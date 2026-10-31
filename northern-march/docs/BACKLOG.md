@@ -21,7 +21,7 @@ Each epic lists its phase, scope and acceptance criterion ("Done when"). Detaile
 - [ ] Scripted player policies: passive, delegating, aggressive done; follow-best-adviser, follow-worst-adviser wait for Phase 5
 - [x] Invariant test harness run on every seed in CI
 - [x] Content-as-data loader and validator
-- [ ] Frozen schemas: SimEvent done; StructuredOrder, Recommendation/Reason, DecisionTrace, BeliefProposition, Report in Phases 2-3
+- [ ] Frozen schemas: SimEvent, StructuredOrder, Recommendation/Reason, BeliefProposition, Report done; DecisionTrace in Phase 3
 - [x] Capped trait vocabulary (14) as data
 - [x] `STATE.md` and `DECISIONS.md` maintained per session
 
@@ -39,31 +39,31 @@ Done when: 1,000 seeds per arm run headless overnight, emit metrics, all invaria
 Done when: G-01 and G-02 pass (identical log hash on two machines; RNG streams isolated).
 
 ## P0.02 Physical world — Phase 2, Core
-- [ ] 20-25 locations across three small provinces
-- [ ] Roads, terrain, rivers, crossings and travel times
-- [ ] Character, army, expedition and messenger positions
+- [x] 20-25 locations across three small provinces
+- [x] Roads, terrain, rivers, crossings and travel times
+- [x] Character, army and messenger positions (expeditions arrive with Phase 11)
 
 Done when: messengers and armies move along routes with correct travel times.
 
 ## P0.03 Reality, observation and belief — Phase 2, Core
-- [ ] Separate WorldState and BeliefState; `ViewOf(agent)` / `ViewOf(player)` accessors
-- [ ] Character observations with quality by capability and conditions
-- [ ] Evidence and reliability bands
-- [ ] Contradictory and stale beliefs (lazy staleness, contradictions kept)
-- [ ] Belief caps and logged eviction per tier
-- [ ] Ruler knowledge projection
-- [ ] Static and runtime checks preventing UI/AI access to hidden truth
+- [x] Separate WorldState and BeliefState; `ViewOf(agent)` / `ViewOf(player)` accessors
+- [x] Character observations with quality by capability and conditions
+- [x] Evidence and reliability bands
+- [x] Contradictory and stale beliefs (lazy staleness, contradictions kept)
+- [x] Belief caps and logged eviction per tier
+- [x] Ruler knowledge projection
+- [x] Static and runtime checks preventing UI/AI access to hidden truth
 
 Done when: two NPCs hold conflicting beliefs about one fact, and no module reads WorldState directly.
 
 ## P0.04 Reports, messengers and orders — Phases 2 and 5, Core
-- [ ] Report authorship, source, time and author bias
-- [ ] Physical transmission and redirection
-- [ ] Lost, delayed and intercepted reports (interceptor gains the beliefs)
-- [ ] Undeliverable orders when recipient location is unknown
-- [ ] Structured strategic orders with constraints, contingencies, discretion and reporting policy
-- [ ] Full order lifecycle events
-- [ ] Previous-order persistence and supersession on receipt
+- [x] Report authorship, source, time and author bias
+- [x] Physical transmission and redirection
+- [x] Lost, delayed and intercepted reports (interceptor gains the beliefs)
+- [x] Undeliverable orders when recipient location is unknown
+- [ ] Structured strategic orders with constraints, contingencies, discretion and reporting policy (schema frozen and validated in Phase 2; composed with real constraints in Phase 5)
+- [x] Full order lifecycle events
+- [x] Previous-order persistence and supersession on receipt
 
 Done when: an order's lifecycle is fully visible in the inspector, including failure branches.
 

@@ -7,7 +7,14 @@ import { POLICIES, type PlayerAction, type PolicyId } from "./policies.ts";
 import { Rng } from "./rng.ts";
 import { migrateSave, SAVE_SCHEMA_VERSION, type InputRecord, type SaveFile } from "./save.ts";
 import { Scheduler } from "./scheduler.ts";
-import { economy, makePlayer, messenger, threat, weather } from "./systems/testbed.ts";
+import { economy, threat, weather } from "./systems/physical.ts";
+import { knowledge } from "./systems/knowledge.ts";
+import { messenger } from "./systems/messenger.ts";
+import { movement } from "./systems/movement.ts";
+import { orders } from "./systems/orders.ts";
+import { makePlayer } from "./systems/player.ts";
+import { MapGraph } from "./map.ts";
+import { beliefsAbout } from "./view.ts";
 import { DAY, type Ctx, type SimParams, type System } from "./systems/types.ts";
 import { buildView, type View } from "./view.ts";
 import { applyEvent, initialState, type WorldState } from "./world.ts";
@@ -50,7 +57,7 @@ export class Sim {
   private decideCount = 0;
   private handlersRun = 0;
   private ctx: Ctx;
-  private routeCache = new Map<string, number>();
+  readonly map: MapGraph;
 
   constructor(cfg: SimConfig) {
     this.cfg = cfg;
@@ -62,8 +69,9 @@ export class Sim {
     for (const a of cfg.ablate ?? []) if (!ABLATABLE.includes(a)) throw new Error(`unknown system ${a} (ablatable: ${ABLATABLE.join(", ")})`);
     this.disabled = new Set(cfg.ablate ?? []);
     this.state = initialState(cfg.content);
+    this.map = new MapGraph(cfg.content);
     this.ctx = this.makeCtx();
-    for (const s of [economy, weather, threat, messenger, makePlayer((ctx, d) => this.decide(ctx, d))]) this.systems.set(s.id, s);
+    for (const s of [economy, weather, threat, movement, knowledge, messenger, orders, makePlayer((ctx, d) => this.decide(ctx, d))]) this.systems.set(s.id, s);
     this.emit("ScenarioStarted", [], [], { contentVersion: cfg.content.version, seed: cfg.seed });
     for (const s of this.systems.values()) if (!this.disabled.has(s.id)) s.start(this.ctx);
   }
@@ -73,7 +81,7 @@ export class Sim {
     throw new Error("WorldState is not readable outside the simulation: use ViewOf(agent | player)");
   }
   viewOf(who: "player" | string): View {
-    return buildView(this.state, who === "player" ? this.content.scenario.ruler : who, this.tick);
+    return buildView(this.state, this.content, who === "player" ? this.content.scenario.ruler : who, this.tick);
   }
   /** Debug inspectors and tests only. Never from presentation or planners. */
   unsafeWorldForDebug(): WorldState {
@@ -156,13 +164,14 @@ export class Sim {
     } else {
       const pol = rp ? this.resumePolicy! : this.cfg.policy;
       const fn = POLICIES[pol as Exclude<PolicyId, "replay">].fn!;
-      const view = buildView(this.state, this.content.scenario.ruler, ctx.tick);
+      const view = buildView(this.state, this.content, this.content.scenario.ruler, ctx.tick);
       actions = fn(view, () => ctx.rng("player"));
       for (const a of actions) {
         if (a.action !== "repair" || !a.target) continue;
-        const b = view.beliefs[`${a.target}:condition`], truth = this.state.fortifications[a.target]?.conditionMilli;
+        const b = beliefsAbout(view, a.target, "fortification.condition")[0], truth = this.state.fortifications[a.target]?.conditionMilli;
+        const hl = this.content.byId.predicate.get("fortification.condition")!.halfLifeTicks;
         if (b && truth !== undefined)
-          this.decisionsObserved.push({ tick: ctx.tick, staleBelief: ctx.tick - b.observedAt > 10 * DAY, wrongBelief: Math.abs(b.value - truth) > 5000 });
+          this.decisionsObserved.push({ tick: ctx.tick, staleBelief: b.ageTicks > hl, wrongBelief: Math.abs((b.believedValue as number) - truth) > 5000 });
       }
     }
     return actions.map((a) => ({ ...a, decision: n }));
@@ -191,26 +200,6 @@ export class Sim {
     return r;
   }
 
-  private travel(from: string, to: string): number {
-    const key = `${from}>${to}`;
-    const hit = this.routeCache.get(key);
-    if (hit !== undefined) return hit;
-    const dist = new Map<string, number>([[from, 0]]), done = new Set<string>();
-    for (;;) {
-      let cur: string | undefined, best = Infinity;
-      for (const [k, d] of [...dist].sort(([a], [b]) => (a < b ? -1 : 1))) if (!done.has(k) && d < best) { best = d; cur = k; }
-      if (cur === undefined) throw new Error(`no route ${from} -> ${to}`);
-      if (cur === to) break;
-      done.add(cur);
-      for (const r of this.content.routes) {
-        const n = r.from === cur ? r.to : r.to === cur ? r.from : null;
-        if (n && !done.has(n) && best + r.travelTicks < (dist.get(n) ?? Infinity)) dist.set(n, best + r.travelTicks);
-      }
-    }
-    this.routeCache.set(key, dist.get(to)!);
-    return dist.get(to)!;
-  }
-
   private makeCtx(): Ctx {
     const self = this;
     return {
@@ -230,8 +219,9 @@ export class Sim {
         return rng;
       },
       enabled: (sys) => !self.disabled.has(sys),
-      travelTicks: (a, b) => self.travel(a, b),
-      observe: () => {},
+      map: this.map,
+      isOpen: (r) => !self.state.routesClosed[r],
+      halfLife: (p) => { const d = self.content.byId.predicate.get(p); if (!d) throw new Error(`unknown predicate ${p}`); return d.halfLifeTicks; },
       extraDraws: (sys) => { const n = self.cfg.params?.extraDraws?.[sys] ?? 0; for (let i = 0; i < n; i++) self.stream(sys).u32(); },
     };
   }

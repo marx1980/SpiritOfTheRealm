@@ -291,6 +291,7 @@ Rebellion is a mobilisation state with structural gates plus a continuous score.
 
 ## Phase 2 - Map, beliefs, reports and contracts
 **Deliver:** 20-25 locations across three provinces with roads, crossings and travel times; character/messenger positions; Observation, Evidence, BeliefProposition, sparse BeliefStore, lazy staleness; report transmission; lost/delayed/intercepted hooks; StructuredOrder (B2) and Recommendation (B3) schemas frozen with lifecycle events.
+**Result (31 Oct):** built; all tests pass; G-01 and G-02 still PASS on the new map. See DECISIONS D-010.
 **Tests:** conflicting beliefs about one fact; staleness without per-tick updates; no action on an undelivered report; intercepted report updates the interceptor's beliefs, not the intended recipient's; lifecycle events validate.
 
 ## Phase 3 - Event-driven BDI-lite agents

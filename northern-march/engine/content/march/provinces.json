@@ -1,0 +1,17 @@
+[
+  {
+    "id": "crownlands",
+    "name": "Crownlands",
+    "seat": "ravenport"
+  },
+  {
+    "id": "northmarch",
+    "name": "Northmarch",
+    "seat": "northwatch"
+  },
+  {
+    "id": "eastmarch",
+    "name": "Eastmarch",
+    "seat": "eastmarch"
+  }
+]

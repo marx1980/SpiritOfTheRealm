@@ -1,0 +1,225 @@
+[
+  {
+    "id": "anna",
+    "name": "Anna",
+    "role": "ruler",
+    "location": "ravenport",
+    "tier": "A",
+    "traits": [
+      "pragmatic",
+      "patient"
+    ],
+    "capabilities": {
+      "engineering": 400,
+      "military": 500,
+      "intelligence": 600,
+      "administration": 700
+    },
+    "relationships": [
+      {
+        "to": "elara",
+        "kind": "trust",
+        "value": 700
+      },
+      {
+        "to": "oren",
+        "kind": "trust",
+        "value": 550
+      },
+      {
+        "to": "bren",
+        "kind": "trust",
+        "value": 650
+      },
+      {
+        "to": "varos",
+        "kind": "trust",
+        "value": 300
+      }
+    ]
+  },
+  {
+    "id": "elara",
+    "name": "Elara",
+    "role": "adviser",
+    "location": "ravenport",
+    "tier": "A",
+    "traits": [
+      "cautious",
+      "honest"
+    ],
+    "reportsTo": "anna",
+    "capabilities": {
+      "engineering": 400,
+      "military": 800,
+      "intelligence": 700,
+      "administration": 500
+    },
+    "relationships": [
+      {
+        "to": "anna",
+        "kind": "loyalty",
+        "value": 800
+      }
+    ]
+  },
+  {
+    "id": "oren",
+    "name": "Oren",
+    "role": "steward",
+    "location": "ravenport",
+    "tier": "A",
+    "traits": [
+      "greedy",
+      "pragmatic"
+    ],
+    "reportsTo": "anna",
+    "capabilities": {
+      "engineering": 300,
+      "military": 200,
+      "intelligence": 500,
+      "administration": 850
+    },
+    "relationships": [
+      {
+        "to": "anna",
+        "kind": "loyalty",
+        "value": 500
+      }
+    ]
+  },
+  {
+    "id": "selene",
+    "name": "Selene",
+    "role": "scholar",
+    "location": "ravenport",
+    "tier": "A",
+    "traits": [
+      "curious",
+      "zealous"
+    ],
+    "reportsTo": "anna",
+    "capabilities": {
+      "engineering": 900,
+      "military": 200,
+      "intelligence": 600,
+      "administration": 400
+    },
+    "relationships": [
+      {
+        "to": "anna",
+        "kind": "loyalty",
+        "value": 600
+      }
+    ]
+  },
+  {
+    "id": "caron",
+    "name": "Caron",
+    "role": "captain",
+    "location": "greybridge",
+    "tier": "A",
+    "traits": [
+      "proud",
+      "aggressive"
+    ],
+    "reportsTo": "anna",
+    "capabilities": {
+      "engineering": 600,
+      "military": 800,
+      "intelligence": 400,
+      "administration": 400
+    },
+    "relationships": [
+      {
+        "to": "anna",
+        "kind": "loyalty",
+        "value": 550
+      },
+      {
+        "to": "elara",
+        "kind": "rivalry",
+        "value": 500
+      }
+    ]
+  },
+  {
+    "id": "bren",
+    "name": "Bren",
+    "role": "castellan",
+    "location": "northwatch",
+    "tier": "A",
+    "traits": [
+      "loyal",
+      "stubborn"
+    ],
+    "reportsTo": "anna",
+    "capabilities": {
+      "engineering": 800,
+      "military": 600,
+      "intelligence": 400,
+      "administration": 500
+    },
+    "relationships": [
+      {
+        "to": "anna",
+        "kind": "loyalty",
+        "value": 800
+      },
+      {
+        "to": "mara",
+        "kind": "trust",
+        "value": 450
+      }
+    ]
+  },
+  {
+    "id": "mara",
+    "name": "Mara",
+    "role": "spokeswoman",
+    "location": "greyfen",
+    "tier": "A",
+    "traits": [
+      "honest",
+      "vengeful"
+    ],
+    "capabilities": {
+      "engineering": 300,
+      "military": 200,
+      "intelligence": 500,
+      "administration": 500
+    },
+    "relationships": [
+      {
+        "to": "bren",
+        "kind": "trust",
+        "value": 400
+      }
+    ]
+  },
+  {
+    "id": "varos",
+    "name": "Varos",
+    "role": "castellan",
+    "location": "eastmarch",
+    "tier": "A",
+    "traits": [
+      "ambitious",
+      "proud"
+    ],
+    "reportsTo": "anna",
+    "capabilities": {
+      "engineering": 600,
+      "military": 700,
+      "intelligence": 800,
+      "administration": 600
+    },
+    "relationships": [
+      {
+        "to": "anna",
+        "kind": "rivalry",
+        "value": 600
+      }
+    ]
+  }
+]

@@ -1,0 +1,203 @@
+[
+  {
+    "id": "ravenport-saltmere",
+    "from": "ravenport",
+    "to": "saltmere",
+    "km": 25,
+    "terrain": "road"
+  },
+  {
+    "id": "ravenport-kingsroad",
+    "from": "ravenport",
+    "to": "kingsroad",
+    "km": 40,
+    "terrain": "road"
+  },
+  {
+    "id": "ravenport-oldmill",
+    "from": "ravenport",
+    "to": "oldmill",
+    "km": 20,
+    "terrain": "road"
+  },
+  {
+    "id": "kingsroad-ashford",
+    "from": "kingsroad",
+    "to": "ashford",
+    "km": 20,
+    "terrain": "track"
+  },
+  {
+    "id": "kingsroad-greybridge",
+    "from": "kingsroad",
+    "to": "greybridge",
+    "km": 30,
+    "terrain": "road"
+  },
+  {
+    "id": "oldmill-crownwood",
+    "from": "oldmill",
+    "to": "crownwood",
+    "km": 15,
+    "terrain": "forest"
+  },
+  {
+    "id": "crownwood-ashford",
+    "from": "crownwood",
+    "to": "ashford",
+    "km": 18,
+    "terrain": "forest"
+  },
+  {
+    "id": "ashford-veyford",
+    "from": "ashford",
+    "to": "veyford",
+    "km": 22,
+    "terrain": "track"
+  },
+  {
+    "id": "greybridge-pinegate",
+    "from": "greybridge",
+    "to": "pinegate",
+    "km": 15,
+    "terrain": "road",
+    "crossing": {
+      "river": "vey",
+      "kind": "bridge"
+    }
+  },
+  {
+    "id": "pinegate-northwatch",
+    "from": "pinegate",
+    "to": "northwatch",
+    "km": 30,
+    "terrain": "road"
+  },
+  {
+    "id": "northwatch-greyfen",
+    "from": "northwatch",
+    "to": "greyfen",
+    "km": 12,
+    "terrain": "track"
+  },
+  {
+    "id": "greyfen-blackwood",
+    "from": "greyfen",
+    "to": "blackwood",
+    "km": 10,
+    "terrain": "forest"
+  },
+  {
+    "id": "northwatch-blackwood",
+    "from": "northwatch",
+    "to": "blackwood",
+    "km": 20,
+    "terrain": "forest"
+  },
+  {
+    "id": "northwatch-grey_hill",
+    "from": "northwatch",
+    "to": "grey_hill",
+    "km": 15,
+    "terrain": "hills"
+  },
+  {
+    "id": "grey_hill-coldmere",
+    "from": "grey_hill",
+    "to": "coldmere",
+    "km": 18,
+    "terrain": "hills"
+  },
+  {
+    "id": "greyfen-fenhollow",
+    "from": "greyfen",
+    "to": "fenhollow",
+    "km": 14,
+    "terrain": "marsh"
+  },
+  {
+    "id": "fenhollow-coldmere",
+    "from": "fenhollow",
+    "to": "coldmere",
+    "km": 20,
+    "terrain": "marsh"
+  },
+  {
+    "id": "pinegate-fenhollow",
+    "from": "pinegate",
+    "to": "fenhollow",
+    "km": 25,
+    "terrain": "track"
+  },
+  {
+    "id": "grey_hill-highcairn",
+    "from": "grey_hill",
+    "to": "highcairn",
+    "km": 12,
+    "terrain": "hills"
+  },
+  {
+    "id": "veyford-redbarrow",
+    "from": "veyford",
+    "to": "redbarrow",
+    "km": 12,
+    "terrain": "track",
+    "crossing": {
+      "river": "vey",
+      "kind": "ford"
+    }
+  },
+  {
+    "id": "redbarrow-eastmarch",
+    "from": "redbarrow",
+    "to": "eastmarch",
+    "km": 20,
+    "terrain": "road"
+  },
+  {
+    "id": "eastmarch-thornfield",
+    "from": "eastmarch",
+    "to": "thornfield",
+    "km": 15,
+    "terrain": "road"
+  },
+  {
+    "id": "eastmarch-marchend",
+    "from": "eastmarch",
+    "to": "marchend",
+    "km": 25,
+    "terrain": "road"
+  },
+  {
+    "id": "marchend-stonegate",
+    "from": "marchend",
+    "to": "stonegate",
+    "km": 30,
+    "terrain": "hills"
+  },
+  {
+    "id": "thornfield-coldmere",
+    "from": "thornfield",
+    "to": "coldmere",
+    "km": 35,
+    "terrain": "hills"
+  },
+  {
+    "id": "saltmere-marchend",
+    "from": "saltmere",
+    "to": "marchend",
+    "km": 40,
+    "terrain": "road",
+    "crossing": {
+      "river": "vey",
+      "kind": "ferry"
+    }
+  },
+  {
+    "id": "eastmarch-bellmoor",
+    "from": "eastmarch",
+    "to": "bellmoor",
+    "km": 10,
+    "terrain": "track"
+  }
+]

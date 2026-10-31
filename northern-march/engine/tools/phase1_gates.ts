@@ -8,7 +8,7 @@ import { checkRun, checkPairing } from "../src/invariants.ts";
 import { canonicalJson } from "../src/canonical.ts";
 import type { SystemId } from "../src/events.ts";
 
-const content = loadContent(new URL("../content/testbed/", import.meta.url).pathname);
+const content = loadContent(new URL("../content/march/", import.meta.url).pathname);
 const out: Record<string, unknown> = {};
 
 // G-02

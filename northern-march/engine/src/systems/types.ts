@@ -1,5 +1,6 @@
 import type { Content } from "../content.ts";
 import type { SimEvent, SubjectRef, SystemId } from "../events.ts";
+import type { MapGraph } from "../map.ts";
 import type { Rng } from "../rng.ts";
 import type { WorldState } from "../world.ts";
 
@@ -15,14 +16,15 @@ export interface Ctx {
   readonly content: Content;
   readonly s: Readonly<WorldState>;
   readonly params: SimParams;
+  readonly map: MapGraph;
   emit(type: string, causedBy: number[], subjects: SubjectRef[], payload: Record<string, unknown>, rngStream?: string): SimEvent;
   at(tick: number, handler: string, args: Record<string, unknown>): void;
   rng(stream: string): Rng;
   /** One-off keyed substream: same key, same draws, whatever happened before (A3). */
   keyed(stream: string): Rng;
   enabled(system: SystemId): boolean;
-  travelTicks(from: string, to: string): number;
-  observe(kind: string, data: Record<string, number | boolean | string>): void;
+  isOpen(routeId: string): boolean;
+  halfLife(predicate: string): number;
   extraDraws(system: SystemId): void;
 }
 
@@ -34,3 +36,6 @@ export interface System {
 
 export const DAY = 86400;
 export const HOUR = 3600;
+export const loc = (id: string) => ({ kind: "location" as const, id });
+export const chr = (id: string) => ({ kind: "character" as const, id });
+export const sorted = <T>(xs: Iterable<T>, key: (x: T) => string) => [...xs].sort((a, b) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0));

@@ -1,13 +1,13 @@
 // C3: invariant checks, run on every seed. Each returns human-readable violations (empty = pass).
 import { canonicalJson } from "./canonical.ts";
 import { EVENT_SCHEMA_VERSION, EVENT_TYPES, type SimEvent, type SystemId } from "./events.ts";
+import { ORDER_LIFECYCLE, ORDER_TRANSITIONS } from "./schemas.ts";
 
 interface RunLike { log: readonly SimEvent[]; projectFromLog?: () => unknown; unsafeWorldForDebug?: () => unknown }
 
 export function checkLog(log: readonly SimEvent[]): string[] {
   const v: string[] = [];
   const pos = new Map<number, number>();
-  const delivered = new Map<number, number>();
   log.forEach((e, i) => pos.set(e.id, i));
   for (let i = 0; i < log.length; i++) {
     const e = log[i], def = EVENT_TYPES[e.type];
@@ -23,10 +23,18 @@ export function checkLog(log: readonly SimEvent[]): string[] {
     }
     if (!e.causedBy.length && !def.root) v.push(`event ${e.id} (${e.type}): empty causedBy on a non-root type`);
     try { canonicalJson(e); } catch (err) { v.push(`event ${e.id}: ${(err as Error).message}`); }
-    const p = e.payload as { reportId?: number };
-    if (e.type === "ReportDelivered") delivered.set(p.reportId!, e.id);
-    if (e.type === "BeliefUpdated" && (!delivered.has(p.reportId!) || !e.causedBy.includes(delivered.get(p.reportId!)!)))
-      v.push(`event ${e.id}: belief from report ${p.reportId} before its ReportDelivered`);
+    if (e.type === "BeliefUpdated") {
+      const holder = e.payload.holder as string;
+      for (const ev of (e.payload.prop as { evidenceRefs: { kind: string; eventId: number; source: string; reportId?: number }[] }).evidenceRefs) {
+        if (!e.causedBy.includes(ev.eventId)) continue; // evidence merged from earlier events
+        const src = log[pos.get(ev.eventId) ?? -1];
+        if (ev.kind === "report" && !(src?.type === "ReportDelivered" && src.payload.reportId === ev.reportId && src.payload.recipient === holder))
+          v.push(`event ${e.id}: belief from report ${ev.reportId} without its ReportDelivered to ${holder}`);
+        if (ev.kind === "intercepted" && !(src && ["InterceptedReportReceived", "InterceptedOrderReceived"].includes(src.type) && src.payload.by === holder))
+          v.push(`event ${e.id}: intercepted belief for ${holder} without the papers reaching them`);
+        if (ev.kind === "observation" && ev.source !== holder) v.push(`event ${e.id}: ${holder} holds someone else's observation as first-hand`);
+      }
+    }
     if (e.type === "PlayerInput") {
       const src = log[pos.get(e.causedBy[0]) ?? -1];
       if (!src || src.type !== "ReportDelivered") v.push(`event ${e.id}: player input not caused by something delivered to the player`);
@@ -35,8 +43,25 @@ export function checkLog(log: readonly SimEvent[]): string[] {
   return v;
 }
 
+const LIFECYCLE = new Set<string>([...ORDER_LIFECYCLE.main, ...ORDER_LIFECYCLE.failures]);
+export const orderIdOf = (e: SimEvent) => (e.type === "OrderIssued" ? (e.payload.order as { id: number }).id : (e.payload.orderId as number));
+
+/** B2: every order's events form a valid path through the lifecycle; nothing follows a terminal step. */
+export function checkOrderLifecycles(log: readonly SimEvent[]): string[] {
+  const v: string[] = [];
+  const state = new Map<number, string>();
+  for (const e of log) {
+    if (!LIFECYCLE.has(e.type)) continue;
+    const id = orderIdOf(e), cur = state.get(id) ?? "start";
+    const allowed = cur === "ObedienceDecided:refuse" ? [] : ORDER_TRANSITIONS[cur.split(":")[0]] ?? [];
+    if (!allowed.includes(e.type)) v.push(`order ${id}: ${e.type} after ${cur}`);
+    state.set(id, e.type === "ObedienceDecided" && e.payload.decision === "refuse" ? "ObedienceDecided:refuse" : e.type);
+  }
+  return v;
+}
+
 export function checkRun(sim: RunLike): string[] {
-  const v = checkLog(sim.log);
+  const v = [...checkLog(sim.log), ...checkOrderLifecycles(sim.log)];
   if (sim.projectFromLog && sim.unsafeWorldForDebug && canonicalJson(sim.projectFromLog()) !== canonicalJson(sim.unsafeWorldForDebug()))
     v.push("WorldState differs from the projection of the log");
   return v;

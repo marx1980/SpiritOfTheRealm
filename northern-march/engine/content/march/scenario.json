@@ -1,6 +1,51 @@
 {
   "ruler": "anna",
   "treasuryMilli": 120000,
+  "movement": {
+    "speedsKmPerDay": {
+      "rider": {
+        "road": 80,
+        "track": 60,
+        "forest": 35,
+        "marsh": 25,
+        "hills": 45
+      },
+      "foot": {
+        "road": 30,
+        "track": 25,
+        "forest": 18,
+        "marsh": 12,
+        "hills": 20
+      },
+      "army": {
+        "road": 20,
+        "track": 15,
+        "forest": 10,
+        "marsh": 6,
+        "hills": 12
+      }
+    },
+    "crossingDelayTicks": {
+      "bridge": 0,
+      "ford": 7200,
+      "ferry": 21600
+    }
+  },
+  "knowledge": {
+    "beliefCaps": {
+      "A": 300,
+      "B": 60,
+      "C": 15
+    },
+    "bands": {
+      "certain": 850,
+      "probable": 650,
+      "uncertain": 400
+    },
+    "stormPenaltyPermille": 150,
+    "maxErrorMilliPerMissingPermille": 15,
+    "lowTrustBelow": 500
+  },
   "economy": {
     "holdings": [
       {
@@ -49,18 +94,33 @@
   "messenger": {
     "reportEveryDays": 10,
     "alarmBelowMilli": 60000,
-    "delayJitterPermille": [
+    "legJitterPermille": [
       900,
       1300
     ],
-    "lossPermille": 60
+    "lossPermillePerDay": 20,
+    "redirectLimit": 2,
+    "understateMilli": 5000
   },
+  "interception": [
+    {
+      "location": "greybridge",
+      "by": "varos",
+      "permille": 40
+    },
+    {
+      "location": "veyford",
+      "by": "varos",
+      "permille": 150
+    }
+  ],
   "player": {
     "repairCostMilliPerMilli": 2,
     "repairRestoreToMilli": 85000,
     "repairDays": 5,
     "levyMilli": 40000
   },
+  "scripts": [],
   "endStates": {
     "fortificationBreachedBelowMilli": 30000
   }

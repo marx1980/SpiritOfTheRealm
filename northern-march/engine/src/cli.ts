@@ -10,7 +10,7 @@ import { ancestry, timeline } from "./inspect.ts";
 import type { SystemId } from "./events.ts";
 import type { PolicyId } from "./policies.ts";
 
-const DEFAULT_CONTENT = new URL("../content/testbed/", import.meta.url).pathname;
+const DEFAULT_CONTENT = new URL("../content/march/", import.meta.url).pathname;
 const [cmd, ...rest] = process.argv.slice(2);
 const opt = (name: string, dflt?: string) => { const i = rest.indexOf(`--${name}`); return i >= 0 ? rest[i + 1] : dflt; };
 const seedsOf = (spec: string) => {

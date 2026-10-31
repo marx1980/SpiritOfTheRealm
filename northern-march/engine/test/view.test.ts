@@ -18,16 +18,19 @@ test("ViewOf(player) is frozen and holds only beliefs, delivered reports and the
   assert.throws(() => { (v as { now: number }).now = 0; });
 });
 
-test("no belief from a report before its ReportDelivered event", () => {
+test("no belief from a report before its ReportDelivered event, and only for its recipient", () => {
   for (const seed of [1, 2, 3, 4]) {
     const sim = run({ seed });
-    const delivered = new Map<number, number>(); // reportId -> delivery event id
+    const delivered = new Map<number, { id: number; recipient: string }>();
     for (const e of sim.log) {
-      const p = e.payload as { reportId?: number };
-      if (e.type === "ReportDelivered") delivered.set(p.reportId!, e.id);
-      if (e.type === "BeliefUpdated") {
-        assert.ok(delivered.has(p.reportId!), `seed ${seed}: belief from undelivered report ${p.reportId}`);
-        assert.ok(e.causedBy.includes(delivered.get(p.reportId!)!));
+      if (e.type === "ReportDelivered") delivered.set(e.payload.reportId as number, { id: e.id, recipient: e.payload.recipient as string });
+      if (e.type !== "BeliefUpdated") continue;
+      for (const ev of (e.payload.prop as { evidenceRefs: { kind: string; reportId?: number; eventId: number }[] }).evidenceRefs) {
+        if (ev.kind !== "report" || !e.causedBy.includes(ev.eventId)) continue;
+        const d = delivered.get(ev.reportId!);
+        assert.ok(d, `seed ${seed}: belief from undelivered report ${ev.reportId}`);
+        assert.equal(d.recipient, e.payload.holder);
+        assert.equal(ev.eventId, d.id);
       }
     }
   }
@@ -38,10 +41,8 @@ test("the player's belief can differ from the truth (reports age and can be lost
   for (const seed of [1, 2, 3, 4, 5]) {
     const sim = run({ seed }, 120);
     const truth = sim.unsafeWorldForDebug();
-    for (const [key, b] of Object.entries(sim.viewOf("player").beliefs)) {
-      const [loc] = key.split(":");
-      if (truth.fortifications[loc] && truth.fortifications[loc].conditionMilli !== b.value) differs = true;
-    }
+    for (const b of Object.values(sim.viewOf("player").beliefs))
+      if (b.predicate === "fortification.condition" && truth.fortifications[b.subject.id].conditionMilli !== b.believedValue) differs = true;
   }
   assert.ok(differs);
 });

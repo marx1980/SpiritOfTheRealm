@@ -48,3 +48,9 @@
 | **PASS / AMBER / FAIL** | PASS: 95% interval inside the band. AMBER: point estimate inside, interval crosses an edge (one extension, then FAIL). FAIL: point estimate outside. |
 | **Knife-edge parameter** | A parameter whose +/-25% change drives the headline metric to 0 or above twice the band's upper edge. |
 | **Gate IDs (G-nn, H-nn)** | Automated gates (plan §C2) and human gates (plan §C4). |
+| **Seat** | Where a character normally resides (`character.seat`, never decays). Messengers go to the last known whereabouts while that belief is alive, otherwise to the seat. |
+| **Lazy staleness** | A belief's band drops one step per half-life of its predicate, computed when read; nothing is updated per tick. Four half-lives: stale (hidden from views). |
+| **Resolution (beliefs)** | Contradictory propositions coexist, except: a first-hand observation at probable or better replaces other values, and a source's newer account replaces its own older one. |
+| **Interception point** | A place where someone's agents may seize passing messengers. The papers are carried to that person, who learns their contents and who wrote to whom; the intended recipient learns nothing. |
+| **Redirect** | A messenger who misses the recipient follows word left with locals of where they went (up to a limit). Without such word, or after a secret departure, the message is undeliverable. |
+| **Scripted event** | `TravelScripted` / `OrderScripted`: test and scenario hooks. Allowed in tests; a gated chain containing one fails the anti-script check (plan C0.7). |

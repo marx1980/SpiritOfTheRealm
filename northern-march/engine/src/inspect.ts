@@ -1,5 +1,7 @@
 // Debug inspectors (developer tooling, not presentation): event ancestry, timelines, per-type counts.
 import type { SimEvent } from "./events.ts";
+import { ORDER_LIFECYCLE } from "./schemas.ts";
+import { orderIdOf } from "./invariants.ts";
 
 const DAY = 86400;
 const fmt = (e: SimEvent) => `#${e.id} d${Math.floor(e.tick / DAY)}+${e.tick % DAY}s ${e.type} ${JSON.stringify(e.payload)}`;
@@ -22,4 +24,11 @@ export function ancestry(log: readonly SimEvent[], id: number, maxDepth = 20): s
 
 export function timeline(log: readonly SimEvent[], types?: string[]): string {
   return log.filter((e) => !types || types.includes(e.type)).map(fmt).join("\n");
+}
+
+const LIFECYCLE = new Set<string>([...ORDER_LIFECYCLE.main, ...ORDER_LIFECYCLE.failures]);
+
+/** Every lifecycle event of one order, in order (P0.04 done-when: the lifecycle is fully visible). */
+export function orderHistory(log: readonly SimEvent[], orderId: number): SimEvent[] {
+  return log.filter((e) => LIFECYCLE.has(e.type) && orderIdOf(e) === orderId);
 }

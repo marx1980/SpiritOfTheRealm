@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import { validateContent, readContentDir, TRAIT_VOCABULARY } from "../src/content.ts";
 
-const DIR = new URL("../content/testbed/", import.meta.url).pathname;
+const DIR = new URL("../content/march/", import.meta.url).pathname;
 const fresh = () => readContentDir(DIR);
 const codes = (raw: ReturnType<typeof fresh>) => validateContent(raw).errors.map((e) => e.code);
 
@@ -33,24 +33,32 @@ test("orphan relationship is rejected", () => {
 });
 
 test("unreachable location is rejected", () => {
-  const raw = fresh(); raw.locations.push({ id: "island", name: "Island", kind: "village", exposurePermille: 0 });
+  const raw = fresh(); raw.locations.push({ id: "island", name: "Island", province: "crownlands", kind: "village", terrain: "road", exposurePermille: 0 });
   assert.ok(codes(raw).includes("LOCATION_UNREACHABLE"));
 });
 
 test("duplicate ids and non-integer numbers are rejected", () => {
   const raw = fresh(); raw.locations.push({ ...raw.locations[0] });
   assert.ok(codes(raw).includes("ID_DUPLICATE"));
-  const raw2 = fresh(); raw2.routes[0].travelTicks = 1.5;
+  const raw2 = fresh(); raw2.routes[0].km = 1.5;
   assert.ok(codes(raw2).includes("NOT_INTEGER"));
 });
 
 test("wrong content schemaVersion is rejected", () => {
-  const raw = fresh(); raw.manifest.schemaVersion = 7;
+  const raw = fresh(); raw.manifest.schemaVersion = 1;
   assert.ok(codes(raw).includes("SCHEMA_VERSION"));
 });
 
+test("unknown province, terrain, river and interceptor are rejected", () => {
+  const a = fresh(); a.locations[0].province = "atlantis"; assert.ok(codes(a).includes("ID_UNKNOWN"));
+  const b = fresh(); b.routes[0].terrain = "lava"; assert.ok(codes(b).includes("TERRAIN_UNKNOWN"));
+  const c = fresh(); c.routes.find((r) => r.crossing)!.crossing!.river = "styx"; assert.ok(codes(c).includes("ID_UNKNOWN"));
+  const d = fresh(); d.scenario.interception.push({ location: "kingsroad", by: "nobody", permille: 5 }); assert.ok(codes(d).includes("ID_UNKNOWN"));
+  const e = fresh(); e.characters[0].tier = "Z" as never; assert.ok(codes(e).includes("TIER_UNKNOWN"));
+});
+
 test("the engine contains no named characters or places (A5)", () => {
-  const names = [...fresh().characters.map((c) => c.name), ...fresh().locations.map((l) => l.name)];
+  const names = [...fresh().characters.map((c) => c.name), ...fresh().locations.map((l) => l.name), ...fresh().provinces.map((p) => p.name)];
   const srcDir = new URL("../src/", import.meta.url).pathname;
   const walk = (d: string): string[] => readdirSync(d, { withFileTypes: true }).flatMap((f) => f.isDirectory() ? walk(d + f.name + "/") : [d + f.name]);
   for (const f of walk(srcDir)) {

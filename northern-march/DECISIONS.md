@@ -4,6 +4,36 @@ Newest first. Numbers come from `phase0/results/` (files named in each entry). A
 
 ---
 
+## D-010 (Phase 2) Map, beliefs, reports and order contracts: built
+
+**Built:** 22 locations in three provinces (Crownlands, Northmarch, Eastmarch) with 27 routes, terrain, the river Vey (bridge at Greybridge, ford at Veyford, ferry Saltmere-Marchend) and travel times for rider, foot and army; character positions and movement; observation with quality from capability and conditions; B5 belief propositions with evidence, bands, lazy staleness, kept contradictions and capped stores with logged eviction; reports with author bias, carried leg by leg; loss, interception, redirection and undeliverable messages; B2 StructuredOrder with every lifecycle step as its own event; B3 Recommendation and B5 Report frozen with validators. 88 tests pass.
+
+**Design decisions (new):**
+1. **Seat vs whereabouts.** `character.location` decays fast (half-life 3 days); `character.seat` never decays. A messenger goes to the last known whereabouts while that belief is alive, otherwise to the seat. Found when every report became undeliverable after 12 days because nobody "knew" where the queen was.
+2. **When contradictions resolve.** First-hand observation at probable or better replaces other values; a source's newer account replaces its own older one; everything else coexists. Which one an agent acts on is a planning choice (Phase 3 DecisionTrace).
+3. **Interception takes time.** Captured papers travel to the interceptor by courier; only then does the interceptor learn the claims plus who wrote to whom (`report.route`) or what was ordered (`order.content`). The interceptor's own couriers are not lost.
+4. **Redirection.** Locals know where someone went unless the departure was secret; a messenger follows such word up to 2 times, then the message is undeliverable.
+5. **Trust and bias.** A recipient who trusts the author below 500 reads the report one band lower. An author whose traits make them reluctant to report bad news may understate damage (chance 1000 minus their mean `badNewsReportingPermille`); the report is tagged `understates_damage`.
+6. **Stub obedience until Phase 3.** Interpretation is literal and obedience always "obey"; both payloads carry a `stub` note, so nothing downstream can mistake them for decisions.
+7. **Scripted hooks.** `TravelScripted` and `OrderScripted` are root events for tests and scenario setup only. A gated chain containing one fails C0.7.
+8. **Schema bumps.** Event schema v2 (belief, report and order payloads) and content schema v2 (provinces, rivers, predicates, tiers, capabilities). The Phase 1 testbed content is retired; v1 content and saves are rejected, not migrated.
+
+**Bugs found while testing (fixed):**
+- The aggressive policy re-levied every minute: its "levied recently?" check compared targets, and a levy's target is the ruler. Policies now match on action only when the target is irrelevant.
+- Repair orders for Greybridge found no recipient (Caron is a captain, not a castellan), so the policy re-decided on every report. Repairs now go to whoever holds the place and reports on it.
+
+**Results:**
+- G-01 PASS: combined hash `7c0765250e9ba7fcf46c76a958c23de976f3c688d12f6e292a3c4604b4d7f66b` under Node (two time zones and locales) and Bun.
+- G-02 PASS: 100/100 seeds per perturbed system.
+- 1,000 seeds per arm (threat ON/OFF), 240 days, every invariant including order lifecycles: 0 violations.
+
+**Watch:**
+- Cost per run rose from 22 to 152 ms per simulated year (belief integration and views). Within G-14's 60 s limit by a wide margin, but Phase 4 should profile `learn()` and `buildView()`.
+- The placeholder end state `fortificationBreached` is now true in every run (Stonegate has a fortification and nobody to repair it), so the testbed gate no longer separates ON from OFF. Real end states arrive with Phases 6-7.
+- Decisions on stale or wrong beliefs: 32% of the delegating policy's repair decisions. That is in the G-11(a) band (5-35%) by chance; G-11 is not evaluated until Phase 3.
+
+---
+
 ## D-009 (Phase 1) Engine core and tooling: built, G-01 and G-02 PASS
 
 **Stack.** TypeScript run directly by Node 22 (type stripping, no build step; `tsc` for type checks only). Reason: the frozen schemas in plan §B are already written as TypeScript interfaces, the same code can later run in a browser UI, and a second engine (Bun/JavaScriptCore) is available for the cross-engine determinism check. Rejected: Python (the Phase 0 prototypes) because it cannot share code with a browser UI; Rust because it is slower to iterate during Phases 2-7.

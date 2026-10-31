@@ -22,14 +22,14 @@
   "batch": {
     "seedsPerArm": 1000,
     "days": 240,
-    "wallClockSeconds": 97.4,
+    "wallClockSeconds": 357.9,
     "invariantViolations": 0,
     "firstViolations": [],
-    "breachedOn": 0.936,
-    "breachedOff": 0.818,
-    "meanEvents": 1454,
-    "meanDecisions": 11.592,
-    "staleOrWrongShare": 0.18141821946169773,
-    "meanWallClockPerSimYearMs": 22
+    "breachedOn": 1,
+    "breachedOff": 1,
+    "meanEvents": 2296,
+    "meanDecisions": 16.076,
+    "staleOrWrongShare": 0.3248320477730779,
+    "meanWallClockPerSimYearMs": 152
   }
 }

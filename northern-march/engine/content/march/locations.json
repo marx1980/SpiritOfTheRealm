@@ -1,0 +1,190 @@
+[
+  {
+    "id": "ravenport",
+    "name": "Ravenport",
+    "province": "crownlands",
+    "kind": "city",
+    "terrain": "road",
+    "exposurePermille": 5
+  },
+  {
+    "id": "saltmere",
+    "name": "Saltmere",
+    "province": "crownlands",
+    "kind": "port",
+    "terrain": "road",
+    "exposurePermille": 15
+  },
+  {
+    "id": "kingsroad",
+    "name": "Kingsroad",
+    "province": "crownlands",
+    "kind": "waystation",
+    "terrain": "road",
+    "exposurePermille": 0
+  },
+  {
+    "id": "greybridge",
+    "name": "Greybridge",
+    "province": "crownlands",
+    "kind": "town",
+    "terrain": "road",
+    "exposurePermille": 5,
+    "fortification": {
+      "conditionMilli": 90000
+    }
+  },
+  {
+    "id": "ashford",
+    "name": "Ashford",
+    "province": "crownlands",
+    "kind": "village",
+    "terrain": "track",
+    "exposurePermille": 5
+  },
+  {
+    "id": "crownwood",
+    "name": "Crownwood",
+    "province": "crownlands",
+    "kind": "forest",
+    "terrain": "forest",
+    "exposurePermille": 0
+  },
+  {
+    "id": "oldmill",
+    "name": "Oldmill",
+    "province": "crownlands",
+    "kind": "village",
+    "terrain": "road",
+    "exposurePermille": 5
+  },
+  {
+    "id": "veyford",
+    "name": "Veyford",
+    "province": "crownlands",
+    "kind": "hamlet",
+    "terrain": "track",
+    "exposurePermille": 5
+  },
+  {
+    "id": "pinegate",
+    "name": "Pinegate",
+    "province": "northmarch",
+    "kind": "village",
+    "terrain": "road",
+    "exposurePermille": 10
+  },
+  {
+    "id": "northwatch",
+    "name": "Northwatch",
+    "province": "northmarch",
+    "kind": "fortress",
+    "terrain": "hills",
+    "exposurePermille": 25,
+    "fortification": {
+      "conditionMilli": 75000
+    }
+  },
+  {
+    "id": "greyfen",
+    "name": "Greyfen",
+    "province": "northmarch",
+    "kind": "village",
+    "terrain": "marsh",
+    "exposurePermille": 10
+  },
+  {
+    "id": "blackwood",
+    "name": "Blackwood",
+    "province": "northmarch",
+    "kind": "forest",
+    "terrain": "forest",
+    "exposurePermille": 0
+  },
+  {
+    "id": "grey_hill",
+    "name": "Grey Hill",
+    "province": "northmarch",
+    "kind": "hill",
+    "terrain": "hills",
+    "exposurePermille": 15
+  },
+  {
+    "id": "coldmere",
+    "name": "Coldmere",
+    "province": "northmarch",
+    "kind": "village",
+    "terrain": "marsh",
+    "exposurePermille": 10
+  },
+  {
+    "id": "fenhollow",
+    "name": "Fenhollow",
+    "province": "northmarch",
+    "kind": "village",
+    "terrain": "marsh",
+    "exposurePermille": 10
+  },
+  {
+    "id": "highcairn",
+    "name": "Highcairn",
+    "province": "northmarch",
+    "kind": "outpost",
+    "terrain": "hills",
+    "exposurePermille": 20
+  },
+  {
+    "id": "redbarrow",
+    "name": "Redbarrow",
+    "province": "eastmarch",
+    "kind": "village",
+    "terrain": "track",
+    "exposurePermille": 5
+  },
+  {
+    "id": "eastmarch",
+    "name": "Eastmarch Keep",
+    "province": "eastmarch",
+    "kind": "keep",
+    "terrain": "road",
+    "exposurePermille": 10,
+    "fortification": {
+      "conditionMilli": 85000
+    }
+  },
+  {
+    "id": "thornfield",
+    "name": "Thornfield",
+    "province": "eastmarch",
+    "kind": "village",
+    "terrain": "road",
+    "exposurePermille": 5
+  },
+  {
+    "id": "marchend",
+    "name": "Marchend",
+    "province": "eastmarch",
+    "kind": "town",
+    "terrain": "road",
+    "exposurePermille": 10
+  },
+  {
+    "id": "stonegate",
+    "name": "Stonegate",
+    "province": "eastmarch",
+    "kind": "pass",
+    "terrain": "hills",
+    "exposurePermille": 20,
+    "fortification": {
+      "conditionMilli": 80000
+    }
+  },
+  {
+    "id": "bellmoor",
+    "name": "Bellmoor",
+    "province": "eastmarch",
+    "kind": "village",
+    "terrain": "track",
+    "exposurePermille": 5
+  }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "fortification.condition",
+    "subjectKind": "location",
+    "halfLifeTicks": 1728000,
+    "domain": "military"
+  },
+  {
+    "id": "character.location",
+    "subjectKind": "character",
+    "halfLifeTicks": 259200,
+    "domain": "info"
+  },
+  {
+    "id": "character.seat",
+    "subjectKind": "character",
+    "halfLifeTicks": 0,
+    "domain": "info"
+  },
+  {
+    "id": "order.status",
+    "subjectKind": "order",
+    "halfLifeTicks": 2592000,
+    "domain": "political"
+  },
+  {
+    "id": "order.content",
+    "subjectKind": "order",
+    "halfLifeTicks": 0,
+    "domain": "political"
+  },
+  {
+    "id": "report.route",
+    "subjectKind": "report",
+    "halfLifeTicks": 0,
+    "domain": "info"
+  }
+]

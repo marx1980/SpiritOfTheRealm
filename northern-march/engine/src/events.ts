@@ -1,10 +1,10 @@
 // B1: event envelope and the registry of event types. Every type belongs to one system (for ablation),
-// one domain, a significance layer, and is either a root (exogenous / player input: may have no cause) or not.
+// one domain and a significance layer, and is either a root (exogenous / player input / test script) or not.
 
-export const EVENT_SCHEMA_VERSION = 1;
+export const EVENT_SCHEMA_VERSION = 2; // v2 (Phase 2): belief, report and order payloads follow B2/B5
 
 export type Domain = "military" | "economic" | "political" | "social" | "environment" | "magic" | "info";
-export type SystemId = "core" | "economy" | "weather" | "threat" | "messenger" | "player";
+export type SystemId = "core" | "economy" | "weather" | "threat" | "movement" | "knowledge" | "messenger" | "orders" | "player" | "advice";
 export const ABLATABLE: readonly SystemId[] = ["economy", "weather", "threat", "messenger"];
 
 export interface SubjectRef {
@@ -29,13 +29,14 @@ export interface EventTypeDef {
   system: SystemId;
   domain: Domain;
   significance: 0 | 1 | 2 | 3;
-  root: boolean; // may have an empty causedBy (exogenous process or player input)
+  root: boolean;
 }
 
 const T = (system: SystemId, domain: Domain, significance: 0 | 1 | 2 | 3, root = false): EventTypeDef => ({ system, domain, significance, root });
 
 export const EVENT_TYPES: Readonly<Record<string, EventTypeDef>> = Object.freeze({
   ScenarioStarted: T("core", "info", 3, true),
+  // physical processes
   TreasuryCollected: T("economy", "economic", 2, true),
   UpkeepPaid: T("economy", "economic", 2, true),
   FortificationsWeathered: T("weather", "environment", 1, true),
@@ -43,15 +44,47 @@ export const EVENT_TYPES: Readonly<Record<string, EventTypeDef>> = Object.freeze
   ThreatBegan: T("threat", "military", 3, true),
   RaidDamage: T("threat", "military", 2),
   ThreatEnded: T("threat", "military", 2),
+  // movement
+  TravelScripted: T("movement", "info", 1, true), // test/scenario script only
+  Departed: T("movement", "info", 1),
+  Arrived: T("movement", "info", 1),
+  RouteClosed: T("movement", "environment", 2, true),
+  RouteOpened: T("movement", "environment", 2, true),
+  // knowledge (B5)
+  Observed: T("knowledge", "info", 0),
+  BeliefUpdated: T("knowledge", "info", 1),
+  BeliefResolved: T("knowledge", "info", 0),
+  BeliefEvicted: T("knowledge", "info", 0),
+  // transmission
   ReportComposed: T("messenger", "info", 1),
-  ReportLost: T("messenger", "info", 1),
+  ReportDispatched: T("messenger", "info", 1),
   ReportDelivered: T("messenger", "info", 2),
-  BeliefUpdated: T("messenger", "info", 1),
-  OrderDelivered: T("messenger", "info", 1),
-  OrderLost: T("messenger", "info", 1),
+  ReportLost: T("messenger", "info", 1),
+  ReportIntercepted: T("messenger", "info", 2),
+  InterceptedReportReceived: T("messenger", "info", 2),
+  ReportUndeliverable: T("messenger", "info", 1),
+  MessengerRedirected: T("messenger", "info", 0),
+  OrderDispatched: T("messenger", "political", 1),
+  OrderLost: T("messenger", "political", 2),
+  OrderIntercepted: T("messenger", "political", 2),
+  InterceptedOrderReceived: T("messenger", "political", 2),
+  OrderUndeliverable: T("messenger", "political", 2),
+  // orders (B2 lifecycle)
+  OrderScripted: T("orders", "political", 2, true), // test/scenario script only
+  OrderIssued: T("orders", "political", 2),
+  OrderReceived: T("orders", "political", 2),
+  OrderInterpreted: T("orders", "political", 1),
+  ObedienceDecided: T("orders", "political", 2),
+  LocalPlanFormed: T("orders", "political", 1),
+  SubordinateOrdersIssued: T("orders", "political", 1),
+  ExecutionStarted: T("orders", "political", 1),
+  OrderCompleted: T("orders", "political", 2),
+  OrderSuperseded: T("orders", "political", 1),
+  OrderAbandoned: T("orders", "political", 2),
+  RepairStarted: T("orders", "military", 1),
+  RepairCompleted: T("orders", "military", 1),
+  LevyRaised: T("orders", "economic", 2),
+  // player and advice
   PlayerInput: T("player", "political", 3, true),
-  RepairStarted: T("player", "military", 1),
-  RepairCompleted: T("player", "military", 1),
-  RepairRefused: T("player", "economic", 1),
-  LevyRaised: T("player", "economic", 2),
+  RecommendationMade: T("advice", "political", 1), // B3 contract; produced from Phase 5
 });

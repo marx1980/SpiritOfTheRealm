@@ -1,6 +1,6 @@
 // A6: scripted player policies. A policy sees only ViewOf(player) and may draw from the "player" stream.
 import type { Rng } from "./rng.ts";
-import type { View } from "./view.ts";
+import { beliefsAbout, type View } from "./view.ts";
 
 export type PolicyId = "passive" | "delegating" | "aggressive" | "random-valid" | "follow-best-adviser" | "follow-worst-adviser" | "replay";
 export interface PlayerAction { action: "repair" | "levy"; target?: string; decision?: number }
@@ -8,9 +8,11 @@ export type PolicyFn = (v: View, rng: () => Rng) => PlayerAction[];
 
 const DAY = 86400;
 const recently = (v: View, action: string, target: string | null, days: number) =>
-  v.self.orders.some((o) => o.action === action && o.target === target && v.now - o.tick < days * DAY);
+  v.self.orders.some((o) => o.action === action && (target === null || o.target === target) && v.now - o.tick < days * DAY);
+/** For each fortification the player has any belief about, the value of the belief she would act on (best first). */
 const believedForts = (v: View) =>
-  Object.entries(v.beliefs).filter(([k]) => k.endsWith(":condition")).map(([k, b]) => ({ loc: k.slice(0, -":condition".length), value: b.value }));
+  [...new Set(Object.values(v.beliefs).filter((b) => b.predicate === "fortification.condition").map((b) => b.subject.id))].sort()
+    .map((loc) => ({ loc, value: beliefsAbout(v, loc, "fortification.condition")[0].believedValue as number }));
 
 const repairBelow = (threshold: number, cooldownDays: number): PolicyFn => (v) =>
   believedForts(v).filter((f) => f.value < threshold && !recently(v, "repair", f.loc, cooldownDays)).map((f) => ({ action: "repair" as const, target: f.loc }));
