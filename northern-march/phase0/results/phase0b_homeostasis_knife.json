@@ -1,0 +1,62 @@
+{
+  "hom=True greyfen_use x0.75": {
+    "A": 0.079,
+    "on": 0.079,
+    "off": 0.0
+  },
+  "hom=True greyfen_use x1.25": {
+    "A": 0.05,
+    "on": 0.063,
+    "off": 0.013
+  },
+  "hom=True cut_rate x0.75": {
+    "A": 0.035,
+    "on": 0.059,
+    "off": 0.024
+  },
+  "hom=True cut_rate x1.25": {
+    "A": 0.08,
+    "on": 0.08,
+    "off": 0.0
+  },
+  "hom=True coin_upkeep x0.75": {
+    "A": 0.014,
+    "on": 0.014,
+    "off": 0.0
+  },
+  "hom=True coin_upkeep x1.25": {
+    "A": 0.134,
+    "on": 0.158,
+    "off": 0.024
+  },
+  "hom=False greyfen_use x0.75": {
+    "A": 0.049,
+    "on": 0.049,
+    "off": 0.0
+  },
+  "hom=False greyfen_use x1.25": {
+    "A": 0.002,
+    "on": 0.006,
+    "off": 0.004
+  },
+  "hom=False cut_rate x0.75": {
+    "A": 0.002,
+    "on": 0.004,
+    "off": 0.002
+  },
+  "hom=False cut_rate x1.25": {
+    "A": 0.049,
+    "on": 0.049,
+    "off": 0.0
+  },
+  "hom=False coin_upkeep x0.75": {
+    "A": 0.018,
+    "on": 0.019,
+    "off": 0.001
+  },
+  "hom=False coin_upkeep x1.25": {
+    "A": 0.158,
+    "on": 0.16,
+    "off": 0.002
+  }
+}

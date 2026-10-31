@@ -1,0 +1,44 @@
+[
+  {
+    "id": "ravenport",
+    "name": "Ravenport",
+    "kind": "city",
+    "exposurePermille": 5
+  },
+  {
+    "id": "kingsroad",
+    "name": "Kingsroad",
+    "kind": "waystation",
+    "exposurePermille": 0
+  },
+  {
+    "id": "northwatch",
+    "name": "Northwatch",
+    "kind": "fortress",
+    "exposurePermille": 25,
+    "fortification": {
+      "conditionMilli": 75000
+    }
+  },
+  {
+    "id": "greyfen",
+    "name": "Greyfen",
+    "kind": "village",
+    "exposurePermille": 10
+  },
+  {
+    "id": "blackwood",
+    "name": "Blackwood",
+    "kind": "forest",
+    "exposurePermille": 0
+  },
+  {
+    "id": "eastmarch",
+    "name": "Eastmarch",
+    "kind": "keep",
+    "exposurePermille": 10,
+    "fortification": {
+      "conditionMilli": 85000
+    }
+  }
+]

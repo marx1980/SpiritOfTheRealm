@@ -1,0 +1,42 @@
+{
+  "on": {
+    "n": 600,
+    "funnel_pct": {
+      "THREAT": 77.0,
+      "SHORTAGE": 74.8,
+      "REPAIR_RISK": 62.8,
+      "REQUISITION": 18.3,
+      "GRIEVANCE": 11.0,
+      "VAROS_OPPORTUNITY": 4.7
+    },
+    "any_root_pct": {
+      "REQUISITION": 58.2,
+      "GRIEVANCE": 24.2,
+      "VAROS_OPPORTUNITY": 10.3
+    },
+    "chain_pct": 4.7,
+    "chain_count": 28
+  },
+  "off": {
+    "n": 600,
+    "funnel_pct": {
+      "THREAT": 0.0,
+      "SHORTAGE": 0.0,
+      "REPAIR_RISK": 0.0,
+      "REQUISITION": 0.0,
+      "GRIEVANCE": 0.0,
+      "VAROS_OPPORTUNITY": 0.0
+    },
+    "any_root_pct": {
+      "REQUISITION": 77.8,
+      "GRIEVANCE": 27.0,
+      "VAROS_OPPORTUNITY": 11.3
+    },
+    "chain_pct": 0.0,
+    "chain_count": 0
+  },
+  "pooled_holdout": {
+    "k": 35,
+    "n": 600
+  }
+}

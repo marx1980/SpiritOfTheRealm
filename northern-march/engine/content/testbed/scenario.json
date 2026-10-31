@@ -1,0 +1,67 @@
+{
+  "ruler": "anna",
+  "treasuryMilli": 120000,
+  "economy": {
+    "holdings": [
+      {
+        "location": "ravenport",
+        "dailyIncomeMilli": 15000,
+        "jitterMilli": 3000
+      },
+      {
+        "location": "greyfen",
+        "dailyIncomeMilli": 4000,
+        "jitterMilli": 1500
+      },
+      {
+        "location": "eastmarch",
+        "dailyIncomeMilli": 3000,
+        "jitterMilli": 1000
+      }
+    ],
+    "dailyUpkeepMilli": 21000
+  },
+  "weather": {
+    "decayMilliPerDay": 250,
+    "stormDamageMilli": [
+      5000,
+      25000
+    ]
+  },
+  "threat": {
+    "sites": [
+      {
+        "site": "blackwood",
+        "target": "northwatch"
+      }
+    ],
+    "startPermillePerDay": 6,
+    "intensityPermille": [
+      300,
+      1000
+    ],
+    "durationDays": [
+      30,
+      90
+    ],
+    "raidDamageMilliAtFullIntensity": 1500
+  },
+  "messenger": {
+    "reportEveryDays": 10,
+    "alarmBelowMilli": 60000,
+    "delayJitterPermille": [
+      900,
+      1300
+    ],
+    "lossPermille": 60
+  },
+  "player": {
+    "repairCostMilliPerMilli": 2,
+    "repairRestoreToMilli": 85000,
+    "repairDays": 5,
+    "levyMilli": 40000
+  },
+  "endStates": {
+    "fortificationBreachedBelowMilli": 30000
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "gate": "causal(fortificationBreached, threat)",
+  "seedBlock": 10000,
+  "n": 1000,
+  "calibrationHash": "6dc750296016",
+  "contentVersion": "testbed-0.1",
+  "perPolicy": {
+    "passive": {
+      "n": 1000,
+      "rOn": 1,
+      "rOff": 1,
+      "A": 0,
+      "A_ci": [
+        0,
+        0
+      ],
+      "lift": 1,
+      "liftCiLow": 1,
+      "G03": "FAIL",
+      "G04": "FAIL"
+    },
+    "delegating": {
+      "n": 1000,
+      "rOn": 0.919,
+      "rOff": 0.776,
+      "A": 0.14300000000000002,
+      "A_ci": [
+        0.122,
+        0.167
+      ],
+      "lift": 1.184278350515464,
+      "liftCiLow": 1.1528822055137844,
+      "G03": "PASS",
+      "G04": "FAIL"
+    },
+    "aggressive": {
+      "n": 1000,
+      "rOn": 0.397,
+      "rOff": 0.134,
+      "A": 0.263,
+      "A_ci": [
+        0.236,
+        0.29
+      ],
+      "lift": 2.962686567164179,
+      "liftCiLow": 2.6052631578947367,
+      "G03": "PASS",
+      "G04": "PASS"
+    },
+    "random-valid": {
+      "n": 1000,
+      "rOn": 0.673,
+      "rOff": 0.389,
+      "A": 0.28400000000000003,
+      "A_ci": [
+        0.256,
+        0.312
+      ],
+      "lift": 1.7300771208226222,
+      "liftCiLow": 1.6252983293556087,
+      "G03": "PASS",
+      "G04": "PASS"
+    }
+  },
+  "G03": {
+    "verdict": "FAIL",
+    "distinctPolicies": 4,
+    "groups": {
+      "aggressive": "aggressive",
+      "delegating": "delegating",
+      "passive": "passive",
+      "random-valid": "random-valid"
+    }
+  },
+  "G04": {
+    "verdict": "FAIL",
+    "distinctPolicies": 4,
+    "groups": {
+      "aggressive": "aggressive",
+      "delegating": "delegating",
+      "passive": "passive",
+      "random-valid": "random-valid"
+    }
+  },
+  "t": "2026-10-31T20:36:44.539Z"
+}

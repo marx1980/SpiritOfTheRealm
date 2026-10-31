@@ -1,0 +1,114 @@
+[
+  {
+    "id": "cautious",
+    "riskPermille": 200,
+    "obedienceWhenDisagreeingPermille": 600,
+    "houseVsCrownPermille": 500,
+    "lossResponsePermille": 300,
+    "badNewsReportingPermille": 700
+  },
+  {
+    "id": "aggressive",
+    "riskPermille": 800,
+    "obedienceWhenDisagreeingPermille": 400,
+    "houseVsCrownPermille": 500,
+    "lossResponsePermille": 700,
+    "badNewsReportingPermille": 500
+  },
+  {
+    "id": "proud",
+    "riskPermille": 600,
+    "obedienceWhenDisagreeingPermille": 300,
+    "houseVsCrownPermille": 600,
+    "lossResponsePermille": 800,
+    "badNewsReportingPermille": 300
+  },
+  {
+    "id": "loyal",
+    "riskPermille": 400,
+    "obedienceWhenDisagreeingPermille": 800,
+    "houseVsCrownPermille": 200,
+    "lossResponsePermille": 500,
+    "badNewsReportingPermille": 600
+  },
+  {
+    "id": "ambitious",
+    "riskPermille": 700,
+    "obedienceWhenDisagreeingPermille": 300,
+    "houseVsCrownPermille": 800,
+    "lossResponsePermille": 600,
+    "badNewsReportingPermille": 400
+  },
+  {
+    "id": "pragmatic",
+    "riskPermille": 500,
+    "obedienceWhenDisagreeingPermille": 500,
+    "houseVsCrownPermille": 500,
+    "lossResponsePermille": 500,
+    "badNewsReportingPermille": 600
+  },
+  {
+    "id": "zealous",
+    "riskPermille": 800,
+    "obedienceWhenDisagreeingPermille": 500,
+    "houseVsCrownPermille": 300,
+    "lossResponsePermille": 800,
+    "badNewsReportingPermille": 400
+  },
+  {
+    "id": "greedy",
+    "riskPermille": 600,
+    "obedienceWhenDisagreeingPermille": 400,
+    "houseVsCrownPermille": 800,
+    "lossResponsePermille": 500,
+    "badNewsReportingPermille": 400
+  },
+  {
+    "id": "honest",
+    "riskPermille": 400,
+    "obedienceWhenDisagreeingPermille": 500,
+    "houseVsCrownPermille": 400,
+    "lossResponsePermille": 500,
+    "badNewsReportingPermille": 900
+  },
+  {
+    "id": "vengeful",
+    "riskPermille": 700,
+    "obedienceWhenDisagreeingPermille": 300,
+    "houseVsCrownPermille": 600,
+    "lossResponsePermille": 900,
+    "badNewsReportingPermille": 500
+  },
+  {
+    "id": "compassionate",
+    "riskPermille": 300,
+    "obedienceWhenDisagreeingPermille": 500,
+    "houseVsCrownPermille": 400,
+    "lossResponsePermille": 400,
+    "badNewsReportingPermille": 700
+  },
+  {
+    "id": "stubborn",
+    "riskPermille": 500,
+    "obedienceWhenDisagreeingPermille": 200,
+    "houseVsCrownPermille": 500,
+    "lossResponsePermille": 600,
+    "badNewsReportingPermille": 500
+  },
+  {
+    "id": "curious",
+    "riskPermille": 600,
+    "obedienceWhenDisagreeingPermille": 500,
+    "houseVsCrownPermille": 500,
+    "lossResponsePermille": 400,
+    "badNewsReportingPermille": 600
+  },
+  {
+    "id": "patient",
+    "riskPermille": 300,
+    "obedienceWhenDisagreeingPermille": 600,
+    "houseVsCrownPermille": 500,
+    "lossResponsePermille": 300,
+    "badNewsReportingPermille": 600
+  }
+]

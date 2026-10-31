@@ -1,0 +1,35 @@
+{
+  "G02": {
+    "perSystem": {
+      "economy": {
+        "seeds": 100,
+        "otherStreamsUnchanged": 100,
+        "perturbedChanged": 100
+      },
+      "weather": {
+        "seeds": 100,
+        "otherStreamsUnchanged": 100,
+        "perturbedChanged": 100
+      },
+      "threat": {
+        "seeds": 100,
+        "otherStreamsUnchanged": 100,
+        "perturbedChanged": 89
+      }
+    },
+    "verdict": "PASS"
+  },
+  "batch": {
+    "seedsPerArm": 1000,
+    "days": 240,
+    "wallClockSeconds": 97.4,
+    "invariantViolations": 0,
+    "firstViolations": [],
+    "breachedOn": 0.936,
+    "breachedOff": 0.818,
+    "meanEvents": 1454,
+    "meanDecisions": 11.592,
+    "staleOrWrongShare": 0.18141821946169773,
+    "meanWallClockPerSimYearMs": 22
+  }
+}

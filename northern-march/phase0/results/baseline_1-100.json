@@ -1,0 +1,19 @@
+{
+  "n": 100,
+  "funnel_pct": {
+    "THREAT": 82.0,
+    "SHORTAGE": 17.0,
+    "REPAIR_RISK": 7.0,
+    "REQUISITION": 3.0,
+    "GRIEVANCE": 1.0,
+    "VAROS_OPPORTUNITY": 1.0
+  },
+  "any_root_pct": {
+    "REQUISITION": 7.0,
+    "GRIEVANCE": 1.0,
+    "VAROS_OPPORTUNITY": 1.0
+  },
+  "chain_pct": 1.0,
+  "chain_count": 1,
+  "set": []
+}

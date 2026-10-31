@@ -1,0 +1,68 @@
+[
+  {
+    "label": "CAL (band calibration, D-002)",
+    "seeds": "10000..10999",
+    "n": 1000,
+    "labelled_chain_rate": 0.06,
+    "labelled_chain_ci": [
+      0.0469,
+      0.0765
+    ],
+    "end_rate_on": 0.119,
+    "end_rate_off": 0.104,
+    "attributable_A": 0.015,
+    "A_ci": [
+      -0.005,
+      0.034
+    ],
+    "G03": "FAIL",
+    "lift_ratio": 1.14,
+    "ratio_ci_low": 0.96,
+    "G04": "FAIL",
+    "calibration_hash": "d3c8bfd6"
+  },
+  {
+    "label": "ALT1 (use 9.75, upkeep 21, coin 120)",
+    "seeds": "10000..10999",
+    "n": 1000,
+    "labelled_chain_rate": 0.04,
+    "labelled_chain_ci": [
+      0.0295,
+      0.054
+    ],
+    "end_rate_on": 0.074,
+    "end_rate_off": 0.042,
+    "attributable_A": 0.032,
+    "A_ci": [
+      0.017,
+      0.047
+    ],
+    "G03": "FAIL",
+    "lift_ratio": 1.76,
+    "ratio_ci_low": 1.35,
+    "G04": "PASS",
+    "calibration_hash": "c105a40d"
+  },
+  {
+    "label": "ALT2 (use 9.0, upkeep 21, coin 120)",
+    "seeds": "10000..10999",
+    "n": 1000,
+    "labelled_chain_rate": 0.026,
+    "labelled_chain_ci": [
+      0.0178,
+      0.0378
+    ],
+    "end_rate_on": 0.052,
+    "end_rate_off": 0.025,
+    "attributable_A": 0.027,
+    "A_ci": [
+      0.015,
+      0.04
+    ],
+    "G03": "FAIL",
+    "lift_ratio": 2.08,
+    "ratio_ci_low": 1.51,
+    "G04": "PASS",
+    "calibration_hash": "244b3488"
+  }
+]

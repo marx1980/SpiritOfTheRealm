@@ -1,0 +1,228 @@
+{
+  "ablation": {
+    "only fix_homeostasis": {
+      "passive": {
+        "A": 0.01,
+        "on": 0.151,
+        "off": 0.141
+      },
+      "delegating": {
+        "A": -0.009,
+        "on": 0.132,
+        "off": 0.141
+      },
+      "aggressive": {
+        "A": 0.01,
+        "on": 0.151,
+        "off": 0.141
+      }
+    },
+    "without fix_homeostasis": {
+      "passive": {
+        "A": 0.082,
+        "on": 0.085,
+        "off": 0.003
+      },
+      "delegating": {
+        "A": 0.062,
+        "on": 0.065,
+        "off": 0.003
+      },
+      "aggressive": {
+        "A": 0.082,
+        "on": 0.085,
+        "off": 0.003
+      }
+    },
+    "only fix_garrison": {
+      "passive": {
+        "A": 0.063,
+        "on": 0.092,
+        "off": 0.029
+      },
+      "delegating": {
+        "A": 0.04,
+        "on": 0.069,
+        "off": 0.029
+      },
+      "aggressive": {
+        "A": 0.063,
+        "on": 0.092,
+        "off": 0.029
+      }
+    },
+    "without fix_garrison": {
+      "passive": {
+        "A": 0.09,
+        "on": 0.1,
+        "off": 0.01
+      },
+      "delegating": {
+        "A": 0.067,
+        "on": 0.077,
+        "off": 0.01
+      },
+      "aggressive": {
+        "A": 0.09,
+        "on": 0.1,
+        "off": 0.01
+      }
+    },
+    "only fix_blame": {
+      "passive": {
+        "A": 0.086,
+        "on": 0.098,
+        "off": 0.012
+      },
+      "delegating": {
+        "A": 0.062,
+        "on": 0.074,
+        "off": 0.012
+      },
+      "aggressive": {
+        "A": 0.086,
+        "on": 0.098,
+        "off": 0.012
+      }
+    },
+    "without fix_blame": {
+      "passive": {
+        "A": 0.058,
+        "on": 0.109,
+        "off": 0.051
+      },
+      "delegating": {
+        "A": 0.038,
+        "on": 0.089,
+        "off": 0.051
+      },
+      "aggressive": {
+        "A": 0.058,
+        "on": 0.109,
+        "off": 0.051
+      }
+    }
+  },
+  "knife_edge": {
+    "greyfen_use": {
+      "0.75": {
+        "value": 7.875,
+        "A": 0.079,
+        "on": 0.079,
+        "off": 0.0
+      },
+      "1.25": {
+        "value": 13.125,
+        "A": 0.05,
+        "on": 0.063,
+        "off": 0.013
+      },
+      "knife_edge": false
+    },
+    "cut_rate": {
+      "0.75": {
+        "value": 9.0,
+        "A": 0.035,
+        "on": 0.059,
+        "off": 0.024
+      },
+      "1.25": {
+        "value": 15.0,
+        "A": 0.08,
+        "on": 0.08,
+        "off": 0.0
+      },
+      "knife_edge": false
+    },
+    "coin_upkeep": {
+      "0.75": {
+        "value": 15.75,
+        "A": 0.014,
+        "on": 0.014,
+        "off": 0.0
+      },
+      "1.25": {
+        "value": 26.25,
+        "A": 0.134,
+        "on": 0.158,
+        "off": 0.024
+      },
+      "knife_edge": false
+    },
+    "varos_theta": {
+      "0.75": {
+        "value": 0.3,
+        "A": 0.07,
+        "on": 0.093,
+        "off": 0.023
+      },
+      "1.25": {
+        "value": 0.5,
+        "A": 0.059,
+        "on": 0.059,
+        "off": 0.0
+      },
+      "knife_edge": false
+    },
+    "lab_k": {
+      "0.75": {
+        "value": 0.45,
+        "A": 0.072,
+        "on": 0.073,
+        "off": 0.001
+      },
+      "1.25": {
+        "value": 0.75,
+        "A": 0.071,
+        "on": 0.072,
+        "off": 0.001
+      },
+      "knife_edge": false
+    },
+    "garrison_divert": {
+      "0.75": {
+        "value": 0.45,
+        "A": 0.073,
+        "on": 0.074,
+        "off": 0.001
+      },
+      "1.25": {
+        "value": 0.75,
+        "A": 0.074,
+        "on": 0.075,
+        "off": 0.001
+      },
+      "knife_edge": false
+    },
+    "blame_danger": {
+      "0.75": {
+        "value": 1.2,
+        "A": 0.062,
+        "on": 0.063,
+        "off": 0.001
+      },
+      "1.25": {
+        "value": 2.0,
+        "A": 0.077,
+        "on": 0.078,
+        "off": 0.001
+      },
+      "knife_edge": false
+    },
+    "blame_calm": {
+      "0.75": {
+        "value": 0.45,
+        "A": 0.076,
+        "on": 0.076,
+        "off": 0.0
+      },
+      "1.25": {
+        "value": 0.75,
+        "A": 0.071,
+        "on": 0.083,
+        "off": 0.012
+      },
+      "knife_edge": false
+    }
+  }
+}

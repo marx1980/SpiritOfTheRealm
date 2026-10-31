@@ -1,0 +1,148 @@
+{
+  "calibration": {
+    "greyfen_use": 10.5,
+    "coin_start": 120.0,
+    "coin_upkeep": 21.0,
+    "varos_grain_range": [
+      30,
+      150
+    ],
+    "varos_theta": 0.4
+  },
+  "gate seeds 1-100": {
+    "n": 100,
+    "funnel_pct": {
+      "THREAT": 82.0,
+      "SHORTAGE": 81.0,
+      "REPAIR_RISK": 67.0,
+      "REQUISITION": 23.0,
+      "GRIEVANCE": 16.0,
+      "VAROS_OPPORTUNITY": 5.0
+    },
+    "any_root_pct": {
+      "REQUISITION": 58.0,
+      "GRIEVANCE": 25.0,
+      "VAROS_OPPORTUNITY": 7.0
+    },
+    "chain_pct": 5.0,
+    "chain_count": 5
+  },
+  "holdout A 1001-1200": {
+    "n": 200,
+    "funnel_pct": {
+      "THREAT": 72.0,
+      "SHORTAGE": 70.5,
+      "REPAIR_RISK": 62.5,
+      "REQUISITION": 20.0,
+      "GRIEVANCE": 12.5,
+      "VAROS_OPPORTUNITY": 8.5
+    },
+    "any_root_pct": {
+      "REQUISITION": 62.0,
+      "GRIEVANCE": 25.5,
+      "VAROS_OPPORTUNITY": 11.0
+    },
+    "chain_pct": 8.5,
+    "chain_count": 17
+  },
+  "holdout B 2001-2400": {
+    "n": 400,
+    "funnel_pct": {
+      "THREAT": 78.0,
+      "SHORTAGE": 75.0,
+      "REPAIR_RISK": 62.8,
+      "REQUISITION": 12.8,
+      "GRIEVANCE": 9.2,
+      "VAROS_OPPORTUNITY": 4.5
+    },
+    "any_root_pct": {
+      "REQUISITION": 55.8,
+      "GRIEVANCE": 22.0,
+      "VAROS_OPPORTUNITY": 10.8
+    },
+    "chain_pct": 4.5,
+    "chain_count": 18
+  },
+  "uncalibrated gate seeds 1-100": {
+    "n": 100,
+    "funnel_pct": {
+      "THREAT": 82.0,
+      "SHORTAGE": 17.0,
+      "REPAIR_RISK": 6.0,
+      "REQUISITION": 3.0,
+      "GRIEVANCE": 1.0,
+      "VAROS_OPPORTUNITY": 0.0
+    },
+    "any_root_pct": {
+      "REQUISITION": 7.0,
+      "GRIEVANCE": 1.0,
+      "VAROS_OPPORTUNITY": 0.0
+    },
+    "chain_pct": 0.0,
+    "chain_count": 0
+  },
+  "threat_off_control": {
+    "n": 300,
+    "funnel_pct": {
+      "THREAT": 0.0,
+      "SHORTAGE": 0.0,
+      "REPAIR_RISK": 0.0,
+      "REQUISITION": 0.0,
+      "GRIEVANCE": 0.0,
+      "VAROS_OPPORTUNITY": 0.0
+    },
+    "any_root_pct": {
+      "REQUISITION": 80.0,
+      "GRIEVANCE": 26.0,
+      "VAROS_OPPORTUNITY": 9.3
+    },
+    "chain_pct": 0.0,
+    "chain_count": 0
+  },
+  "sensitivity_pm25": {
+    "greyfen_use": {
+      "7.875": 1.0,
+      "13.125": 0.0
+    },
+    "coin_start": {
+      "90.0": 7.3,
+      "150.0": 4.0
+    },
+    "coin_upkeep": {
+      "15.75": 0.7,
+      "26.25": 11.7
+    },
+    "varos_theta": {
+      "0.3": 7.7,
+      "0.5": 3.0
+    },
+    "p_threat_start": {
+      "0.0045": 4.0,
+      "0.0075": 5.0
+    },
+    "p_storm": {
+      "0.015": 3.7,
+      "0.025": 4.7
+    },
+    "cut_rate": {
+      "9.0": 0.0,
+      "15.0": 1.7
+    },
+    "fear_factor": {
+      "0.6": 6.7,
+      "1.0": 3.7
+    },
+    "w_griev": {
+      "0.45": 5.0,
+      "0.75": 5.0
+    },
+    "elara_alarm": {
+      "52.5": 6.3,
+      "87.5": 3.0
+    },
+    "p_rumor_reach": {
+      "0.525": 3.3,
+      "0.875": 7.7
+    }
+  }
+}
