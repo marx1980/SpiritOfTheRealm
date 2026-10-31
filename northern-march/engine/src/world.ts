@@ -2,7 +2,7 @@
 import type { BeliefProposition } from "./beliefs.ts";
 import type { Content, Mode } from "./content.ts";
 import type { SimEvent } from "./events.ts";
-import type { Report, StructuredOrder } from "./schemas.ts";
+import type { ActionRef, Recommendation, Report, StructuredOrder } from "./schemas.ts";
 
 export type Position = { at: string } | { transit: { from: string; dest: string; path: string[]; arrivals: number[]; departedAt: number; mode: Mode } };
 export type ReportStatus = "composed" | "in_transit" | "delivered" | "lost" | "intercepted" | "undeliverable";
@@ -12,10 +12,18 @@ export interface Messenger {
   path: string[]; arrivals: number[]; departedAt: number; redirects: number;
 }
 export interface IssuedRecord { orderId: number; action: string; target: string; recipient: string; tick: number }
+export interface Intention { action: ActionRef; score: number; adoptedAt: number; decisionEventId: number; idle: boolean; orderId?: number }
+export interface AgentState { operational: Intention | null; focus: string | null; experience: Record<string, number>; lastDecision: number | null; answerRate: Record<string, number> }
 
 export interface WorldState {
   treasuryMilli: Record<string, number>;
-  fortifications: Record<string, { conditionMilli: number; lastChangeEvent: number }>;
+  fortifications: Record<string, { conditionMilli: number; lastChangeEvent: number; garrison: number }>;
+  troops: Record<string, number>;
+  agents: Record<string, AgentState>;
+  recommendations: Record<string, Recommendation>;
+  lastRaid: Record<string, number>;
+  lastRepairStart: Record<string, number>;
+  lastArrival: Record<string, Record<string, number>>;
   lastStorm: Record<string, number>;
   threats: Record<string, { intensityPermille: number; untilTick: number; eventId: number }>;
   routesClosed: Record<string, true>;
@@ -39,11 +47,16 @@ export const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 export function initialState(c: Content): WorldState {
   const fortifications: WorldState["fortifications"] = {};
   for (const l of [...c.locations].sort((a, b) => cmp(a.id, b.id)))
-    if (l.fortification) fortifications[l.id] = { conditionMilli: l.fortification.conditionMilli, lastChangeEvent: 1 };
+    if (l.fortification) fortifications[l.id] = { conditionMilli: l.fortification.conditionMilli, lastChangeEvent: 1, garrison: l.fortification.garrison };
   const positions: WorldState["positions"] = {};
-  for (const ch of [...c.characters].sort((a, b) => cmp(a.id, b.id))) positions[ch.id] = { at: ch.location };
+  const troops: WorldState["troops"] = {}, agents: WorldState["agents"] = {};
+  for (const ch of [...c.characters].sort((a, b) => cmp(a.id, b.id))) {
+    positions[ch.id] = { at: ch.location };
+    if (ch.troops) troops[ch.id] = ch.troops;
+    if (ch.id !== c.scenario.ruler) agents[ch.id] = { operational: null, focus: null, experience: {}, lastDecision: null, answerRate: {} };
+  }
   return {
-    treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, lastStorm: {}, threats: {}, routesClosed: {},
+    treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, agents, recommendations: {}, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, lastStorm: {}, threats: {}, routesClosed: {},
     positions, departures: {}, beliefs: {}, nextPropId: 1, reports: {}, nextReportId: 1, messengers: {}, nextMessengerId: 1,
     orders: {}, nextOrderId: 1, ordersInForce: {}, issued: {}, repairs: {},
   };
@@ -81,7 +94,8 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
     const f = s.fortifications[p.location]; if (f) { f.conditionMilli = clampCond(f.conditionMilli - p.damageMilli); f.lastChangeEvent = e.id; }
   },
   ThreatBegan: (s, p, e) => { s.threats[p.site] = { intensityPermille: p.intensityPermille, untilTick: p.untilTick, eventId: e.id }; },
-  RaidDamage: (s, p, e) => { const f = s.fortifications[p.location]; f.conditionMilli = clampCond(f.conditionMilli - p.damageMilli); f.lastChangeEvent = e.id; },
+  RaidDamage: (s, p, e) => { const f = s.fortifications[p.location]; f.conditionMilli = clampCond(f.conditionMilli - p.damageMilli); f.lastChangeEvent = e.id; s.lastRaid[p.location] = e.tick; },
+  ThreatScripted: noop,
   ThreatEnded: (s, p) => { delete s.threats[p.site]; },
 
   TravelScripted: noop,
@@ -89,7 +103,7 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
     s.positions[p.who] = { transit: { from: p.from, dest: p.dest, path: p.path, arrivals: p.arrivals, departedAt: e.tick, mode: p.mode } };
     (s.departures[p.from] ??= {})[p.who] = { to: p.secret ? null : p.dest, tick: e.tick };
   },
-  Arrived: (s, p) => { s.positions[p.who] = { at: p.at }; },
+  Arrived: (s, p, e) => { s.positions[p.who] = { at: p.at }; (s.lastArrival[p.at] ??= {})[p.who] = e.tick; },
   RouteClosed: (s, p) => { s.routesClosed[p.route] = true; },
   RouteOpened: (s, p) => { delete s.routesClosed[p.route]; },
 
@@ -113,6 +127,7 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   ReportLost: (s, p) => { s.reports[String(p.reportId)].status = "lost"; dropMessenger(s, p); },
   ReportIntercepted: (s, p, e) => { s.reports[String(p.reportId)].status = "intercepted"; capture(s, p, "report", e); },
   InterceptedReportReceived: (s, p) => dropMessenger(s, p),
+  ReportShared: noop,
   ReportUndeliverable: (s, p) => { s.reports[String(p.reportId)].status = "undeliverable"; dropMessenger(s, p); },
 
   OrderScripted: noop,
@@ -140,11 +155,31 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   OrderCompleted: endOrder("completed"),
   OrderSuperseded: endOrder("superseded"),
   OrderAbandoned: endOrder("abandoned"),
-  RepairStarted: (s, p) => { s.repairs[p.location] = { startedAt: p.startedAt, orderId: p.orderId }; s.treasuryMilli[p.payer] -= p.costMilli; },
+  RepairStarted: (s, p, e) => { s.repairs[p.location] = { startedAt: p.startedAt, orderId: p.orderId }; s.treasuryMilli[p.payer] -= p.costMilli; s.lastRepairStart[p.location] = e.tick; },
   RepairCompleted: (s, p, e) => { const f = s.fortifications[p.location]; f.conditionMilli = clampCond(f.conditionMilli + p.restoredMilli); f.lastChangeEvent = e.id; delete s.repairs[p.location]; },
   LevyRaised: (s, p) => { s.treasuryMilli[p.payer] += p.amountMilli; },
   PlayerInput: noop,
-  RecommendationMade: noop,
+  RecommendationMade: (s, p) => { s.recommendations[p.recommendation.author] = p.recommendation; },
+  AgentWoke: noop,
+  DecisionMade: (s, p, e) => {
+    const t = p.trace, a = s.agents[t.agent];
+    a.lastDecision = e.id;
+    if (t.kind === "focus") a.focus = t.selected.target ?? null;
+    else if (t.kind === "plan" || t.kind === "obedience") {
+      if (t.keptCurrentIntention && a.operational) a.operational = { ...a.operational, score: p.score };
+      else a.operational = { action: t.selected, score: p.score, adoptedAt: e.tick, decisionEventId: e.id, idle: p.idle, ...(p.orderId != null ? { orderId: p.orderId } : {}) };
+    }
+  },
+  ExperienceGained: (s, p) => { const x = s.agents[p.agent].experience; x[p.domain] = Math.min(p.cap, (x[p.domain] ?? 0) + p.amount); },
+  SortieLaunched: noop,
+  SortieResolved: noop,
+  LossesTaken: (s, p) => {
+    if (p.garrisonLost) s.fortifications[p.location].garrison -= p.garrisonLost;
+    for (const [who, n] of Object.entries(p.troopsLost as Record<string, number>)) s.troops[who] -= n;
+  },
+  DetachmentSent: (s, p) => { s.troops[p.commander] -= p.men; },
+  DetachmentArrived: (s, p, e) => { s.fortifications[p.to].garrison += p.men; (s.lastArrival[p.to] ??= {})[p.commander] = e.tick; },
+  ResponseAssessed: (s, p) => { s.agents[p.agent].answerRate[p.of] = p.rate; },
 };
 
 export function applyEvent(s: WorldState, e: SimEvent): void {

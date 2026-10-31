@@ -8,6 +8,7 @@ import { issue } from "./orders.ts";
 function recipientFor(ctx: Ctx, a: PlayerAction): string | null {
   const cs = sorted(ctx.content.characters, (c) => c.id);
   if (a.action === "repair") return cs.find((c) => c.location === a.target && c.reportsTo === ctx.content.scenario.ruler)?.id ?? null;
+  if (a.action === "advance") return cs.find((c) => c.role === "captain")?.id ?? null;
   return cs.find((c) => c.role === "steward")?.id ?? null;
 }
 
@@ -22,7 +23,7 @@ export function makePlayer(decide: (ctx: Ctx, deliveredEventId: number) => Playe
           const input = ctx.emit("PlayerInput", [deliveredEventId], [chr(ruler)], { player: ruler, action: a.action, target: a.target ?? null, decision: a.decision! });
           const to = recipientFor(ctx, a);
           if (!to) continue;
-          issue(ctx, ruler, to, a.action, a.action === "repair" ? loc(a.target!) : chr(ruler), input.id);
+          issue(ctx, ruler, to, a.action, a.action === "levy" ? chr(ruler) : loc(a.target!), input.id);
         }
       },
     },

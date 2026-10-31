@@ -12,6 +12,7 @@ import { knowledge } from "./systems/knowledge.ts";
 import { messenger } from "./systems/messenger.ts";
 import { movement } from "./systems/movement.ts";
 import { orders } from "./systems/orders.ts";
+import { agents } from "./systems/agents.ts";
 import { makePlayer } from "./systems/player.ts";
 import { MapGraph } from "./map.ts";
 import { beliefsAbout } from "./view.ts";
@@ -71,7 +72,7 @@ export class Sim {
     this.state = initialState(cfg.content);
     this.map = new MapGraph(cfg.content);
     this.ctx = this.makeCtx();
-    for (const s of [economy, weather, threat, movement, knowledge, messenger, orders, makePlayer((ctx, d) => this.decide(ctx, d))]) this.systems.set(s.id, s);
+    for (const s of [economy, weather, threat, movement, knowledge, messenger, orders, agents, makePlayer((ctx, d) => this.decide(ctx, d))]) this.systems.set(s.id, s);
     this.emit("ScenarioStarted", [], [], { contentVersion: cfg.content.version, seed: cfg.seed });
     for (const s of this.systems.values()) if (!this.disabled.has(s.id)) s.start(this.ctx);
   }
@@ -130,7 +131,7 @@ export class Sim {
   // ---- save / load (A1, A4) --------------------------------------------------------
   save(): SaveFile {
     const inputs: InputRecord[] = this.log.filter((e) => e.type === "PlayerInput").map((e) => ({
-      decision: e.payload.decision as number, tick: e.tick, action: e.payload.action as "repair" | "levy", target: (e.payload.target as string | null) ?? null,
+      decision: e.payload.decision as number, tick: e.tick, action: e.payload.action as InputRecord["action"], target: (e.payload.target as string | null) ?? null,
     }));
     const rngStates: SaveFile["rngStates"] = {};
     for (const [n, r] of [...this.streams].sort(([a], [b]) => (a < b ? -1 : 1))) rngStates[n] = { state: r.getState(), draws: r.draws };
@@ -160,7 +161,7 @@ export class Sim {
     if (rp && n < rp.decisions) {
       const recs = rp.inputs.filter((i) => i.decision === n);
       for (const r of recs) if (r.tick !== ctx.tick) throw new Error(`replay diverged: decision ${n} recorded at ${r.tick}, reached at ${ctx.tick}`);
-      actions = recs.map((r) => (r.action === "levy" ? { action: "levy" } : { action: "repair", target: r.target! }));
+      actions = recs.map((r) => (r.action === "levy" ? { action: "levy" } : { action: r.action, target: r.target! }));
     } else {
       const pol = rp ? this.resumePolicy! : this.cfg.policy;
       const fn = POLICIES[pol as Exclude<PolicyId, "replay">].fn!;
@@ -189,6 +190,7 @@ export class Sim {
     canonicalJson(e); // integers only (A2)
     applyEvent(this.state, e);
     this.log.push(e);
+    for (const s of this.systems.values()) if (s.onEvent && !this.disabled.has(s.id)) s.onEvent(this.ctx, e);
     return e;
   }
 
@@ -221,6 +223,7 @@ export class Sim {
       enabled: (sys) => !self.disabled.has(sys),
       map: this.map,
       isOpen: (r) => !self.state.routesClosed[r],
+      runtime: {},
       halfLife: (p) => { const d = self.content.byId.predicate.get(p); if (!d) throw new Error(`unknown predicate ${p}`); return d.halfLifeTicks; },
       extraDraws: (sys) => { const n = self.cfg.params?.extraDraws?.[sys] ?? 0; for (let i = 0; i < n; i++) self.stream(sys).u32(); },
     };

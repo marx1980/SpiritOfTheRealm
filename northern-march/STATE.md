@@ -1,9 +1,17 @@
 # STATE
 
-Updated: 31 Oct 2026, end of Phase 2 (Opus 5.5).
+Updated: 31 Oct 2026, end of Phase 3 (Opus 5.5).
 
 ## Built
-**Engine (`engine/`, TypeScript on Node 22, no build step).** `npm test` runs 88 tests, all passing; `npx tsc -p .` is clean.
+**Engine (`engine/`, TypeScript on Node 22, no build step).** `npm test` runs 110 tests, all passing; `npx tsc -p .` is clean.
+
+Phase 3 added:
+- `src/agents/` (pure, reads only beliefs): `model.ts` (Situation, Perceiver), `terms.ts` (expected consequences), `planner.ts` (candidate templates capped by skill, scoring with reasons, commitment, strategic focus), `obedience.ts` (interpretation, margins, obey/adapt/refuse).
+- `src/systems/agents.ts`: wake subscription index, coalescing, reviews of live intentions, execution (letters, marches, detachments, sorties), advice and B3 Recommendations, answer-rate learning.
+- `src/systems/orders.ts`: real interpretation and obedience; execution with the recipient's skill.
+- `src/chronicle.ts`: failure attribution (belief / choice / communication / execution) and breach tracing.
+- `tools/phase3_gate.ts`: G-10/G-11 runner (TUNE and sealed modes).
+- Content v3: objectives, houses, garrisons, Caron's company, threat strength and treasury predicates, agent and battle parameters.
 
 Phase 2 added:
 - `content/march/`: 22 locations, 3 provinces, 27 routes, the Vey with bridge/ford/ferry, 8 characters with tiers and capabilities, predicates with half-lives.

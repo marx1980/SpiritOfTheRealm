@@ -6,7 +6,7 @@ import type { Report } from "../schemas.ts";
 import type { Messenger } from "../world.ts";
 import type { Ctx, System } from "./types.ts";
 import { DAY, HOUR, chr, loc, sorted } from "./types.ts";
-import { best, learn, observe } from "./knowledge.ts";
+import { best, interpretBand, learn, observe } from "./knowledge.ts";
 
 const where = (ctx: Ctx, who: string) => { const p = ctx.s.positions[who]; return "at" in p ? p.at : p.transit.dest; };
 const ref = (m: { kind: string }, id: number) => (m.kind === "order" ? { orderId: id } : { reportId: id });
@@ -75,13 +75,29 @@ function arrive(ctx: Ctx, m: Messenger, cause: number) {
 function deliverReport(ctx: Ctx, m: Messenger, at: string, cause: number) {
   const report = ctx.s.reports[String(m.ref)];
   const d = ctx.emit("ReportDelivered", [cause], [chr(m.recipient), { kind: "report", id: String(m.ref) }], { reportId: m.ref, recipient: m.recipient, at, messengerId: m.id });
-  const holder = ctx.content.byId.character.get(m.recipient)!;
+  readReport(ctx, m.recipient, report, d.id);
+  // At court the dispatch is read out: councillors present hear it too (DESIGN_PIPELINE §5).
+  if (m.recipient === ctx.content.scenario.ruler) {
+    const hearers = sorted(ctx.content.characters.filter((c) => c.reportsTo === m.recipient && c.id !== report.author).map((c) => c.id)
+      .filter((id) => { const p = ctx.s.positions[id]; return "at" in p && p.at === at; }), (x) => x);
+    if (hearers.length) {
+      const sh = ctx.emit("ReportShared", [d.id], [chr(m.recipient), { kind: "report", id: String(report.id) }], { reportId: report.id, at, hearers });
+      for (const h of hearers) readReport(ctx, h, report, sh.id);
+    }
+    ctx.at(ctx.tick, "player:decide", { deliveredEventId: d.id });
+  }
+}
+
+/** A reader weighs a report by their trust in the author and their own skill in its domain. */
+function readReport(ctx: Ctx, reader: string, report: Report, eventId: number) {
+  const holder = ctx.content.byId.character.get(reader)!;
   const trust = holder.relationships.find((r) => r.to === report.author && r.kind === "trust")?.value ?? 500;
   const low = trust < ctx.content.scenario.knowledge.lowTrustBelow;
-  for (const c of report.claims)
-    learn(ctx, m.recipient, { subject: c.subject, predicate: c.predicate, value: c.believedValue, observedAt: c.observedAt, band: low ? downgrade(c.reliabilityBand) : c.reliabilityBand },
-      { kind: "report", eventId: d.id, source: report.author, reportId: report.id }, [d.id]);
-  if (m.recipient === ctx.content.scenario.ruler) ctx.at(ctx.tick, "player:decide", { deliveredEventId: d.id });
+  for (const c of report.claims) {
+    const band = interpretBand(ctx, reader, c.predicate, low ? downgrade(c.reliabilityBand) : c.reliabilityBand);
+    learn(ctx, reader, { subject: c.subject, predicate: c.predicate, value: c.believedValue, observedAt: c.observedAt, band },
+      { kind: "report", eventId, source: report.author, reportId: report.id }, [eventId]);
+  }
 }
 
 function receiveCapturedReport(ctx: Ctx, m: Messenger, report: Report, cause: number) {
@@ -101,7 +117,7 @@ function receiveCapturedOrder(ctx: Ctx, m: Messenger, cause: number) {
 }
 
 /** Compose a report from the author's current beliefs, with the author's bias, and send it. */
-export function compose(ctx: Ctx, author: string, recipient: string, claims: BeliefProposition[], cause: number) {
+export function compose(ctx: Ctx, author: string, recipient: string, claims: BeliefProposition[], cause: number, purpose?: string) {
   const sc = ctx.content.scenario.messenger;
   const ch = ctx.content.byId.character.get(author)!;
   const id = ctx.s.nextReportId;
@@ -115,7 +131,7 @@ export function compose(ctx: Ctx, author: string, recipient: string, claims: Bel
     }
     return c;
   });
-  const report: Report = { id, author, recipient, subject: out[0].subject, claims: out, composedAt: ctx.tick, route: [], ...(bias.length ? { authorBias: bias } : {}) };
+  const report: Report = { id, author, recipient, subject: out[0].subject, claims: out, composedAt: ctx.tick, route: [], ...(bias.length ? { authorBias: bias } : {}), ...(purpose ? { purpose } : {}) };
   const ev = ctx.emit("ReportComposed", [cause], [chr(author), chr(recipient), out[0].subject], { report });
   dispatch(ctx, "report", id, author, recipient, ev.id);
 }
@@ -132,8 +148,9 @@ function inspectAndReport(ctx: Ctx, author: string, cause: number) {
   const p = ctx.s.positions[author];
   if (!("at" in p) || p.at !== ch.location || !ctx.s.fortifications[ch.location] || !ch.reportsTo) return;
   const upd = observe(ctx, author, loc(ch.location), "fortification.condition", cause)!;
-  const b = best(ctx, author, ch.location, "fortification.condition");
-  const claims = [selfClaim(ctx, author, upd.id), ...(b ? [{ ...b, reliabilityBand: b.band as BeliefProposition["reliabilityBand"] }] : [])].map(({ band: _b, ...rest }: any) => rest);
+  const beliefs = [best(ctx, author, ch.location, "fortification.condition"),
+    ...ctx.content.scenario.threat.sites.filter((x) => x.target === ch.location).map((x) => best(ctx, author, x.site, "threat.intensity"))].filter((x) => !!x);
+  const claims = [selfClaim(ctx, author, upd.id), ...beliefs.map((b) => ({ ...b!, reliabilityBand: b!.band as BeliefProposition["reliabilityBand"] }))].map(({ band: _b, ...rest }: any) => rest);
   compose(ctx, author, ch.reportsTo, claims, upd.id);
 }
 
@@ -153,7 +170,7 @@ export const messenger: System = {
     "messenger:urgent": (ctx, { location, cause }) => {
       for (const ch of sorted(ctx.content.characters, (c) => c.id)) if (ch.location === location && ch.reportsTo) { inspectAndReport(ctx, ch.id, cause); break; }
     },
-    "messenger:compose": (ctx, { author, recipient, claims, cause }) => compose(ctx, author, recipient, claims, cause),
+    "messenger:compose": (ctx, { author, recipient, claims, cause, purpose }) => compose(ctx, author, recipient, claims, cause, purpose),
     "messenger:dispatchOrder": (ctx, { orderId, cause }) => {
       const o = ctx.s.orders[String(orderId)].order;
       dispatch(ctx, "order", orderId, o.issuer, o.recipient, cause);

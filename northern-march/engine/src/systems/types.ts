@@ -26,12 +26,16 @@ export interface Ctx {
   isOpen(routeId: string): boolean;
   halfLife(predicate: string): number;
   extraDraws(system: SystemId): void;
+  /** Per-simulation scratch (wake index, pending wakes). Not world state: rebuilt deterministically on replay. */
+  readonly runtime: Record<string, any>;
 }
 
 export interface System {
   id: SystemId;
   start(ctx: Ctx): void;
   handlers: Record<string, (ctx: Ctx, args: Record<string, any>) => void>;
+  /** Called after every event is applied (used by the wake subscription index). Must not emit. */
+  onEvent?: (ctx: Ctx, e: SimEvent) => void;
 }
 
 export const DAY = 86400;

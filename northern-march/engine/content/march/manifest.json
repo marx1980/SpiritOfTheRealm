@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
-  "contentVersion": "march-0.2",
-  "note": "Phase 2 prototype map: three provinces of the Northern March. Placeholder balance."
+  "schemaVersion": 3,
+  "contentVersion": "march-0.3",
+  "note": "Phase 3: agents (objectives, houses, garrisons). Placeholder balance."
 }

@@ -91,3 +91,18 @@ export class GateLog {
     appendFileSync(this.path, JSON.stringify(row) + "\n");
   }
 }
+
+/** G-11(b): ratio of two rates (bad after wrong beliefs / bad after correct beliefs), bootstrapped over seeds
+ *  (decisions within a seed are not independent, so seeds are the resampling unit). */
+export function clusteredRateRatio(perSeed: { badWrong: number; wrong: number; badRight: number; right: number }[], B = 2000, seed = 0) {
+  const ratio = (xs: typeof perSeed) => {
+    const s = xs.reduce((a, x) => ({ bw: a.bw + x.badWrong, w: a.w + x.wrong, br: a.br + x.badRight, r: a.r + x.right }), { bw: 0, w: 0, br: 0, r: 0 });
+    const pw = s.w ? s.bw / s.w : 0, pr = s.r ? s.br / s.r : 0;
+    return pr > 0 ? pw / pr : pw > 0 ? Infinity : 1;
+  };
+  const r = Rng.fromSeed(seed, "gate:cluster-bootstrap");
+  const xs: number[] = [];
+  for (let b = 0; b < B; b++) xs.push(ratio(Array.from({ length: perSeed.length }, () => perSeed[r.int(0, perSeed.length - 1)])));
+  xs.sort((a, b) => a - b);
+  return { ratio: ratio(perSeed), ci: [xs[Math.floor(0.025 * B)], xs[Math.floor(0.975 * B)]] as [number, number] };
+}

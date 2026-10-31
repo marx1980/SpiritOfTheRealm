@@ -21,7 +21,7 @@ Each epic lists its phase, scope and acceptance criterion ("Done when"). Detaile
 - [ ] Scripted player policies: passive, delegating, aggressive done; follow-best-adviser, follow-worst-adviser wait for Phase 5
 - [x] Invariant test harness run on every seed in CI
 - [x] Content-as-data loader and validator
-- [ ] Frozen schemas: SimEvent, StructuredOrder, Recommendation/Reason, BeliefProposition, Report done; DecisionTrace in Phase 3
+- [x] Frozen schemas: SimEvent, StructuredOrder, Recommendation/Reason, BeliefProposition, Report, DecisionTrace
 - [x] Capped trait vocabulary (14) as data
 - [x] `STATE.md` and `DECISIONS.md` maintained per session
 
@@ -68,14 +68,14 @@ Done when: two NPCs hold conflicting beliefs about one fact, and no module reads
 Done when: an order's lifecycle is fully visible in the inspector, including failure branches.
 
 ## P0.05 Core characters and autonomous decisions — Phase 3, Core
-- [ ] Anna, Elara, Caron, Varos, Bren, Oren, Mara, Selene
-- [ ] Cast sheet: role, House, objectives and traits for each (Bren, Oren, Mara, Selene roles decided 31 Oct, see IMPLEMENTATION_PLAN §G)
-- [ ] Capabilities by domain, limitations, knowledge and relationships
-- [ ] Wake subscription index and trigger coalescing
-- [ ] Candidate actions evaluated from beliefs only, deterministic tie-break
-- [ ] Intention commitment and hysteresis
-- [ ] Order interpretation and obedience decision (obey / adapt / refuse)
-- [ ] DecisionTrace
+- [ ] Anna, Elara, Caron, Varos, Bren, Oren, Mara, Selene (all eight in content with roles, houses and objectives; Mara has nothing to do until Phase 6)
+- [x] Cast sheet: role, House, objectives and traits for each (`content/march/characters.json`)
+- [x] Capabilities by domain (plus experience), knowledge and relationships
+- [x] Wake subscription index and trigger coalescing
+- [x] Candidate actions evaluated from beliefs only, deterministic tie-break
+- [x] Intention commitment and hysteresis
+- [x] Order interpretation and obedience decision (obey / adapt / refuse)
+- [x] DecisionTrace
 
 Done when: Elara and Caron reach different, explainable plans from the same evidence, and no agent dithers between near-equal plans.
 

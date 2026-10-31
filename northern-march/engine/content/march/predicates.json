@@ -3,36 +3,72 @@
     "id": "fortification.condition",
     "subjectKind": "location",
     "halfLifeTicks": 1728000,
-    "domain": "military"
+    "domain": "military",
+    "wakeSignificance": 2,
+    "materialDelta": 5000
   },
   {
     "id": "character.location",
     "subjectKind": "character",
     "halfLifeTicks": 259200,
-    "domain": "info"
+    "domain": "info",
+    "wakeSignificance": 1,
+    "materialDelta": 1
   },
   {
     "id": "character.seat",
     "subjectKind": "character",
     "halfLifeTicks": 0,
-    "domain": "info"
+    "domain": "info",
+    "wakeSignificance": 1,
+    "materialDelta": 1
   },
   {
     "id": "order.status",
     "subjectKind": "order",
     "halfLifeTicks": 2592000,
-    "domain": "political"
+    "domain": "political",
+    "wakeSignificance": 1,
+    "materialDelta": 1
   },
   {
     "id": "order.content",
     "subjectKind": "order",
     "halfLifeTicks": 0,
-    "domain": "political"
+    "domain": "political",
+    "wakeSignificance": 2,
+    "materialDelta": 1
   },
   {
     "id": "report.route",
     "subjectKind": "report",
     "halfLifeTicks": 0,
-    "domain": "info"
+    "domain": "info",
+    "wakeSignificance": 1,
+    "materialDelta": 1
+  },
+  {
+    "id": "threat.intensity",
+    "subjectKind": "location",
+    "halfLifeTicks": 604800,
+    "domain": "military",
+    "wakeSignificance": 3,
+    "materialDelta": 150
+  },
+  {
+    "id": "treasury.balance",
+    "subjectKind": "character",
+    "halfLifeTicks": 864000,
+    "domain": "economic",
+    "wakeSignificance": 1,
+    "materialDelta": 20000
+  },
+  {
+    "id": "request.reinforce",
+    "subjectKind": "location",
+    "halfLifeTicks": 864000,
+    "domain": "military",
+    "wakeSignificance": 2,
+    "materialDelta": 1
   }
 ]

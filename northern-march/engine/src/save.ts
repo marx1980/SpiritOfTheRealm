@@ -6,7 +6,7 @@ import type { SystemId } from "./events.ts";
 
 export const SAVE_SCHEMA_VERSION = 1;
 
-export interface InputRecord { decision: number; tick: number; action: "repair" | "levy"; target: string | null }
+export interface InputRecord { decision: number; tick: number; action: "repair" | "levy" | "advance"; target: string | null }
 export interface SaveFile {
   schemaVersion: number; contentVersion: string; contentHash: string;
   seed: number; policy: PolicyId; params: SimParams; ablate: SystemId[];

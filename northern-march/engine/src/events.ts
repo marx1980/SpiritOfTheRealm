@@ -1,10 +1,10 @@
 // B1: event envelope and the registry of event types. Every type belongs to one system (for ablation),
 // one domain and a significance layer, and is either a root (exogenous / player input / test script) or not.
 
-export const EVENT_SCHEMA_VERSION = 2; // v2 (Phase 2): belief, report and order payloads follow B2/B5
+export const EVENT_SCHEMA_VERSION = 3; // v3 (Phase 3): agents, DecisionTrace, obedience payloads; v2 (Phase 2): B2/B5 payloads
 
 export type Domain = "military" | "economic" | "political" | "social" | "environment" | "magic" | "info";
-export type SystemId = "core" | "economy" | "weather" | "threat" | "movement" | "knowledge" | "messenger" | "orders" | "player" | "advice";
+export type SystemId = "core" | "economy" | "weather" | "threat" | "movement" | "knowledge" | "messenger" | "orders" | "player" | "advice" | "agents" | "battle";
 export const ABLATABLE: readonly SystemId[] = ["economy", "weather", "threat", "messenger"];
 
 export interface SubjectRef {
@@ -44,6 +44,7 @@ export const EVENT_TYPES: Readonly<Record<string, EventTypeDef>> = Object.freeze
   ThreatBegan: T("threat", "military", 3, true),
   RaidDamage: T("threat", "military", 2),
   ThreatEnded: T("threat", "military", 2),
+  ThreatScripted: T("threat", "military", 3, true), // test/scenario script only
   // movement
   TravelScripted: T("movement", "info", 1, true), // test/scenario script only
   Departed: T("movement", "info", 1),
@@ -63,6 +64,7 @@ export const EVENT_TYPES: Readonly<Record<string, EventTypeDef>> = Object.freeze
   ReportIntercepted: T("messenger", "info", 2),
   InterceptedReportReceived: T("messenger", "info", 2),
   ReportUndeliverable: T("messenger", "info", 1),
+  ReportShared: T("messenger", "info", 1), // read out to the councillors present
   MessengerRedirected: T("messenger", "info", 0),
   OrderDispatched: T("messenger", "political", 1),
   OrderLost: T("messenger", "political", 2),
@@ -86,5 +88,15 @@ export const EVENT_TYPES: Readonly<Record<string, EventTypeDef>> = Object.freeze
   LevyRaised: T("orders", "economic", 2),
   // player and advice
   PlayerInput: T("player", "political", 3, true),
-  RecommendationMade: T("advice", "political", 1), // B3 contract; produced from Phase 5
+  RecommendationMade: T("advice", "political", 1), // B3: advisers prepare advice when court business arrives
+  // agents (Phase 3)
+  AgentWoke: T("agents", "info", 0),
+  DecisionMade: T("agents", "political", 1),
+  ExperienceGained: T("agents", "info", 0),
+  ResponseAssessed: T("agents", "info", 0), // was a request answered? (agents learn whom they can count on)
+  SortieLaunched: T("battle", "military", 2),
+  SortieResolved: T("battle", "military", 3),
+  LossesTaken: T("battle", "military", 2),
+  DetachmentSent: T("agents", "military", 1),
+  DetachmentArrived: T("agents", "military", 1),
 });

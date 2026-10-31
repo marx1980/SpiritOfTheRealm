@@ -12,8 +12,10 @@ export function learn(ctx: Ctx, holder: string, claim: Claim, evidence: Evidence
   const store = ctx.s.beliefs[holder] ?? {};
   const incoming: BeliefProposition = { id: 0, subject: claim.subject, predicate: claim.predicate, believedValue: claim.value, evidenceRefs: [evidence],
     observedOrLearnedAt: claim.observedAt, observedAt: claim.observedAt, learnedAt: ctx.tick, reliabilityBand: claim.band };
+  const prev = best(ctx, holder, claim.subject.id, claim.predicate);
   const { upsert, dropIds, reason } = integrate(store, incoming, { now: ctx.tick, halfLife: ctx.halfLife(claim.predicate), nextId: ctx.s.nextPropId });
-  const upd = ctx.emit("BeliefUpdated", causedBy, [chr(holder), claim.subject], { holder, prop: upsert });
+  const material = isMaterial(ctx, claim.predicate, prev?.believedValue, claim.value);
+  const upd = ctx.emit("BeliefUpdated", causedBy, [chr(holder), claim.subject], { holder, prop: upsert, material });
   if (dropIds.length) ctx.emit("BeliefResolved", [upd.id], [chr(holder), claim.subject], { holder, kept: upsert.id, dropped: dropIds, reason });
   const ch = ctx.content.byId.character.get(holder)!;
   const cap = ctx.content.scenario.knowledge.beliefCaps[ch.tier];
@@ -22,6 +24,27 @@ export function learn(ctx: Ctx, holder: string, claim: Claim, evidence: Evidence
   });
   if (plan.length) ctx.emit("BeliefEvicted", [upd.id], [chr(holder)], { holder, propIds: plan.map((x) => x.id), scores: plan.map((x) => x.score) });
   return upd;
+}
+
+/** A change matters if there was no belief, a different non-numeric value, or a numeric value in another band of
+ *  width `materialDelta` (so slow drift wakes an agent when it crosses a band edge, not every day). */
+function isMaterial(ctx: Ctx, predicate: string, before: unknown, after: unknown) {
+  if (before === undefined) return true;
+  const d = ctx.content.byId.predicate.get(predicate)!.materialDelta;
+  if (typeof before === "number" && typeof after === "number") return Math.floor(before / d) !== Math.floor(after / d);
+  return JSON.stringify(before) !== JSON.stringify(after);
+}
+
+/** Effective skill: content capability plus experience gained in play. */
+export function skill(ctx: Ctx, who: string, domain: string) {
+  return Math.min(1000, (ctx.content.byId.character.get(who)?.capabilities[domain] ?? 0) + (ctx.s.agents[who]?.experience[domain] ?? 0));
+}
+
+/** Interpretation (ARCHITECTURE §20.7): low skill in the domain treats a reading as more reliable than it is. */
+export function interpretBand(ctx: Ctx, who: string, predicate: string, band: Band): Band {
+  const domain = CAPABILITY_FOR[predicate];
+  if (!domain || skill(ctx, who, domain) >= 500 || band === "certain") return band;
+  return (["doubtful", "uncertain", "probable", "certain"] as const)[["doubtful", "uncertain", "probable", "certain"].indexOf(band) + 1];
 }
 
 /** 1000: about the holder, where they are, their superior or someone they have a relationship with; 600: same province; else 300. */
@@ -35,28 +58,42 @@ function relevance(ctx: Ctx, holder: string, subj: SubjectRef): number {
   return subjLoc && ctx.content.byId.location.get(subjLoc)?.province === prov ? 600 : 300;
 }
 
-const CAPABILITY_FOR: Record<string, string> = { "fortification.condition": "engineering", "character.location": "intelligence" };
+export const CAPABILITY_FOR: Record<string, string> = { "fortification.condition": "engineering", "character.location": "intelligence", "threat.intensity": "intelligence", "treasury.balance": "administration" };
 
 /** A character looks at something where they are. Quality = capability minus conditions; error shrinks with quality. */
 export function observe(ctx: Ctx, observer: string, subject: SubjectRef, predicate: string, cause: number) {
   const k = ctx.content.scenario.knowledge;
-  const ch = ctx.content.byId.character.get(observer)!;
   let value: unknown, quality: number;
   if (predicate === "fortification.condition") {
     const truth = ctx.s.fortifications[subject.id].conditionMilli;
     const storm = ctx.s.lastStorm[subject.id];
-    quality = Math.max(0, (ch.capabilities[CAPABILITY_FOR[predicate]] ?? 0) - (storm !== undefined && ctx.tick - storm < 86400 ? k.stormPenaltyPermille : 0));
+    quality = Math.max(0, skill(ctx, observer, CAPABILITY_FOR[predicate]) - (storm !== undefined && ctx.tick - storm < 86400 ? k.stormPenaltyPermille : 0));
     const maxErr = (1000 - quality) * k.maxErrorMilliPerMissingPermille;
-    const r = ctx.keyed(`knowledge:observe:${observer}:${ctx.tick}:${subject.id}`);
+    const r = ctx.keyed(`knowledge:observe:${observer}:${ctx.tick}:${subject.id}:${predicate}`);
     value = Math.max(0, Math.min(100000, truth + r.int(-maxErr, maxErr)));
+  } else if (predicate === "threat.intensity") {
+    // estimating raiders' strength from what they did: errors shrink with intelligence skill
+    const truth = ctx.s.threats[subject.id]?.intensityPermille ?? 0;
+    quality = skill(ctx, observer, "intelligence");
+    const maxErr = Math.floor((1000 - quality) / 2);
+    const r = ctx.keyed(`knowledge:observe:${observer}:${ctx.tick}:${subject.id}:${predicate}`);
+    value = truth === 0 ? 0 : Math.max(50, Math.min(1000, truth + r.int(-maxErr, maxErr)));
+  } else if (predicate === "treasury.balance") {
+    const truth = ctx.s.treasuryMilli[subject.id] ?? 0;
+    quality = skill(ctx, observer, "administration");
+    const maxErr = (1000 - quality) * 20;
+    const r = ctx.keyed(`knowledge:observe:${observer}:${ctx.tick}:${subject.id}:${predicate}`);
+    value = truth + r.int(-maxErr, maxErr);
   } else if (predicate === "character.location") {
     const pos = ctx.s.positions[subject.id];
     if (!("at" in pos)) return null;
     value = pos.at; quality = 1000; // seeing someone in the same place is certain
   } else throw new Error(`cannot observe ${predicate}`);
-  const band = bandFromQuality(quality, k.bands);
+  const band = interpretBand(ctx, observer, predicate, bandFromQuality(quality, k.bands));
   const obs = ctx.emit("Observed", [cause], [chr(observer), subject], { observer, subject, predicate, value, qualityPermille: quality, band });
-  return learn(ctx, observer, { subject, predicate, value, observedAt: ctx.tick, band }, { kind: "observation", eventId: obs.id, source: observer }, [obs.id]);
+  const here = ctx.s.positions[observer];
+  const local = subject.kind === "location" && "at" in here && here.at === subject.id;
+  return learn(ctx, observer, { subject, predicate, value, observedAt: ctx.tick, band }, { kind: "observation", eventId: obs.id, source: observer, ...(local ? { local: true } : {}) }, [obs.id]);
 }
 
 /** Best current belief (highest effective band, then freshest, then lowest id). */

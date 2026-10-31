@@ -4,6 +4,59 @@ Newest first. Numbers come from `phase0/results/` (files named in each entry). A
 
 ---
 
+## D-012 (Phase 3) Event-driven BDI-lite agents: built
+
+**Built (110 tests pass):**
+- Agents with objectives (10 data-defined kinds), houses, capped traits with a commitment modifier, capabilities plus experience, relationships, and a learned "answer rate" per person they ask for help.
+- Wake subscription index keyed by subject: an agent wakes only when one of its own beliefs changes materially (crosses a band of the predicate's `materialDelta`) on a subject it cares about; same-tick triggers coalesce; a daily review runs only while it pursues a live intention. Physical events reach agents only through observation (being there) or messages.
+- Layered planning: strategic focus on significance-3 wakes; operational plans from role templates (castellan, captain, adviser), capped by planning skill (3-7 options); scoring through objectives, risk appetite, capability, relationships, orders in force and cost, every term recorded as a Reason; commitment margin scaled by traits; deterministic tie-break.
+- Obedience: interpretation (clarity x skill), willingness (obey vs adapt vs refuse, margins from temperament, loyalty, legitimacy, discretion and changed circumstances), local plan and execution with the recipient's own skill (a skilled engineer repairs faster and closer to target). No random rolls.
+- Execution through people and physical systems: request letters, marches with troops, detachments, sorties (men x skill against raider strength), losses; raids are reduced by defenders.
+- Advice: dispatches delivered at court are read out to the councillors present (`ReportShared`); each prepares a B3 Recommendation from their own beliefs.
+- DecisionTrace (B4) on every consequential choice (`DecisionMade`), validated.
+- Chronicle pass (derived data, the log is untouched): failure origin per bad outcome; breaches traced to the failed agent decision or to the ruler.
+
+**Same evidence, different plans (test):** with identical beliefs (Northwatch at 60%, raiders at 700), Elara advises repairing Northwatch (protecting the realm outweighs the cost; a sortie is too risky for her), Caron advises a sortie (renown outweighs leaving his post and the expected losses), Oren advises sending the captain (repairs would drain the treasury), Selene advises repair (sound works).
+
+**Design decisions found while testing:**
+1. *Dithering through a threshold.* Bren flipped between "ask for repairs" and "ask for reinforcement" because the repair option is only generated below 70% and his readings wobble around 70. A feasible current intention now always stays on the table.
+2. *Ignoring the wall underfoot.* An 8-day-old "probable" report outranked Caron's own daily "uncertain" look at the wall he stood on. First-hand observation of one's own surroundings now resolves contradictions at uncertain or better.
+3. *Advice by alphabet.* Oren's objectives did not touch the options, so ties broke by name. `crown_standing` now values the realm's fortifications at its own (lower) priority.
+4. *Agents learn whom they can count on.* Ten days after a request, the asker checks whether help came and updates its answer rate (30% weight). Under a passive ruler Bren learns that asking is pointless.
+5. *Calibration.* Expected storms (from the known climate) are part of every agent's baseline; a repair completing within the horizon now counts in full (it was scaled down by the remaining fraction, a bug).
+6. *Low-skill overconfidence.* Below 500 in the relevant domain, an observer or reader treats a reading one band more reliable than it is (ARCHITECTURE §20.7).
+7. *Who answers repair orders.* Unchanged from Phase 2; captains answer "advance".
+
+**How the G-10/G-11 measurement was reached (TUNE seeds, every run in `engine/results/phase3_tune.jsonl`):**
+- v1: bad = the fort lost 15+ points or was breached within 20 days. About 70% of decisions were "bad", almost all "execution": it judged situations (a heavy raid makes every option lose 15 points), not decisions. Rejected.
+- v2: bad = surprise (more than 10 points worse than the decider expected) or regret (with the truth another option was 10+ points better); only new choices judged; decisive beliefs only. Exposed systematically optimistic expectations (median 17-20 points), leading to decisions 4-5 above.
+- v3: with calibration, storms still dominated (one storm does 5-25 points). Luck adjustment added: storm damage beyond its climatic expectation is not counted against the decision; the raw ratio is reported alongside.
+- v4: breaches without a failed agent decision are traced to the ruler (told and gave no order: choice; never told or order lost: communication; could not be carried out: execution). G-10 had failed for passive without this.
+- G-11(b) did not move with any of these: under passive and delegating rulers the ratio stayed near 1. No change was made to pass it.
+
+**Sealed gate (block 20000, pre-registered in D-011):** {{GATE}}
+
+**Regressions:** {{REGRESSION}}
+
+---
+
+## D-011 (Phase 3) Pre-registration for sealed block 20000-20999 (G-10, G-11)
+
+Written before the gate run. Content `march-0.3`, calibration hash `a3cbe77f9cae` (full content + parameters). Policies: passive, delegating, aggressive; 1,000 seeds each, 240 days. Evaluated by `engine/tools/phase3_gate.ts gate 20000 1000` and logged to `engine/results/gate_log.jsonl`. One evaluation; the result stands.
+
+Definitions fixed on TUNE seeds 1-400 (logged in `engine/results/phase3_tune.jsonl`; see D-012 for how they were reached):
+- Judged decisions: each new choice (an intention adopted; an order answered). Re-affirmations are not judged.
+- Bad outcome of a decision: more than 10 points worse than the decider expected (surprise), or with the truth another option was more than 10 points better (regret). Losses = fort condition lost + men lost + breach penalty, both sides. **Luck adjustment:** storm damage beyond its climatic expectation is not counted against the decision. The raw (unadjusted) ratio is reported alongside.
+- Breaches are bad outcomes too, traced to the failed agent decision, else to the ruler (order lost: communication; order could not be carried out: execution; refused: choice; told and gave no order: choice; never told: communication).
+- Wrong or stale: a decisive belief (about the decision's fort or the threats near it) off by more than 5 points (condition), 150 (threat strength) or 20 coin (treasury), or older than its predicate's half-life.
+- G-10: attributed / (bad decisions + breaches); PASS if point >= 95% and Wilson lower bound >= 90%, with at least 300 outcomes.
+- G-11: (a) wrong-or-stale share in [5%, 35%] (three-state); (b) bad rate after wrong-or-stale / after correct >= 1.5 with seed-clustered bootstrap lower bound > 1.0. G-11 per policy = worst of (a) and (b).
+- Policy rule C0.5 (groups of policies differing on < 10% of seeds count once).
+
+TUNE expectation (seeds 201-400): G-10 PASS for all three; G-11(a) PASS for all three; G-11(b) FAIL for passive (0.83) and delegating (1.12), PASS for aggressive (2.41). So the expected verdict is G-10 PASS, G-11 FAIL.
+
+---
+
 ## D-010 (Phase 2) Map, beliefs, reports and order contracts: built
 
 **Built:** 22 locations in three provinces (Crownlands, Northmarch, Eastmarch) with 27 routes, terrain, the river Vey (bridge at Greybridge, ford at Veyford, ferry Saltmere-Marchend) and travel times for rider, foot and army; character positions and movement; observation with quality from capability and conditions; B5 belief propositions with evidence, bands, lazy staleness, kept contradictions and capped stores with logged eviction; reports with author bias, carried leg by leg; loss, interception, redirection and undeliverable messages; B2 StructuredOrder with every lifecycle step as its own event; B3 Recommendation and B5 Report frozen with validators. 88 tests pass.

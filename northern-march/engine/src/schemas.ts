@@ -63,6 +63,28 @@ export interface Recommendation {
 export interface Report {
   id: number; author: string; recipient: string; subject: SubjectRef; claims: BeliefProposition[];
   composedAt: number; dispatchedAt?: number; route: string[]; carrier?: string; deliveredAt?: number; authorBias?: string[];
+  purpose?: string; // addition (Phase 3): e.g. "request_reinforcement"
+}
+
+export const DECISION_TRACE_SCHEMA_VERSION = 1;
+export interface ActionRef { kind: string; target?: string }
+/** B4. Additions (Phase 3): kind, subject/predicate/believedValue on consulted beliefs, margin. */
+export interface DecisionTrace {
+  schemaVersion: number;
+  agent: string;
+  tick: number;
+  trigger: number;
+  layer: "strategic" | "operational" | "tactical" | "immediate";
+  kind: "plan" | "advise" | "obedience" | "focus";
+  beliefsConsulted: { ref: { kind: "belief"; id: string }; ageTicks: number; reliability: "certain" | "probable" | "uncertain" | "doubtful";
+    subject?: SubjectRef; predicate?: string; believedValue?: unknown }[];
+  objectivesActive: { kind: "objective"; id: string }[];
+  ordersInForce: number[];
+  candidates: { action: ActionRef; score: number; contributions: Reason[] }[];
+  selected: ActionRef;
+  keptCurrentIntention: boolean;
+  margin?: number;
+  outcome?: { eventId: number; failureOrigin?: "belief" | "choice" | "communication" | "execution" };
 }
 
 // ---- validators: return a list of problems (empty = valid) ------------------------------------------------
@@ -101,7 +123,7 @@ export function validateProposition(x: unknown): V {
   int(v, x, "id"); ref(v, x.subject, "subject"); str(v, x, "predicate");
   if (!("believedValue" in x)) v.push("believedValue missing");
   arr(v, x, "evidenceRefs", (e, i) => {
-    if (!isObj(e) || !["observation", "report", "intercepted", "scenario"].includes(e.kind as string) || !Number.isSafeInteger(e.eventId) || typeof e.source !== "string") v.push(`evidenceRefs[${i}]`);
+    if (!isObj(e) || !["observation", "report", "intercepted", "scenario"].includes(e.kind as string) || !Number.isSafeInteger(e.eventId) || typeof e.source !== "string" || (e.local !== undefined && typeof e.local !== "boolean")) v.push(`evidenceRefs[${i}]`);
   });
   int(v, x, "observedOrLearnedAt"); oneOf(v, x, "reliabilityBand", ["certain", "probable", "uncertain", "doubtful"]);
   return v;
@@ -114,6 +136,28 @@ export function validateReport(x: unknown): V {
   arr(v, x, "claims", (c, i) => { for (const p of validateProposition(c)) v.push(`claims[${i}].${p}`); });
   int(v, x, "composedAt"); int(v, x, "dispatchedAt", true); arr(v, x, "route"); str(v, x, "carrier", true); int(v, x, "deliveredAt", true);
   arr(v, x, "authorBias", undefined, true);
+  return v;
+}
+
+export function validateDecisionTrace(x: unknown): V {
+  const v: V = [];
+  if (!isObj(x)) return ["trace must be an object"];
+  int(v, x, "schemaVersion"); str(v, x, "agent"); int(v, x, "tick"); int(v, x, "trigger");
+  oneOf(v, x, "layer", ["strategic", "operational", "tactical", "immediate"]); oneOf(v, x, "kind", ["plan", "advise", "obedience", "focus"]);
+  arr(v, x, "beliefsConsulted", (b, i) => {
+    if (!isObj(b) || !Number.isSafeInteger(b.ageTicks) || !["certain", "probable", "uncertain", "doubtful"].includes(b.reliability as string)) v.push(`beliefsConsulted[${i}]`);
+    else ref(v, b.ref, `beliefsConsulted[${i}].ref`);
+  });
+  arr(v, x, "objectivesActive", (o, i) => ref(v, o, `objectivesActive[${i}]`));
+  arr(v, x, "ordersInForce", (o, i) => { if (!Number.isSafeInteger(o)) v.push(`ordersInForce[${i}]`); });
+  arr(v, x, "candidates", (c, i) => {
+    if (!isObj(c) || !isObj(c.action) || typeof (c.action as { kind: unknown }).kind !== "string" || !Number.isSafeInteger(c.score) || !Array.isArray(c.contributions)) { v.push(`candidates[${i}]`); return; }
+    (c.contributions as unknown[]).forEach((r, j) => { if (!isObj(r) || !REASON_KINDS.includes(r.kind as never) || !Number.isSafeInteger(r.weight)) v.push(`candidates[${i}].contributions[${j}]`); });
+  });
+  if (!isObj(x.selected) || typeof x.selected.kind !== "string") v.push("selected must be an action");
+  if (typeof x.keptCurrentIntention !== "boolean") v.push("keptCurrentIntention must be boolean");
+  if (Array.isArray(x.candidates) && isObj(x.selected) && !(x.candidates as { action: unknown }[]).some((c) => JSON.stringify(c.action) === JSON.stringify(x.selected)))
+    v.push("selected is not among the candidates");
   return v;
 }
 

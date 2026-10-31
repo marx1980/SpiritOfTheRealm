@@ -89,7 +89,7 @@
       30,
       90
     ],
-    "raidDamageMilliAtFullIntensity": 1500
+    "raidDamageMilliAtFullIntensity": 2000
   },
   "messenger": {
     "reportEveryDays": 10,
@@ -123,5 +123,57 @@
   "scripts": [],
   "endStates": {
     "fortificationBreachedBelowMilli": 30000
+  },
+  "agents": {
+    "reviewDays": {
+      "strategic": 7,
+      "operational": 1
+    },
+    "commitment": {
+      "baseMarginPermille": 150,
+      "absFloorMilli": 1000
+    },
+    "obedience": {
+      "adaptMarginMilli": 3000,
+      "refuseMarginMilli": 9000,
+      "changedCircumstancesPermille": 500,
+      "dutyMilli": 4000,
+      "legitimacyRulerPermille": 900
+    },
+    "planning": {
+      "minCandidates": 3,
+      "maxCandidates": 7,
+      "skillPerExtraCandidate": 250
+    },
+    "horizonDays": 20,
+    "quietDaysToEnd": 3,
+    "wakeBudgetPerDay": {
+      "A": 20,
+      "B": 3,
+      "C": 0
+    },
+    "values": {
+      "manMilli": 150,
+      "renownMilli": 15000,
+      "postMilli": 8000,
+      "breachPenaltyMilli": 30000,
+      "goodConditionMilli": 70000
+    },
+    "experience": {
+      "perTaskPermille": 20,
+      "capPermille": 200
+    },
+    "requestAssessDays": 10,
+    "answerLearningPermille": 300
+  },
+  "battle": {
+    "sortie": {
+      "skillBasePermille": 500,
+      "intensityFactorPermille": 400,
+      "lossOnSuccessPermille": 50,
+      "lossOnFailurePermille": 300,
+      "hours": 12
+    },
+    "raidMitigationPerManPermille": 8
   }
 }

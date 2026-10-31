@@ -7,7 +7,7 @@ export type EffectiveBand = Band | "stale";
 /** Index = reliability; higher is better. */
 export const BANDS: readonly EffectiveBand[] = ["stale", "doubtful", "uncertain", "probable", "certain"];
 
-export interface Evidence { kind: "observation" | "report" | "intercepted" | "scenario"; eventId: number; source: string; reportId?: number }
+export interface Evidence { kind: "observation" | "report" | "intercepted" | "scenario"; eventId: number; source: string; reportId?: number; local?: boolean }
 export interface BeliefProposition<T = unknown> {
   id: number;
   subject: SubjectRef;
@@ -43,7 +43,8 @@ const MAX_EVIDENCE = 5;
  * Integrate new evidence into one holder's store.
  * - Same subject, predicate and value: merge into that proposition (evidence appended, freshest time, better band).
  * - Different value: a new proposition; the old one is KEPT (contradictions coexist), unless
- *   (a) the new evidence is first-hand observation at probable or better: it resolves every other value, or
+ *   (a) the new evidence is first-hand observation at probable or better (uncertain or better if the observer stands
+ *       at the place observed): it resolves every other value, or
  *   (b) it comes from the same source with a newer observation: that source has updated its own account.
  */
 export function integrate(store: Record<string, BeliefProposition>, incoming: BeliefProposition, o: { now: number; halfLife: number; nextId: number }) {
@@ -61,7 +62,10 @@ export function integrate(store: Record<string, BeliefProposition>, incoming: Be
   } else {
     upsert = { ...incoming, id: o.nextId, learnedAt: o.now, observedOrLearnedAt: incoming.observedAt };
   }
-  const firsthand = incoming.evidenceRefs.some((e) => e.kind === "observation") && BANDS.indexOf(incoming.reliabilityBand) >= BANDS.indexOf("probable");
+  // First-hand observation resolves contradictions at probable or better; when it is of the observer's own
+  // surroundings (they are standing there), at uncertain or better.
+  const obs = incoming.evidenceRefs.find((e) => e.kind === "observation");
+  const firsthand = !!obs && BANDS.indexOf(incoming.reliabilityBand) >= BANDS.indexOf(obs.local ? "uncertain" : "probable");
   const src = sourceOf(incoming);
   const dropIds = group.filter((p) => p.id !== upsert.id && !same(p.believedValue, incoming.believedValue))
     .filter((p) => firsthand || (sourceOf(p) === src && p.observedAt <= incoming.observedAt))

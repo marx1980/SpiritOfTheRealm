@@ -3,7 +3,10 @@
 import { readFileSync } from "node:fs";
 import { hashOf } from "./canonical.ts";
 
-export const CONTENT_SCHEMA_VERSION = 2;
+export const CONTENT_SCHEMA_VERSION = 3;
+export const OBJECTIVE_KINDS = ["hold_fortification", "hold_post", "protect_realm", "sound_works", "preserve_treasury", "preserve_forces",
+  "win_renown", "crown_standing", "house_standing", "protect_community"] as const;
+export type ObjectiveKind = (typeof OBJECTIVE_KINDS)[number];
 export const TRAIT_VOCABULARY = ["cautious", "aggressive", "proud", "loyal", "ambitious", "pragmatic", "zealous",
   "greedy", "honest", "vengeful", "compassionate", "stubborn", "curious", "patient"] as const;
 export const MODES = ["rider", "foot", "army"] as const;
@@ -12,18 +15,33 @@ export const TIERS = ["A", "B", "C"] as const;
 
 export interface SubjectRefC { kind: "character" | "location" | "report" | "order"; id: string }
 export interface Trait { id: string; riskPermille: number; obedienceWhenDisagreeingPermille: number; houseVsCrownPermille: number;
-  lossResponsePermille: number; badNewsReportingPermille: number }
+  lossResponsePermille: number; badNewsReportingPermille: number; commitmentPermille: number }
 export interface Province { id: string; name: string; seat: string }
 export interface River { id: string; name: string }
-export interface Location { id: string; name: string; province: string; kind: string; terrain: string; exposurePermille: number; fortification?: { conditionMilli: number } }
+export interface Location { id: string; name: string; province: string; kind: string; terrain: string; exposurePermille: number; fortification?: { conditionMilli: number; garrison: number } }
 export interface Route { id: string; from: string; to: string; km: number; terrain: string; crossing?: { river: string; kind: string } }
-export interface Predicate { id: string; subjectKind: SubjectRefC["kind"]; halfLifeTicks: number; domain: string }
+export interface Predicate { id: string; subjectKind: SubjectRefC["kind"]; halfLifeTicks: number; domain: string; wakeSignificance: 0 | 1 | 2 | 3; materialDelta: number }
 export interface Relationship { to: string; kind: string; value: number }
+export interface ObjectiveDef { id: string; kind: "role" | "personal" | "political" | "situational"; objective: ObjectiveKind; priorityPermille: number; target?: string; reserveMilli?: number }
 export interface Character { id: string; name: string; role: string; location: string; tier: (typeof TIERS)[number]; traits: string[]; reportsTo?: string;
-  capabilities: Record<string, number>; relationships: Relationship[] }
+  capabilities: Record<string, number>; relationships: Relationship[]; house: string; objectives: ObjectiveDef[]; troops?: number }
 export type Script =
   | { day: number; kind: "travel"; who: string; to: string; mode: Mode; secret?: boolean }
-  | { day: number; kind: "order"; from: string; to: string; intent: string; objective: SubjectRefC; supersedesPrevious?: boolean };
+  | { day: number; kind: "order"; from: string; to: string; intent: string; objective: SubjectRefC; supersedesPrevious?: boolean }
+  | { day: number; kind: "threat"; site: string; intensityPermille: number; durationDays: number };
+export interface AgentParams {
+  reviewDays: { strategic: number; operational: number };
+  commitment: { baseMarginPermille: number; absFloorMilli: number };
+  obedience: { adaptMarginMilli: number; refuseMarginMilli: number; changedCircumstancesPermille: number; dutyMilli: number; legitimacyRulerPermille: number };
+  planning: { minCandidates: number; maxCandidates: number; skillPerExtraCandidate: number };
+  horizonDays: number; quietDaysToEnd: number; requestAssessDays: number; answerLearningPermille: number; wakeBudgetPerDay: Record<(typeof TIERS)[number], number>;
+  values: { manMilli: number; renownMilli: number; postMilli: number; breachPenaltyMilli: number; goodConditionMilli: number };
+  experience: { perTaskPermille: number; capPermille: number };
+}
+export interface BattleParams {
+  sortie: { skillBasePermille: number; intensityFactorPermille: number; lossOnSuccessPermille: number; lossOnFailurePermille: number; hours: number };
+  raidMitigationPerManPermille: number;
+}
 export interface Scenario {
   ruler: string; treasuryMilli: number;
   movement: { speedsKmPerDay: Record<Mode, Record<string, number>>; crossingDelayTicks: Record<string, number> };
@@ -39,6 +57,8 @@ export interface Scenario {
   player: { repairCostMilliPerMilli: number; repairRestoreToMilli: number; repairDays: number; levyMilli: number };
   scripts: Script[];
   endStates: { fortificationBreachedBelowMilli: number };
+  agents: AgentParams;
+  battle: BattleParams;
 }
 export interface RawContent {
   manifest: { schemaVersion: number; contentVersion: string };
@@ -113,16 +133,27 @@ export function validateContent(raw: RawContent): { errors: ContentError[] } {
     for (const t of c.traits) if (!vocab.has(t)) err("TRAIT_UNKNOWN", `character ${c.id} has trait ${t}`);
     for (const r of c.relationships) if (!chars.has(r.to)) err("RELATIONSHIP_ORPHAN", `character ${c.id} -> ${r.to}`);
     for (const [k, v] of Object.entries(c.capabilities ?? {})) if (v < 0 || v > 1000) err("RANGE", `character ${c.id} capability ${k}=${v}`);
+    if (typeof c.house !== "string") err("ID_UNKNOWN", `character ${c.id} has no house`);
+    for (const o of c.objectives ?? []) {
+      if (!(OBJECTIVE_KINDS as readonly string[]).includes(o.objective)) err("OBJECTIVE_UNKNOWN", `character ${c.id}: ${o.objective}`);
+      if (o.target) need(locs, o.target, "location", `character ${c.id} objective ${o.id}`);
+      if (!(o.priorityPermille >= 0 && o.priorityPermille <= 1000)) err("RANGE", `character ${c.id} objective ${o.id} priority`);
+    }
   }
+  for (const t of raw.traits) if (!(t.commitmentPermille >= 0 && t.commitmentPermille <= 1000)) err("RANGE", `trait ${t.id} commitmentPermille`);
+  for (const p of raw.predicates) if (![0, 1, 2, 3].includes(p.wakeSignificance) || !(p.materialDelta > 0)) err("RANGE", `predicate ${p.id} wake metadata`);
+  for (const l of raw.locations) if (l.fortification && !(l.fortification.garrison >= 0)) err("RANGE", `location ${l.id} garrison`);
   need(chars, sc.ruler, "character", "scenario.ruler");
   for (const h of sc.economy.holdings) need(locs, h.location, "location", "economy holding");
   for (const s of sc.threat.sites) { need(locs, s.site, "location", "threat site"); need(locs, s.target, "location", "threat target"); }
   for (const i of sc.interception) { need(locs, i.location, "location", "interception"); need(chars, i.by, "character", "interception"); }
   for (const s of sc.scripts) {
     if (s.kind === "travel") { need(chars, s.who, "character", "script"); need(locs, s.to, "location", "script"); if (!(MODES as readonly string[]).includes(s.mode)) err("MODE_MISSING", `script mode ${s.mode}`); }
-    else { need(chars, s.from, "character", "script"); need(chars, s.to, "character", "script"); }
+    else if (s.kind === "order") { need(chars, s.from, "character", "script"); need(chars, s.to, "character", "script"); }
+    else if (s.kind === "threat") { if (!sc.threat.sites.some((x) => x.site === s.site)) err("ID_UNKNOWN", `script threat site ${s.site}`); }
+    else err("SCRIPT_UNKNOWN", `script kind ${(s as { kind: string }).kind}`);
   }
-  for (const id of ["fortification.condition", "character.location", "character.seat", "order.status", "order.content", "report.route"]) need(preds, id, "predicate", "engine requires");
+  for (const id of ["fortification.condition", "character.location", "character.seat", "order.status", "order.content", "report.route", "threat.intensity", "treasury.balance", "request.reinforce"]) need(preds, id, "predicate", "engine requires");
 
   const ruler = raw.characters.find((c) => c.id === sc.ruler);
   if (ruler && locs.has(ruler.location)) {

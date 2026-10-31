@@ -28,8 +28,9 @@ export function checkLog(log: readonly SimEvent[]): string[] {
       for (const ev of (e.payload.prop as { evidenceRefs: { kind: string; eventId: number; source: string; reportId?: number }[] }).evidenceRefs) {
         if (!e.causedBy.includes(ev.eventId)) continue; // evidence merged from earlier events
         const src = log[pos.get(ev.eventId) ?? -1];
-        if (ev.kind === "report" && !(src?.type === "ReportDelivered" && src.payload.reportId === ev.reportId && src.payload.recipient === holder))
-          v.push(`event ${e.id}: belief from report ${ev.reportId} without its ReportDelivered to ${holder}`);
+        const heard = src?.type === "ReportShared" && src.payload.reportId === ev.reportId && (src.payload.hearers as string[]).includes(holder);
+        if (ev.kind === "report" && !heard && !(src?.type === "ReportDelivered" && src.payload.reportId === ev.reportId && src.payload.recipient === holder))
+          v.push(`event ${e.id}: belief from report ${ev.reportId} without its ReportDelivered to ${holder} or a reading at court`);
         if (ev.kind === "intercepted" && !(src && ["InterceptedReportReceived", "InterceptedOrderReceived"].includes(src.type) && src.payload.by === holder))
           v.push(`event ${e.id}: intercepted belief for ${holder} without the papers reaching them`);
         if (ev.kind === "observation" && ev.source !== holder) v.push(`event ${e.id}: ${holder} holds someone else's observation as first-hand`);

@@ -54,3 +54,10 @@
 | **Interception point** | A place where someone's agents may seize passing messengers. The papers are carried to that person, who learns their contents and who wrote to whom; the intended recipient learns nothing. |
 | **Redirect** | A messenger who misses the recipient follows word left with locals of where they went (up to a limit). Without such word, or after a secret departure, the message is undeliverable. |
 | **Scripted event** | `TravelScripted` / `OrderScripted`: test and scenario hooks. Allowed in tests; a gated chain containing one fails the anti-script check (plan C0.7). |
+| **Material belief change** | A belief update that crosses a band of the predicate's `materialDelta` (or changes a non-numeric value, or is new). Only material changes to an agent's own beliefs wake it. |
+| **Wake / review** | A wake runs an agent's planning on triggers (coalesced per tick). A review is a daily wake that happens only while the agent pursues a live intention (marching, deployed, sortie pending). |
+| **Focus** | The objective an agent's strategic layer attends to (re-chosen on significance-3 wakes); its terms weigh 25% more. |
+| **Answer rate** | How often an agent's requests to someone have been answered, learned from its own experience; it sets how much the agent expects from asking. |
+| **Surprise / regret** | Chronicle tests for a bad decision outcome: more than 10 points worse than the decider expected, or with the truth another option was more than 10 points better. |
+| **Luck adjustment** | Storm damage beyond its climatic expectation is not counted against a decision when judging surprise. |
+| **Council at court** | Characters reporting to the ruler and present with her; dispatches delivered to her are read out to them (`ReportShared`). |

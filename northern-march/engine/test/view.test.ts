@@ -29,8 +29,9 @@ test("no belief from a report before its ReportDelivered event, and only for its
         if (ev.kind !== "report" || !e.causedBy.includes(ev.eventId)) continue;
         const d = delivered.get(ev.reportId!);
         assert.ok(d, `seed ${seed}: belief from undelivered report ${ev.reportId}`);
-        assert.equal(d.recipient, e.payload.holder);
-        assert.equal(ev.eventId, d.id);
+        const src = sim.log.find((x) => x.id === ev.eventId)!;
+        if (src.type === "ReportShared") assert.ok((src.payload.hearers as string[]).includes(e.payload.holder as string), "heard at court");
+        else { assert.equal(d.recipient, e.payload.holder); assert.equal(ev.eventId, d.id); }
       }
     }
   }
