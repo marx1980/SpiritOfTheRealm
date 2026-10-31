@@ -1,0 +1,67 @@
+# Copilot Instructions
+
+## Context efficiency
+
+Minimise unnecessary context gathering.
+
+When starting a new task:
+1. Read README.md and PLAN.md first, if they exist.
+2. Use PLAN.md to identify the current NEXT task.
+3. Inspect only the files directly relevant to that task.
+4. Expand to additional files only when required to understand dependencies or implement the task correctly.
+
+Do not automatically:
+-   scan or analyse the entire repository;
+-   read every file to understand the project;
+-   review the full git history;
+-   perform broad repository searches;
+-   audit unrelated code;
+-   investigate unrelated branches or previous work;
+-   read large files unless they are relevant to the task.
+
+If the relevant files can be identified directly, open those files rather than exploring the repository broadly.
+
+## Implementation
+
+Work on one PLAN.md task at a time.
+
+Before changing code:
+-   understand the task and its acceptance criteria;
+-   inspect the smallest practical set of relevant files;
+-   preserve existing behaviour unless the task requires changing it.
+
+When implementing:
+-   make focused changes;
+-   avoid unrelated refactoring;
+-   avoid adding unnecessary dependencies;
+- follow existing conventions in the files being modified;
+- do not investigate unrelated problems unless they block the current task.
+
+## Testing
+
+Run the smallest relevant tests first.
+
+Run broader tests only when:
+-   the change could reasonably affect other functionality;
+-   dependencies make broader validation necessary; or
+-   the focused tests reveal a problem requiring wider investigation.
+
+Do not run expensive or exhaustive test suites automatically when focused validation is sufficient.
+
+## Plan maintenance
+
+After completing a task:
+1. Verify the acceptance criteria.
+2. Mark the task DONE.
+3. Update PLAN.md with any important implementation decision that a future session needs.
+4. Identify the next unfinished task as NEXT.
+5. Keep PLAN.md concise. Do not turn it into a detailed development log.
+
+## Session completion
+At the end of the task, briefly report:
+-   what was changed;
+-   what was tested;
+-   any unresolved issue;
+-   what is NEXT.
+Do not begin the next
+PLAN.md task unless explicitly asked.
