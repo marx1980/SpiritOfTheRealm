@@ -9,7 +9,7 @@ import type { IssuedRecord, Position, WorldState } from "./world.ts";
 export const ADVICE_FRESH = 15 * 86400;
 
 /** Skill names as people in the realm would say them. */
-export const AREA: Record<string, string> = { engineering: "Works", military: "Military", intelligence: "Intelligence", administration: "Administration" };
+export const AREA: Record<string, string> = { engineering: "Construction", military: "Military", intelligence: "Intelligence", administration: "Administration" };
 /** The strongest skill (ties: alphabetical) as the area someone is known for. */
 export function areaOf(caps: Record<string, number>): string {
   const best = Object.entries(caps).filter(([k]) => k in AREA).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))[0];

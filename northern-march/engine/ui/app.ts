@@ -188,7 +188,10 @@ function choicesBlock(v: View): string {
   return `<div class="choices">${cs.map((c) => {
     const q = st.queue.find((x) => matches(x, c.action));
     const rec = c.by.length ? ` (recommended by ${esc(listNames(c.by))})` : "";
-    return `<label class="check"><input type="checkbox" data-toggle='${esc(JSON.stringify(c.action))}' ${q ? "checked" : ""}> ${esc(c.text)}${rec}</label>${q && c.action.action === "advance" ? missionBlock(v, c.action.target!, q) : ""}`;
+    const cost = c.action.action === "repair" ? repairCostKnown(v, c.action.target!) : undefined, coins = coinsKnown(v);
+    const short = cost !== undefined && coins !== undefined && cost > coins;
+    const costNote = cost === undefined ? "" : ` <span class="cost-inline">costs about ${kCoins(cost)}${coins === undefined ? "" : `; you have ${kCoins(coins)}`}</span>${short ? ` <span class="low">Not enough coins. <button data-use-levy>Raise a levy (about ${kCoins(content.scenario.player.levyMilli)})</button></span>` : ""}`;
+    return `<label class="check"><input type="checkbox" data-toggle='${esc(JSON.stringify(c.action))}' ${q ? "checked" : ""} ${short ? "disabled" : ""}> ${esc(c.text)}${rec}${costNote}</label>${q && c.action.action === "advance" ? missionBlock(v, c.action.target!, q) : ""}`;
   }).join("")}</div>`;
 }
 /** The letters of this pause, all together. */
@@ -197,6 +200,7 @@ function batchBlock(v: View): string {
   return ls.length ? `<div class="batch">${ls.map((l) => `<div class="batch-letter"><b>${esc(name(v, l.author))}</b> <span class="when">${esc(dayAgo(v, l.deliveredAt))}</span><div>${esc(letterSentences(v, l).join(" "))}</div></div>`).join("")}</div>` : "";
 }
 
+const areaShort = (a: string) => ({ Military: "MIL", Administration: "ADM", Construction: "CON", Intelligence: "INT" } as Record<string, string>)[a] ?? a.toUpperCase();
 function pauseText(v: View): string {
   if (st.over) {
     const o = st.sim.objectiveStatus();
@@ -209,7 +213,7 @@ function pauseText(v: View): string {
   }
   if (r === "advice") {
     const a = v.advice.find((x) => x.id === st.advice);
-    return a ? `${name(v, a.author)}${v.world.areas[a.author] ? ` (${v.world.areas[a.author]})` : ""} advises: ${planWords(v, a.plan.id)}` : "Advice";
+    return a ? `${name(v, a.author)}${v.world.areas[a.author] ? ` (${areaShort(v.world.areas[a.author])})` : ""} advises: ${planWords(v, a.plan.id)}` : "Advice";
   }
   if (r === "danger") return "You are in danger";
   if (r === "arrival") { const p = v.self.position; return "at" in p ? `Arrived at ${name(v, p.at)}` : "Arrived"; }

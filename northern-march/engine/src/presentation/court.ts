@@ -6,7 +6,7 @@ import { ago, certainty, nameOf, nearestFort, planWords, raiderWords, reasonWord
 
 export interface Evidence { text: string; age: string; source: string; certainty: string }
 /** Short area labels for the council list. */
-const SHORT_AREA: Record<string, string> = { Military: "Mil", Administration: "Adm", Works: "Con", Intelligence: "Int" };
+const SHORT_AREA: Record<string, string> = { Military: "MIL", Administration: "ADM", Construction: "CON", Intelligence: "INT" };
 
 export interface AdviceLine { id: number; adviser: string; area: string; plan: string; supports: string[]; concerns: string[]; unsure: number; heard: string; fresh: boolean }
 export interface Issue { key: string; title: string; priority: number; evidence: Evidence[]; advice: AdviceLine[]; place?: string }
