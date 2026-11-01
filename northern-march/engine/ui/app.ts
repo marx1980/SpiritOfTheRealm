@@ -123,7 +123,12 @@ const actionText = (v: View, a: PlayerAction) =>
   a.action === "order" ? `Order ${name(v, a.order!.recipient)}: ${a.order!.intent} ${name(v, a.order!.objective.id)}`
   : a.action === "levy" ? "Raise a levy" : a.action === "travel" ? `Travel to ${name(v, a.target!)}`
   : a.action === "repair" ? `Repair ${name(v, a.target!)}` : `Send the captain to ${name(v, a.target!)}`;
-const queue = (a: PlayerAction) => { if (!st.paused) return; st.queue.push(a); st.error = ""; render(); };
+const queue = (a: PlayerAction) => {
+  if (!st.paused) return;
+  // the same action from two advisers (e.g. raiders and captain both mean "send the captain to Northwatch") is queued once
+  if (st.queue.some((q) => JSON.stringify(q) === JSON.stringify(a))) { st.error = `${actionText(st.sim.viewOf("player"), a)} is already queued`; return render(); }
+  st.queue.push(a); st.error = ""; render();
+};
 
 function pauseText(v: View): string {
   if (st.over) {
