@@ -53,7 +53,7 @@ export function buildCourt(v: View): Court {
   issues.sort((a, b) => b.priority - a.priority || (a.key < b.key ? -1 : 1));
   const pos = v.self.position;
   return {
-    day: dayOf(v.now), at: "at" in pos ? nameOf(v, pos.at) : `on the road to ${nameOf(v, pos.transit.dest)}`, issues, advice: adviceLines(v),
+    day: dayOf(v.now), at: "at" in pos ? nameOf(v, pos.at) : `on the road to ${nameOf(v, pos.transit.dest)}`, issues, advice: adviceLines(v).filter((a) => !issues.some((i) => i.advice.some((x) => x.id === a.id))),
     letters: [...v.reports].reverse().map((r) => ({ from: nameOf(v, r.author), about: nameOf(v, r.subject.id), written: ago(v.now, r.composedAt), arrived: ago(v.now, r.deliveredAt), route: r.route.length })),
   };
 }
