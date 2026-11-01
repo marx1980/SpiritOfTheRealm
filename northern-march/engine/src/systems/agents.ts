@@ -337,7 +337,7 @@ export function execute(ctx: Ctx, agent: string, a: ActionRef, decisionId: numbe
     }
     case "sortie": {
       const pos = ctx.s.positions[agent];
-      if (!("at" in pos)) return;
+      if (!("at" in pos) || ctx.s.sortieOpen[agent] !== undefined) return; // one fight at a time
       const men = defenceAt(ctx.s, pos.at) ?? 0;
       const ev = ctx.emit("SortieLaunched", [decisionId], [chr(agent), loc(pos.at), loc(a.target!)], { commander: agent, from: pos.at, site: a.target, men, decisionEventId: decisionId });
       ctx.at(ctx.tick + c.scenario.battle.sortie.hours * HOUR, "agents:resolveSortie", { commander: agent, from: pos.at, site: a.target, launchedEventId: ev.id });
@@ -356,6 +356,14 @@ export function execute(ctx: Ctx, agent: string, a: ActionRef, decisionId: numbe
     }
     default: return; // order-specific actions (repairs, levies) are executed by the order pipeline
   }
+}
+
+/** What a commander tells his superior after a fight: how it went, what the fort and his company now count, and what he sees of the raiders. */
+export function battleClaims(ctx: Ctx, who: string, from: string, site: string, cause: number) {
+  observe(ctx, who, loc(from), "fortification.garrison", cause);
+  if ((ctx.s.troops[who] ?? 0) > 0) observe(ctx, who, chr(who), "character.troops", cause);
+  return [best(ctx, who, site, "battle.result"), best(ctx, who, from, "fortification.garrison"), best(ctx, who, who, "character.troops"), best(ctx, who, site, "threat.intensity")]
+    .filter((x): x is NonNullable<typeof x> => !!x).map(({ band, ...rest }) => ({ ...rest, reliabilityBand: band as "certain" }));
 }
 
 function present(s: Readonly<WorldState>, where: string) {
@@ -447,6 +455,12 @@ export const agents: System = {
           { kind: "observation", eventId: res.id, source: who }, [res.id]);
         else observe(ctx, who, loc(site), "threat.intensity", res.id);
       }
+      // what happened, as the commander knows it, and a letter to his superior (an ordered attack reports through the order instead)
+      learn(ctx, commander, { subject: loc(site), predicate: "battle.result", value: !threat ? "nobody" : success ? "won" : "lost", observedAt: ctx.tick, band: "certain" },
+        { kind: "observation", eventId: res.id, source: commander }, [res.id]);
+      const superior = ctx.content.byId.character.get(commander)?.reportsTo;
+      const ordered = (ctx.s.ordersInForce[commander] ?? []).some((id) => { const o = ctx.s.orders[String(id)]; return o.status === "executing" && o.order.intent === "attack" && o.order.objective.id === site; });
+      if (superior && !ordered) ctx.at(ctx.tick, "messenger:compose", { author: commander, recipient: superior, claims: battleClaims(ctx, commander, from, site, res.id), cause: res.id, purpose: `battle:${site}` });
       ctx.at(ctx.tick, "orders:sortieDone", { commander, site, resolvedEventId: res.id });
     },
     // Was a request answered? The asker sees it for themselves: work started on the wall, or the help arrived.

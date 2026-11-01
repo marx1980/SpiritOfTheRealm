@@ -90,6 +90,7 @@ function letterParts(v: View, r: LetterLike): { rank: number; text: string }[] {
         if (prev !== undefined && wallWords(prev as number) === wallWords(val as number)) break; // unchanged
         if (here) fort.push(`the walls are ${wallWords(val as number)}`); else out.push({ rank: 1, text: `The walls at ${s} are ${wallWords(val as number)}.` });
         break;
+      case "battle.result": out.push({ rank: 0, text: val === "nobody" ? `We found no raiders at ${s}.` : `We fought the raiders at ${s} and ${val === "won" ? "won" : "were beaten"}.` }); break;
       case "threat.intensity": out.push({ rank: 2, text: `${cap(raiderWords(val as number))} at ${s}.` }); break;
       case "fortification.garrison":
         if (prev === val) break;

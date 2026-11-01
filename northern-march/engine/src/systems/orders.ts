@@ -10,7 +10,7 @@ import { plan } from "../agents/planner.ts";
 import type { Ctx, System } from "./types.ts";
 import { DAY, chr, loc } from "./types.ts";
 import { best, learn, observe, observeTreasury, skill } from "./knowledge.ts";
-import { buildSituation, defenceAt, execute, isIdle, perceiverFromView, promote, traceOf } from "./agents.ts";
+import { battleClaims, buildSituation, defenceAt, execute, isIdle, perceiverFromView, promote, traceOf } from "./agents.ts";
 import { travel } from "./movement.ts";
 import { menAt, resyncRepair, scheduleRepairEnd } from "./repairs.ts";
 
@@ -195,6 +195,12 @@ function report(ctx: Ctx, o: StructuredOrder, outcome: string, cause: number) {
     { kind: "observation", eventId: cause, source: o.recipient }, [cause]);
   const p = ctx.s.positions[o.recipient];
   if (o.intent === "repair" && "at" in p && p.at === o.objective.id) observe(ctx, o.recipient, loc(o.objective.id), "fortification.condition", cause);
+  if (o.intent === "attack" && "at" in p) {
+    const st = best(ctx, o.recipient, String(o.id), "order.status");
+    const claims = [...(st ? [{ ...st, reliabilityBand: st.band as "certain" }] : []).map(({ band: _b, ...rest }: any) => rest), ...battleClaims(ctx, o.recipient, p.at, o.objective.id, cause)];
+    if (o.recipient !== o.issuer) ctx.at(ctx.tick, "messenger:compose", { author: o.recipient, recipient: o.issuer, claims, cause });
+    return;
+  }
   const claims = [best(ctx, o.recipient, String(o.id), "order.status"),
     o.intent === "repair" ? best(ctx, o.recipient, o.objective.id, "fortification.condition") : null,
     (o.intent === "investigate" || o.intent === "attack") ? best(ctx, o.recipient, o.objective.id, "threat.intensity") ?? best(ctx, o.recipient, o.objective.id, "fortification.condition") : null]

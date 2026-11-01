@@ -30,6 +30,7 @@ export interface WorldState {
   lastRaid: Record<string, number>;
   lastRepairStart: Record<string, number>;
   lastArrival: Record<string, Record<string, number>>;
+  sortieOpen: Record<string, number>; // commander -> tick of the sortie still being fought
   lastStorm: Record<string, number>;
   threats: Record<string, { intensityPermille: number; untilTick: number; eventId: number }>;
   routesClosed: Record<string, true>;
@@ -66,7 +67,7 @@ export function initialState(c: Content): WorldState {
     if (ch.id !== c.scenario.ruler && ch.tier !== "C") agents[ch.id] = newAgent();
   }
   return {
-    treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, tiers, history: {}, agents, recommendations: {}, heard: {}, campaign: { ended: null, lastDanger: -1 }, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, lastStorm: {}, threats: {}, routesClosed: {},
+    treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, tiers, history: {}, agents, recommendations: {}, heard: {}, campaign: { ended: null, lastDanger: -1 }, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, sortieOpen: {}, lastStorm: {}, threats: {}, routesClosed: {},
     positions, departures: {}, beliefs: {}, nextPropId: 1, reports: {}, nextReportId: 1, messengers: {}, nextMessengerId: 1,
     orders: {}, nextOrderId: 1, advisePending: {}, dayEndDay: -1, ordersInForce: {}, issued: {}, repairs: {},
   };
@@ -194,8 +195,8 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
     }
   },
   ExperienceGained: (s, p) => { const x = s.agents[p.agent].experience; x[p.domain] = Math.min(p.cap, (x[p.domain] ?? 0) + p.amount); },
-  SortieLaunched: noop,
-  SortieResolved: noop,
+  SortieLaunched: (s, p, e) => { s.sortieOpen[p.commander] = e.tick; },
+  SortieResolved: (s, p) => { delete s.sortieOpen[p.commander]; },
   LossesTaken: (s, p) => {
     if (p.garrisonLost) s.fortifications[p.location].garrison -= p.garrisonLost;
     for (const [who, n] of Object.entries(p.troopsLost as Record<string, number>)) s.troops[who] -= n;

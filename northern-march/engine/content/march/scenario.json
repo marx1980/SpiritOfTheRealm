@@ -172,8 +172,8 @@
     "sortie": {
       "skillBasePermille": 500,
       "intensityFactorPermille": 400,
-      "lossOnSuccessPermille": 50,
-      "lossOnFailurePermille": 300,
+      "lossOnSuccessPermille": 30,
+      "lossOnFailurePermille": 150,
       "hours": 12
     },
     "raidMitigationPerManPermille": 8

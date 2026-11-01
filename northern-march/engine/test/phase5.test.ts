@@ -240,3 +240,21 @@ test("an attack order sends the captain to the fort that answers the site, he so
   assert.ok(launched && launched.payload.from === "northwatch" && launched.payload.site === "blackwood", "Caron sorties from Northwatch against Blackwood");
   assert.ok(sim.log.some((e) => e.type === "OrderCompleted" && e.payload.orderId === (ours!.payload.order as { id: number }).id), "the attack order is completed");
 });
+
+test("a fight is reported: how it went, what the fort and company now count; and a commander fights one sortie at a time", async () => {
+  const { letterSentences } = await import("../src/presentation/phrasing.ts");
+  const c = variant((r) => {
+    r.scenario.scripts = [{ day: 3, kind: "threat", site: "blackwood", intensityPermille: 800, durationDays: 60 }];
+    r.scenario.messenger.lossPermillePerDay = 0; r.scenario.interception = [];
+  });
+  const sim = run({ seed: 51, content: c, policy: "passive" }, 60);
+  const open = new Set<string>();
+  for (const e of sim.log) {
+    if (e.type === "SortieLaunched") { assert.ok(!open.has(e.payload.commander as string), "no second sortie while one is being fought"); open.add(e.payload.commander as string); }
+    if (e.type === "SortieResolved") open.delete(e.payload.commander as string);
+  }
+  const v = sim.viewOf("player");
+  const letter = v.reports.find((r) => r.claims.some((x) => x.predicate === "battle.result"));
+  assert.ok(letter, "a letter tells of a fight");
+  assert.match(letterSentences(v, letter!).join(" "), /We fought the raiders at Blackwood and (won|were beaten)\.|We found no raiders at Blackwood\./);
+});

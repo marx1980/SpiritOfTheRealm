@@ -214,7 +214,7 @@ const areaShort = (a: string) => ({ Military: "MIL", Administration: "ADM", Cons
 /** Status words in green (good outcome), red (bad outcome) or amber (under way, at risk): the text is escaped first. */
 const tone = (t: string) => esc(t)
   .replace(/\b(completed|succeeded|won|held|repaired|sound|no raiders)\b/gi, '<span class="ok">$1</span>')
-  .replace(/\b(abandoned|failed|lost|breached|captured|refused|not enough coins|dead|fallen)\b/gi, '<span class="bad">$1</span>')
+  .replace(/\b(abandoned|failed|lost|breached|captured|refused|beaten|not enough coins|dead|fallen)\b/gi, '<span class="bad">$1</span>')
   .replace(/\b(damaged|in progress|under way|low|worn)\b/gi, '<span class="warn">$1</span>');
 const cap1 = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 function pauseText(v: View): string {
@@ -311,7 +311,10 @@ function side(v: View) {
   const isPlayer = st.draft.action.startsWith("p:");
   const pAct = st.draft.action.slice(2);
   const fortId = !st.draft.objective.startsWith("@") && content.byId.location.get(st.draft.objective)?.fortification ? st.draft.objective : null;
-  const ACTIONS: [string, string][] = [["p:repair", "Repair"], ["p:advance", "Send captain"], ["p:levy", "Levy"], ["p:travel", "Travel"], ...INTENTS.map((k) => [`o:${k}`, k] as [string, string])];
+  // each thing appears once: the four things Anna does herself, then the other orders she can send (repair, levy, advance and travel are the first four)
+  const OTHER: Record<string, string> = { hold: "Hold position", withdraw: "Withdraw", screen: "Screen", escort: "Escort", requisition: "Requisition", investigate: "Scout", attack: "Attack raiders", negotiate: "Negotiate", report: "Ask for a report" };
+  const ACTIONS: [string, string][] = [["p:repair", "Repair walls"], ["p:advance", "Send captain"], ["p:levy", "Raise a levy"], ["p:travel", "Travel"], ...INTENTS.filter((k) => OTHER[k]).map((k) => [`o:${k}`, OTHER[k]] as [string, string])];
+  const aboutPeople = st.draft.action === "o:escort" || st.draft.action === "o:negotiate"; // only these are about a person; everything else is about a place
   const draft = isPlayer ? null : toDraft();
   const problems: string[] = isPlayer ? (
       (pAct === "repair" || pAct === "advance") && !fortId ? ["choose a fort under Where"]
@@ -328,7 +331,7 @@ function side(v: View) {
     <div class="form">
       <label for="o-to">To</label><select id="o-to">${known.map((k) => opt(k, name(v, k), st.draft.recipient)).join("")}</select>
       <label for="o-action">Action</label><select id="o-action">${ACTIONS.map(([k, l]) => opt(k, l, st.draft.action)).join("")}</select>
-      <label for="o-obj">Where</label><select id="o-obj">${places.map((x) => opt(x.id, x.name, st.draft.objective)).join("")}${known.map((k) => opt("@" + k, name(v, k), st.draft.objective)).join("")}</select>
+      <label for="o-obj">${aboutPeople ? "Who" : "Where"}</label><select id="o-obj">${aboutPeople ? known.map((k) => opt("@" + k, name(v, k), st.draft.objective)).join("") : places.map((x) => opt(x.id, x.name, st.draft.objective)).join("")}</select>
       ${pAct === "advance" ? `<label for="o-mission">Mission</label><select id="o-mission">${[["defend", "Defend the fort"], ["scout", "Scout the raiders"], ["attack", "Attack the raiders"]].map(([k, l]) => opt(k, l, st.draft.mission)).join("")}</select>` : ""}
       ${isPlayer ? "" : `<label for="o-disc">Freedom</label><select id="o-disc">${[["strict", "Exactly as told"], ["bounded", "Some freedom"], ["delegated", "Full freedom"]].map(([k, l]) => opt(k, l, st.draft.discretion)).join("")}</select>`}
       ${costLine}
@@ -498,7 +501,15 @@ document.addEventListener("change", (e) => {
   if (t.dataset.pause) { (t as HTMLInputElement).checked ? st.autoPause.add(t.dataset.pause) : st.autoPause.delete(t.dataset.pause); return; }
   const k = ({ "o-to": "recipient", "o-action": "action", "o-obj": "objective", "o-disc": "discretion", "o-mission": "mission" } as Record<string, keyof typeof st.draft>)[t.id];
   if (t.id === "o-obj" && content.byId.location.get(t.value)?.fortification) st.selected = t.value;
-  if (k) { st.draft[k] = t.value; render(); }
+  if (k) {
+    st.draft[k] = t.value;
+    if (k === "action") { // the list under Where follows the action: places, or people for escort and negotiate
+      const people = t.value === "o:escort" || t.value === "o:negotiate";
+      if (people && !st.draft.objective.startsWith("@")) st.draft.objective = "@" + (st.draft.recipient || "anna");
+      if (!people && st.draft.objective.startsWith("@")) st.draft.objective = st.selected;
+    }
+    render();
+  }
 });
 document.addEventListener("keydown", (e) => { if (e.key === "O" && e.shiftKey) { st.observer = !st.observer; render(); } });
 start(st.seed);
