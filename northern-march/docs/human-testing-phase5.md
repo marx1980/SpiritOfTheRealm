@@ -25,7 +25,7 @@ Whether a player can explain every decision from what the screen shows. It is no
 | C3 | Repairs ordered without enough coins | The order is abandoned; Anna learns it only by letter |
 | C4 | Anna travels to a fort | Letters go to the council first; the regent may act |
 | C5 | Anna stays in a failing fort when the second wave comes (day 55+) | A danger warning, then possible death or capture |
-| C6 | Following Oren | He mostly says wait or levy; walls keep falling while the treasury looks healthy |
+| C6 | Following Oren | He mostly says wait or levy; walls fall from raids and storms while the treasury looks healthy |
 
 Each tester should meet at least three.
 

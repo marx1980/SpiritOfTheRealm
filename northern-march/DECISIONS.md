@@ -4,6 +4,12 @@ Newest first. Numbers come from `phase0/results/` (files named in each entry). A
 
 ---
 
+## D-016 G-11 override confirmed (2 Nov)
+
+Marko confirmed the D-013 override: G-11 stays FAIL and the project proceeds. Recommendation 3 stands: re-test at Phase 7 (and Phase 14). **Standing instruction: tell Marko whenever G-11 is re-run and passes.**
+
+---
+
 ## D-015 (Phase 5) Court, Map and personal presence
 
 **G-12 pre-registration (written before the sealed run).**

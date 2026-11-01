@@ -196,7 +196,12 @@ function missionBlock(v: View, fort: string, q: PlayerAction): string {
 function choicesBlock(v: View): string {
   const cs = choices(v);
   if (!cs.length) return "";
-  return `<div class="choices">${cs.map((c) => {
+  // councillors who advise waiting are heard too: every adviser's word is on the page
+  const latest = new Map<string, Recommendation>();
+  for (const r of v.advice) { const cur = latest.get(r.author); if (!cur || cur.computedAt < r.computedAt) latest.set(r.author, r); }
+  const waits = [...latest.values()].filter((r) => planOf(v, r.plan.id).kind === "advise_wait")
+    .map((r) => `<div class="wait-row"><span class="who">${esc(name(v, r.author))}${v.world.areas[r.author] ? ` <small class="area">(${esc(areaShort(v.world.areas[r.author]))})</small>` : ""}</span> ${esc(planWords(v, r.plan.id))}</div>`).join("");
+  return `<div class="choices">${waits}${cs.map((c) => {
     const q = st.queue.find((x) => matches(x, c.action));
     const rec = c.by.length ? ` (recommended by ${esc(listNames(c.by))})` : "";
     const cost = c.action.action === "repair" ? repairCostKnown(v, c.action.target!) : undefined, coins = coinsKnown(v);

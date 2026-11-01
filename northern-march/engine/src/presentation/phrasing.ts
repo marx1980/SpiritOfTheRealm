@@ -92,6 +92,8 @@ function letterParts(v: View, r: LetterLike): { rank: number; text: string }[] {
   const out: { rank: number; text: string }[] = [];
   const home = r.claims.find((c) => c.predicate === "character.location" && c.subject.id === r.author)?.believedValue as string | undefined;
   const fort: string[] = [];
+  const fought = new Map(r.claims.filter((c) => c.predicate === "battle.result").map((c) => [c.subject.id, String(c.believedValue)]));
+  const fighting = [...fought.values()].some((x) => x !== "nobody");
   for (const c of r.claims) {
     const s = nameOf(v, c.subject.id), val = c.believedValue, me = c.subject.id === r.author, prev = earlier(v, r, c);
     const here = c.subject.id === home;
@@ -101,16 +103,19 @@ function letterParts(v: View, r: LetterLike): { rank: number; text: string }[] {
         if (here) fort.push(`the walls are ${wallWords(val as number)}`); else out.push({ rank: 1, text: `The walls at ${s} are ${wallWords(val as number)}.` });
         break;
       case "battle.result": out.push({ rank: 0, text: val === "nobody" ? `We found no raiders at ${s}.` : `We fought the raiders at ${s} and ${val === "won" ? "won" : "were beaten"}.` }); break;
-      case "threat.intensity": out.push({ rank: 2, text: `${cap(raiderWords(val as number))} at ${s}.` }); break;
+      case "threat.intensity":
+        // a fight and the raiders' present strength are one story: do not tell it twice
+        if (fought.has(c.subject.id) && (val as number) <= 0) { if (fought.get(c.subject.id) === "lost") out.push({ rank: 2, text: `The raiders at ${s} have since gone.` }); break; }
+        out.push({ rank: 2, text: `${cap(raiderWords(val as number))} at ${s}.` }); break;
       case "fortification.garrison":
         if (prev === val) break;
-        { const t = prev === undefined ? `${here ? "the fort has" : `the fort at ${s} has`} ${val} men` : `${here ? "the fort now has" : `the fort at ${s} now has`} ${val} men, ${(val as number) > (prev as number) ? "up" : "down"} from ${prev}`;
+        { const t = prev === undefined ? `${here ? "the fort has" : `the fort at ${s} has`} ${val} men` : `${here ? "the fort now has" : `the fort at ${s} now has`} ${val} men${fighting && (val as number) < (prev as number) ? ", after the fighting" : ""}`;
           if (here) fort.push(t); else out.push({ rank: 1, text: cap(t) + "." }); }
         break;
       case "character.troops":
         if (prev === val) break;
-        out.push({ rank: 1, text: me ? (prev === undefined ? `I have ${val} men with me.` : `I now have ${val} men with me, ${(val as number) > (prev as number) ? "up" : "down"} from ${prev}.`)
-          : (prev === undefined ? `${s} has ${val} men with them.` : `${s} now has ${val} men with them, ${(val as number) > (prev as number) ? "up" : "down"} from ${prev}.`) });
+        out.push({ rank: 1, text: me ? (prev === undefined ? `I have ${val} men with me.` : `I now have ${val} men with me${fighting && (val as number) < (prev as number) ? ", after the fighting" : ""}.`)
+          : (prev === undefined ? `${s} has ${val} men with them.` : `${s} now has ${val} men with them.`) });
         break;
       // people speak of themselves in the first person
       case "character.location": out.push({ rank: 4, text: me ? `I am at ${nameOf(v, String(val))}.` : `${s} is at ${nameOf(v, String(val))}.` }); break;
@@ -132,7 +137,7 @@ function letterParts(v: View, r: LetterLike): { rank: number; text: string }[] {
 export function letterSentences(v: View, r: LetterLike): string[] {
   const parts = letterParts(v, r);
   // where the writer is comes first, then what has changed
-  parts.sort((x, y) => (x.rank === 4 ? -1 : y.rank === 4 ? 1 : 0));
+  parts.sort((x, y) => (x.rank === 4 ? -1 : x.rank) - (y.rank === 4 ? -1 : y.rank));
   return parts.length ? parts.map((p) => p.text) : ["Nothing new in this letter."];
 }
 /** The one sentence that matters most in a letter (for the list): orders, then walls and men, raiders, treasury, then where someone is. */
