@@ -162,9 +162,10 @@ function side(v: View) {
     <span></span><button id="o-add" ${p && !problems.length ? "" : "disabled"}>Add</button></div>
     ${problems.length && draft ? `<div class="err">${esc(problems.join("; "))}</div>` : ""}</div>`;
   const open = v.reports.find((r) => r.reportId === st.openLetter);
-  const reader = open ? `<div class="letter-read"><div class="h"><b>${esc(name(v, open.author))}</b><span>arrived ${esc(dayAgo(v, open.deliveredAt))}</span></div>
-      <div class="c">written ${esc(dayAgo(v, open.composedAt))}</div>
-      ${letterSentences(v, open).map((s) => `<p>${esc(s)}</p>`).join("")}
+  const reader = open ? `<div class="letter-read">
+      <div class="lr-head"><b>${esc(name(v, open.author))}</b>
+        <span class="tags"><span class="tag arrived">arrived ${esc(dayAgo(v, open.deliveredAt))}</span><span class="tag written">written ${esc(dayAgo(v, open.composedAt))}</span></span></div>
+      <p class="lr-body"><span class="speaker">${esc(name(v, open.author))}:</span> ${esc(letterSentences(v, open).join(" "))}</p>
       <button data-close-letter>Close</button></div>` : "";
   const letters = `<div class="card"><h2>Letters · ${v.reports.length}</h2>${reader}<div class="letters">${[...v.reports].reverse().slice(0, 40).map((r) => {
     const first = letterSentences(v, r)[0];

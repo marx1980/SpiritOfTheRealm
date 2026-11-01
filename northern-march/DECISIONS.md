@@ -35,6 +35,7 @@ Newest first. Numbers come from `phase0/results/` (files named in each entry). A
 - **Campaign objective** (`scenario.objective`): `objectiveStatus()` and the `objectiveMet` metric.
 - **Advice audience:** advisers advise whoever is with them; Anna hears advice only in person. She keeps each adviser's latest advice per target for 15 days.
 - **Adviser policies:** `follow:<id>`, and `follow-best-adviser` / `follow-worst-adviser` through measured aliases.
+- **Letter reader layout:** the writer's name on the left; "arrived" and "written" as separate tags on the right; the text starts "Name: ".
 - **Letters speak in the first person about the writer's own whereabouts** ("I am at Greybridge"); the writer's walls and raiders stay as "The walls at…".
 - **Advice pauses name their advice:** `next()` returns `adviceId`; the pause shows that advice with its reasons and a Do it button. The page passes advice to wait (the engine still records it, so G-12 and the tests are unchanged). Continue moved to the top row.
 - **Letters arrive in order and the pause names the right one:** the view lists letters by arrival, not by stored id, and a report pause carries the letter that arrived (`next()` returns `letterId`). Before, a pause for Caron's letter could show the last stored letter, so Bren's first letter (arrives day 11.6) was not what the pause showed.
