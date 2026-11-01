@@ -27,13 +27,19 @@ function adviceLines(v: View, target?: string): AdviceLine[] {
   };
   // Orders in place: issued by you and not yet reported finished in a letter (for up to 60 days).
   const finished = new Set(Object.values(v.beliefs).filter((b) => b.predicate === "order.status" && ["completed", "abandoned", "superseded"].includes(String(b.believedValue))).map((b) => b.subject.id));
-  const completed = new Set(Object.values(v.beliefs).filter((b) => b.predicate === "order.status" && String(b.believedValue) === "completed").map((b) => b.subject.id));
-  // an action just issued or just reported completed is not offered again
-  const inPlace = v.self.orders.filter((o) => v.now - o.tick < 60 * 86400 && !finished.has(String(o.orderId)));
-  const justDone = v.self.orders.filter((o) => v.now - o.tick < 20 * 86400 && completed.has(String(o.orderId)));
+  // An order in progress: its advice is set aside until it is finished.
+  const inProgress = v.self.orders.filter((o) => v.now - o.tick < 60 * 86400 && !finished.has(String(o.orderId)));
+  // A completed order: its advice stays set aside until Anna learns something new about that place (a letter or an
+  // observation dated after the completion), since until then the situation she knows is the one the order changed.
+  const doneAt = new Map<string, number>();
+  for (const b of Object.values(v.beliefs)) if (b.predicate === "order.status" && String(b.believedValue) === "completed") doneAt.set(b.subject.id, b.observedAt);
+  const doneOrders = v.self.orders.filter((o) => doneAt.has(String(o.orderId))).map((o) => ({ ...o, doneAt: doneAt.get(String(o.orderId))! }));
+  const learnedSince = (place: string, t: number) => Object.values(v.beliefs).some((b) => b.subject.id === place && b.observedAt > t);
   const superseded = (r: { plan: { id: string } }) => {
     const want = orderOf(JSON.parse(r.plan.id) as { kind: string; target?: string });
-    return !!want && [...inPlace, ...justDone].some((o) => o.action === want.action && o.target === want.target);
+    if (!want) return false;
+    if (inProgress.some((o) => o.action === want.action && o.target === want.target)) return true;
+    return doneOrders.some((o) => o.action === want.action && o.target === want.target && !learnedSince(want.target, o.doneAt));
   };
   return v.advice.filter((r) => (target ? r.plan.id.includes(`"${target}"`) : latest.get(r.author) === r.id) && !superseded(r)).map((r) => ({
     id: r.id, adviser: nameOf(v, r.author), area: SHORT_AREA[v.world.areas[r.author] ?? ""] ?? v.world.areas[r.author] ?? "", plan: planWords(v, r.plan.id),
