@@ -1,0 +1,13 @@
+{
+ "tuneSeeds": "1..200",
+ "rates": {
+  "elara": 0.07,
+  "oren": 0,
+  "selene": 0.04
+ },
+ "passive": 0,
+ "aliases": {
+  "follow-best-adviser": "elara",
+  "follow-worst-adviser": "oren"
+ }
+}

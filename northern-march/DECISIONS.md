@@ -4,6 +4,15 @@ Newest first. Numbers come from `phase0/results/` (files named in each entry). A
 
 ---
 
+## D-015 (Phase 5) Court, Map and personal presence
+
+**G-12 pre-registration (written before the sealed run).**
+- Objective success = after 240 days the campaign has not ended (Anna alive and free) and Northwatch, Greybridge and Eastmarch Keep are all at or above the breach line (repairs can restore a breached wall before the end).
+- "Follow adviser X" = at every decision point, carry out each piece of advice heard from X in person in the last 15 days (one standing piece per target): repair → repair; send the captain → advance; attack raiders → send the captain to the nearest fort; levy → levy. Waiting is no action. 10-day cooldown per action and target.
+- Best and worst chosen on TUNE seeds 1..200 (results/phase5_g12_tune.txt): Elara 7.0%, Selene 4.0%, Oren 0.0% (passive 0.0%). Best = Elara, worst = Oren (results/g12_aliases.json).
+- Sealed block 50000..50999, paired by seed, bootstrap 2,000. PASS: difference ≥ 10 points and interval lower bound > 0. AMBER: one of the two. FAIL: neither.
+- Expectation from TUNE: about 7 points, so AMBER is the likely verdict. Not tuning to pass; see the findings below.
+
 ## D-014 (Phase 4) Simulation tiers: built, G-14 PASS
 
 **Built (118 tests pass):**
@@ -36,7 +45,7 @@ Newest first. Numbers come from `phase0/results/` (files named in each entry). A
 | delegating | 6 / 3 / 0 | -1.0% | 1.0 s |
 | aggressive | 5 / 3 / 0 | -1.0% | 1.5 s |
 
-**Regressions (final code):** G-01 PASS (combined hash `4238030536c7f39d09f7a9e1ffdfa62e8a50b6147a2c6fbf73e39dc630a006d7`, Node and Bun, two time zones and locales). G-02 and the 1,000-seed invariant batch: {{REGRESSION}}
+**Regressions (final code):** G-01 PASS (combined hash `4238030536c7f39d09f7a9e1ffdfa62e8a50b6147a2c6fbf73e39dc630a006d7`, Node and Bun, two time zones and locales). G-02 and the 1,000-seed invariant batch: G-02 (redefined) PASS: in all 300 perturbed seeds the first divergence belongs to the perturbed system (economy 100/100, weather 100/100, threat 100/100); no foreign first divergence. 1,000 seeds × 2 arms × 240 days: 0 invariant violations, breached 96.0% on / 94.2% off, mean 5,011 events and 17.9 decisions per run, 452 ms per simulated year (results/phase4_regression.txt)
 
 **Watch:**
 - The busiest Tier B day is exactly at its budget (3). Fine now; more Tier B roles may need a larger budget or lighter triggers.

@@ -1,0 +1,5 @@
+elara 0.070 {} 24.8
+oren 0.000 {} 4.1
+selene 0.040 {} 25.6
+passive 0.000 {}
+aliases {"follow-best-adviser":"elara","follow-worst-adviser":"oren"}

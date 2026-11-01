@@ -37,9 +37,12 @@ export function checkLog(log: readonly SimEvent[]): string[] {
         if (ev.kind === "order" && !(src?.type === "OrderReceived" && src.payload.recipient === holder)) v.push(`event ${e.id}: ${holder} learned from an order it did not receive`);
       }
     }
-    if (e.type === "PlayerInput") {
+    if (e.type === "PlayerInput" && e.causedBy.length) {
       const src = log[pos.get(e.causedBy[0]) ?? -1];
-      if (!src || src.type !== "ReportDelivered") v.push(`event ${e.id}: player input not caused by something delivered to the player`);
+      const p = (src?.payload ?? {}) as Record<string, unknown>, who = e.payload.player;
+      const perceived = !!src && ((src.type === "ReportDelivered" && p.recipient === who) || (src.type === "RecommendationMade" && (p.audience as string[] ?? []).includes(who as string))
+        || (src.type === "DangerSignalled" && p.who === who) || (src.type === "Arrived" && p.who === who));
+      if (!perceived) v.push(`event ${e.id}: player input caused by something the player did not perceive`);
     }
   }
   return v;

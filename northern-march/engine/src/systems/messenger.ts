@@ -59,6 +59,17 @@ function arrive(ctx: Ctx, m: Messenger, cause: number) {
   }
   const word = ctx.s.departures[dest]?.[m.recipient];
   const limit = ctx.content.scenario.messenger.redirectLimit;
+  // Letters for an absent ruler are read to the council at her seat before they are sent after her (the regent acts on them).
+  const ruler = ctx.content.scenario.ruler;
+  if (m.kind === "report" && m.recipient === ruler && dest === ctx.content.scenario.regency.seat) {
+    const report = ctx.s.reports[String(m.ref)];
+    const hearers = sorted(ctx.content.characters.filter((c) => c.reportsTo === ruler && c.id !== report.author && ctx.s.tiers[c.id] !== "C").map((c) => c.id)
+      .filter((id) => { const p = ctx.s.positions[id]; return "at" in p && p.at === dest; }), (x) => x);
+    if (hearers.length) {
+      const sh = ctx.emit("ReportShared", [cause], [chr(ruler), { kind: "report", id: String(report.id) }], { reportId: report.id, at: dest, hearers, inAbsence: true });
+      for (const h of hearers) readReport(ctx, h, report, sh.id);
+    }
+  }
   if (word && word.to && m.redirects < limit) {
     const target = where(ctx, m.recipient);
     const path = ctx.map.path(dest, target, "rider", (r) => ctx.isOpen(r));
@@ -85,7 +96,7 @@ function deliverReport(ctx: Ctx, m: Messenger, at: string, cause: number) {
       const sh = ctx.emit("ReportShared", [d.id], [chr(m.recipient), { kind: "report", id: String(report.id) }], { reportId: report.id, at, hearers });
       for (const h of hearers) readReport(ctx, h, report, sh.id);
     }
-    ctx.at(ctx.tick, "player:decide", { deliveredEventId: d.id });
+    ctx.at(ctx.tick, "player:decide", { cause: d.id, reason: "report" });
   }
 }
 

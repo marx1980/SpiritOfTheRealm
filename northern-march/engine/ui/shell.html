@@ -1,0 +1,81 @@
+<title>Northern March</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus+SC&family=Source+Sans+3:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: war table — Court (issues) | Map | Letters & orders; stacks on phones. */
+:root {
+  --bg: #eceeea; --panel: #f7f8f5; --ink: #1f2a2e; --mute: #5f6b6c; --line: #c9cfca;
+  --accent: #2f5d7c; --accent-ink: #ffffff; --ok: #3c7a4a; --warn: #a8701a; --bad: #a3312b; --sea: #d9e2e4; --land: #e3e6dc;
+  --f-display: "Marcellus SC", "Trajan Pro", Georgia, serif; --f-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif; --f-data: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12171a; --panel: #1a2125; --ink: #dde3e0; --mute: #93a09f; --line: #2e383c; --accent: #7fa9c9; --accent-ink: #0d1316;
+  --ok: #79b48a; --warn: #d9a54a; --bad: #e07a70; --sea: #172126; --land: #1d2629; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12171a; --panel: #1a2125; --ink: #dde3e0; --mute: #93a09f; --line: #2e383c; --accent: #7fa9c9; --accent-ink: #0d1316;
+  --ok: #79b48a; --warn: #d9a54a; --bad: #e07a70; --sea: #172126; --land: #1d2629; color-scheme: dark }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.45 var(--f-body); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 12px; }
+h1, h2 { font-family: var(--f-display); font-weight: 400; margin: 0; letter-spacing: .04em; }
+h1 { font-size: 22px; } h2 { font-size: 15px; color: var(--mute); }
+button, select { font: inherit; color: inherit; }
+button { border: 1px solid var(--line); background: var(--panel); border-radius: 4px; padding: 4px 10px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+button:disabled { opacity: .45; cursor: default; }
+select { border: 1px solid var(--line); background: var(--panel); border-radius: 4px; padding: 3px 6px; max-width: 100%; }
+.top { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.top .meta { font-family: var(--f-data); font-size: 13px; color: var(--mute); display: flex; gap: 14px; flex-wrap: wrap; }
+.top .grow { flex: 1; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 13px; }
+.chip { display: inline-flex; gap: 4px; align-items: center; border: 1px solid var(--line); border-radius: 999px; padding: 1px 9px; background: var(--panel); }
+.pause { margin: 10px 0; padding: 8px 12px; border-left: 4px solid var(--accent); background: var(--panel); display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.pause.danger { border-color: var(--bad); }
+.pause.ended { border-color: var(--bad); font-weight: 600; }
+.pause .what { font-family: var(--f-display); font-size: 16px; }
+.pause .queue { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; min-width: 0; }
+.grid { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr) minmax(260px, 330px); gap: 14px; margin-top: 10px; }
+@media (max-width: 1000px) { .grid { grid-template-columns: 1fr; } }
+.col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; min-width: 0; }
+.issue { border-left: 4px solid var(--line); }
+.issue.p-hi { border-left-color: var(--bad); } .issue.p-mid { border-left-color: var(--warn); }
+.issue .t { font-weight: 600; text-wrap: balance; }
+.ev { font-size: 13px; color: var(--mute); display: grid; gap: 1px; margin-top: 4px; }
+.ev span b { color: var(--ink); font-weight: 400; }
+.adv { margin-top: 6px; display: grid; gap: 4px; }
+.adv .row { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; font-size: 14px; }
+.adv .who { font-family: var(--f-display); min-width: 4.5em; }
+.adv .why { font-size: 12px; color: var(--mute); width: 100%; padding-left: 4.5em; }
+.adv button { font-size: 12px; padding: 1px 8px; margin-left: auto; }
+.map { padding: 0; overflow: hidden; }
+.map svg { display: block; width: 100%; height: auto; max-height: 72vh; background: var(--sea); }
+.map .route { stroke: var(--line); stroke-width: 3; }
+.map .route.ford { stroke-dasharray: 6 5; }
+.map text { font-family: var(--f-body); font-size: 15px; fill: var(--ink); paint-order: stroke; stroke: var(--land); stroke-width: 4px; }
+.map text.sub { font-size: 12px; fill: var(--mute); }
+.map .place { fill: var(--panel); stroke: var(--ink); stroke-width: 1.5; cursor: pointer; }
+.map .place.sel { stroke: var(--accent); stroke-width: 4; }
+.map .w-sound { fill: var(--ok); } .map .w-worn { fill: var(--ok); opacity: .7; } .map .w-damaged { fill: var(--warn); } .map .w-bad { fill: var(--bad); } .map .w-none { fill: var(--panel); }
+.map .raid { fill: var(--bad); opacity: .85; }
+.map .you { fill: none; stroke: var(--accent); stroke-width: 4; }
+.detail { font-size: 13px; display: grid; gap: 2px; }
+.detail .k { color: var(--mute); }
+.letters { display: grid; gap: 6px; max-height: 300px; overflow-y: auto; }
+.letter { font-size: 13px; border-bottom: 1px solid var(--line); padding-bottom: 5px; }
+.letter .h { display: flex; justify-content: space-between; gap: 8px; } .letter .h b { font-weight: 600; }
+.letter .c { color: var(--mute); }
+.form { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 8px; align-items: center; font-size: 14px; }
+.form label { color: var(--mute); }
+.err { color: var(--bad); font-size: 13px; }
+.quick { display: flex; flex-wrap: wrap; gap: 6px; }
+.obs { font-family: var(--f-data); font-size: 12px; }
+.obs table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+.obs td, .obs th { border-bottom: 1px solid var(--line); padding: 2px 4px; text-align: left; }
+.obs .log { max-height: 260px; overflow: auto; white-space: pre; }
+.scroll { overflow-x: auto; }
+@media (prefers-reduced-motion: no-preference) { button { transition: border-color .12s; } }
+</style>
+<div id="app"></div>
+<script>/*APP*/</script>

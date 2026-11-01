@@ -1,0 +1,234 @@
+// Debug UI (Phase 5): Court, Map, letters, order composer, travel and auto-pause, all from ViewOf(player).
+// The observer panel (Shift+O or #observer) shows hidden truth for H-01 observers only.
+import { deriveContent, type RawContent } from "../src/content.ts";
+import { createSim } from "../src/engine.ts";
+import { buildCourt, type AdviceLine } from "../src/presentation/court.ts";
+import { buildMap } from "../src/presentation/map.ts";
+import { validateDraft, type OrderDraft, type View } from "../src/view.ts";
+import { INTENTS, type Recommendation } from "../src/schemas.ts";
+import type { PlayerAction } from "../src/policies.ts";
+
+declare const __RAW__: RawContent;
+declare const __H01__: { seed: number; days: number; scripts: RawContent["scenario"]["scripts"] };
+const DAY = 86400;
+const raw = structuredClone(__RAW__);
+raw.scenario.scripts = __H01__.scripts;
+const content = deriveContent(raw);
+const END = __H01__.days * DAY;
+const REASONS = ["report", "advice", "danger", "arrival"] as const;
+const REASON_LABEL: Record<string, string> = { report: "Letters", advice: "Advice", danger: "Danger", arrival: "Arrival", checkpoint: "Day" };
+
+type Sim = ReturnType<typeof createSim>;
+const st = {
+  sim: null as unknown as Sim, seed: __H01__.seed, paused: null as null | string, over: false,
+  queue: [] as PlayerAction[], autoPause: new Set<string>(REASONS), selected: "northwatch",
+  draft: { recipient: "", intent: "repair", objective: "northwatch", discretion: "bounded" } as { recipient: string; intent: string; objective: string; discretion: string },
+  error: "", observer: location.hash === "#observer", answered: 0,
+};
+
+const esc = (s: unknown) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+const name = (v: View, id: string) => v.world.names[id] ?? id;
+
+function start(seed: number) {
+  st.sim = createSim({ content, seed, policy: "external" });
+  st.seed = seed; st.queue = []; st.error = ""; st.over = false; st.answered = 0;
+  advance();
+}
+
+/** Run to the next pause the player wants to see; other decision points pass with no action. */
+function advance() {
+  for (let guard = 0; guard < 5000; guard++) {
+    const r = st.sim.next(END);
+    if (r.ended || !r.paused) { st.paused = null; st.over = true; return render(); }
+    if (st.autoPause.has(r.reason!) || r.reason === "danger") { st.paused = r.reason!; return render(); }
+    st.sim.answer([]);
+  }
+  render();
+}
+
+function send() {
+  try { st.sim.answer(st.queue); } catch (e) { st.error = (e as Error).message; return render(); }
+  st.answered++; st.queue = []; st.error = "";
+  advance();
+}
+
+function fortNear(v: View, site: string) {
+  const s = v.world.places.find((p) => p.id === site);
+  if (!s) return undefined;
+  const d = (p: { pos: [number, number] }) => (p.pos[0] - s.pos[0]) ** 2 + (p.pos[1] - s.pos[1]) ** 2;
+  return v.world.places.filter((p) => p.fortified).sort((a, b) => d(a) - d(b))[0]?.id;
+}
+function adviceAction(v: View, r: Recommendation): PlayerAction | null {
+  const a = JSON.parse(r.plan.id) as { kind: string; target?: string };
+  if (a.kind === "advise_repair") return { action: "repair", target: a.target, followed: r.author };
+  if (a.kind === "advise_send_captain") return { action: "advance", target: a.target, followed: r.author };
+  if (a.kind === "advise_sortie") { const f = fortNear(v, a.target!); return f ? { action: "advance", target: f, followed: r.author } : null; }
+  if (a.kind === "advise_levy") return { action: "levy", followed: r.author };
+  return null;
+}
+const actionText = (v: View, a: PlayerAction) =>
+  a.action === "order" ? `Order ${name(v, a.order!.recipient)}: ${a.order!.intent} ${name(v, a.order!.objective.id)}`
+  : a.action === "levy" ? "Raise a levy" : a.action === "travel" ? `Travel to ${name(v, a.target!)}`
+  : a.action === "repair" ? `Repair ${name(v, a.target!)}` : `Send the captain to ${name(v, a.target!)}`;
+const queue = (a: PlayerAction) => { if (!st.paused) return; st.queue.push(a); st.error = ""; render(); };
+
+function pauseText(v: View): string {
+  if (st.over) {
+    const o = st.sim.objectiveStatus();
+    return o.ended ? (o.ended === "killed" ? `Anna is dead` : `Anna is captured`) : `Day ${__H01__.days}: ${o.met ? "the forts hold" : "fallen: " + o.fortsBelowBreach.map((f) => name(v, f)).join(", ")}`;
+  }
+  const r = st.paused;
+  if (r === "report") { const l = v.reports.at(-1); return l ? `Letter from ${name(v, l.author)}` : "Letter"; }
+  if (r === "advice") { const a = [...v.advice].sort((x, y) => y.computedAt - x.computedAt)[0]; return a ? `${name(v, a.author)} advises` : "Advice"; }
+  if (r === "danger") return "You are in danger";
+  if (r === "arrival") { const p = v.self.position; return "at" in p ? `Arrived at ${name(v, p.at)}` : "Arrived"; }
+  return REASON_LABEL[r ?? ""] ?? "";
+}
+
+function adviceRows(v: View, lines: AdviceLine[]) {
+  return lines.map((l) => {
+    const r = v.advice.find((x) => x.id === l.id), a = r ? adviceAction(v, r) : null;
+    return `<div class="row"><span class="who">${esc(l.adviser)}</span><span>${esc(l.plan)}</span>
+      ${a && st.paused ? `<button data-act='${esc(JSON.stringify(a))}'>Do it</button>` : ""}
+      <span class="why">${esc([...l.because, l.heard].join(" · "))}</span></div>`;
+  }).join("");
+}
+
+function court(v: View) {
+  const c = buildCourt(v);
+  const issues = c.issues.map((i) => `<div class="card issue ${i.priority >= 45 ? "p-hi" : i.priority >= 25 ? "p-mid" : ""}">
+    <div class="t">${esc(i.title)}</div>
+    <div class="ev">${i.evidence.map((e) => `<span><b>${esc(e.text)}</b> · ${esc(e.source)} · ${esc(e.age)} · ${esc(e.certainty)}</span>`).join("")}</div>
+    ${i.advice.length ? `<div class="adv">${adviceRows(v, i.advice)}</div>` : ""}</div>`).join("");
+  const general = c.advice.length ? `<div class="card"><h2>Council</h2><div class="adv">${adviceRows(v, c.advice)}</div></div>` : "";
+  return `<div class="col"><h2>Court · ${esc(c.at)}</h2>${issues || `<div class="card">No pressing matters</div>`}${general}</div>`;
+}
+
+function map(v: View) {
+  const m = buildMap(v), byId = new Map(m.places.map((p) => [p.id, p]));
+  const wcls = (w?: string) => !w ? "w-none" : w === "sound" ? "w-sound" : w === "worn" ? "w-worn" : w === "damaged" ? "w-damaged" : "w-bad";
+  const routes = m.routes.map((r) => { const a = byId.get(r.from)!, b = byId.get(r.to)!; return `<line class="route${r.crossing ? " ford" : ""}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/>`; }).join("");
+  const places = m.places.map((p) => {
+    const sel = p.id === st.selected ? " sel" : "";
+    const shape = p.fortified ? `<rect class="place ${wcls(p.wall?.words)}${sel}" x="${p.x - 13}" y="${p.y - 13}" width="26" height="26" rx="2" data-place="${p.id}"/>`
+      : `<circle class="place${sel}" cx="${p.x}" cy="${p.y}" r="${p.raiders ? 9 : 6}" data-place="${p.id}"/>`;
+    const raid = p.raiders && p.raiders.words !== "no raiders" ? `<path class="raid" d="M${p.x + 14} ${p.y - 26} l10 18 h-20 z"/>` : "";
+    const you = p.you ? `<circle class="you" cx="${p.x}" cy="${p.y}" r="22"/>` : "";
+    const sub = p.fortified ? (p.wall ? p.wall.words : "unknown") : p.raiders && p.raiders.words !== "no raiders" ? p.raiders.words : "";
+    return `${you}${shape}${raid}<text x="${p.x + 18}" y="${p.y + 5}">${esc(p.name)}</text>${sub ? `<text class="sub" x="${p.x + 18}" y="${p.y + 20}">${esc(sub)}</text>` : ""}`;
+  }).join("");
+  const s = byId.get(st.selected);
+  const line = (k: string, x?: { words: string; source: string; age: string; certainty: string }) => x ? `<div><span class="k">${k}</span> ${esc(x.words)} · ${esc(x.source)} · ${esc(x.age)} · ${esc(x.certainty)}</div>` : "";
+  const detail = s ? `<div class="card detail"><h2>${esc(s.name)}</h2>${line("Walls", s.wall)}${line("Raiders", s.raiders)}
+    ${s.people.length ? `<div><span class="k">People</span> ${s.people.map((x) => `${esc(x.name)} (${esc(x.age)}, ${esc(x.certainty)})`).join(", ")}</div>` : ""}
+    ${!s.wall && !s.raiders && !s.people.length ? `<div class="k">No news</div>` : ""}</div>` : "";
+  return `<div class="col"><div class="card map"><svg viewBox="40 30 980 920" role="img" aria-label="Map of the realm">
+    <rect x="40" y="30" width="980" height="920" fill="var(--land)"/>${routes}${places}</svg></div>${detail}</div>`;
+}
+
+function side(v: View) {
+  const p = st.paused;
+  const forts = v.world.places.filter((x) => x.fortified);
+  const opt = (val: string, label: string, cur: string) => `<option value="${esc(val)}"${val === cur ? " selected" : ""}>${esc(label)}</option>`;
+  const here = "at" in v.self.position ? v.self.position.at : null;
+  const travel = content.scenario.presence.travelTo.filter((t) => t !== here);
+  const known = [...new Set(Object.values(v.beliefs).filter((b) => b.predicate === "character.location" && b.subject.id !== v.self.id).map((b) => b.subject.id))].sort();
+  if (!st.draft.recipient || !known.includes(st.draft.recipient)) st.draft.recipient = known[0] ?? "";
+  const draft = toDraft();
+  const problems = draft ? validateDraft(v, draft) : ["no recipient"];
+  const quick = `<div class="card"><h2>Act</h2><div class="quick">
+    <select id="q-fort">${forts.map((f) => opt(f.id, f.name, st.selected)).join("")}</select>
+    <button data-q="repair" ${p ? "" : "disabled"}>Repair</button><button data-q="advance" ${p ? "" : "disabled"}>Send captain</button>
+    <button data-act='${esc(JSON.stringify({ action: "levy" }))}' ${p ? "" : "disabled"}>Levy</button></div>
+    <div class="quick" style="margin-top:6px">${travel.map((t) => `<button data-act='${esc(JSON.stringify({ action: "travel", target: t }))}' ${p ? "" : "disabled"}>Travel to ${esc(name(v, t))}</button>`).join("")}</div></div>`;
+  const places = [...v.world.places].sort((a, b) => (a.name < b.name ? -1 : 1));
+  const composer = `<div class="card"><h2>Order</h2><div class="form">
+    <label for="o-to">To</label><select id="o-to">${known.map((k) => opt(k, name(v, k), st.draft.recipient)).join("")}</select>
+    <label for="o-intent">Intent</label><select id="o-intent">${INTENTS.map((k) => opt(k, k, st.draft.intent)).join("")}</select>
+    <label for="o-obj">Where</label><select id="o-obj">${places.map((x) => opt(x.id, x.name, st.draft.objective)).join("")}${known.map((k) => opt("@" + k, name(v, k), st.draft.objective)).join("")}</select>
+    <label for="o-disc">Freedom</label><select id="o-disc">${["strict", "bounded", "delegated"].map((k) => opt(k, k, st.draft.discretion)).join("")}</select>
+    <span></span><button id="o-add" ${p && !problems.length ? "" : "disabled"}>Add</button></div>
+    ${problems.length && draft ? `<div class="err">${esc(problems.join("; "))}</div>` : ""}</div>`;
+  const letters = `<div class="card"><h2>Letters · ${v.reports.length}</h2><div class="letters">${[...v.reports].reverse().slice(0, 40).map((r) => {
+    const c = r.claims[0];
+    return `<div class="letter"><div class="h"><b>${esc(name(v, r.author))}</b><span>${esc(dayAgo(v, r.deliveredAt))}</span></div>
+      <div class="c">${esc(name(v, r.subject.id))} · written ${esc(dayAgo(v, r.composedAt))}${c ? " · " + esc(claimWords(v, c.predicate, c.believedValue)) : ""}</div></div>`;
+  }).join("") || `<div class="c">None</div>`}</div></div>`;
+  const orders = v.self.orders.length ? `<div class="card"><h2>Orders given · ${v.self.orders.length}</h2><div class="letters">${[...v.self.orders].reverse().slice(0, 20).map((o) => {
+    const b = v.beliefs[Object.keys(v.beliefs).find((k) => v.beliefs[k].predicate === "order.status" && v.beliefs[k].subject.id === String(o.orderId)) ?? ""];
+    return `<div class="letter"><div class="h"><b>${esc(name(v, o.recipient))}</b><span>${esc(dayAgo(v, o.tick))}</span></div><div class="c">${esc(o.action)} ${esc(name(v, o.target))} · ${esc(b ? String(b.believedValue) : "no word")}</div></div>`;
+  }).join("")}</div></div>` : "";
+  return `<div class="col">${quick}${composer}${letters}${orders}</div>`;
+}
+const dayAgo = (v: View, t: number) => { const d = Math.floor(v.now / DAY) - Math.floor(t / DAY); return d <= 0 ? "today" : d === 1 ? "yesterday" : `${d} days ago`; };
+function claimWords(v: View, pred: string, val: unknown) {
+  if (pred === "character.location") return `at ${name(v, val as string)}`;
+  if (pred === "fortification.condition") { const p = (val as number) / 1000; return `walls ${p >= 85 ? "sound" : p >= 70 ? "worn" : p >= 55 ? "damaged" : p >= 40 ? "badly damaged" : p >= 30 ? "near collapse" : "breached"}`; }
+  if (pred === "threat.intensity") { const s = val as number; return s <= 0 ? "no raiders" : s < 350 ? "a small band" : s < 650 ? "a strong band" : "a large host"; }
+  if (pred === "order.status") return `order ${val}`;
+  return pred.split(".").pop()!;
+}
+function toDraft(): OrderDraft | null {
+  if (!st.draft.recipient) return null;
+  const obj = st.draft.objective.startsWith("@") ? { kind: "character" as const, id: st.draft.objective.slice(1) } : { kind: "location" as const, id: st.draft.objective };
+  return { recipient: st.draft.recipient, intent: st.draft.intent as OrderDraft["intent"], objective: obj, discretion: st.draft.discretion as OrderDraft["discretion"],
+    reportingPolicy: { onReceipt: true, onCompletion: true, onFailure: true } };
+}
+
+function observer() {
+  const w = st.sim.unsafeWorldForDebug();
+  const rows = Object.entries(w.fortifications).map(([id, f]) => `<tr><td>${id}</td><td>${Math.round(f.conditionMilli / 1000)}%</td><td>${w.troops?.[id] ?? ""}</td></tr>`).join("");
+  const threats = Object.entries(w.threats).map(([id, t]) => `<tr><td>${id}</td><td>${(t as { intensityPermille: number }).intensityPermille}</td></tr>`).join("");
+  const pos = Object.entries(w.positions).filter(([id]) => w.tiers[id] === "A" || id === content.scenario.ruler).map(([id, p]) => `<tr><td>${id}</td><td>${"at" in p ? p.at : "→ " + p.transit.dest}</td></tr>`).join("");
+  const log = st.sim.log.slice(-60).map((e) => `${Math.floor(e.tick / DAY)} ${e.type} ${JSON.stringify(e.payload).slice(0, 140)}`).join("\n");
+  return `<div class="card obs"><h2>Observer · seed ${st.seed} · answered ${st.answered} · treasury ${Math.round(w.treasuryMilli[content.scenario.ruler] / 1000)}</h2>
+    <div class="scroll"><table><tr><th>fort</th><th>walls</th><th>troops</th></tr>${rows}</table></div>
+    <div class="scroll"><table><tr><th>site</th><th>raiders</th></tr>${threats || "<tr><td>none</td><td></td></tr>"}</table></div>
+    <div class="scroll"><table><tr><th>who</th><th>where</th></tr>${pos}</table></div>
+    <div class="quick" style="margin:6px 0"><button id="copy-log">Copy log</button></div>
+    <div class="log">${esc(log)}</div></div>`;
+}
+
+function render() {
+  const v = st.sim.viewOf("player");
+  const o = st.sim.objectiveStatus();
+  const pos = v.self.position;
+  const cls = st.over ? "ended" : st.paused === "danger" ? "danger" : "";
+  document.getElementById("app")!.innerHTML = `
+  <div class="top"><h1>Northern March</h1>
+    <div class="meta"><span>Day ${Math.floor(v.now / DAY) + 1} / ${__H01__.days}</span><span>${"at" in pos ? esc(name(v, pos.at)) : "on the road to " + esc(name(v, pos.transit.dest))}</span></div>
+    <div class="grow"></div>
+    <div class="chips">Pause on ${REASONS.map((r) => `<label class="chip"><input type="checkbox" data-pause="${r}" ${st.autoPause.has(r) ? "checked" : ""} ${r === "danger" ? "disabled" : ""}>${REASON_LABEL[r]}</label>`).join("")}</div>
+    <button id="restart">Restart</button>
+  </div>
+  <div class="pause ${cls}"><span class="what">${esc(pauseText(v))}</span>
+    <span class="queue">${st.queue.map((a, i) => `<span class="chip">${esc(actionText(v, a))} <button data-unq="${i}" aria-label="Remove">×</button></span>`).join("")}</span>
+    ${st.over ? "" : `<button class="primary" id="go">${st.queue.length ? "Send and continue" : "Continue"}</button>`}
+    ${st.error ? `<span class="err">${esc(st.error)}</span>` : ""}</div>
+  <div class="grid">${court(v)}${map(v)}${side(v)}</div>
+  ${st.observer ? observer() : ""}`;
+  void o;
+}
+
+document.addEventListener("click", (e) => {
+  const t = e.target as HTMLElement;
+  const el = t.closest("[data-act],[data-place],[data-q],[data-unq],#go,#restart,#o-add,#copy-log") as HTMLElement | null;
+  if (!el) return;
+  if (el.dataset.act) return queue(JSON.parse(el.dataset.act));
+  if (el.dataset.place) { st.selected = el.dataset.place; if (content.byId.location.get(st.selected)?.fortification) st.draft.objective = st.selected; return render(); }
+  if (el.dataset.q) return queue({ action: el.dataset.q as "repair", target: (document.getElementById("q-fort") as HTMLSelectElement).value });
+  if (el.dataset.unq) { st.queue.splice(Number(el.dataset.unq), 1); return render(); }
+  if (el.id === "go") return send();
+  if (el.id === "restart") return start(st.seed);
+  if (el.id === "o-add") { const d = toDraft(); if (d) queue({ action: "order", order: d }); return; }
+  if (el.id === "copy-log") navigator.clipboard?.writeText(st.sim.log.map((x) => JSON.stringify(x)).join("\n")).catch(() => {});
+});
+document.addEventListener("change", (e) => {
+  const t = e.target as HTMLInputElement | HTMLSelectElement;
+  if (t.dataset.pause) { (t as HTMLInputElement).checked ? st.autoPause.add(t.dataset.pause) : st.autoPause.delete(t.dataset.pause); return; }
+  const k = ({ "o-to": "recipient", "o-intent": "intent", "o-obj": "objective", "o-disc": "discretion" } as Record<string, keyof typeof st.draft>)[t.id];
+  if (k) { st.draft[k] = t.value; render(); }
+  if (t.id === "q-fort") st.selected = t.value;
+});
+document.addEventListener("keydown", (e) => { if (e.key === "O" && e.shiftKey) { st.observer = !st.observer; render(); } });
+start(st.seed);

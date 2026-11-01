@@ -235,7 +235,10 @@ function think(ctx: Ctx, agent: string, cause: number, layer: "strategic" | "ope
       }
     }
     const pos = ctx.s.positions[agent], rp = ctx.s.positions[c.scenario.ruler];
+    const rg = c.scenario.regency;
+    const rulerAway = !("at" in rp) || rp.at !== rg.seat;
     if (reason === "triggers" && ch.reportsTo === c.scenario.ruler && "at" in pos && "at" in rp && pos.at === rp.at) advise(ctx, agent, cause);
+    else if (reason === "triggers" && agent === rg.regent && rulerAway && "at" in pos && pos.at === rg.seat) regency(ctx, agent, cause);
   } finally {
     r.awake = null;
   }
@@ -258,7 +261,36 @@ function advise(ctx: Ctx, agent: string, cause: number) {
   };
   const problems = validateRecommendation(rec);
   if (problems.length) throw new Error(`invalid recommendation: ${problems.join("; ")}`);
-  ctx.emit("RecommendationMade", [d.id], [chr(agent), chr(c.scenario.ruler)], { recommendation: rec });
+  const audience = present(ctx.s, (ctx.s.positions[agent] as { at: string }).at).filter((x) => x !== agent);
+  const made = ctx.emit("RecommendationMade", [d.id], [chr(agent), chr(c.scenario.ruler)], { recommendation: rec, audience });
+  if (audience.includes(c.scenario.ruler)) ctx.at(ctx.tick, "player:decide", { cause: made.id, reason: "advice" });
+}
+
+/** Regency (adopted decision 3): with the ruler away, the regent acts on her own advice within delegated authority and
+ *  writes to the ruler; reserved matters she puts to the ruler by letter instead. */
+function regency(ctx: Ctx, agent: string, cause: number) {
+  const c = ctx.content, rg = c.scenario.regency, ruler = c.scenario.ruler;
+  const view = buildView(ctx.s, c, agent, ctx.tick), per = perceiverFromView(view);
+  const sit = buildSituation(ctx.s, c, agent, ctx.tick, "advise", view);
+  const res = plan(sit, per);
+  if (!res || res.selected.kind === "advise_wait") return;
+  const a = res.selected;
+  const recent = (ctx.s.issued[agent] ?? []).some((r) => r.target === a.target && ctx.tick - r.tick < 20 * DAY);
+  const cond = a.target ? (per.get(a.target, "fortification.condition")?.value as number | undefined) : undefined;
+  const cost = a.kind === "advise_repair" && cond !== undefined ? Math.max(0, c.scenario.player.repairRestoreToMilli - cond) * c.scenario.player.repairCostMilliPerMilli : 0;
+  const within = (a.kind === "advise_repair" && cost <= rg.maxRepairCostMilli) || (a.kind === "advise_levy" && rg.mayLevy) || (a.kind === "advise_send_captain" && rg.maySendCaptain);
+  const d = ctx.emit("DecisionMade", [cause], [chr(agent), chr(ruler)], {
+    trace: { ...traceOf(sit, per, res, cause, "strategic", "regency") }, score: res.score, idle: true, authority: within ? "within" : "reserved", recent });
+  if (recent) return;
+  const fort = a.target && ctx.s.fortifications[a.target] ? a.target : null;
+  const claims = fort ? claimsFor(ctx, agent, fort) : [];
+  if (within && a.kind === "advise_repair") {
+    const to = sorted(c.characters.filter((x) => x.location === a.target && x.reportsTo === ruler), (x) => x.id)[0]?.id;
+    if (!to) return;
+    ctx.at(ctx.tick, "orders:regentOrder", { regent: agent, recipient: to, intent: "repair", objective: loc(a.target!), cause: d.id, claims });
+  } else if (claims.length) {
+    ctx.at(ctx.tick, "messenger:compose", { author: agent, recipient: ruler, claims, cause: d.id, purpose: `regency:${a.kind}${a.target ? ":" + a.target : ""}` });
+  }
 }
 
 // ---- execution through people and physical systems -------------------------------------------------------------------
@@ -335,6 +367,7 @@ export const agents: System = {
       if (who && isAgent(ctx, who)) rebuild(ctx, who);
     } else if (e.type === "Arrived") {
       ctx.at(ctx.tick, "orders:arrived", { who: e.payload.who, at: e.payload.at, arrivedEventId: e.id });
+      if (e.payload.who === ctx.content.scenario.ruler) ctx.at(ctx.tick, "player:decide", { cause: e.id, reason: "arrival" });
     } else if (e.type === "ReportDelivered") {
       ctx.at(ctx.tick, "orders:reportArrived", { reportId: e.payload.reportId, recipient: e.payload.recipient, deliveredEventId: e.id });
     }

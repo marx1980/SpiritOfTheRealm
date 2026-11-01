@@ -25,6 +25,8 @@ export interface WorldState {
   history: Record<string, HistoryEntry[]>;
   agents: Record<string, AgentState>;
   recommendations: Record<string, Recommendation>;
+  heard: Record<string, Record<string, Recommendation>>; // advice each listener heard in person, latest per adviser and target
+  campaign: { ended: { tick: number; ending: string; where: string } | null; lastDanger: number };
   lastRaid: Record<string, number>;
   lastRepairStart: Record<string, number>;
   lastArrival: Record<string, Record<string, number>>;
@@ -62,7 +64,7 @@ export function initialState(c: Content): WorldState {
     if (ch.id !== c.scenario.ruler && ch.tier !== "C") agents[ch.id] = newAgent();
   }
   return {
-    treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, tiers, history: {}, agents, recommendations: {}, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, lastStorm: {}, threats: {}, routesClosed: {},
+    treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, tiers, history: {}, agents, recommendations: {}, heard: {}, campaign: { ended: null, lastDanger: -1 }, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, lastStorm: {}, threats: {}, routesClosed: {},
     positions, departures: {}, beliefs: {}, nextPropId: 1, reports: {}, nextReportId: 1, messengers: {}, nextMessengerId: 1,
     orders: {}, nextOrderId: 1, ordersInForce: {}, issued: {}, repairs: {},
   };
@@ -168,7 +170,13 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   RepairCompleted: (s, p, e) => { const f = s.fortifications[p.location]; f.conditionMilli = clampCond(f.conditionMilli + p.restoredMilli); f.lastChangeEvent = e.id; delete s.repairs[p.location]; },
   LevyRaised: (s, p) => { s.treasuryMilli[p.payer] += p.amountMilli; },
   PlayerInput: noop,
-  RecommendationMade: (s, p) => { s.recommendations[p.recommendation.author] = p.recommendation; },
+  RecommendationMade: (s, p) => {
+    s.recommendations[p.recommendation.author] = p.recommendation;
+    const t = (JSON.parse(p.recommendation.plan.id) as { target?: string }).target ?? "*";
+    for (const who of p.audience ?? []) (s.heard[who] ??= {})[`${p.recommendation.author}|${t}`] = p.recommendation;
+  },
+  DangerSignalled: (s, p, e) => { s.campaign.lastDanger = e.tick; },
+  CampaignEnded: (s, p, e) => { s.campaign.ended = { tick: e.tick, ending: p.ending, where: p.where }; },
   AgentWoke: (s, p, e) => { s.agents[p.agent].lastActive = e.tick; },
   DecisionMade: (s, p, e) => {
     const t = p.trace, a = s.agents[t.agent];

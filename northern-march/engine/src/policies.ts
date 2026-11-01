@@ -1,9 +1,10 @@
 // A6: scripted player policies. A policy sees only ViewOf(player) and may draw from the "player" stream.
 import type { Rng } from "./rng.ts";
-import { beliefsAbout, type View } from "./view.ts";
+import { beliefsAbout, type OrderDraft, type View } from "./view.ts";
 
-export type PolicyId = "passive" | "delegating" | "aggressive" | "random-valid" | "follow-best-adviser" | "follow-worst-adviser" | "replay";
-export interface PlayerAction { action: "repair" | "levy" | "advance"; target?: string; decision?: number }
+
+export type PolicyId = "passive" | "delegating" | "aggressive" | "random-valid" | "follow-best-adviser" | "follow-worst-adviser" | "external" | "replay" | `follow:${string}`;
+export interface PlayerAction { action: "repair" | "levy" | "advance" | "travel" | "order"; target?: string; order?: OrderDraft; decision?: number; followed?: string }
 export type PolicyFn = (v: View, rng: () => Rng) => PlayerAction[];
 
 const DAY = 86400;
@@ -32,7 +33,39 @@ const advanceTo = (minIntensity: number, cooldownDays: number): PolicyFn => (v) 
 const repairBelow = (threshold: number, cooldownDays: number): PolicyFn => (v) =>
   believedForts(v).filter((f) => f.value < threshold && !recently(v, "repair", f.loc, cooldownDays)).map((f) => ({ action: "repair" as const, target: f.loc }));
 
-export const POLICIES: Record<Exclude<PolicyId, "replay">, { fn: PolicyFn | null; note: string }> = {
+/** Do what one adviser recommends: each piece of advice heard from them in person and still fresh (one standing
+ *  piece per target), unless already acted on recently. */
+export function followAdviser(adviser: string): PolicyFn {
+  return (v) => {
+    const out: PlayerAction[] = [];
+    for (const rec of v.advice.filter((r) => r.author === adviser)) {
+      const a = JSON.parse(rec.plan.id) as { kind: string; target?: string };
+      const map: Record<string, PlayerAction["action"]> = { advise_repair: "repair", advise_send_captain: "advance", advise_levy: "levy" };
+      let action = map[a.kind], target = a.target;
+      if (a.kind === "advise_sortie") { action = "advance"; target = fortOfSite(v, a.target!); } // send the captain to the fort nearest the raiders
+      if (!action || recently(v, action, action === "levy" ? null : target ?? null, 10)) continue;
+      if (out.some((x) => x.action === action && x.target === target)) continue;
+      out.push({ action, ...(target ? { target } : {}), followed: adviser });
+    }
+    return out;
+  };
+}
+/** The fortified place nearest a site on the map (static knowledge). */
+function fortOfSite(v: View, site: string): string | undefined {
+  const s = v.world.places.find((p) => p.id === site);
+  if (!s) return undefined;
+  const d = (p: { pos: [number, number] }) => (p.pos[0] - s.pos[0]) ** 2 + (p.pos[1] - s.pos[1]) ** 2;
+  return [...v.world.places].filter((p) => p.fortified).sort((a, b) => d(a) - d(b) || (a.id < b.id ? -1 : 1))[0]?.id;
+}
+
+/** Which adviser "best" and "worst" mean is measured (G-12) and recorded in content; until then they are unavailable. */
+export function policyFn(id: PolicyId, aliases: Record<string, string> = {}): PolicyFn | null {
+  if (id.startsWith("follow:")) return followAdviser(id.slice("follow:".length));
+  if ((id === "follow-best-adviser" || id === "follow-worst-adviser") && aliases[id]) return followAdviser(aliases[id]);
+  return POLICIES[id as keyof typeof POLICIES]?.fn ?? null;
+}
+
+export const POLICIES: Record<"passive" | "delegating" | "aggressive" | "random-valid" | "follow-best-adviser" | "follow-worst-adviser", { fn: PolicyFn | null; note: string }> = {
   passive: { fn: () => [], note: "never acts" },
   delegating: { fn: (v, rng) => [...repairBelow(60000, 20)(v, rng), ...advanceTo(400, 20)(v, rng)], note: "repairs below 60%; sends the captain against raiders reported at 400 or more" },
   aggressive: {

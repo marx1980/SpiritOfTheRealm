@@ -177,5 +177,28 @@
       "hours": 12
     },
     "raidMitigationPerManPermille": 8
+  },
+  "regency": {
+    "regent": "elara",
+    "seat": "ravenport",
+    "maxRepairCostMilli": 50000,
+    "mayLevy": false,
+    "maySendCaptain": false
+  },
+  "presence": {
+    "dangerBelowMilli": 60000,
+    "deathPermille": 300,
+    "travelTo": [
+      "ravenport",
+      "greybridge",
+      "northwatch"
+    ]
+  },
+  "objective": {
+    "forts": [
+      "northwatch",
+      "greybridge",
+      "eastmarch"
+    ]
   }
 }

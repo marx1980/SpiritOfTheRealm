@@ -5,7 +5,11 @@
     "province": "crownlands",
     "kind": "city",
     "terrain": "road",
-    "exposurePermille": 5
+    "exposurePermille": 5,
+    "pos": [
+      120,
+      620
+    ]
   },
   {
     "id": "saltmere",
@@ -13,7 +17,11 @@
     "province": "crownlands",
     "kind": "port",
     "terrain": "road",
-    "exposurePermille": 15
+    "exposurePermille": 15,
+    "pos": [
+      90,
+      820
+    ]
   },
   {
     "id": "kingsroad",
@@ -21,7 +29,11 @@
     "province": "crownlands",
     "kind": "waystation",
     "terrain": "road",
-    "exposurePermille": 0
+    "exposurePermille": 0,
+    "pos": [
+      300,
+      520
+    ]
   },
   {
     "id": "greybridge",
@@ -33,7 +45,11 @@
     "fortification": {
       "conditionMilli": 90000,
       "garrison": 80
-    }
+    },
+    "pos": [
+      430,
+      420
+    ]
   },
   {
     "id": "ashford",
@@ -41,7 +57,11 @@
     "province": "crownlands",
     "kind": "village",
     "terrain": "track",
-    "exposurePermille": 5
+    "exposurePermille": 5,
+    "pos": [
+      330,
+      660
+    ]
   },
   {
     "id": "crownwood",
@@ -49,7 +69,11 @@
     "province": "crownlands",
     "kind": "forest",
     "terrain": "forest",
-    "exposurePermille": 0
+    "exposurePermille": 0,
+    "pos": [
+      220,
+      720
+    ]
   },
   {
     "id": "oldmill",
@@ -57,7 +81,11 @@
     "province": "crownlands",
     "kind": "village",
     "terrain": "road",
-    "exposurePermille": 5
+    "exposurePermille": 5,
+    "pos": [
+      160,
+      520
+    ]
   },
   {
     "id": "veyford",
@@ -65,7 +93,11 @@
     "province": "crownlands",
     "kind": "hamlet",
     "terrain": "track",
-    "exposurePermille": 5
+    "exposurePermille": 5,
+    "pos": [
+      470,
+      700
+    ]
   },
   {
     "id": "pinegate",
@@ -73,7 +105,11 @@
     "province": "northmarch",
     "kind": "village",
     "terrain": "road",
-    "exposurePermille": 10
+    "exposurePermille": 10,
+    "pos": [
+      540,
+      360
+    ]
   },
   {
     "id": "northwatch",
@@ -85,7 +121,11 @@
     "fortification": {
       "conditionMilli": 75000,
       "garrison": 120
-    }
+    },
+    "pos": [
+      700,
+      280
+    ]
   },
   {
     "id": "greyfen",
@@ -93,7 +133,11 @@
     "province": "northmarch",
     "kind": "village",
     "terrain": "marsh",
-    "exposurePermille": 10
+    "exposurePermille": 10,
+    "pos": [
+      760,
+      400
+    ]
   },
   {
     "id": "blackwood",
@@ -101,7 +145,11 @@
     "province": "northmarch",
     "kind": "forest",
     "terrain": "forest",
-    "exposurePermille": 0
+    "exposurePermille": 0,
+    "pos": [
+      860,
+      330
+    ]
   },
   {
     "id": "grey_hill",
@@ -109,7 +157,11 @@
     "province": "northmarch",
     "kind": "hill",
     "terrain": "hills",
-    "exposurePermille": 15
+    "exposurePermille": 15,
+    "pos": [
+      720,
+      160
+    ]
   },
   {
     "id": "coldmere",
@@ -117,7 +169,11 @@
     "province": "northmarch",
     "kind": "village",
     "terrain": "marsh",
-    "exposurePermille": 10
+    "exposurePermille": 10,
+    "pos": [
+      860,
+      180
+    ]
   },
   {
     "id": "fenhollow",
@@ -125,7 +181,11 @@
     "province": "northmarch",
     "kind": "village",
     "terrain": "marsh",
-    "exposurePermille": 10
+    "exposurePermille": 10,
+    "pos": [
+      640,
+      480
+    ]
   },
   {
     "id": "highcairn",
@@ -133,7 +193,11 @@
     "province": "northmarch",
     "kind": "outpost",
     "terrain": "hills",
-    "exposurePermille": 20
+    "exposurePermille": 20,
+    "pos": [
+      620,
+      70
+    ]
   },
   {
     "id": "redbarrow",
@@ -141,7 +205,11 @@
     "province": "eastmarch",
     "kind": "village",
     "terrain": "track",
-    "exposurePermille": 5
+    "exposurePermille": 5,
+    "pos": [
+      580,
+      720
+    ]
   },
   {
     "id": "eastmarch",
@@ -153,7 +221,11 @@
     "fortification": {
       "conditionMilli": 85000,
       "garrison": 150
-    }
+    },
+    "pos": [
+      700,
+      800
+    ]
   },
   {
     "id": "thornfield",
@@ -161,7 +233,11 @@
     "province": "eastmarch",
     "kind": "village",
     "terrain": "road",
-    "exposurePermille": 5
+    "exposurePermille": 5,
+    "pos": [
+      830,
+      640
+    ]
   },
   {
     "id": "marchend",
@@ -169,7 +245,11 @@
     "province": "eastmarch",
     "kind": "town",
     "terrain": "road",
-    "exposurePermille": 10
+    "exposurePermille": 10,
+    "pos": [
+      560,
+      900
+    ]
   },
   {
     "id": "stonegate",
@@ -177,7 +257,11 @@
     "province": "eastmarch",
     "kind": "pass",
     "terrain": "hills",
-    "exposurePermille": 20
+    "exposurePermille": 20,
+    "pos": [
+      820,
+      920
+    ]
   },
   {
     "id": "bellmoor",
@@ -185,6 +269,10 @@
     "province": "eastmarch",
     "kind": "village",
     "terrain": "track",
-    "exposurePermille": 5
+    "exposurePermille": 5,
+    "pos": [
+      840,
+      800
+    ]
   }
 ]

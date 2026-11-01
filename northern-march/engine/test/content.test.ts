@@ -33,7 +33,7 @@ test("orphan relationship is rejected", () => {
 });
 
 test("unreachable location is rejected", () => {
-  const raw = fresh(); raw.locations.push({ id: "island", name: "Island", province: "crownlands", kind: "village", terrain: "road", exposurePermille: 0 });
+  const raw = fresh(); raw.locations.push({ id: "island", name: "Island", province: "crownlands", kind: "village", terrain: "road", exposurePermille: 0, pos: [0, 0] });
   assert.ok(codes(raw).includes("LOCATION_UNREACHABLE"));
 });
 

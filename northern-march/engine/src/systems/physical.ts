@@ -18,6 +18,26 @@ export function maybeAlarm(ctx: Ctx, location: string, before: number, cause: nu
   if (after !== undefined && before >= alarm && after < alarm) ctx.at(ctx.tick, "messenger:urgent", { location, cause });
 }
 
+/** Personal danger (P0.07): signalled before it can be lethal. The ruler at a raided fort is warned when she believes the
+ *  walls are failing; if they are breached with her inside, she is captured or killed and the campaign ends. */
+function presence(ctx: Ctx, fort: string, raid: number): boolean {
+  const sc = ctx.content.scenario, ruler = sc.ruler, pos = ctx.s.positions[ruler];
+  if (!("at" in pos) || pos.at !== fort) return false;
+  const cond = ctx.s.fortifications[fort].conditionMilli;
+  if (cond < sc.endStates.fortificationBreachedBelowMilli) {
+    const r = ctx.keyed(`threat:presence:${ctx.tick}`);
+    const ending = r.chancePermille(sc.presence.deathPermille) ? "killed" : "captured";
+    ctx.emit("CampaignEnded", [raid], [chr(ruler), loc(fort)], { ending, where: fort });
+    return true;
+  }
+  const believed = best(ctx, ruler, fort, "fortification.condition");
+  if (believed && (believed.believedValue as number) < sc.presence.dangerBelowMilli && ctx.tick - ctx.s.campaign.lastDanger > 5 * DAY) {
+    const w = ctx.emit("DangerSignalled", [raid], [chr(ruler), loc(fort)], { who: ruler, where: fort, believedMilli: believed.believedValue });
+    ctx.at(ctx.tick, "player:decide", { cause: w.id, reason: "danger" });
+  }
+  return false;
+}
+
 export const economy: System = {
   id: "economy",
   start: (ctx) => ctx.at(DAY, "economy:day", {}),
@@ -98,6 +118,7 @@ export const threat: System = {
             observe(ctx, who, loc(site), "threat.intensity", e.id);
           }
           maybeAlarm(ctx, target, before, e.id);
+          if (presence(ctx, target, e.id)) return; // the campaign has ended
         }
       }
       // Days without raids are evidence too: those at the target who still believe in a threat notice the quiet.

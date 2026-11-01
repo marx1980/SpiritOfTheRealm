@@ -16,15 +16,16 @@ import { travel } from "./movement.ts";
 const oref = (id: number) => ({ kind: "order" as const, id: String(id) });
 
 export function issue(ctx: Ctx, issuer: string, recipient: string, intent: IntentKind, objective: SubjectRef, cause: number, supersedesPrevious = false,
-  opts: { discretion?: StructuredOrder["discretion"]; parentOrderId?: number } = {}) {
+  opts: { discretion?: StructuredOrder["discretion"]; parentOrderId?: number; constraints?: StructuredOrder["constraints"]; contingencies?: StructuredOrder["contingencies"];
+    reportingPolicy?: StructuredOrder["reportingPolicy"] } = {}) {
   const id = ctx.s.nextOrderId;
   const supersedes = supersedesPrevious
     ? (ctx.s.issued[issuer] ?? []).filter((r) => r.recipient === recipient && r.target === objective.id).map((r) => r.orderId)
     : [];
   const order: StructuredOrder = {
     schemaVersion: 1, id, issuer, recipient, issuedAt: ctx.tick, kind: "strategic", intent, objective,
-    constraints: [], contingencies: [], discretion: opts.discretion ?? "bounded",
-    reportingPolicy: { onReceipt: false, onCompletion: true, onFailure: true },
+    constraints: opts.constraints ?? [], contingencies: opts.contingencies ?? [], discretion: opts.discretion ?? "bounded",
+    reportingPolicy: opts.reportingPolicy ?? { onReceipt: false, onCompletion: true, onFailure: true },
     ...(supersedes.length ? { supersedes } : {}), ...(opts.parentOrderId ? { parentOrderId: opts.parentOrderId } : {}),
   };
   const problems = validateOrder(order);
@@ -189,6 +190,14 @@ export const orders: System = {
       issue(ctx, s.from, s.to, s.intent as IntentKind, s.objective, ev.id, !!s.supersedesPrevious, { discretion: s.discretion });
     },
     "orders:received": (ctx, { orderId, receivedEventId }) => process(ctx, orderId, receivedEventId),
+    "orders:regentOrder": (ctx, { regent, recipient, intent, objective, cause, claims }) => {
+      const id = issue(ctx, regent, recipient, intent, objective, cause);
+      learn(ctx, regent, { subject: oref(id), predicate: "order.status", value: "issued", observedAt: ctx.tick, band: "certain" },
+        { kind: "observation", eventId: cause, source: regent }, [cause]);
+      const st = best(ctx, regent, String(id), "order.status");
+      const all = [...claims, ...(st ? [{ ...st, reliabilityBand: st.band }] : [])].map(({ band: _b, ...rest }: any) => rest);
+      ctx.at(ctx.tick, "messenger:compose", { author: regent, recipient: ctx.content.scenario.ruler, claims: all, cause, purpose: `regency:ordered:${intent}:${objective.id}` });
+    },
     "orders:completeRepair": (ctx, { orderId, location, restoredMilli, startedEventId, engineer }) => {
       const rc = ctx.emit("RepairCompleted", [startedEventId], [loc(location), oref(orderId)], { location, restoredMilli, orderId });
       const exp = ctx.content.scenario.agents.experience;

@@ -18,7 +18,7 @@ export interface Trait { id: string; riskPermille: number; obedienceWhenDisagree
   lossResponsePermille: number; badNewsReportingPermille: number; commitmentPermille: number }
 export interface Province { id: string; name: string; seat: string }
 export interface River { id: string; name: string }
-export interface Location { id: string; name: string; province: string; kind: string; terrain: string; exposurePermille: number; fortification?: { conditionMilli: number; garrison: number } }
+export interface Location { id: string; name: string; province: string; kind: string; terrain: string; exposurePermille: number; fortification?: { conditionMilli: number; garrison: number }; pos: [number, number] }
 export interface Route { id: string; from: string; to: string; km: number; terrain: string; crossing?: { river: string; kind: string } }
 export interface Predicate { id: string; subjectKind: SubjectRefC["kind"]; halfLifeTicks: number; domain: string; wakeSignificance: 0 | 1 | 2 | 3; materialDelta: number }
 export interface Relationship { to: string; kind: string; value: number }
@@ -61,6 +61,9 @@ export interface Scenario {
   endStates: { fortificationBreachedBelowMilli: number };
   agents: AgentParams;
   battle: BattleParams;
+  regency: { regent: string; seat: string; maxRepairCostMilli: number; mayLevy: boolean; maySendCaptain: boolean };
+  presence: { dangerBelowMilli: number; deathPermille: number; travelTo: string[] };
+  objective: { forts: string[] };
 }
 export interface RawContent {
   manifest: { schemaVersion: number; contentVersion: string };
@@ -149,6 +152,10 @@ export function validateContent(raw: RawContent): { errors: ContentError[] } {
   for (const h of sc.economy.holdings) need(locs, h.location, "location", "economy holding");
   for (const s of sc.threat.sites) { need(locs, s.site, "location", "threat site"); need(locs, s.target, "location", "threat target"); }
   for (const i of sc.interception) { need(locs, i.location, "location", "interception"); need(chars, i.by, "character", "interception"); }
+  need(chars, sc.regency.regent, "character", "regency.regent"); need(locs, sc.regency.seat, "location", "regency.seat");
+  for (const l of sc.presence.travelTo) need(locs, l, "location", "presence.travelTo");
+  for (const f of sc.objective.forts) if (!raw.locations.find((l) => l.id === f)?.fortification) err("ID_UNKNOWN", `objective fort ${f} is not fortified`);
+  for (const l of raw.locations) if (!Array.isArray(l.pos) || l.pos.length !== 2) err("POSITION", `location ${l.id} has no map position`);
   for (const s of sc.scripts) {
     if (s.kind === "travel") { need(chars, s.who, "character", "script"); need(locs, s.to, "location", "script"); if (!(MODES as readonly string[]).includes(s.mode)) err("MODE_MISSING", `script mode ${s.mode}`); }
     else if (s.kind === "order") { need(chars, s.from, "character", "script"); need(chars, s.to, "character", "script"); }

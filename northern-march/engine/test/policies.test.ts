@@ -25,7 +25,7 @@ test("player actions appear only as PlayerInput events with no cause other than 
   assert.ok(inputs.length > 0);
   for (const e of inputs) {
     const seen = sim.log.find((x) => x.id === e.causedBy[0]);
-    assert.ok(!seen || seen.type === "ReportDelivered", "player acted on something not shown to her");
+    assert.ok(!seen || ["ReportDelivered", "RecommendationMade", "DangerSignalled", "Arrived"].includes(seen.type), "player acted on something not shown to her");
   }
 });
 

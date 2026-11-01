@@ -88,6 +88,8 @@ export const EVENT_TYPES: Readonly<Record<string, EventTypeDef>> = Object.freeze
   LevyRaised: T("orders", "economic", 2),
   // player and advice
   PlayerInput: T("player", "political", 3, true),
+  DangerSignalled: T("core", "military", 3), // the ruler is warned before danger can be lethal
+  CampaignEnded: T("core", "political", 3),
   RecommendationMade: T("advice", "political", 1), // B3: advisers prepare advice when court business arrives
   // agents (Phase 3)
   AgentWoke: T("agents", "info", 0),

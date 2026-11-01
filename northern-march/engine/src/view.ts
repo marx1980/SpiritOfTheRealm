@@ -2,19 +2,31 @@
 // beliefs (with staleness applied on read), reports delivered to them, their own orders and position, and the clock.
 import { BANDS, effectiveBand, type BeliefProposition, type EffectiveBand } from "./beliefs.ts";
 import type { Content } from "./content.ts";
-import type { StructuredOrder } from "./schemas.ts";
+import { INTENTS, type Constraint, type Contingency, type IntentKind, type Recommendation, type ReportingPolicy, type StructuredOrder } from "./schemas.ts";
 import type { IssuedRecord, Position, WorldState } from "./world.ts";
+
+/** Advice heard more than this long ago is no longer shown as standing advice. */
+export const ADVICE_FRESH = 15 * 86400;
 
 export type BeliefView = BeliefProposition & { effectiveBand: EffectiveBand; ageTicks: number };
 export interface DeliveredReport {
   reportId: number; author: string; subject: { kind: string; id: string }; claims: BeliefProposition[];
   composedAt: number; deliveredAt: number; route: string[]; authorBias?: string[];
 }
+/** Static knowledge anyone in the realm has: the map and the names of places and of people they know of. */
+export interface WorldKnowledge {
+  places: { id: string; name: string; province: string; kind: string; pos: [number, number]; fortified: boolean }[];
+  routes: { from: string; to: string; crossing?: string }[];
+  names: Record<string, string>;
+}
 export interface View {
   readonly now: number;
   readonly self: { readonly id: string; readonly position: Position; readonly ordersInForce: readonly StructuredOrder[]; readonly orders: readonly IssuedRecord[] };
   readonly beliefs: Readonly<Record<string, Readonly<BeliefView>>>;
   readonly reports: readonly DeliveredReport[];
+  /** What advisers told the viewer in person, latest per adviser (DESIGN_PIPELINE §5). */
+  readonly advice: readonly Recommendation[];
+  readonly world: WorldKnowledge;
 }
 
 function deepFreeze<T>(o: T): T {
@@ -33,12 +45,20 @@ export function buildView(s: Readonly<WorldState>, c: Content, who: string, now:
     .map((r) => ({ reportId: r.id, author: r.author, subject: r.subject, claims: structuredClone(r.claims), composedAt: r.composedAt, deliveredAt: r.deliveredAt!,
       route: [...r.route], ...(r.authorBias ? { authorBias: [...r.authorBias] } : {}) }))
     .sort((a, b) => a.reportId - b.reportId);
+  const known = new Set<string>([who, ...Object.values(beliefs).filter((b) => b.subject.kind === "character").map((b) => b.subject.id), ...reports.map((r) => r.author)]);
   return deepFreeze({
     now,
     self: { id: who, position: structuredClone(s.positions[who]), ordersInForce: (s.ordersInForce[who] ?? []).map((id) => structuredClone(s.orders[String(id)].order)),
       orders: structuredClone(s.issued[who] ?? []) },
     beliefs,
     reports,
+    advice: Object.values(s.heard[who] ?? {}).filter((r) => now - r.computedAt <= ADVICE_FRESH).map((r) => structuredClone(r))
+      .sort((a, b) => (a.author < b.author ? -1 : a.author > b.author ? 1 : b.computedAt - a.computedAt || a.id - b.id)),
+    world: {
+      places: c.locations.map((l) => ({ id: l.id, name: l.name, province: l.province, kind: l.kind, pos: [...l.pos] as [number, number], fortified: !!l.fortification })),
+      routes: c.routes.map((r) => ({ from: r.from, to: r.to, ...(r.crossing ? { crossing: r.crossing.kind } : {}) })),
+      names: Object.fromEntries([...c.locations.map((l) => [l.id, l.name]), ...[...known].sort().map((id) => [id, c.byId.character.get(id)?.name ?? id])]),
+    },
   });
 }
 
@@ -46,4 +66,24 @@ export function buildView(s: Readonly<WorldState>, c: Content, who: string, now:
 export function beliefsAbout(v: View, subjectId: string, predicate: string): BeliefView[] {
   return Object.values(v.beliefs).filter((b) => b.subject.id === subjectId && b.predicate === predicate)
     .sort((a, b) => BANDS.indexOf(b.effectiveBand) - BANDS.indexOf(a.effectiveBand) || b.observedAt - a.observedAt || a.id - b.id);
+}
+
+export interface OrderDraft {
+  recipient: string; intent: IntentKind; objective: { kind: "location" | "character"; id: string };
+  discretion?: StructuredOrder["discretion"]; constraints?: Constraint[]; contingencies?: Contingency[]; reportingPolicy?: ReportingPolicy;
+}
+
+/** A draft order is valid only against what the issuer knows (A7, ARCHITECTURE §20.11): a recipient they know where
+ *  to find, a place on their map or a person they know of, an intent from the frozen list. */
+export function validateDraft(v: View, d: OrderDraft): string[] {
+  const out: string[] = [];
+  if (!INTENTS.includes(d.intent)) out.push(`unknown intent ${d.intent}`);
+  if (d.recipient === v.self.id) out.push("cannot order yourself");
+  if (!beliefsAbout(v, d.recipient, "character.seat").length && !beliefsAbout(v, d.recipient, "character.location").length) out.push(`you do not know who or where ${d.recipient} is`);
+  if (d.objective?.kind === "location" && !v.world.places.some((p) => p.id === d.objective.id)) out.push(`no place called ${d.objective.id} on your map`);
+  if (d.objective?.kind === "character" && !(d.objective.id in v.world.names)) out.push(`you know of no one called ${d.objective.id}`);
+  if (!d.objective || !["location", "character"].includes(d.objective.kind)) out.push("an order needs an objective");
+  if (d.discretion && !["strict", "bounded", "delegated"].includes(d.discretion)) out.push(`unknown discretion ${d.discretion}`);
+  for (const c of d.constraints ?? []) if (typeof c.kind !== "string" || typeof c.textKey !== "string") out.push("malformed constraint");
+  return out;
 }

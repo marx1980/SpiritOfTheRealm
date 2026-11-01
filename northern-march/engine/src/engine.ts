@@ -1,9 +1,8 @@
 // Event-sourced simulation core (A1-A3, A6, A7). The log is the source of truth; WorldState is its projection.
-import { createHash } from "node:crypto";
-import { canonicalJson } from "./canonical.ts";
+import { canonicalJson, sha256 } from "./canonical.ts";
 import type { Content } from "./content.ts";
 import { ABLATABLE, EVENT_SCHEMA_VERSION, EVENT_TYPES, type SimEvent, type SubjectRef, type SystemId } from "./events.ts";
-import { POLICIES, type PlayerAction, type PolicyId } from "./policies.ts";
+import { POLICIES, policyFn, type PlayerAction, type PolicyId } from "./policies.ts";
 import { Rng } from "./rng.ts";
 import { migrateSave, SAVE_SCHEMA_VERSION, type InputRecord, type SaveFile } from "./save.ts";
 import { Scheduler } from "./scheduler.ts";
@@ -17,7 +16,7 @@ import { makePlayer } from "./systems/player.ts";
 import { MapGraph } from "./map.ts";
 import { beliefsAbout } from "./view.ts";
 import { DAY, type Ctx, type SimParams, type System } from "./systems/types.ts";
-import { buildView, type View } from "./view.ts";
+import { buildView, validateDraft, type View } from "./view.ts";
 import { applyEvent, initialState, type WorldState } from "./world.ts";
 
 export { SAVE_SCHEMA_VERSION };
@@ -28,15 +27,15 @@ export interface SimConfig {
   content: Content;
   seed: number;
   policy: PolicyId;
+  /** follow-best-adviser / follow-worst-adviser → adviser id, as measured on TUNE seeds (G-12). */
+  policyAliases?: Record<string, string>;
   params?: SimParams;
   ablate?: SystemId[];
   replay?: { inputs: InputRecord[]; decisions: number };
 }
 
 export function hashLog(log: readonly SimEvent[]): string {
-  const h = createHash("sha256");
-  for (const e of log) h.update(canonicalJson(e) + "\n", "utf8");
-  return h.digest("hex");
+  return sha256(log.map((e) => canonicalJson(e) + "\n").join(""));
 }
 
 export interface DecisionObservation { tick: number; staleBelief: boolean; wrongBelief: boolean }
@@ -65,14 +64,18 @@ export class Sim {
     this.seed = cfg.seed;
     this.content = cfg.content;
     this.policyId = cfg.replay ? "replay" : cfg.policy;
-    if (cfg.policy !== "replay" && !POLICIES[cfg.policy]) throw new Error(`unknown policy ${cfg.policy}`);
-    if (cfg.policy !== "replay" && !POLICIES[cfg.policy].fn) throw new Error(`policy ${cfg.policy}: ${POLICIES[cfg.policy].note}`);
+    if (cfg.policy !== "replay" && cfg.policy !== "external") {
+      if (!policyFn(cfg.policy, cfg.policyAliases)) {
+        const known = POLICIES[cfg.policy as keyof typeof POLICIES];
+        throw new Error(known ? `policy ${cfg.policy}: ${known.note}` : `unknown policy ${cfg.policy}`);
+      }
+    }
     for (const a of cfg.ablate ?? []) if (!ABLATABLE.includes(a)) throw new Error(`unknown system ${a} (ablatable: ${ABLATABLE.join(", ")})`);
     this.disabled = new Set(cfg.ablate ?? []);
     this.state = initialState(cfg.content);
     this.map = new MapGraph(cfg.content);
     this.ctx = this.makeCtx();
-    for (const s of [economy, weather, threat, movement, knowledge, messenger, orders, agents, makePlayer((ctx, d) => this.decide(ctx, d))]) this.systems.set(s.id, s);
+    for (const s of [economy, weather, threat, movement, knowledge, messenger, orders, agents, makePlayer((ctx, d, r) => this.decide(ctx, d, r))]) this.systems.set(s.id, s);
     this.emit("ScenarioStarted", [], [], { contentVersion: cfg.content.version, seed: cfg.seed });
     for (const s of this.systems.values()) if (!this.disabled.has(s.id)) s.start(this.ctx);
   }
@@ -97,18 +100,68 @@ export class Sim {
   // ---- running ----------------------------------------------------------------
   runUntil(t: number): void {
     if (!Number.isSafeInteger(t) || t < this.tick) throw new Error(`bad target tick ${t}`);
+    if (this.pendingDecision) throw new Error("waiting for the player: call answer() first");
     for (;;) {
+      if (this.state.campaign.ended) return; // nothing happens after the end
       const next = this.sched.peekTick();
       if (next === undefined || next >= t) break;
       const item = this.sched.pop()!;
       this.tick = item.tick;
-      const sys = item.handler.split(":")[0] as SystemId;
-      const fn = this.systems.get(sys)?.handlers[item.handler];
-      if (!fn) throw new Error(`no handler ${item.handler}`);
-      this.handlersRun++;
-      fn(this.ctx, item.args);
+      // interactive play: stop at the player's decision points and wait for answer()
+      if (item.handler === "player:decide" && this.awaitsHuman()) { this.pendingDecision = item; return; }
+      this.runItem(item);
     }
     this.tick = t;
+  }
+  private runItem(item: { handler: string; args: Record<string, unknown> }) {
+    const sys = item.handler.split(":")[0] as SystemId;
+    const fn = this.systems.get(sys)?.handlers[item.handler];
+    if (!fn) throw new Error(`no handler ${item.handler}`);
+    this.handlersRun++;
+    fn(this.ctx, item.args as Record<string, any>);
+  }
+  private pendingDecision: { handler: string; args: Record<string, unknown> } | null = null;
+  private pendingAnswer: PlayerAction[] | null = null;
+  private awaitsHuman() {
+    const pol = this.cfg.replay ? this.resumePolicy : this.cfg.policy;
+    return pol === "external" && !(this.cfg.replay && this.decideCount < this.cfg.replay.decisions) && !this.state.campaign.ended;
+  }
+
+  /** Interactive play: run until the player must decide (or until `limit`). Returns what she sees at that moment. */
+  next(limit: number): { paused: boolean; reason?: string; ended?: boolean; view?: View } {
+    if (!this.pendingDecision) {
+      const before = this.tick;
+      this.runUntil(Math.max(limit, before));
+    }
+    const ended = !!this.state.campaign.ended;
+    if (this.pendingDecision) return { paused: true, reason: this.pendingDecision.args.reason as string ?? "report", view: this.viewOf("player"), ended };
+    return { paused: false, ended };
+  }
+
+  /** The player's answer at a decision point. Orders are validated against what she knows (A7). */
+  answer(actions: PlayerAction[]): void {
+    if (!this.pendingDecision) throw new Error("no decision is pending");
+    const view = this.viewOf("player");
+    for (const a of actions) {
+      if (a.action === "order") {
+        const problems = validateDraft(view, a.order!);
+        if (problems.length) throw new Error(`cannot order: ${problems.join("; ")}`);
+      }
+      if (a.action === "travel" && !this.content.scenario.presence.travelTo.includes(a.target!)) throw new Error(`cannot travel to ${a.target}`);
+    }
+    const item = this.pendingDecision;
+    this.pendingDecision = null;
+    this.pendingAnswer = actions;
+    this.runItem(item);
+    this.pendingAnswer = null;
+  }
+
+  /** Campaign objective (P0.24, Phase 5 version): the ruler alive and free, and every objective fortification above breach. */
+  objectiveStatus() {
+    const sc = this.content.scenario, breach = sc.endStates.fortificationBreachedBelowMilli;
+    const fortsBelowBreach = sc.objective.forts.filter((f) => this.state.fortifications[f].conditionMilli < breach);
+    const ended = this.state.campaign.ended;
+    return { met: !ended && fortsBelowBreach.length === 0, ended: ended?.ending ?? null, fortsBelowBreach };
   }
   runDays(n: number): void {
     this.runUntil(this.tick + n * DAY);
@@ -129,9 +182,21 @@ export class Sim {
   }
 
   // ---- save / load (A1, A4) --------------------------------------------------------
+  /** Replay helper: run exactly up to the given number of scheduled steps, then sit at `tick`. */
+  replayTo(handlers: number, tick: number) {
+    while (this.handlersRun < handlers) {
+      const item = this.sched.pop();
+      if (!item) throw new Error("replay ran out of scheduled steps");
+      this.tick = item.tick;
+      this.runItem(item);
+    }
+    this.tick = tick;
+  }
   save(): SaveFile {
+    if (this.pendingDecision) throw new Error("answer the pending decision before saving");
     const inputs: InputRecord[] = this.log.filter((e) => e.type === "PlayerInput").map((e) => ({
       decision: e.payload.decision as number, tick: e.tick, action: e.payload.action as InputRecord["action"], target: (e.payload.target as string | null) ?? null,
+      ...(e.payload.order ? { order: e.payload.order as InputRecord["order"] } : {}), ...(e.payload.followed ? { followed: e.payload.followed as string } : {}),
     }));
     const rngStates: SaveFile["rngStates"] = {};
     for (const [n, r] of [...this.streams].sort(([a], [b]) => (a < b ? -1 : 1))) rngStates[n] = { state: r.getState(), draws: r.draws };
@@ -139,7 +204,7 @@ export class Sim {
       schemaVersion: SAVE_SCHEMA_VERSION, contentVersion: this.content.version, contentHash: this.content.hash,
       seed: this.seed, policy: this.cfg.replay ? (this.resumePolicy ?? "passive") : this.cfg.policy,
       params: this.cfg.params ?? {}, ablate: [...(this.cfg.ablate ?? [])],
-      tick: this.tick, decisions: this.decideCount, inputs, rngStates, logHash: hashLog(this.log), eventCount: this.log.length,
+      tick: this.tick, decisions: this.decideCount, inputs, rngStates, logHash: hashLog(this.log), eventCount: this.log.length, handlersRun: this.handlersRun,
     };
   }
   resumePolicy?: PolicyId;
@@ -154,17 +219,20 @@ export class Sim {
   }
 
   // ---- internals ---------------------------------------------------------------------
-  private decide(ctx: Ctx, deliveredEventId: number): PlayerAction[] {
+  private decide(ctx: Ctx, cause: number | null, reason: string): PlayerAction[] {
+    void cause; void reason;
     const n = this.decideCount++;
     let actions: PlayerAction[];
     const rp = this.cfg.replay;
     if (rp && n < rp.decisions) {
       const recs = rp.inputs.filter((i) => i.decision === n);
       for (const r of recs) if (r.tick !== ctx.tick) throw new Error(`replay diverged: decision ${n} recorded at ${r.tick}, reached at ${ctx.tick}`);
-      actions = recs.map((r) => (r.action === "levy" ? { action: "levy" } : { action: r.action, target: r.target! }));
+      actions = recs.map((r) => ({ action: r.action, ...(r.target ? { target: r.target } : {}), ...(r.order ? { order: r.order } : {}), ...(r.followed ? { followed: r.followed } : {}) }));
+    } else if ((rp ? this.resumePolicy : this.cfg.policy) === "external") {
+      actions = this.pendingAnswer ?? [];
     } else {
       const pol = rp ? this.resumePolicy! : this.cfg.policy;
-      const fn = POLICIES[pol as Exclude<PolicyId, "replay">].fn!;
+      const fn = policyFn(pol, this.cfg.policyAliases)!;
       const view = buildView(this.state, this.content, this.content.scenario.ruler, ctx.tick);
       actions = fn(view, () => ctx.rng("player"));
       for (const a of actions) {
@@ -240,7 +308,8 @@ export function loadSave(raw: unknown, content: Content): Sim {
   if (s.contentHash !== content.hash) throw new Error("content hash mismatch: same version label, different data");
   const sim = new Sim({ content, seed: s.seed, policy: "replay", params: s.params, ablate: s.ablate, replay: { inputs: s.inputs, decisions: s.decisions } });
   sim.resumePolicy = s.policy;
-  sim.runUntil(s.tick);
+  if (s.handlersRun !== undefined) sim.replayTo(s.handlersRun, s.tick);
+  else sim.runUntil(s.tick);
   if (hashLog(sim.log) !== s.logHash) throw new Error("log hash mismatch: the save does not replay to the same log");
   for (const [name, st] of Object.entries(s.rngStates)) {
     if (name === "player") sim.restoreStream(name, st); // the replayed run used recorded inputs, not the player stream

@@ -23,12 +23,14 @@ export function generate(sit: Situation, per: Perceiver): ActionRef[] {
   const add = (a: ActionRef) => { if (!out.some((x) => actionKey(x) === actionKey(a))) out.push(a); };
   if (sit.mode === "advise") {
     add(act("advise_wait"));
-    for (const f of worn(sit, per)) add(act("advise_repair", f));
+    // Money first when it cannot cover the repairs the adviser believes are needed (a repair without funds is abandoned).
+    const tre = per.get(sit.ruler, "treasury.balance"), w = worn(sit, per);
+    const need = w.reduce((n, f) => n + Math.max(0, sit.p.restoreToMilli - (picture(sit, per, f).cond ?? 0)) * sit.p.repairCostPerMilli, 0);
+    if (tre && ((tre.value as number) < sit.p.levyMilli || (tre.value as number) < need)) add(act("advise_levy"));
+    for (const f of w) add(act("advise_repair", f));
     if (sit.captains.length) for (const f of threatened(sit, per)) add(act("advise_send_captain", f));
     if (sit.captains.length) for (const f of threatened(sit, per)) for (const s of sit.forts.find((x) => x.id === f)!.sites)
       if (((per.get(s, "threat.intensity")?.value as number) ?? 0) > 0) add(act("advise_sortie", s));
-    const tre = per.get(sit.ruler, "treasury.balance");
-    if (tre && (tre.value as number) < sit.p.levyMilli) add(act("advise_levy"));
     return out.slice(0, candidateCap(sit));
   }
   const fortsHere = sit.at ? sit.forts.find((f) => f.id === sit.at) : undefined;

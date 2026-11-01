@@ -76,7 +76,7 @@ export interface DecisionTrace {
   tick: number;
   trigger: number;
   layer: "strategic" | "operational" | "tactical" | "immediate";
-  kind: "plan" | "advise" | "obedience" | "focus";
+  kind: "plan" | "advise" | "obedience" | "focus" | "regency";
   beliefsConsulted: { ref: { kind: "belief"; id: string }; ageTicks: number; reliability: "certain" | "probable" | "uncertain" | "doubtful";
     subject?: SubjectRef; predicate?: string; believedValue?: unknown }[];
   objectivesActive: { kind: "objective"; id: string }[];
@@ -145,7 +145,7 @@ export function validateDecisionTrace(x: unknown): V {
   const v: V = [];
   if (!isObj(x)) return ["trace must be an object"];
   int(v, x, "schemaVersion"); str(v, x, "agent"); int(v, x, "tick"); int(v, x, "trigger");
-  oneOf(v, x, "layer", ["strategic", "operational", "tactical", "immediate"]); oneOf(v, x, "kind", ["plan", "advise", "obedience", "focus"]);
+  oneOf(v, x, "layer", ["strategic", "operational", "tactical", "immediate"]); oneOf(v, x, "kind", ["plan", "advise", "obedience", "focus", "regency"]);
   arr(v, x, "beliefsConsulted", (b, i) => {
     if (!isObj(b) || !Number.isSafeInteger(b.ageTicks) || !["certain", "probable", "uncertain", "doubtful"].includes(b.reliability as string)) v.push(`beliefsConsulted[${i}]`);
     else ref(v, b.ref, `beliefsConsulted[${i}].ref`);

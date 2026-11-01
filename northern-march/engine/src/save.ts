@@ -6,13 +6,16 @@ import type { SystemId } from "./events.ts";
 
 export const SAVE_SCHEMA_VERSION = 1;
 
-export interface InputRecord { decision: number; tick: number; action: "repair" | "levy" | "advance"; target: string | null }
+import type { OrderDraft } from "./view.ts";
+export interface InputRecord { decision: number; tick: number; action: "repair" | "levy" | "advance" | "travel" | "order"; target: string | null; order?: OrderDraft; followed?: string }
 export interface SaveFile {
   schemaVersion: number; contentVersion: string; contentHash: string;
   seed: number; policy: PolicyId; params: SimParams; ablate: SystemId[];
   tick: number; decisions: number; inputs: InputRecord[];
   rngStates: Record<string, { state: RngState; draws: number }>;
   logHash: string; eventCount: number;
+  /** Scheduled steps run so far: lets a save taken mid-tick (after an interactive decision) replay to the same step. */
+  handlersRun?: number;
 }
 
 const MIGRATIONS: Record<number, (s: Record<string, unknown>) => Record<string, unknown>> = {

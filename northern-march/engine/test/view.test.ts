@@ -14,7 +14,7 @@ test("ViewOf(player) is frozen and holds only beliefs, delivered reports and the
   const sim = run({ seed: 1 }, 60);
   const v = sim.viewOf("player");
   assert.ok(Object.isFrozen(v) && Object.isFrozen(v.beliefs));
-  assert.deepEqual(Object.keys(v).sort(), ["beliefs", "now", "reports", "self"]);
+  assert.deepEqual(Object.keys(v).sort(), ["advice", "beliefs", "now", "reports", "self", "world"]);
   assert.throws(() => { (v as { now: number }).now = 0; });
 });
 
@@ -56,9 +56,8 @@ test("presentation renders from a view", () => {
 
 test("presentation modules import nothing that exposes WorldState (static check)", () => {
   const dir = new URL("../src/presentation/", import.meta.url).pathname;
-  const allowed = new Set(["../view.ts", "./format.ts"]);
   for (const f of readdirSync(dir)) {
     const src = readFileSync(dir + f, "utf8");
-    for (const m of src.matchAll(/from\s+["']([^"']+)["']/g)) assert.ok(allowed.has(m[1]), `${f} imports ${m[1]}`);
+    for (const m of src.matchAll(/from\s+["']([^"']+)["']/g)) assert.ok(m[1] === "../view.ts" || /^\.\/[a-z]+\.ts$/.test(m[1]), `${f} imports ${m[1]}`);
   }
 });

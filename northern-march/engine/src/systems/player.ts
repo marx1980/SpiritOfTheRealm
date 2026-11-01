@@ -3,6 +3,8 @@ import type { PlayerAction } from "../policies.ts";
 import type { Ctx, System } from "./types.ts";
 import { chr, loc, sorted } from "./types.ts";
 import { issue } from "./orders.ts";
+import { travel } from "./movement.ts";
+import { DAY, HOUR } from "./types.ts";
 
 /** Who receives an action: for a repair, whoever holds the place and reports on it to the ruler; for a levy, the steward. */
 function recipientFor(ctx: Ctx, a: PlayerAction): string | null {
@@ -12,15 +14,31 @@ function recipientFor(ctx: Ctx, a: PlayerAction): string | null {
   return cs.find((c) => c.role === "steward")?.id ?? null;
 }
 
-export function makePlayer(decide: (ctx: Ctx, deliveredEventId: number) => PlayerAction[]): System {
+/** Decision points: a report reaches the ruler, an adviser speaks to her, she is warned of danger, she arrives
+ *  somewhere, or (in interactive play) a daily checkpoint. The cause is what she perceived, if anything. */
+export function makePlayer(decide: (ctx: Ctx, cause: number | null, reason: string) => PlayerAction[]): System {
   return {
     id: "player",
-    start: () => {},
+    start: (ctx) => { if (ctx.params.checkpoints) ctx.at(DAY + 12 * HOUR, "player:checkpoint", {}); },
     handlers: {
-      "player:decide": (ctx, { deliveredEventId }) => {
+      "player:checkpoint": (ctx) => {
+        ctx.at(ctx.tick, "player:decide", { cause: null, reason: "checkpoint" });
+        ctx.at(ctx.tick + DAY, "player:checkpoint", {});
+      },
+      "player:decide": (ctx, { cause, deliveredEventId, reason }) => {
+        if (ctx.s.campaign.ended) return;
         const ruler = ctx.content.scenario.ruler;
-        for (const a of decide(ctx, deliveredEventId)) {
-          const input = ctx.emit("PlayerInput", [deliveredEventId], [chr(ruler)], { player: ruler, action: a.action, target: a.target ?? null, decision: a.decision! });
+        const why: number | null = cause ?? deliveredEventId ?? null;
+        for (const a of decide(ctx, why, reason ?? "report")) {
+          const input = ctx.emit("PlayerInput", why ? [why] : [], [chr(ruler)], { player: ruler, action: a.action, target: a.target ?? null, decision: a.decision!,
+            ...(a.order ? { order: a.order } : {}), ...(a.followed ? { followed: a.followed } : {}) });
+          if (a.action === "travel") { travel(ctx, ruler, a.target!, "rider", false, input.id); continue; }
+          if (a.action === "order") {
+            const d = a.order!;
+            issue(ctx, ruler, d.recipient, d.intent, d.objective, input.id, false,
+              { discretion: d.discretion, constraints: d.constraints, contingencies: d.contingencies, reportingPolicy: d.reportingPolicy });
+            continue;
+          }
           const to = recipientFor(ctx, a);
           if (!to) continue;
           issue(ctx, ruler, to, a.action, a.action === "levy" ? chr(ruler) : loc(a.target!), input.id);

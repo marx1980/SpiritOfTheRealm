@@ -11,7 +11,7 @@ export const METRIC_FIELDS = [
   "decisionsTotal", "decisionsUsingStaleOrWrongBelief", "badOutcomesByFailureOrigin", "badOutcomeByBeliefQuality",
   "causalChainMaxLength", "crossSystemChains", "endStateFlags", "ordersLost", "ordersIntercepted", "ordersRefused", "ordersAdapted",
   "disobedienceEvents", "agentWakesPerSimDay", "wallClockPerSimYear", "communityRevolts", "communityRevoltsWithoutNamedLeader",
-  "armId", "policyId", "calibrationHash", "seedBlock", "logHash", "eventsByType",
+  "objectiveMet", "armId", "policyId", "calibrationHash", "seedBlock", "logHash", "eventsByType",
 ] as const;
 
 export interface BatchSpec { content: Content; seeds: number[]; days: number; policy: PolicyId; ablate?: SystemId[]; params?: SimParams }
@@ -49,7 +49,8 @@ export function metricsRow(sim: Sim, spec: BatchSpec, wallMs: number) {
     dominantCrisis: null,
     crisisCount: { Storm: count("Storm"), ThreatBegan: count("ThreatBegan") },
     timeToFirstCrisis: crisis.length ? crisis[0].tick : null,
-    timeToEnding: null, endingType: null, endingFirstCause: null, endingAncestryDomains: null,
+    timeToEnding: log.find((e) => e.type === "CampaignEnded")?.tick ?? null, endingType: sim.objectiveStatus().ended, endingFirstCause: null, endingAncestryDomains: null,
+    objectiveMet: sim.objectiveStatus().met,
     decisionsTotal: count("PlayerInput"),
     decisionsUsingStaleOrWrongBelief: obs.filter((o) => o.staleBelief || o.wrongBelief).length,
     badOutcomesByFailureOrigin: null, badOutcomeByBeliefQuality: null,
