@@ -1,11 +1,12 @@
-// Map (P0.06): places from static knowledge; walls, raiders and people as the player believes them, with age, source
-// and certainty. No hidden truth, no exact numbers.
+// Map (P0.06): places from static knowledge; walls, raiders, troops and people as the player believes them, with age,
+// source and certainty. No hidden truth; troop figures are the believed count, exact only where the belief is certain.
 import { beliefsAbout, type View } from "../view.ts";
 import { ago, certainty, nameOf, raiderWords, sourceOf, wallWords } from "./phrasing.ts";
 
 export interface MapPlace {
   id: string; name: string; x: number; y: number; fortified: boolean;
   wall?: { words: string; age: string; source: string; certainty: string };
+  troops?: { count: number; exact: boolean; observedAt: number };
   raiders?: { words: string; age: string; source: string; certainty: string };
   people: { name: string; age: string; certainty: string }[];
   you: boolean;
@@ -23,8 +24,10 @@ export function buildMap(v: View): MapModel {
   }
   const places = v.world.places.map((p) => {
     const w = beliefsAbout(v, p.id, "fortification.condition")[0], r = beliefsAbout(v, p.id, "threat.intensity")[0];
+    const g = beliefsAbout(v, p.id, "fortification.garrison")[0];
     return {
       id: p.id, name: p.name, x: p.pos[0], y: p.pos[1], fortified: p.fortified, you: here === p.id,
+      ...(g ? { troops: { count: g.believedValue as number, exact: g.effectiveBand === "certain", observedAt: g.observedAt } } : {}),
       ...(w ? { wall: { words: wallWords(w.believedValue as number), age: ago(v.now, w.observedAt), source: sourceOf(v, w), certainty: certainty[w.effectiveBand] } } : {}),
       ...(r ? { raiders: { words: raiderWords(r.believedValue as number), age: ago(v.now, r.observedAt), source: sourceOf(v, r), certainty: certainty[r.effectiveBand] } } : {}),
       people: (people.get(p.id) ?? []).sort((a, b) => (a.name < b.name ? -1 : 1)),

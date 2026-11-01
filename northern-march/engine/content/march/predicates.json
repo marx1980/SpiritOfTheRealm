@@ -64,6 +64,14 @@
     "materialDelta": 20000
   },
   {
+    "id": "fortification.garrison",
+    "subjectKind": "location",
+    "halfLifeTicks": 864000,
+    "domain": "military",
+    "wakeSignificance": 1,
+    "materialDelta": 1
+  },
+  {
     "id": "request.reinforce",
     "subjectKind": "location",
     "halfLifeTicks": 864000,

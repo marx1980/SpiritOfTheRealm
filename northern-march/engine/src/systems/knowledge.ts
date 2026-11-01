@@ -57,7 +57,7 @@ function relevance(ctx: Ctx, holder: string, subj: SubjectRef): number {
   return subjLoc && ctx.content.byId.location.get(subjLoc)?.province === prov ? 600 : 300;
 }
 
-export const CAPABILITY_FOR: Record<string, string> = { "fortification.condition": "engineering", "character.location": "intelligence", "threat.intensity": "intelligence", "treasury.balance": "administration" };
+export const CAPABILITY_FOR: Record<string, string> = { "fortification.condition": "engineering", "fortification.garrison": "intelligence", "character.location": "intelligence", "threat.intensity": "intelligence", "treasury.balance": "administration" };
 
 /** A character looks at something where they are. Quality = capability minus conditions; error shrinks with quality. */
 /** `relay`: someone else who is with the observer hears what they see (the steward tells the ruler at the seat). */
@@ -106,6 +106,14 @@ export function observe(ctx: Ctx, observer: string, subject: SubjectRef, predica
     const maxErr = exact ? 0 : Math.min((1000 - quality) * 20, Math.floor(Math.abs(truth) / 10));
     const r = ctx.keyed(`knowledge:observe:${observer}:${ctx.tick}:${subject.id}:${predicate}`);
     value = truth + r.int(-maxErr, maxErr);
+  } else if (predicate === "fortification.garrison") {
+    // men in the fort (captains' companies are not counted here); exact when the observer is at that place
+    const truth = ctx.s.fortifications[subject.id].garrison;
+    const here = ctx.s.positions[observer];
+    quality = "at" in here && here.at === subject.id ? 1000 : skill(ctx, observer, CAPABILITY_FOR[predicate]);
+    const maxErr = Math.floor((1000 - quality) / 50);
+    const r = ctx.keyed(`knowledge:observe:${observer}:${ctx.tick}:${subject.id}:${predicate}`);
+    value = Math.max(0, truth + r.int(-maxErr, maxErr));
   } else if (predicate === "character.location") {
     const pos = ctx.s.positions[subject.id];
     if (!("at" in pos)) return null;

@@ -115,7 +115,9 @@ function readReport(ctx: Ctx, reader: string, report: Report, eventId: number) {
   const low = trust < ctx.content.scenario.knowledge.lowTrustBelow;
   for (const c of report.claims) {
     const band = interpretBand(ctx, reader, c.predicate, low ? downgrade(c.reliabilityBand) : c.reliabilityBand);
-    learn(ctx, reader, { subject: c.subject, predicate: c.predicate, value: c.believedValue, observedAt: c.observedAt, band },
+    // a letter states the troop count as it stands: the figure is fresh from the day it arrives
+    const observedAt = c.predicate === "fortification.garrison" ? ctx.tick : c.observedAt;
+    learn(ctx, reader, { subject: c.subject, predicate: c.predicate, value: c.believedValue, observedAt, band },
       { kind: "report", eventId, source: report.author, reportId: report.id }, [eventId]);
   }
 }
@@ -168,7 +170,8 @@ function inspectAndReport(ctx: Ctx, author: string, cause: number) {
   const p = ctx.s.positions[author];
   if (ctx.s.tiers[author] === "C" || !("at" in p) || p.at !== ch.location || !ctx.s.fortifications[ch.location] || !ch.reportsTo) return;
   const upd = observe(ctx, author, loc(ch.location), "fortification.condition", cause)!;
-  const beliefs = [best(ctx, author, ch.location, "fortification.condition"),
+  observe(ctx, author, loc(ch.location), "fortification.garrison", cause);
+  const beliefs = [best(ctx, author, ch.location, "fortification.condition"), best(ctx, author, ch.location, "fortification.garrison"),
     ...ctx.content.scenario.threat.sites.filter((x) => x.target === ch.location).map((x) => best(ctx, author, x.site, "threat.intensity"))].filter((x) => !!x);
   const claims = [selfClaim(ctx, author, upd.id), ...beliefs.map((b) => ({ ...b!, reliabilityBand: b!.band as BeliefProposition["reliabilityBand"] }))].map(({ band: _b, ...rest }: any) => rest);
   compose(ctx, author, ch.reportsTo, claims, upd.id);
