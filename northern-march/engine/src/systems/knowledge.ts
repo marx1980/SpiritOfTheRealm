@@ -72,7 +72,7 @@ export function admAdviser(ctx: Ctx): string | undefined {
   return best;
 }
 
-/** Anna and the Administration adviser see every treasury movement at once. */
+/** The ruler and the Administration adviser see every treasury movement at once. */
 export function observeTreasury(ctx: Ctx, cause: number) {
   const ruler = ctx.content.scenario.ruler;
   observe(ctx, ruler, chr(ruler), "treasury.balance", cause);

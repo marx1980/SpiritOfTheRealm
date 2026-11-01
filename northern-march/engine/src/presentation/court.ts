@@ -29,7 +29,7 @@ function adviceLines(v: View, target?: string): AdviceLine[] {
   const finished = new Set(Object.values(v.beliefs).filter((b) => b.predicate === "order.status" && ["completed", "abandoned", "superseded"].includes(String(b.believedValue))).map((b) => b.subject.id));
   // An order in progress: its advice is set aside until it is finished.
   const inProgress = v.self.orders.filter((o) => v.now - o.tick < 60 * 86400 && !finished.has(String(o.orderId)));
-  // A completed order: its advice stays set aside until Anna learns something new about that place (a letter or an
+  // A completed order: its advice stays set aside until the ruler learns something new about that place (a letter or an
   // observation dated after the completion), since until then the situation she knows is the one the order changed.
   const doneAt = new Map<string, number>();
   for (const b of Object.values(v.beliefs)) if (b.predicate === "order.status" && String(b.believedValue) === "completed") doneAt.set(b.subject.id, b.observedAt);

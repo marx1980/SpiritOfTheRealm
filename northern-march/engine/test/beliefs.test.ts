@@ -33,7 +33,8 @@ test("staleness changes the view without any per-tick event", () => {
   assert.ok(BANDS.indexOf(b7.effectiveBand) < BANDS.indexOf(b1.effectiveBand), `${b1.effectiveBand} -> ${b7.effectiveBand}`);
   const stored1 = day1.unsafeWorldForDebug().beliefs.anna[String(b1.id)], stored7 = day7.unsafeWorldForDebug().beliefs.anna[String(b7.id)];
   assert.deepEqual(stored1, stored7, "the stored proposition is unchanged; only the read differs");
-  assert.ok(!day7.log.some((e) => e.type.startsWith("Belief") && e.payload.holder === "anna" && e.tick > 0));
+  // Anna now observes the treasury every day (exact, as ruler), so only location beliefs must stay silent per tick.
+  assert.ok(!day7.log.some((e) => e.type.startsWith("Belief") && e.payload.holder === "anna" && e.tick > 0 && JSON.stringify(e.payload).includes("character.location")));
 });
 
 test("contradictions from different sources are kept; same-source updates and first-hand observation resolve", () => {
