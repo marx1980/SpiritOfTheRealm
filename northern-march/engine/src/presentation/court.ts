@@ -28,10 +28,16 @@ function adviceLines(v: View, target?: string): AdviceLine[] {
   };
   // Orders in place: issued by you and not yet reported finished in a letter (for up to 60 days).
   const finished = new Set(Object.values(v.beliefs).filter((b) => b.predicate === "order.status" && ["completed", "abandoned", "superseded"].includes(String(b.believedValue))).map((b) => b.subject.id));
-  const inPlace = v.self.orders.filter((o) => !finished.has(String(o.orderId)) && v.now - o.tick < 60 * 86400);
+  const completed = new Set(Object.values(v.beliefs).filter((b) => b.predicate === "order.status" && String(b.believedValue) === "completed").map((b) => b.subject.id));
+  const recent = v.self.orders.filter((o) => v.now - o.tick < 60 * 86400);
+  const inPlace = recent.filter((o) => !finished.has(String(o.orderId)));
+  // a captain sent to a fort stays there after the order is completed, so that advice is already done too
+  const captainThere = recent.filter((o) => o.action === "advance" && completed.has(String(o.orderId)));
   const superseded = (r: { plan: { id: string } }) => {
     const want = orderOf(JSON.parse(r.plan.id) as { kind: string; target?: string });
-    return !!want && inPlace.some((o) => o.action === want.action && o.target === want.target);
+    if (!want) return false;
+    const pool = want.action === "advance" ? [...inPlace, ...captainThere] : inPlace;
+    return pool.some((o) => o.action === want.action && o.target === want.target);
   };
   return v.advice.filter((r) => (target ? r.plan.id.includes(`"${target}"`) : latest.get(r.author) === r.id) && !superseded(r)).map((r) => ({
     id: r.id, adviser: nameOf(v, r.author), area: SHORT_AREA[v.world.areas[r.author] ?? ""] ?? v.world.areas[r.author] ?? "", plan: planWords(v, r.plan.id),
