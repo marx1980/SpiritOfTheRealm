@@ -10,12 +10,14 @@ import { INTENTS, type Recommendation } from "../src/schemas.ts";
 import type { PlayerAction } from "../src/policies.ts";
 
 declare const __RAW__: RawContent;
-declare const __H01__: { seed: number; days: number; scripts: RawContent["scenario"]["scripts"] };
+declare const __H01__: { seed: number; days: number; prelude: number; scripts: RawContent["scenario"]["scripts"] };
 const DAY = 86400;
 const raw = structuredClone(__RAW__);
-raw.scenario.scripts = __H01__.scripts;
+// scripted events are counted from the start of play; the sim also runs a silent prelude before it
+const PRE = __H01__.prelude * 86400;
+raw.scenario.scripts = __H01__.scripts.map((s) => ({ ...s, day: s.day + __H01__.prelude }));
 const content = deriveContent(raw);
-const END = __H01__.days * DAY;
+const END = PRE + __H01__.days * DAY;
 const REASONS = ["report", "advice", "danger", "arrival"] as const;
 const REASON_LABEL: Record<string, string> = { report: "Letters", advice: "Advice", danger: "Danger", arrival: "Arrival", checkpoint: "Day" };
 
@@ -47,6 +49,8 @@ function answer(actions: PlayerAction[]) {
 function start(seed: number, restore = true) {
   st.sim = createSim({ content, seed, policy: "external" });
   st.seed = seed; st.queue = []; st.error = ""; st.over = false; st.log = [];
+  // the prelude (before play): letters and events happen with no decisions for the player
+  for (let guard = 0; guard < 5000; guard++) { const r = st.sim.next(PRE); if (!r.paused) break; st.sim.answer([]); }
   if (!restore) clearLog(seed);
   const saved = restore ? loadLog(seed) : [];
   try {
@@ -264,7 +268,7 @@ function render() {
   const doIt = adv && adviceAction(v, adv) && st.paused ? `<button data-act='${esc(JSON.stringify(adviceAction(v, adv)))}'>Do it</button>` : "";
   document.getElementById("app")!.innerHTML = `
   <div class="top"><h1>Northern March</h1>
-    <div class="meta"><span>Day ${Math.floor(v.now / DAY) + 1} / ${__H01__.days}</span><span>${"at" in pos ? esc(name(v, pos.at)) : "on the road to " + esc(name(v, pos.transit.dest))}</span></div>
+    <div class="meta"><span>Day ${Math.floor((v.now - PRE) / DAY) + 1} / ${__H01__.days}</span><span>${"at" in pos ? esc(name(v, pos.at)) : "on the road to " + esc(name(v, pos.transit.dest))}</span></div>
     <div class="grow"></div>
     ${cont}
     <button id="restart">Restart</button>

@@ -5,7 +5,7 @@ Gate text: IMPLEMENTATION_PLAN C4. This file is the practical script for running
 ## Build and open
 - `cd engine && npm install && node ui/build.ts` writes `ui/dist/northern-march.html` (one self-contained page; it also runs offline, with fallback fonts).
 - The published debug page is the same file: https://claude.ai/artifact/L6oAoVF7F2WHLBpoQ4ud2Z (private until shared from its Share menu).
-- Scenario: `ui/h01.json` — seed 51, 90 days, raiders at Blackwood from day 6 (a strong band, 35 days) and again from day 55 (a large host, 30 days). Every tester plays the same seed. Restart gives the same game.
+- Scenario: `ui/h01.json` — seed 51, 150 days of play after an 11-day prelude (the sim runs silently first, so the first letters are already on their way on day 1; letters take about 10 days to be delivered). Raiders at Blackwood from game day 6 (a strong band, 35 days) and again from day 55 (a large host, 30 days). Every tester plays the same seed. Restart gives the same game.
 - Observer panel: Shift+O, or open the page with `#observer`. Testers never see it.
 
 ## Testers
@@ -13,7 +13,7 @@ Gate text: IMPLEMENTATION_PLAN C4. This file is the practical script for running
 - Two sessions each of at least 30 minutes (H-02 needs two). Session 1 is H-01.
 
 ## Briefing (read aloud, nothing more)
-"You are Queen Anna. Keep Northwatch, Greybridge and Eastmarch Keep from falling for 90 days, and stay alive. You only know what reaches you: letters, what your advisers tell you in person, and what you see yourself. Think aloud. Before every decision, say why."
+"You are Queen Anna. Keep Northwatch, Greybridge and Eastmarch Keep from falling for 150 days, and stay alive. You only know what reaches you: letters, what your advisers tell you in person, and what you see yourself. Think aloud. Before every decision, say why."
 
 ## Delayed consequences built into the scenario
 Each tester should meet at least three. The observer marks which ones occurred.

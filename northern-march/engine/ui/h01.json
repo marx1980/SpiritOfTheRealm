@@ -1,8 +1,21 @@
 {
   "seed": 51,
-  "days": 90,
+  "days": 150,
   "scripts": [
-    { "day": 6, "kind": "threat", "site": "blackwood", "intensityPermille": 550, "durationDays": 35 },
-    { "day": 55, "kind": "threat", "site": "blackwood", "intensityPermille": 850, "durationDays": 30 }
-  ]
+    {
+      "day": 6,
+      "kind": "threat",
+      "site": "blackwood",
+      "intensityPermille": 550,
+      "durationDays": 35
+    },
+    {
+      "day": 55,
+      "kind": "threat",
+      "site": "blackwood",
+      "intensityPermille": 850,
+      "durationDays": 30
+    }
+  ],
+  "prelude": 11
 }
