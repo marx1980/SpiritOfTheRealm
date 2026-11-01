@@ -269,3 +269,11 @@ test("garrisons recover 2% of their establishment a day, never above it", () => 
   const w2 = sim2.unsafeWorldForDebug();
   assert.equal(w2.fortifications.northwatch.establishment, n);
 });
+
+test("a captain's company refills 2% a day, only in his home town", () => {
+  const sim = run({ seed: 5 }, 40);
+  const w = sim.unsafeWorldForDebug();
+  const caron = CONTENT.characters.find((c) => c.id === "caron")!;
+  assert.ok(w.troops.caron <= caron.troops!);
+  for (const e of sim.log.filter((x) => x.type === "CompanyRecovered")) for (const [, n] of (e.payload as { changes: [string, number][] }).changes) assert.ok(n >= 1 && n <= 4);
+});

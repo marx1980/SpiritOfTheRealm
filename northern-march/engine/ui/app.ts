@@ -207,8 +207,9 @@ function choicesBlock(v: View): string {
 }
 /** The letters of this pause, all together. */
 function batchBlock(v: View): string {
-  const ls = st.batch.map((id) => v.reports.find((x) => x.reportId === id)).filter((x): x is NonNullable<typeof x> => !!x);
-  return ls.length ? `<div class="batch">${ls.map((l) => `<div class="batch-letter"><b>${esc(name(v, l.author))}</b> <span class="when">${esc(dayAgo(v, l.deliveredAt))}</span><div>${tone(letterSentences(v, l).join(" "))}</div></div>`).join("")}</div>` : "";
+  const ids = [...st.batch]; if (st.paused === "report" && st.letter !== null && !ids.includes(st.letter)) ids.push(st.letter);
+  const ls = ids.map((id) => v.reports.find((x) => x.reportId === id)).filter((x): x is NonNullable<typeof x> => !!x);
+  return ls.length ? `<div class="batch">${ls.map((l) => `<div class="batch-letter"><span class="what">${tone(`Letter from ${name(v, l.author)}: ${letterSentences(v, l).join(" ")}`)}</span></div>`).join("")}</div>` : "";
 }
 
 const areaShort = (a: string) => ({ Military: "MIL", Administration: "ADM", Construction: "CON", Intelligence: "INT" } as Record<string, string>)[a] ?? a.toUpperCase();
@@ -430,7 +431,7 @@ function render() {
   </div>
   <div class="status-row" aria-label="Realm status">${coinStatus(v)}</div>
   ${st.tab === "settings" ? settingsTab() : `
-  <div class="pause ${cls}">${batchBlock(v)}<span class="what">${tone(pauseText(v))}</span>${why ? `<span class="why-line">${esc(why)}</span>` : ""}
+  <div class="pause ${cls}">${batchBlock(v)}${st.paused === "report" && batchBlock(v) ? "" : `<span class="what">${tone(pauseText(v))}</span>`}${why ? `<span class="why-line">${esc(why)}</span>` : ""}
     ${st.paused ? choicesBlock(v) : ""}
     <span class="queue">${st.queue.map((a, i) => ({ a, i })).filter(({ a }) => !isShown(a)).map(({ a, i }) => `<span class="chip">${esc(actionText(v, a))} <button data-unq="${i}" aria-label="Remove">×</button></span>`).join("")}</span>
     ${st.error ? `<span class="err">${esc(st.error)}</span>` : ""}</div>

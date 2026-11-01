@@ -57,6 +57,12 @@ export const economy: System = {
         return gap > 0 ? [[f, Math.min(gap, Math.max(1, Math.floor((fo.establishment * 20) / 1000)))]] : [];
       });
       if (gains.length) ctx.emit("GarrisonRecovered", [], gains.map(([f]) => loc(f)), { changes: gains });
+      // A captain's company refills by 2% of its establishment a day, only while he is in his home town.
+      const back = ctx.content.characters.filter((c) => c.troops).sort((a, b) => cmp(a.id, b.id)).flatMap((c): [string, number][] => {
+        const pos = ctx.s.positions[c.id], gap = c.troops! - (ctx.s.troops[c.id] ?? 0);
+        return gap > 0 && "at" in pos && pos.at === c.location ? [[c.id, Math.min(gap, Math.max(1, Math.floor((c.troops! * 20) / 1000)))]] : [];
+      });
+      if (back.length) ctx.emit("CompanyRecovered", [], back.map(([c]) => chr(c)), { changes: back });
       ctx.extraDraws("economy");
       ctx.at(ctx.tick + DAY, "economy:day", {});
     },

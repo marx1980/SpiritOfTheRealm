@@ -100,6 +100,7 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   TreasuryCollected: (s, p) => { s.treasuryMilli[p.holder] = (s.treasuryMilli[p.holder] ?? 0) + p.amountMilli; },
   UpkeepPaid: (s, p) => { s.treasuryMilli[p.holder] -= p.amountMilli; },
   GarrisonRecovered: (s, p) => { for (const [loc, n] of p.changes as [string, number][]) { const f = s.fortifications[loc]; f.garrison = Math.min(f.establishment, f.garrison + n); } },
+  CompanyRecovered: (s, p) => { for (const [who, n] of p.changes as [string, number][]) s.troops[who] += n; },
   FortificationsWeathered: (s, p, e) => {
     for (const [loc, d] of p.changes as [string, number][]) { const f = s.fortifications[loc]; f.conditionMilli = clampCond(f.conditionMilli - d); f.lastChangeEvent = e.id; }
   },
