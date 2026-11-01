@@ -66,10 +66,7 @@ export const weather: System = {
       const forts = Object.keys(ctx.s.fortifications).sort(cmp);
       if (forts.length) {
         const before = forts.map((f) => ctx.s.fortifications[f].conditionMilli);
-        // wear is mended as part of the daily upkeep (castellans keep walls sound); only storms and raids need the ruler
-        const mend = sc.weather.maintenanceMilliPerDay ?? 0, upTo = sc.weather.maintainToMilli ?? 0;
-        const change = (f: string) => sc.weather.decayMilliPerDay - Math.min(mend, Math.max(0, upTo - ctx.s.fortifications[f].conditionMilli));
-        const e = ctx.emit("FortificationsWeathered", [], forts.map(loc), { changes: forts.map((f) => [f, change(f)]) });
+        const e = ctx.emit("FortificationsWeathered", [], forts.map(loc), { changes: forts.map((f) => [f, sc.weather.decayMilliPerDay]) });
         forts.forEach((f, i) => maybeAlarm(ctx, f, before[i], e.id));
       }
       for (const l of sorted(ctx.content.locations, (l) => l.id)) {

@@ -189,12 +189,12 @@ test("letters say walls and men only when they changed, in natural words, naming
   }
 });
 
-test("wear on walls is mended from the daily upkeep: with no storms or raids the walls climb to sound by themselves", () => {
+test("walls do not decay on their own: with no storms or raids they stay as they were", () => {
   const c = variant((r) => { r.scenario.threat.startPermillePerDay = 0; r.scenario.scripts = []; for (const l of r.locations) l.exposurePermille = 0; });
   const sim = run({ seed: 4, content: c, policy: "passive" }, 90);
   const w = sim.unsafeWorldForDebug();
-  assert.equal(w.fortifications["northwatch"].conditionMilli, 90000, "Northwatch (75k at the start) is back to sound");
-  assert.ok(!sim.log.some((e) => e.type === "OrderIssued"), "without any order from the ruler");
+  assert.equal(w.fortifications["northwatch"].conditionMilli, 75000);
+  assert.equal(w.fortifications["greybridge"].conditionMilli, 90000);
 });
 
 test("a scouting order always brings word: no raiders seen is news too", () => {

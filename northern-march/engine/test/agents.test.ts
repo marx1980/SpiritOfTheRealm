@@ -22,8 +22,8 @@ const crisis = variant((r) => {
     { day: 3, kind: "threat", site: "blackwood", intensityPermille: 800, durationDays: 60 },
   ];
   r.scenario.messenger.lossPermillePerDay = 0; r.scenario.interception = [];
-  // the fixture pins the old balance (repair cost, walls wearing instead of being mended): these tests are about how agents choose, not about the economy
-  r.scenario.player.repairCostMilliPerMilli = 2; r.scenario.weather.decayMilliPerDay = 250; r.scenario.weather.maintenanceMilliPerDay = 0;
+  // the fixture pins the old balance (repair cost, walls wearing): these tests are about how agents choose, not about the economy
+  r.scenario.player.repairCostMilliPerMilli = 2; r.scenario.weather.decayMilliPerDay = 250;
 });
 
 test("inactive characters do no work", () => {
@@ -194,8 +194,8 @@ test("order recipients decide, with reasons, and the decision is traced", () => 
   const c = variant((r) => {
     r.scenario.scripts = [{ day: 2, kind: "order", from: "anna", to: "caron", intent: "advance", objective: { kind: "location", id: "northwatch" } }];
     r.scenario.messenger.lossPermillePerDay = 0; r.scenario.interception = [];
-  // the fixture pins the old balance (repair cost, walls wearing instead of being mended): these tests are about how agents choose, not about the economy
-  r.scenario.player.repairCostMilliPerMilli = 2; r.scenario.weather.decayMilliPerDay = 250; r.scenario.weather.maintenanceMilliPerDay = 0;
+  // the fixture pins the old balance (repair cost, walls wearing): these tests are about how agents choose, not about the economy
+  r.scenario.player.repairCostMilliPerMilli = 2; r.scenario.weather.decayMilliPerDay = 250;
   });
   const sim = run({ seed: 1, content: c, policy: "passive" }, 10);
   const ob = sim.log.find((e) => e.type === "ObedienceDecided")!;
@@ -213,8 +213,8 @@ test("a disloyal recipient refuses an order he thinks wrong; refusal is recorded
     r.scenario.scripts = [{ day: 2, kind: "order", from: "anna", to: "caron", intent: "advance", objective: { kind: "location", id: "highcairn" } }];
     r.characters.find((x) => x.id === "caron")!.relationships = [{ to: "anna", kind: "loyalty", value: 0 }];
     r.scenario.messenger.lossPermillePerDay = 0; r.scenario.interception = [];
-  // the fixture pins the old balance (repair cost, walls wearing instead of being mended): these tests are about how agents choose, not about the economy
-  r.scenario.player.repairCostMilliPerMilli = 2; r.scenario.weather.decayMilliPerDay = 250; r.scenario.weather.maintenanceMilliPerDay = 0;
+  // the fixture pins the old balance (repair cost, walls wearing): these tests are about how agents choose, not about the economy
+  r.scenario.player.repairCostMilliPerMilli = 2; r.scenario.weather.decayMilliPerDay = 250;
   });
   const sim = run({ seed: 1, content: c, policy: "passive" }, 10);
   const ob = sim.log.find((e) => e.type === "ObedienceDecided")!;
