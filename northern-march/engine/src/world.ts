@@ -19,7 +19,7 @@ export interface HistoryEntry { tick: number; event: "promoted" | "demoted" | "a
 
 export interface WorldState {
   treasuryMilli: Record<string, number>;
-  fortifications: Record<string, { conditionMilli: number; lastChangeEvent: number; garrison: number }>;
+  fortifications: Record<string, { conditionMilli: number; lastChangeEvent: number; garrison: number; establishment: number }>;
   troops: Record<string, number>;
   tiers: Record<string, Tier>;
   history: Record<string, HistoryEntry[]>;
@@ -57,7 +57,7 @@ export const newAgent = (): AgentState => ({ operational: null, focus: null, exp
 export function initialState(c: Content): WorldState {
   const fortifications: WorldState["fortifications"] = {};
   for (const l of [...c.locations].sort((a, b) => cmp(a.id, b.id)))
-    if (l.fortification) fortifications[l.id] = { conditionMilli: l.fortification.conditionMilli, lastChangeEvent: 1, garrison: l.fortification.garrison };
+    if (l.fortification) fortifications[l.id] = { conditionMilli: l.fortification.conditionMilli, lastChangeEvent: 1, garrison: l.fortification.garrison, establishment: l.fortification.garrison };
   const positions: WorldState["positions"] = {};
   const troops: WorldState["troops"] = {}, agents: WorldState["agents"] = {}, tiers: WorldState["tiers"] = {};
   for (const ch of [...c.characters].sort((a, b) => cmp(a.id, b.id))) {
@@ -99,6 +99,7 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   ScenarioStarted: noop,
   TreasuryCollected: (s, p) => { s.treasuryMilli[p.holder] = (s.treasuryMilli[p.holder] ?? 0) + p.amountMilli; },
   UpkeepPaid: (s, p) => { s.treasuryMilli[p.holder] -= p.amountMilli; },
+  GarrisonRecovered: (s, p) => { for (const [loc, n] of p.changes as [string, number][]) { const f = s.fortifications[loc]; f.garrison = Math.min(f.establishment, f.garrison + n); } },
   FortificationsWeathered: (s, p, e) => {
     for (const [loc, d] of p.changes as [string, number][]) { const f = s.fortifications[loc]; f.conditionMilli = clampCond(f.conditionMilli - d); f.lastChangeEvent = e.id; }
   },

@@ -51,6 +51,12 @@ export const economy: System = {
       }
       const up = ctx.emit("UpkeepPaid", [], [chr(sc.ruler)], { holder: sc.ruler, amountMilli: sc.economy.dailyUpkeepMilli });
       observeTreasury(ctx, up.id);
+      // Garrisons refill by 2% of their establishment (at least one man) a day, up to that establishment.
+      const gains = Object.keys(ctx.s.fortifications).sort(cmp).flatMap((f): [string, number][] => {
+        const fo = ctx.s.fortifications[f], gap = fo.establishment - fo.garrison;
+        return gap > 0 ? [[f, Math.min(gap, Math.max(1, Math.floor((fo.establishment * 20) / 1000)))]] : [];
+      });
+      if (gains.length) ctx.emit("GarrisonRecovered", [], gains.map(([f]) => loc(f)), { changes: gains });
       ctx.extraDraws("economy");
       ctx.at(ctx.tick + DAY, "economy:day", {});
     },

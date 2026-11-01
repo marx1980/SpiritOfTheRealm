@@ -258,3 +258,14 @@ test("a fight is reported: how it went, what the fort and company now count; and
   assert.ok(letter, "a letter tells of a fight");
   assert.match(letterSentences(v, letter!).join(" "), /We fought the raiders at Blackwood and (won|were beaten)\.|We found no raiders at Blackwood\./);
 });
+
+test("garrisons recover 2% of their establishment a day, never above it", () => {
+  const sim = run({ seed: 5 }, 30), w = sim.unsafeWorldForDebug();
+  assert.ok(Object.values(w.fortifications).every((f) => f.garrison <= f.establishment && f.establishment > 0));
+  // a fort knocked down to half strength refills by 2% of establishment a day
+  const n = CONTENT.locations.find((l) => l.id === "northwatch")!.fortification!.garrison;
+  const sim2 = createSim({ content: variant((r) => { r.scenario.threat.startPermillePerDay = 0; }), seed: 5, policy: "delegating" });
+  sim2.runDays(2);
+  const w2 = sim2.unsafeWorldForDebug();
+  assert.equal(w2.fortifications.northwatch.establishment, n);
+});

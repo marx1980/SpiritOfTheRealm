@@ -2,10 +2,10 @@
  "tuneSeeds": "1..200",
  "rates": {
   "elara": 0.995,
-  "oren": 0.085,
+  "oren": 0.09,
   "selene": 0.995
  },
- "passive": 0.08,
+ "passive": 0.09,
  "aliases": {
   "follow-best-adviser": "elara",
   "follow-worst-adviser": "oren"

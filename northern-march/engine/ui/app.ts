@@ -4,6 +4,7 @@ import { deriveContent, type RawContent } from "../src/content.ts";
 import { createSim } from "../src/engine.ts";
 import { adviceSettled, buildCourt, type AdviceLine } from "../src/presentation/court.ts";
 import { buildMap } from "../src/presentation/map.ts";
+import { mapSvg } from "./maparts.ts";
 import { captainSentTo, certainty, letterSentences, letterGist, planWords, reasonWords, sourceOf } from "../src/presentation/phrasing.ts";
 import { beliefsAbout, validateDraft, type OrderDraft, type View } from "../src/view.ts";
 import { INTENTS, type Recommendation } from "../src/schemas.ts";
@@ -267,20 +268,7 @@ function court(v: View) {
 
 function map(v: View) {
   const m = buildMap(v), byId = new Map(m.places.map((p) => [p.id, p]));
-  const wcls = (w?: string) => !w ? "w-none" : w === "sound" ? "w-sound" : w === "worn" ? "w-worn" : w === "damaged" ? "w-damaged" : "w-bad";
-  const routes = m.routes.map((r) => { const a = byId.get(r.from)!, b = byId.get(r.to)!; return `<line class="route${r.crossing ? " ford" : ""}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/>`; }).join("");
-  const places = m.places.map((p) => {
-    const sel = p.id === st.selected ? " sel" : "";
-    const shape = p.fortified ? `<rect class="place ${wcls(p.wall?.words)}${sel}" x="${p.x - 13}" y="${p.y - 13}" width="26" height="26" rx="2" data-place="${p.id}"/>`
-      : `<circle class="place${sel}" cx="${p.x}" cy="${p.y}" r="${p.raiders ? 9 : 6}" data-place="${p.id}"/>`;
-    const raid = p.raiders && p.raiders.words !== "no raiders" ? `<path class="raid" d="M${p.x + 14} ${p.y - 26} l10 18 h-20 z"/>` : "";
-    const you = p.you ? `<circle class="you" cx="${p.x}" cy="${p.y}" r="22"/>` : "";
-    const sub = p.fortified ? (p.wall ? p.wall.words : "unknown") : p.raiders && p.raiders.words !== "no raiders" ? p.raiders.words : "";
-    const troopParts = p.troops ? [...(p.troops.fort ? [`${p.troops.fort.exact ? "" : "~"}${p.troops.fort.count} in fort`] : []), ...p.troops.captains.map((c) => `${esc(c.name)} ${c.exact ? "" : "~"}${c.count}`)] : [];
-    const troops = troopParts.length ? `<text class="sub" x="${p.x + 18}" y="${p.y + 34}">${troopParts.join(" · ")}</text>` : "";
-    const hit = `<circle class="hit" cx="${p.x}" cy="${p.y}" r="26" data-place="${p.id}"/>`;
-    return `${you}${shape}${raid}${hit}<text x="${p.x + 18}" y="${p.y + 5}">${esc(p.name)}</text>${sub ? `<text class="sub" x="${p.x + 18}" y="${p.y + 20}">${esc(sub)}</text>` : ""}${troops}`;
-  }).join("");
+  const kinds = new Map(v.world.places.map((p) => [p.id, p.kind])), terrains = new Map(v.world.places.map((p) => [p.id, p.terrain]));
   const s = byId.get(st.selected);
   const line = (k: string, x?: { words: string; source: string; age: string; certainty: string }) => x ? `<div><span class="k">${k}:</span> ${tone(cap1(x.words))} <em class="stat-age">(${esc(x.age)}, ${esc(x.source)}, ${esc(x.certainty)})</em></div>` : "";
   const hasNews = !!s && (!!s.wall || !!s.raiders || !!s.troops || s.people.length > 0);
@@ -294,8 +282,7 @@ function map(v: View) {
   const detail = s ? `<div class="card detail"><h2>${esc(s.name)}${kind ? ` <small>(${esc(kind)})</small>` : ""}</h2>${hasNews ? "" : `<div class="k">No news</div>`}${line("Walls", s.wall)}${line("Raiders", s.raiders)}${troopLine}
     ${s.people.length ? `<div><span class="k">People</span> ${s.people.map((x) => `${esc(x.name)} (${esc(x.age)}, ${esc(x.certainty)})`).join(", ")}</div>` : ""}
     </div>` : "";
-  return `<div class="col"><div class="card map"><svg viewBox="40 30 980 920" role="img" aria-label="Map of the realm">
-    <rect x="40" y="30" width="980" height="920" fill="var(--land)"/>${routes}${places}</svg></div>${detail}</div>`;
+  return `<div class="col"><div class="card map">${mapSvg({ model: m, selected: st.selected, kinds, terrains })}</div>${detail}</div>`;
 }
 
 function side(v: View) {

@@ -23,7 +23,7 @@ export interface DeliveredReport {
 }
 /** Static knowledge anyone in the realm has: the map and the names of places and of people they know of. */
 export interface WorldKnowledge {
-  places: { id: string; name: string; province: string; kind: string; pos: [number, number]; fortified: boolean }[];
+  places: { id: string; name: string; province: string; kind: string; terrain: string; pos: [number, number]; fortified: boolean }[];
   routes: { from: string; to: string; crossing?: string }[];
   names: Record<string, string>;
   /** What each known person is known for: their strongest skill, in words (the area they advise on). */
@@ -65,7 +65,7 @@ export function buildView(s: Readonly<WorldState>, c: Content, who: string, now:
     advice: Object.values(s.heard[who] ?? {}).filter((r) => now - r.computedAt <= ADVICE_FRESH).map((r) => structuredClone(r))
       .sort((a, b) => (a.author < b.author ? -1 : a.author > b.author ? 1 : b.computedAt - a.computedAt || a.id - b.id)),
     world: {
-      places: c.locations.map((l) => ({ id: l.id, name: l.name, province: l.province, kind: l.kind, pos: [...l.pos] as [number, number], fortified: !!l.fortification })),
+      places: c.locations.map((l) => ({ id: l.id, name: l.name, province: l.province, kind: l.kind, terrain: l.terrain, pos: [...l.pos] as [number, number], fortified: !!l.fortification })),
       routes: c.routes.map((r) => ({ from: r.from, to: r.to, ...(r.crossing ? { crossing: r.crossing.kind } : {}) })),
       names: Object.fromEntries([...c.locations.map((l) => [l.id, l.name]), ...[...known].sort().map((id) => [id, c.byId.character.get(id)?.name ?? id])]),
       areas: Object.fromEntries([...known].sort().map((id) => [id, areaOf(c.byId.character.get(id)?.capabilities ?? {})])),

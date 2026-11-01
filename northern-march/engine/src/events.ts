@@ -40,6 +40,7 @@ export const EVENT_TYPES: Readonly<Record<string, EventTypeDef>> = Object.freeze
   TreasuryCollected: T("economy", "economic", 2, true),
   UpkeepPaid: T("economy", "economic", 2, true),
   FortificationsWeathered: T("weather", "environment", 1, true),
+  GarrisonRecovered: T("economy", "military", 1, true),
   Storm: T("weather", "environment", 2, true),
   ThreatBegan: T("threat", "military", 3, true),
   RaidDamage: T("threat", "military", 2),
