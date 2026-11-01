@@ -2,11 +2,12 @@
 // source and certainty. No hidden truth; troop figures are the believed count, exact only where the belief is certain.
 import { beliefsAbout, type View } from "../view.ts";
 import { ago, certainty, nameOf, raiderWords, sourceOf, wallWords } from "./phrasing.ts";
+import { dayOf } from "./format.ts";
 
 export interface MapPlace {
   id: string; name: string; x: number; y: number; fortified: boolean;
   wall?: { words: string; age: string; source: string; certainty: string };
-  troops?: { fort?: { count: number; exact: boolean; observedAt: number }; captains: { name: string; count: number; exact: boolean; observedAt: number }[] };
+  troops?: { fort?: { count: number; exact: boolean; day: number }; captains: { name: string; count: number; exact: boolean; day: number }[] };
   raiders?: { words: string; age: string; source: string; certainty: string };
   people: { name: string; age: string; certainty: string }[];
   you: boolean;
@@ -28,13 +29,13 @@ export function buildMap(v: View): MapModel {
     const t = beliefsAbout(v, id, "character.troops")[0], at = beliefsAbout(v, id, "character.location")[0]?.believedValue as string | undefined;
     if (!t || !at) continue;
     if (!companies.has(at)) companies.set(at, []);
-    companies.get(at)!.push({ name: nameOf(v, id), count: t.believedValue as number, exact: t.effectiveBand === "certain", observedAt: t.observedAt });
+    companies.get(at)!.push({ name: nameOf(v, id), count: t.believedValue as number, exact: t.effectiveBand === "certain", day: dayOf(t.observedAt) });
   }
   const places = v.world.places.map((p) => {
     const w = beliefsAbout(v, p.id, "fortification.condition")[0], r = beliefsAbout(v, p.id, "threat.intensity")[0];
     const g = beliefsAbout(v, p.id, "fortification.garrison")[0];
     const captains = companies.get(p.id) ?? [];
-    const troops = g || captains.length ? { ...(g ? { fort: { count: g.believedValue as number, exact: g.effectiveBand === "certain", observedAt: g.observedAt } } : {}), captains } : undefined;
+    const troops = g || captains.length ? { ...(g ? { fort: { count: g.believedValue as number, exact: g.effectiveBand === "certain", day: dayOf(g.observedAt) } } : {}), captains } : undefined;
     return {
       id: p.id, name: p.name, x: p.pos[0], y: p.pos[1], fortified: p.fortified, you: here === p.id,
       ...(troops ? { troops } : {}),

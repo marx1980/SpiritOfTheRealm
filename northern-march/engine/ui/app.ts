@@ -187,10 +187,10 @@ function map(v: View) {
   const s = byId.get(st.selected);
   const line = (k: string, x?: { words: string; source: string; age: string; certainty: string }) => x ? `<div><span class="k">${k}</span> ${esc(x.words)} · ${esc(x.source)} · ${esc(x.age)} · ${esc(x.certainty)}</div>` : "";
   const hasNews = !!s && (!!s.wall || !!s.raiders || !!s.troops || s.people.length > 0);
-  const dayNo = (t: number) => Math.floor((t - PRE) / DAY) + 1;
+  const dayNo = (d: number) => d - PRE / DAY + 1; // day index from the engine, counted from the first letter day
   const troopItems = s?.troops ? [
-    ...(s.troops.fort ? [`Fort ${s.troops.fort.exact ? "" : "about "}${s.troops.fort.count}, day ${dayNo(s.troops.fort.observedAt)}`] : []),
-    ...s.troops.captains.map((c) => `${esc(c.name)} ${c.exact ? "" : "about "}${c.count}, day ${dayNo(c.observedAt)}`),
+    ...(s.troops.fort ? [`Fort ${s.troops.fort.exact ? "" : "about "}${s.troops.fort.count}, day ${dayNo(s.troops.fort.day)}`] : []),
+    ...s.troops.captains.map((c) => `${esc(c.name)} ${c.exact ? "" : "about "}${c.count}, day ${dayNo(c.day)}`),
   ] : [];
   const troopLine = troopItems.length ? `<div><span class="k">Troops</span> ${troopItems.join(" · ")}</div>` : "";
   const detail = hasNews ? `<div class="card detail"><h2>${esc(s.name)}</h2>${line("Walls", s.wall)}${line("Raiders", s.raiders)}${troopLine}
