@@ -39,7 +39,7 @@ const REASON_LABEL: Record<string, string> = { report: "Letters", advice: "Advic
 
 type Sim = ReturnType<typeof createSim>;
 const st = {
-  sim: null as unknown as Sim, log: [] as PlayerAction[][], seed: __H01__.seed, paused: null as null | string, over: false, letter: null as number | null, advice: null as number | null, tab: "game" as "game" | "settings",
+  sim: null as unknown as Sim, log: [] as PlayerAction[][], shownPause: null as string | null, seed: __H01__.seed, paused: null as null | string, over: false, letter: null as number | null, advice: null as number | null, tab: "game" as "game" | "settings",
   queue: [] as PlayerAction[], autoPause: new Set<string>(REASONS), selected: "northwatch",
   draft: { recipient: "", action: "p:repair", objective: "northwatch", discretion: "bounded" } as { recipient: string; action: string; objective: string; discretion: string },
   error: "", observer: location.hash === "#observer", answered: 0, openLetter: null as number | null,
@@ -127,6 +127,7 @@ const queue = (a: PlayerAction) => {
   if (!st.paused) return;
   // the same action from two advisers (e.g. raiders and captain both mean "send the captain to Northwatch") is queued once
   if (st.queue.some((q) => JSON.stringify(q) === JSON.stringify(a))) { st.error = `${actionText(st.sim.viewOf("player"), a)} is already queued`; return render(); }
+  if (!affordable(st.sim.viewOf("player"), a)) { st.error = `${actionText(st.sim.viewOf("player"), a)}: not enough coins`; return render(); }
   st.queue.push(a); st.error = ""; render();
 };
 
@@ -153,7 +154,7 @@ function adviceRows(v: View, lines: AdviceLine[]) {
   return lines.map((l) => {
     const r = v.advice.find((x) => x.id === l.id), a = r ? adviceAction(v, r) : null;
     return `<div class="row"><span class="who">${esc(l.adviser)}${l.area ? ` <small class="area">(${esc(l.area)})</small>` : ""}</span><span>${esc(l.plan)}. <em class="${l.fresh ? "" : "old"}">(${esc(l.heard)})</em></span>
-      ${a && st.paused ? `<button data-act='${esc(JSON.stringify(a))}'>Do it</button>` : ""}
+      ${a && st.paused && affordable(v, a) ? `<button data-act='${esc(JSON.stringify(a))}'>Do it</button>` : ""}
       <span class="why">${l.supports.length ? `Supports: ${esc(l.supports.join(", "))}. ` : ""}${l.concerns.length ? `Concerns: ${esc(l.concerns.join(", "))}.` : ""}</span></div>`;
   }).join("");
 }
@@ -210,12 +211,19 @@ function side(v: View) {
       (pAct === "repair" || pAct === "advance") && !fortId ? ["choose a fort under Where"]
       : pAct === "travel" && !travel.includes(st.draft.objective) ? ["choose a place to travel to under Where"] : [])
     : draft ? validateDraft(v, draft) : ["no recipient"];
+  // A repair is only offered if Anna can pay for it (from what she believes about the walls and her coins).
+  const isRepair = st.draft.action === "p:repair" || st.draft.action === "o:repair";
+  const repairCost = isRepair && fortId ? repairCostKnown(v, fortId) : undefined;
+  const coins = coinsKnown(v);
+  if (repairCost !== undefined && coins !== undefined && repairCost > coins) problems.push(`not enough coins: the repair costs about ${kCoins(repairCost)} and you have about ${kCoins(coins)}`);
+  const costLine = repairCost === undefined ? "" : `<span></span><span class="cost">Repair costs about ${kCoins(repairCost)}${coins === undefined ? "" : `; you have about ${kCoins(coins)}`}${repairCost > (coins ?? Infinity) ? ` <button data-use-levy>Raise a levy instead (about ${kCoins(content.scenario.player.levyMilli)})</button>` : ""}</span>`;
   const act = `<div class="card"><h2>Act</h2>
     <div class="form">
       <label for="o-to">To</label><select id="o-to">${known.map((k) => opt(k, name(v, k), st.draft.recipient)).join("")}</select>
       <label for="o-action">Action</label><select id="o-action">${ACTIONS.map(([k, l]) => opt(k, l, st.draft.action)).join("")}</select>
       <label for="o-obj">Where</label><select id="o-obj">${places.map((x) => opt(x.id, x.name, st.draft.objective)).join("")}${known.map((k) => opt("@" + k, name(v, k), st.draft.objective)).join("")}</select>
       ${isPlayer ? "" : `<label for="o-disc">Freedom</label><select id="o-disc">${[["strict", "Exactly as told"], ["bounded", "Some freedom"], ["delegated", "Full freedom"]].map(([k, l]) => opt(k, l, st.draft.discretion)).join("")}</select>`}
+      ${costLine}
       <span></span><button id="o-add" ${p && !problems.length ? "" : "disabled"}>Add</button>
     </div>
     ${problems.length ? `<div class="err">${esc(problems.join("; "))}</div>` : ""}</div>`;
@@ -255,13 +263,36 @@ function observer() {
 }
 
 /** Coins as Anna believes them (words, never the true amount). Goods are not in the engine yet (Phase 7). */
+/** What Anna believes the treasury holds (the newest belief), or undefined. */
+function coinsKnown(v: View): number | undefined {
+  const b = beliefsAbout(v, content.scenario.ruler, "treasury.balance").sort((x, y) => y.observedAt - x.observedAt)[0];
+  return b ? (b.believedValue as number) : undefined;
+}
+/** What a repair of a fort would cost, from what Anna believes about its walls. */
+function repairCostKnown(v: View, place: string): number | undefined {
+  const b = beliefsAbout(v, place, "fortification.condition").sort((x, y) => y.observedAt - x.observedAt)[0];
+  return b ? Math.max(0, content.scenario.player.repairRestoreToMilli - (b.believedValue as number)) * content.scenario.player.repairCostMilliPerMilli : undefined;
+}
+const kCoins = (n: number) => `${Math.round(n / 1000)}k`;
+/** Background income (holdings) minus upkeep, per day: a rough estimate Anna can see. */
+const netDailyMilli = content.scenario.economy.holdings.reduce((a, h) => a + h.dailyIncomeMilli, 0) - content.scenario.economy.dailyUpkeepMilli;
+const LOW_COINS = 30000;
+/** A repair is only possible if Anna can pay for it, as far as she knows. Other actions are always possible. */
+function affordable(v: View, a: PlayerAction): boolean {
+  if (a.action !== "repair") return true;
+  const c = repairCostKnown(v, a.target!), k = coinsKnown(v);
+  return c === undefined || k === undefined || c <= k;
+}
+
 function coinStatus(v: View): string {
   const bs = beliefsAbout(v, content.scenario.ruler, "treasury.balance");
   const b = bs.sort((x, y) => y.observedAt - x.observedAt)[0];
   if (!b) return `<span class="stat"><span class="emo" aria-hidden="true">🪙</span> Coins: unknown</span>`;
   const n = b.believedValue as number;
-  return `<span class="stat${b.effectiveBand === "stale" ? " old" : ""}"><span class="emo" aria-hidden="true">🪙</span> Coins: ${Math.round(n / 1000)}k</span>
-    <em class="stat-age">(${esc(dayAgo(v, b.observedAt))})</em>`;
+  const net = `${netDailyMilli >= 0 ? "+" : "−"}${kCoins(Math.abs(netDailyMilli))} a day`;
+  const low = n < LOW_COINS ? ` <span class="low">Low. <button data-use-levy>Raise a levy (about ${kCoins(content.scenario.player.levyMilli)})</button></span>` : "";
+  return `<span class="stat${b.effectiveBand === "stale" ? " old" : ""}"><span class="emo" aria-hidden="true">🪙</span> Coins: ${kCoins(n)}</span>
+    <em class="stat-age">(${esc(dayAgo(v, b.observedAt))})</em> <span class="stat-net">net about ${net}</span>${low}`;
 }
 
 /** Settings tab: what pauses the game, and the observer panel for H-01 observers. */
@@ -286,7 +317,11 @@ function render() {
     ...(adv.reasons.some((x) => x.weight > 0) ? [`Supports: ${adv.reasons.filter((x) => x.weight > 0).slice(0, 3).map((x) => reasonWords(x.textKey)).join(", ")}`] : []),
     ...(adv.reasons.some((x) => x.weight < 0) ? [`Concerns: ${adv.reasons.filter((x) => x.weight < 0).slice(0, 3).map((x) => reasonWords(x.textKey)).join(", ")}`] : []),
   ].map((x) => x + ".").join(" ") : "";
-  const doIt = adv && adviceAction(v, adv) && st.paused ? `<button data-act='${esc(JSON.stringify(adviceAction(v, adv)))}'>Do it</button>` : "";
+  const advAct = adv ? adviceAction(v, adv) : null;
+  const doIt = advAct && affordable(v, advAct) && st.paused ? `<button data-act='${esc(JSON.stringify(advAct))}'>Do it</button>` : "";
+  const pauseKey = `${st.paused}:${st.letter}:${st.advice}`;
+  const newPause = st.paused !== null && pauseKey !== st.shownPause;
+  st.shownPause = st.paused !== null ? pauseKey : null;
   document.getElementById("app")!.innerHTML = `
   <div class="top"><h1>Northern March</h1>
     <div class="meta"><span>Day ${Math.floor((v.now - PRE) / DAY) + 1} / ${__H01__.days}</span><span>${"at" in pos ? esc(name(v, pos.at)) : "on the road to " + esc(name(v, pos.transit.dest))}</span></div>
@@ -303,12 +338,14 @@ function render() {
   <div class="grid">${court(v)}${map(v)}${side(v)}</div>
   ${st.observer ? observer() : ""}`}`;
   void o;
+  if (newPause) document.querySelector(".pause")?.scrollIntoView({ block: "start" });
 }
 
 document.addEventListener("click", (e) => {
   const t = e.target as HTMLElement;
-  const el = t.closest("[data-act],[data-place],[data-q],[data-unq],[data-letter],[data-close-letter],#go,#restart,#settings-tab,#o-add,#copy-log") as HTMLElement | null;
+  const el = t.closest("[data-act],[data-place],[data-q],[data-unq],[data-letter],[data-close-letter],[data-use-levy],#go,#restart,#settings-tab,#o-add,#copy-log") as HTMLElement | null;
   if (!el) return;
+  if (el.dataset.useLevy !== undefined) { st.draft.action = "p:levy"; return render(); }
   if (el.dataset.letter) { const id = Number(el.dataset.letter); st.openLetter = st.openLetter === id ? null : id; return render(); }
   if (el.dataset.closeLetter !== undefined) { st.openLetter = null; return render(); }
   if (el.dataset.act) return queue(JSON.parse(el.dataset.act));
