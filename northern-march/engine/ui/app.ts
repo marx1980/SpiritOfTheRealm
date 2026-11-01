@@ -218,9 +218,14 @@ function batchBlock(v: View): string {
 
 const areaShort = (a: string) => ({ Military: "MIL", Administration: "ADM", Construction: "CON", Intelligence: "INT" } as Record<string, string>)[a] ?? a.toUpperCase();
 /** Status words in green (good outcome), red (bad outcome) or amber (under way, at risk): the text is escaped first. */
+/** Age words coloured by how stale the news is: three days or more amber, a week or more red. */
+const ageTone = (a: string) => { const n = /(\d+) days? ago/.exec(a)?.[1]; const d = n ? Number(n) : 0; return d >= 7 ? `<span class="bad">${esc(a)}</span>` : d >= 3 ? `<span class="warn">${esc(a)}</span>` : esc(a); };
 const tone = (t: string) => esc(t)
+  .replace(/\b(\d+) days ago\b/g, (m, n) => (Number(n) >= 7 ? `<span class="bad">${m}</span>` : Number(n) >= 3 ? `<span class="warn">${m}</span>` : m))
   .replace(/\b(completed|succeeded|won|held|repaired|sound|no raiders)\b/gi, '<span class="ok">$1</span>')
-  .replace(/\b(abandoned|failed|lost|breached|captured|refused|beaten|not enough coins|dead|fallen|a small band|a strong band|a large host)\b/gi, '<span class="bad">$1</span>')
+  .replace(/\b(abandoned|failed|lost|breached|captured|refused|beaten|not enough coins|dead|fallen|a strong band)\b/gi, '<span class="bad">$1</span>')
+  .replace(/\b(a large host)\b/gi, '<span class="bad big">$1</span>')
+  .replace(/\b(a small band)\b/gi, '<span class="warn">$1</span>')
   .replace(/(?<!no )\b(raiders)\b/gi, '<span class="bad">$1</span>')
   .replace(/\b(damaged|in progress|under way|low|worn)\b/gi, '<span class="warn">$1</span>');
 const cap1 = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
@@ -258,7 +263,7 @@ function orderDetails(v: View, id: string): string {
   if (!o) return "";
   const verb: Record<string, string> = { repair: "Repair", advance: "Send to", levy: "Raise a levy", travel: "Travel to", investigate: "Scout the raiders at", attack: "Attack the raiders at" };
   const hist = beliefsAbout(v, id, "order.status").sort((a, b) => b.observedAt - a.observedAt)
-    .map((b) => `<div>${tone(String(b.believedValue))} · ${esc(sourceOf(v, b))} · ${esc(dayAgo(v, b.observedAt))} · ${esc(certainty[b.effectiveBand])}</div>`).filter((x, i, a) => a.indexOf(x) === i).join("");
+    .map((b) => `<div>${tone(String(b.believedValue))} · ${esc(sourceOf(v, b))} · ${ageTone(dayAgo(v, b.observedAt))} · ${esc(certainty[b.effectiveBand])}</div>`).filter((x, i, a) => a.indexOf(x) === i).join("");
   return `<div class="ev order-detail"><div><span class="k">To:</span> ${esc(name(v, o.recipient))}</div><div><span class="k">Order:</span> ${esc(verb[o.action] ?? o.action)}${o.action === "levy" ? "" : " " + esc(name(v, o.target))}</div>
     <div><span class="k">Given:</span> day ${Math.floor((o.tick - PRE) / DAY) + 1}</div><div><span class="k">Reports:</span></div>${hist || "<div>none yet</div>"}</div>`;
 }
@@ -271,7 +276,7 @@ function court(v: View) {
     .filter(({ i, advice }) => !(st.batch.length && /^(walls|raiders):/.test(i.key) && !advice.length && i.evidence[0]?.age === "today"));
   const issues = shown.map(({ i, advice }) => `<div class="card issue ${i.priority >= 45 ? "p-hi" : i.priority >= 25 ? "p-mid" : ""}"${i.key.startsWith("order:") ? ` data-issue="${esc(i.key)}" role="button" tabindex="0"` : ""}>
     <div class="t">${tone(i.title)}</div>${st.openIssue === i.key ? orderDetails(v, i.key.slice(6)) : ""}
-    <div class="ev">${i.evidence.map((e) => `<span><b>${esc(e.text)}</b> · ${esc(e.source)} · ${esc(e.age)} · ${esc(e.certainty)}</span>`).join("")}</div>
+    <div class="ev">${i.evidence.map((e) => `<span><b>${esc(e.text)}</b> · ${esc(e.source)} · ${ageTone(e.age)} · ${esc(e.certainty)}</span>`).join("")}</div>
     ${advice.length ? `<div class="adv">${adviceRows(v, advice)}</div>` : ""}</div>`).join("");
   const rest = c.advice.filter((l) => !inBox(l));
   const general = rest.length ? `<div class="card"><h2>Council</h2><div class="adv">${adviceRows(v, rest)}</div></div>` : "";
@@ -282,7 +287,7 @@ function map(v: View) {
   const m = buildMap(v), byId = new Map(m.places.map((p) => [p.id, p]));
   const kinds = new Map(v.world.places.map((p) => [p.id, p.kind])), terrains = new Map(v.world.places.map((p) => [p.id, p.terrain]));
   const s = byId.get(st.selected);
-  const line = (k: string, x?: { words: string; source: string; age: string; certainty: string }) => x ? `<div><span class="k">${k}:</span> ${tone(cap1(x.words))} <em class="stat-age">(${esc(x.age)}, ${esc(x.source)}, ${esc(x.certainty)})</em></div>` : "";
+  const line = (k: string, x?: { words: string; source: string; age: string; certainty: string }) => x ? `<div><span class="k">${k}:</span> ${tone(cap1(x.words))} <em class="stat-age">(${ageTone(x.age)}, ${esc(x.source)}, ${esc(x.certainty)})</em></div>` : "";
   const hasNews = !!s && (!!s.wall || !!s.raiders || !!s.troops || s.people.length > 0);
   const dayNo = (d: number) => d - PRE / DAY + 1; // day index from the engine, counted from the first letter day
   const troopParts = s?.troops ? [
@@ -292,7 +297,7 @@ function map(v: View) {
   const troopLine = troopParts.length ? `<div><span class="k">Troops:</span> ${troopParts.map((x) => x.t).join(" + ")} <em class="stat-age">(day ${dayNo(Math.min(...troopParts.map((x) => x.day)))})</em></div>` : "";
   const kind = s ? v.world.places.find((x) => x.id === s.id)?.kind ?? "" : "";
   const detail = s ? `<div class="card detail"><h2>${esc(s.name)}${kind ? ` <small>(${esc(kind)})</small>` : ""}</h2>${hasNews ? "" : `<div class="k">No news</div>`}${line("Walls", s.wall)}${line("Raiders", s.raiders)}${troopLine}
-    ${s.people.length ? `<div><span class="k">People</span> ${s.people.map((x) => `${esc(x.name)} (${esc(x.age)}, ${esc(x.certainty)})`).join(", ")}</div>` : ""}
+    ${s.people.length ? `<div><span class="k">People</span> ${s.people.map((x) => `${esc(x.name)} (${ageTone(x.age)}, ${esc(x.certainty)})`).join(", ")}</div>` : ""}
     </div>` : "";
   return `<div class="col"><div class="card map">${mapSvg({ model: m, selected: st.selected, kinds, terrains })}</div>${detail}</div>`;
 }
@@ -341,12 +346,12 @@ function side(v: View) {
   const letters = `<div class="card"><h2>Letters</h2><div class="letters">${[...v.reports].reverse().slice(0, 40).map((r) => {
     const isOpen = r.reportId === st.openLetter;
     const body = isOpen ? `<div class="lr-body"><span class="speaker">${esc(name(v, r.author))}:</span> ${tone(letterSentences(v, r).join(" "))}</div>` : `<div class="c">${tone(letterGist(v, r))}</div>`;
-    const tags = isOpen ? `<span class="tags"><span class="tag arrived">arrived ${esc(dayAgo(v, r.deliveredAt))}</span><span class="tag written">written ${esc(dayAgo(v, r.composedAt))}</span></span>` : `<span class="when">written ${esc(dayAgo(v, r.composedAt))}</span>`;
+    const tags = isOpen ? `<span class="tags"><span class="tag arrived">arrived ${ageTone(dayAgo(v, r.deliveredAt))}</span><span class="tag written">written ${ageTone(dayAgo(v, r.composedAt))}</span></span>` : `<span class="when">written ${ageTone(dayAgo(v, r.composedAt))}</span>`;
     return `<div class="letter${isOpen ? " open" : ""}" data-letter="${r.reportId}" role="button" tabindex="0"><div class="h"><b>${esc(name(v, r.author))}</b>${tags}</div>${body}</div>`;
   }).join("") || `<div class="c">None</div>`}</div></div>`;
   const orders = v.self.orders.length ? `<div class="card"><h2>Orders given</h2><div class="letters">${[...v.self.orders].reverse().slice(0, 20).map((o) => {
     const b = v.beliefs[Object.keys(v.beliefs).find((k) => v.beliefs[k].predicate === "order.status" && v.beliefs[k].subject.id === String(o.orderId)) ?? ""];
-    return `<div class="letter"><div class="h"><b>${esc(name(v, o.recipient))}</b><span>${esc(dayAgo(v, o.tick))}</span></div><div class="c">${esc(o.action)} ${esc(name(v, o.target))} · ${esc(b ? String(b.believedValue) : "no word")}</div></div>`;
+    return `<div class="letter"><div class="h"><b>${esc(name(v, o.recipient))}</b><span>${ageTone(dayAgo(v, o.tick))}</span></div><div class="c">${esc(o.action)} ${esc(name(v, o.target))} · ${esc(b ? String(b.believedValue) : "no word")}</div></div>`;
   }).join("")}</div></div>` : "";
   return `<div class="col">${act}${letters}${orders}</div>`;
 }
@@ -402,7 +407,7 @@ function coinStatus(v: View): string {
   const net = `${netDailyMilli >= 0 ? "+" : "−"}${kCoins(Math.abs(netDailyMilli))} a day`;
   const low = n < LOW_COINS ? ` <span class="low">Low. <button data-use-levy>Raise a levy (about ${kCoins(content.scenario.player.levyMilli)})</button></span>` : "";
   return `<span class="stat${b.effectiveBand === "stale" ? " old" : ""}"><span class="emo" aria-hidden="true">🪙</span> Coins: ${kCoins(n)}</span>
-    <span class="stat-net ${netDailyMilli >= 0 ? "ok" : "bad"}">${net}</span> <em class="stat-age">(${esc(dayAgo(v, b.observedAt))})</em>${low}`;
+    <span class="stat-net ${netDailyMilli >= 0 ? "ok" : "bad"}">${net}</span> <em class="stat-age">(${ageTone(dayAgo(v, b.observedAt))})</em>${low}`;
 }
 
 /** Settings tab: what pauses the game, and the observer panel for H-01 observers. */

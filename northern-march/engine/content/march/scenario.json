@@ -181,7 +181,7 @@
   "regency": {
     "regent": "elara",
     "seat": "ravenport",
-    "maxRepairCostMilli": 60000,
+    "maxRepairCostMilli": 0,
     "mayLevy": false,
     "maySendCaptain": false
   },

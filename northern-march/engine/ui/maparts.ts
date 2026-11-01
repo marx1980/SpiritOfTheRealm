@@ -106,7 +106,7 @@ export function mapSvg({ model: m, selected, kinds, terrains }: MapArtInput): st
     const k = ICON[kinds.get(p.id) ?? "village"] ?? ICON.village;
     const flag = p.fortified ? `<path d="M0 ${k.top}v-12" stroke="${INK}" stroke-width="1.5"/><path d="M0 ${k.top - 12}l12 4-12 4z" fill="${FLAG[wcls(p.wall?.words)]}" stroke="${INK}" stroke-width="1.2" stroke-linejoin="round"/>` : "";
     const raided = !!p.raiders && p.raiders.words !== "no raiders";
-    const raid = raided ? `<g transform="translate(${p.x + 36} ${p.y - 30}) scale(2)"><path d="M-9 8L0-9 9 8z" fill="${FLAG.bad}" stroke="${INK}" stroke-width="1.5" stroke-linejoin="round"/><path d="M0-9v-6" stroke="${INK}" stroke-width="1.3"/></g>` : "";
+    const raid = raided ? `<g transform="translate(${p.x + 36} ${p.y - 30}) scale(2)"><path d="M-9 8L0-9 9 8z" fill="${p.raiders!.words.includes("small") ? FLAG.damaged : p.raiders!.words.includes("large") ? "#6e1410" : FLAG.bad}" stroke="${INK}" stroke-width="1.5" stroke-linejoin="round"/><path d="M0-9v-6" stroke="${INK}" stroke-width="1.3"/></g>` : "";
     const you = p.you ? `<circle cx="${p.x}" cy="${p.y}" r="27" fill="none" stroke="#a0381c" stroke-width="3" stroke-dasharray="5 4"/>` : "";
     const sel = p.id === selected ? `<circle cx="${p.x}" cy="${p.y}" r="31" fill="#a0381c" fill-opacity=".12" stroke="#a0381c" stroke-width="2"/>` : "";
     const sub = p.fortified ? (p.wall ? p.wall.words : "unknown") : raided ? p.raiders!.words : "";

@@ -57,6 +57,7 @@ test("the regent decides within delegated authority, and Anna learns of it only 
     r.characters.find((x) => x.id === "bren")!.location = "northwatch";
     r.locations.find((x) => x.id === "northwatch")!.fortification!.conditionMilli = 62000;
     r.scenario.messenger.lossPermillePerDay = 0; r.scenario.interception = [];
+    r.scenario.regency.maxRepairCostMilli = 60000; // the mechanism still works when the ruler grants the authority
   });
   const sim = run({ seed: 2, content: c, policy: "passive" }, 40);
   const regentOrders = sim.log.filter((e) => e.type === "OrderIssued" && (e.payload.order as { issuer: string }).issuer === "elara");
@@ -286,4 +287,10 @@ test("letters from one hand arrive in the order written, never on the same day a
       assert.ok(Math.floor(b.deliveredAt / DAY) > Math.floor(a.deliveredAt / DAY), `seed ${seed}: ${a.author} letter ${b.reportId} overtook ${a.reportId}`);
     }
   }
+});
+
+test("by default the regent spends nothing: every repair is the ruler's to approve", () => {
+  assert.equal(CONTENT.scenario.regency.maxRepairCostMilli, 0);
+  const sim = run({ seed: 2, content: variant((r) => { r.scenario.scripts = [{ day: 1, kind: "travel", who: "anna", to: "greybridge", mode: "rider" }, { day: 3, kind: "threat", site: "blackwood", intensityPermille: 700, durationDays: 60 }]; }), policy: "passive" }, 40);
+  assert.equal(sim.log.filter((e) => e.type === "OrderIssued" && (e.payload.order as { issuer: string }).issuer === "elara").length, 0);
 });
