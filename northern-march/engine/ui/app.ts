@@ -40,7 +40,7 @@ const REASON_LABEL: Record<string, string> = { report: "Letters", advice: "Advic
 type Sim = ReturnType<typeof createSim>;
 const st = {
   sim: null as unknown as Sim, log: [] as PlayerAction[][], shownPause: null as string | null, seed: __H01__.seed, paused: null as null | string, over: false, letter: null as number | null, advice: null as number | null, tab: "game" as "game" | "settings",
-  queue: [] as PlayerAction[], autoPause: new Set<string>(REASONS), selected: "northwatch",
+  batch: [] as number[], queue: [] as PlayerAction[], autoPause: new Set<string>(REASONS), selected: "northwatch",
   draft: { recipient: "", action: "p:repair", objective: "northwatch", discretion: "bounded", mission: "defend" } as { recipient: string; action: string; objective: string; discretion: string; mission: string },
   error: "", observer: location.hash === "#observer", answered: 0, openLetter: null as number | null,
 };
@@ -85,9 +85,11 @@ function start(seed: number, restore = true) {
 
 /** Run to the next pause the player wants to see; other decision points pass with no action. */
 function advance() {
+  // letters of one day are gathered and shown together, before the next decision that is shown
+  let batch: number[] = [], batchDay = -1;
   for (let guard = 0; guard < 5000; guard++) {
     const r = st.sim.next(END);
-    if (r.ended || !r.paused) { st.paused = null; st.over = true; return render(); }
+    if (r.ended || !r.paused) { st.paused = null; st.over = true; st.batch = []; return render(); }
     // advice to wait asks for no decision: the page passes it (the engine still records it; G-12 is unaffected)
     if (r.reason === "advice" && r.view) {
       const a = r.view.advice.find((x) => x.id === r.adviceId);
@@ -95,7 +97,15 @@ function advance() {
       // advice already carried out (or under way) is not put to the ruler again
       if (r.adviceId !== undefined && adviceSettled(r.view, r.adviceId)) { answer([]); continue; }
     }
-    if (st.autoPause.has(r.reason!) || r.reason === "danger") { st.paused = r.reason!; st.letter = r.letterId ?? null; st.advice = r.adviceId ?? null; st.openLetter = st.letter; return render(); }
+    if (r.reason === "report" && r.letterId !== undefined && st.autoPause.has("report")) {
+      const day = Math.floor(st.sim.viewOf("player").now / DAY);
+      if (batchDay === -1 || batchDay === day) { batchDay = day; batch.push(r.letterId); answer([]); continue; }
+    }
+    if (batch.length || st.autoPause.has(r.reason!) || r.reason === "danger") {
+      st.paused = batch.length && !st.autoPause.has(r.reason!) && r.reason !== "danger" ? "report" : r.reason!;
+      st.letter = r.letterId ?? null; st.advice = r.adviceId ?? null; st.batch = batch; st.openLetter = st.letter;
+      return render();
+    }
     answer([]);
   }
   render();
@@ -138,6 +148,54 @@ const queue = (a: PlayerAction) => {
   if (!affordable(st.sim.viewOf("player"), a)) { st.error = `${actionText(st.sim.viewOf("player"), a)}: not enough coins`; return render(); }
   st.queue.push(a); st.error = ""; render();
 };
+
+/** Two actions are the same action if they send the same captain to the same fort (its mission may differ). */
+const matches = (q: PlayerAction, a: PlayerAction) => a.action === "advance" ? q.action === "advance" && q.target === a.target : JSON.stringify(q) === JSON.stringify(a);
+const listNames = (xs: string[]) => xs.length <= 1 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
+/** Each adviser's latest advice that is not yet settled, as the action it means (parallel choices). */
+function latestAdvice(v: View): Recommendation[] {
+  const latest = new Map<string, Recommendation>();
+  for (const r of v.advice) { const cur = latest.get(r.author); if (!cur || cur.computedAt < r.computedAt) latest.set(r.author, r); }
+  return [...latest.values()].filter((r) => !adviceSettled(v, r.id));
+}
+function choices(v: View): { action: PlayerAction; text: string; by: string[] }[] {
+  const out = new Map<string, { action: PlayerAction; text: string; by: string[] }>();
+  for (const r of latestAdvice(v)) {
+    const act = adviceAction(v, r);
+    if (!act) continue;
+    const key = JSON.stringify(act);
+    if (!out.has(key)) out.set(key, { action: act, text: actionText(v, act), by: [] });
+    out.get(key)!.by.push(name(v, r.author));
+  }
+  return [...out.values()];
+}
+/** Advisers who want the raiders at a site attacked. */
+function attackersOf(v: View, raid: string): string[] {
+  return latestAdvice(v).filter((r) => { const a = JSON.parse(r.plan.id) as { kind: string; target?: string }; return a.kind === "advise_sortie" && a.target === raid; }).map((r) => name(v, r.author));
+}
+/** Once a send is checked: defend the fort (default), or attack or patrol the raiders it answers. */
+function missionBlock(v: View, fort: string, q: PlayerAction): string {
+  const raid = raidNear(v, fort);
+  const opts: { mission: string; label: string; by: string[] }[] = [{ mission: "defend", label: `Defend ${name(v, fort)}`, by: [] }];
+  if (raid) opts.push({ mission: "attack", label: `Attack the raiders at ${name(v, raid)}`, by: attackersOf(v, raid) }, { mission: "patrol", label: `Patrol the raiders at ${name(v, raid)}`, by: [] });
+  const cur = q.mission ?? "defend";
+  return `<div class="mission">${opts.map((o) => `<button data-mission='${esc(JSON.stringify({ fort, mission: o.mission, raid }))}' class="${cur === o.mission ? "primary" : ""}" aria-pressed="${cur === o.mission}">${esc(o.label)}${o.by.length ? ` (recommended by ${esc(listNames(o.by))})` : ""}</button>`).join("")}</div>`;
+}
+/** Parallel choices as checkboxes; a checked send shows its mission step beneath. */
+function choicesBlock(v: View): string {
+  const cs = choices(v);
+  if (!cs.length) return "";
+  return `<div class="choices">${cs.map((c) => {
+    const q = st.queue.find((x) => matches(x, c.action));
+    const rec = c.by.length ? ` (recommended by ${esc(listNames(c.by))})` : "";
+    return `<label class="check"><input type="checkbox" data-toggle='${esc(JSON.stringify(c.action))}' ${q ? "checked" : ""}> ${esc(c.text)}${rec}</label>${q && c.action.action === "advance" ? missionBlock(v, c.action.target!, q) : ""}`;
+  }).join("")}</div>`;
+}
+/** The letters of this pause, all together. */
+function batchBlock(v: View): string {
+  const ls = st.batch.map((id) => v.reports.find((x) => x.reportId === id)).filter((x): x is NonNullable<typeof x> => !!x);
+  return ls.length ? `<div class="batch">${ls.map((l) => `<div class="batch-letter"><b>${esc(name(v, l.author))}</b> <span class="when">${esc(dayAgo(v, l.deliveredAt))}</span><div>${esc(letterSentences(v, l).join(" "))}</div></div>`).join("")}</div>` : "";
+}
 
 function pauseText(v: View): string {
   if (st.over) {
@@ -335,9 +393,8 @@ function render() {
     ...(adv.reasons.some((x) => x.weight > 0) ? [`Supports: ${adv.reasons.filter((x) => x.weight > 0).slice(0, 3).map((x) => reasonWords(x.textKey)).join(", ")}`] : []),
     ...(adv.reasons.some((x) => x.weight < 0) ? [`Concerns: ${adv.reasons.filter((x) => x.weight < 0).slice(0, 3).map((x) => reasonWords(x.textKey)).join(", ")}`] : []),
   ].map((x) => x + ".").join(" ") : "";
-  const advAct = adv ? adviceAction(v, adv) : null;
-  const isQueued = (a: PlayerAction) => st.queue.some((q) => JSON.stringify(q) === JSON.stringify(a));
-  const doIt = advAct && (isQueued(advAct) || affordable(v, advAct)) && st.paused ? `<button data-act='${esc(JSON.stringify(advAct))}' class="${isQueued(advAct) ? "primary" : ""}" aria-pressed="${isQueued(advAct)}">Do it</button>` : "";
+  const shownChoices = choices(v);
+  const isShown = (q: PlayerAction) => shownChoices.some((c) => matches(q, c.action));
   const pauseKey = `${st.paused}:${st.letter}:${st.advice}`;
   const newPause = st.paused !== null && pauseKey !== st.shownPause;
   st.shownPause = st.paused !== null ? pauseKey : null;
@@ -351,8 +408,9 @@ function render() {
   </div>
   <div class="status-row" aria-label="Realm status">${coinStatus(v)}</div>
   ${st.tab === "settings" ? settingsTab() : `
-  <div class="pause ${cls}"><span class="what">${esc(pauseText(v))}</span>${why ? `<span class="why-line">${esc(why)}</span>` : ""}${doIt}
-    <span class="queue">${st.queue.map((a, i) => ({ a, i })).filter(({ a }) => !(advAct && JSON.stringify(a) === JSON.stringify(advAct))).map(({ a, i }) => `<span class="chip">${esc(actionText(v, a))} <button data-unq="${i}" aria-label="Remove">×</button></span>`).join("")}</span>
+  <div class="pause ${cls}">${batchBlock(v)}<span class="what">${esc(pauseText(v))}</span>${why ? `<span class="why-line">${esc(why)}</span>` : ""}
+    ${st.paused ? choicesBlock(v) : ""}
+    <span class="queue">${st.queue.map((a, i) => ({ a, i })).filter(({ a }) => !isShown(a)).map(({ a, i }) => `<span class="chip">${esc(actionText(v, a))} <button data-unq="${i}" aria-label="Remove">×</button></span>`).join("")}</span>
     ${st.error ? `<span class="err">${esc(st.error)}</span>` : ""}</div>
   <div class="grid">${court(v)}${map(v)}${side(v)}</div>
   ${st.observer ? observer() : ""}`}`;
@@ -362,11 +420,23 @@ function render() {
 
 document.addEventListener("click", (e) => {
   const t = e.target as HTMLElement;
-  const el = t.closest("[data-act],[data-place],[data-q],[data-unq],[data-letter],[data-close-letter],[data-use-levy],#go,#restart,#settings-tab,#o-add,#copy-log") as HTMLElement | null;
+  const el = t.closest("[data-act],[data-toggle],[data-mission],[data-place],[data-q],[data-unq],[data-letter],[data-close-letter],[data-use-levy],#go,#restart,#settings-tab,#o-add,#copy-log") as HTMLElement | null;
   if (!el) return;
   if (el.dataset.useLevy !== undefined) { st.draft.action = "p:levy"; return render(); }
   if (el.dataset.letter) { const id = Number(el.dataset.letter); st.openLetter = st.openLetter === id ? null : id; return render(); }
   if (el.dataset.closeLetter !== undefined) { st.openLetter = null; return render(); }
+  if (el.dataset.toggle) {
+    const a = JSON.parse(el.dataset.toggle) as PlayerAction, i = st.queue.findIndex((q) => matches(q, a));
+    if (i >= 0) { st.queue.splice(i, 1); st.error = ""; return render(); }
+    return queue(a);
+  }
+  if (el.dataset.mission) {
+    const m = JSON.parse(el.dataset.mission) as { fort: string; mission: "defend" | "attack" | "patrol"; raid?: string };
+    const a: PlayerAction = { action: "advance", target: m.fort, ...(m.mission !== "defend" ? { mission: m.mission, raid: m.raid } : {}) };
+    const i = st.queue.findIndex((q) => matches(q, a));
+    if (i >= 0) st.queue[i] = a; else queue(a);
+    st.error = ""; return render();
+  }
   if (el.dataset.act) {
     const a = JSON.parse(el.dataset.act) as PlayerAction, i = st.queue.findIndex((q) => JSON.stringify(q) === JSON.stringify(a));
     if (i >= 0) { st.queue.splice(i, 1); st.error = ""; return render(); }

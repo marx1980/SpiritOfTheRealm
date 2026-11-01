@@ -30,7 +30,11 @@ select { border: 1px solid var(--line); background: var(--panel); border-radius:
 .top .grow { flex: 1; }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 13px; }
 .chip { display: inline-flex; gap: 4px; align-items: center; border: 1px solid var(--line); border-radius: 999px; padding: 1px 9px; background: var(--panel); }
-.pause { scroll-margin-top: 96px; } .stat-net { font-size: 12px; color: var(--mute); } .low { color: var(--bad); font-size: 13px; } .low button, .cost button { font-size: 12px; padding: 2px 8px; }
+.pause { scroll-margin-top: 96px; } .batch, .choices, .mission { width: 100%; display: grid; gap: 6px; } .batch { gap: 8px; }
+.batch-letter { font-size: 14px; border-bottom: 1px solid var(--line); padding-bottom: 5px; }
+.check { display: flex; gap: 8px; align-items: baseline; font-size: 15px; }
+.mission { display: flex; flex-wrap: wrap; gap: 6px; padding-left: 26px; }
+.mission button { font-size: 13px; } .stat-net { font-size: 12px; color: var(--mute); } .low { color: var(--bad); font-size: 13px; } .low button, .cost button { font-size: 12px; padding: 2px 8px; }
 .cost { font-size: 13px; color: var(--mute); grid-column: 2; }
 .pause { margin: 10px 0; padding: 8px 12px; border-left: 4px solid var(--accent); background: var(--panel); display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
 .pause.danger { border-color: var(--bad); }
