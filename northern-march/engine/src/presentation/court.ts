@@ -5,7 +5,7 @@ import { dayOf, pct } from "./format.ts";
 import { ago, certainty, nameOf, planWords, raiderWords, reasonWords, sourceOf, wallWords } from "./phrasing.ts";
 
 export interface Evidence { text: string; age: string; source: string; certainty: string }
-export interface AdviceLine { id: number; adviser: string; area: string; plan: string; supports: string[]; concerns: string[]; unsure: number; heard: string }
+export interface AdviceLine { id: number; adviser: string; area: string; plan: string; supports: string[]; concerns: string[]; unsure: number; heard: string; fresh: boolean }
 export interface Issue { key: string; title: string; priority: number; evidence: Evidence[]; advice: AdviceLine[]; place?: string }
 export interface Court { day: number; at: string; issues: Issue[]; advice: AdviceLine[]; letters: { from: string; about: string; written: string; arrived: string; route: number }[] }
 
@@ -17,7 +17,7 @@ function adviceLines(v: View, target?: string): AdviceLine[] {
     id: r.id, adviser: nameOf(v, r.author), area: v.world.areas[r.author] ?? "", plan: planWords(v, r.plan.id),
     supports: r.reasons.filter((x) => x.weight > 0).slice(0, 3).map((x) => reasonWords(x.textKey)),
     concerns: r.reasons.filter((x) => x.weight < 0).slice(0, 3).map((x) => reasonWords(x.textKey)),
-    unsure: r.uncertainties.length, heard: `heard ${ago(v.now, r.computedAt)}`,
+    unsure: r.uncertainties.length, heard: `heard ${ago(v.now, r.computedAt)}`, fresh: v.now - r.computedAt < 2 * 86400,
   }));
 }
 

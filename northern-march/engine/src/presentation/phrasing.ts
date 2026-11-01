@@ -31,11 +31,11 @@ export function sourceOf(v: View, b: BeliefView): string {
 }
 
 const REASON: Record<string, string> = {
-  "reason.protect_realm": "the realm's walls", "reason.crown_standing": "the crown's standing", "reason.hold_fortification": "holding the fortress",
-  "reason.hold_post": "his post", "reason.win_renown": "renown", "reason.preserve_forces": "the lives of the men", "reason.preserve_treasury": "the treasury",
-  "reason.sound_works": "sound works", "reason.house_standing": "his house's standing", "reason.risk": "the risk", "reason.risk_averse": "the risk",
-  "reason.own_skill": "his own skill", "reason.trusts": "trust", "reason.asked_for_help": "a request for help", "reason.as_ordered": "orders",
-  "reason.against_orders": "orders", "reason.cost": "the cost", "reason.duty": "duty",
+  "reason.protect_realm": "keeping the realm safe", "reason.crown_standing": "how the crown is seen", "reason.hold_fortification": "holding the fortress",
+  "reason.hold_post": "staying at his post", "reason.win_renown": "his reputation", "reason.preserve_forces": "keeping the men alive",
+  "reason.preserve_treasury": "the money in the treasury", "reason.sound_works": "keeping the works in good repair", "reason.house_standing": "his family's standing",
+  "reason.risk": "the danger involved", "reason.risk_averse": "the danger involved", "reason.own_skill": "his own skill", "reason.trusts": "trust in the people involved",
+  "reason.asked_for_help": "a request for help", "reason.as_ordered": "his orders", "reason.against_orders": "his orders", "reason.cost": "what it costs", "reason.duty": "duty",
 };
 export const reasonWords = (key: string) => REASON[key] ?? key.replace(/^reason\./, "").replace(/_/g, " ");
 
