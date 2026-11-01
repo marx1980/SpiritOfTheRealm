@@ -2,7 +2,7 @@
 // The observer panel (Shift+O or #observer) shows hidden truth for H-01 observers only.
 import { deriveContent, type RawContent } from "../src/content.ts";
 import { createSim } from "../src/engine.ts";
-import { buildCourt, type AdviceLine } from "../src/presentation/court.ts";
+import { adviceSettled, buildCourt, type AdviceLine } from "../src/presentation/court.ts";
 import { buildMap } from "../src/presentation/map.ts";
 import { letterSentences, letterGist, planWords, reasonWords } from "../src/presentation/phrasing.ts";
 import { beliefsAbout, validateDraft, type OrderDraft, type View } from "../src/view.ts";
@@ -92,6 +92,8 @@ function advance() {
     if (r.reason === "advice" && r.view) {
       const a = r.view.advice.find((x) => x.id === r.adviceId);
       if (a && (JSON.parse(a.plan.id) as { kind: string }).kind === "advise_wait") { answer([]); continue; }
+      // advice already carried out (or under way) is not put to the ruler again
+      if (r.adviceId !== undefined && adviceSettled(r.view, r.adviceId)) { answer([]); continue; }
     }
     if (st.autoPause.has(r.reason!) || r.reason === "danger") { st.paused = r.reason!; st.letter = r.letterId ?? null; st.advice = r.adviceId ?? null; st.openLetter = st.letter; return render(); }
     answer([]);
@@ -326,7 +328,8 @@ function render() {
     ...(adv.reasons.some((x) => x.weight < 0) ? [`Concerns: ${adv.reasons.filter((x) => x.weight < 0).slice(0, 3).map((x) => reasonWords(x.textKey)).join(", ")}`] : []),
   ].map((x) => x + ".").join(" ") : "";
   const advAct = adv ? adviceAction(v, adv) : null;
-  const doIt = advAct && affordable(v, advAct) && st.paused ? `<button data-act='${esc(JSON.stringify(advAct))}'>Do it</button>` : "";
+  const advQueued = !!advAct && st.queue.some((q) => JSON.stringify(q) === JSON.stringify(advAct));
+  const doIt = advAct && (advQueued || affordable(v, advAct)) && st.paused ? `<button data-act='${esc(JSON.stringify(advAct))}' class="${advQueued ? "primary" : ""}" aria-pressed="${advQueued}">Do it</button>` : "";
   const pauseKey = `${st.paused}:${st.letter}:${st.advice}`;
   const newPause = st.paused !== null && pauseKey !== st.shownPause;
   st.shownPause = st.paused !== null ? pauseKey : null;
@@ -341,7 +344,7 @@ function render() {
   <div class="status-row" aria-label="Realm status">${coinStatus(v)}</div>
   ${st.tab === "settings" ? settingsTab() : `
   <div class="pause ${cls}"><span class="what">${esc(pauseText(v))}</span>${why ? `<span class="why-line">${esc(why)}</span>` : ""}${doIt}
-    <span class="queue">${st.queue.map((a, i) => `<span class="chip">${esc(actionText(v, a))} <button data-unq="${i}" aria-label="Remove">×</button></span>`).join("")}</span>
+    <span class="queue">${st.queue.map((a, i) => ({ a, i })).filter(({ a }) => !advAct || JSON.stringify(a) !== JSON.stringify(advAct)).map(({ a, i }) => `<span class="chip">${esc(actionText(v, a))} <button data-unq="${i}" aria-label="Remove">×</button></span>`).join("")}</span>
     ${st.error ? `<span class="err">${esc(st.error)}</span>` : ""}</div>
   <div class="grid">${court(v)}${map(v)}${side(v)}</div>
   ${st.observer ? observer() : ""}`}`;
@@ -356,7 +359,11 @@ document.addEventListener("click", (e) => {
   if (el.dataset.useLevy !== undefined) { st.draft.action = "p:levy"; return render(); }
   if (el.dataset.letter) { const id = Number(el.dataset.letter); st.openLetter = st.openLetter === id ? null : id; return render(); }
   if (el.dataset.closeLetter !== undefined) { st.openLetter = null; return render(); }
-  if (el.dataset.act) return queue(JSON.parse(el.dataset.act));
+  if (el.dataset.act) {
+    const a = JSON.parse(el.dataset.act) as PlayerAction, i = st.queue.findIndex((q) => JSON.stringify(q) === JSON.stringify(a));
+    if (i >= 0) { st.queue.splice(i, 1); st.error = ""; return render(); }
+    return queue(a);
+  }
   if (el.dataset.place) { st.selected = el.dataset.place; if (content.byId.location.get(st.selected)?.fortification) st.draft.objective = st.selected; return render(); }
   if (el.dataset.unq) { st.queue.splice(Number(el.dataset.unq), 1); return render(); }
   if (el.id === "go") return send();

@@ -12,10 +12,8 @@ export interface AdviceLine { id: number; adviser: string; area: string; plan: s
 export interface Issue { key: string; title: string; priority: number; evidence: Evidence[]; advice: AdviceLine[]; place?: string }
 export interface Court { day: number; at: string; issues: Issue[]; advice: AdviceLine[]; letters: { from: string; about: string; written: string; arrived: string; route: number }[] }
 
-/** Advice about one place (each adviser's standing advice on it), or, with no place, each adviser's latest advice. */
-function adviceLines(v: View, target?: string): AdviceLine[] {
-  const latest = new Map<string, number>();
-  for (const r of v.advice) if (!latest.has(r.author) || v.advice.find((x) => x.id === latest.get(r.author))!.computedAt < r.computedAt) latest.set(r.author, r.id);
+/** Whether a piece of advice is already carried out, or being carried out, so it is no longer put to the ruler. */
+export function settledCheck(v: View): (r: { plan: { id: string } }) => boolean {
   // the order each kind of advice turns into: attacking the raiders is sending the captain to the nearest fort
   const orderOf = (a: { kind: string; target?: string }): { action: string; target: string } | undefined => {
     if (a.kind === "advise_levy") return { action: "levy", target: v.self.id };
@@ -34,13 +32,31 @@ function adviceLines(v: View, target?: string): AdviceLine[] {
   const doneAt = new Map<string, number>();
   for (const b of Object.values(v.beliefs)) if (b.predicate === "order.status" && String(b.believedValue) === "completed") doneAt.set(b.subject.id, b.observedAt);
   const doneOrders = v.self.orders.filter((o) => doneAt.has(String(o.orderId))).map((o) => ({ ...o, doneAt: doneAt.get(String(o.orderId))! }));
+  const captains = new Set(Object.values(v.beliefs).filter((b) => b.predicate === "character.troops").map((b) => b.subject.id));
+  const captainBelievedAt = (place: string) => Object.values(v.beliefs).some((b) => b.predicate === "character.location" && captains.has(b.subject.id) && b.believedValue === place);
   const learnedSince = (place: string, t: number) => Object.values(v.beliefs).some((b) => b.subject.id === place && b.observedAt > t);
   const superseded = (r: { plan: { id: string } }) => {
     const want = orderOf(JSON.parse(r.plan.id) as { kind: string; target?: string });
     if (!want) return false;
     if (inProgress.some((o) => o.action === want.action && o.target === want.target)) return true;
+    // a captain (one with a company) is already believed to be at the place: sending one there is settled
+    if (want.action === "advance" && captainBelievedAt(want.target)) return true;
     return doneOrders.some((o) => o.action === want.action && o.target === want.target && !learnedSince(want.target, o.doneAt));
   };
+  return superseded;
+}
+
+/** True when the advice with this id is settled (the pause should not put it to the ruler). */
+export function adviceSettled(v: View, id: number): boolean {
+  const r = v.advice.find((x) => x.id === id);
+  return !r || settledCheck(v)(r);
+}
+
+/** Advice about one place (each adviser's standing advice on it), or, with no place, each adviser's latest advice. */
+function adviceLines(v: View, target?: string): AdviceLine[] {
+  const latest = new Map<string, number>();
+  for (const r of v.advice) if (!latest.has(r.author) || v.advice.find((x) => x.id === latest.get(r.author))!.computedAt < r.computedAt) latest.set(r.author, r.id);
+  const superseded = settledCheck(v);
   return v.advice.filter((r) => (target ? r.plan.id.includes(`"${target}"`) : latest.get(r.author) === r.id) && !superseded(r)).map((r) => ({
     id: r.id, adviser: nameOf(v, r.author), area: SHORT_AREA[v.world.areas[r.author] ?? ""] ?? v.world.areas[r.author] ?? "", plan: planWords(v, r.plan.id),
     supports: r.reasons.filter((x) => x.weight > 0).slice(0, 3).map((x) => reasonWords(x.textKey)),
