@@ -36,7 +36,9 @@ Newest first. Numbers come from `phase0/results/` (files named in each entry). A
 - **Advice audience:** advisers advise whoever is with them; Anna hears advice only in person. She keeps each adviser's latest advice per target for 15 days.
 - **Adviser policies:** `follow:<id>`, and `follow-best-adviser` / `follow-worst-adviser` through measured aliases.
 - **Reason wording in plain words** ("keeping the realm safe", "what it costs", "how the crown is seen"). "heard" times older than two days show in the warning colour.
-- Not done: showing coin or treasury status on the page. Needed before advice about costs means much to a tester (raised by Marko).
+- **Status row and Settings tab:** a row under the title shows coins as a word (empty, low, adequate, good) from Anna's own beliefs, with the age of the belief; the pause settings and the observer panel moved to a Settings tab. Coins show "unknown" until Anna has a belief about her treasury: the engine gives her none, so the page must not show the true amount (A7). Production goods are not in the engine yet (Phase 7), so they are not shown.
+- **Open decision:** should Anna know her coins at the seat (on arrival, or from the steward at court)? That is an engine rule change, so the sealed gates must be re-run.
+- Not done (superseded by the status row above): showing coin status. Needed before advice about costs means much to a tester (raised by Marko).
 - **Advice reads plainly:** each adviser shows their area in brackets, taken from their strongest skill (Elara Military, Oren Administration, Selene Works); reasons are grouped as "Supports" and "Concerns" (a Concern under a plan is a cost or risk of that plan, not of the reader); "heard today" instead of "today". Advisers' areas are public knowledge in the view. Engine decisions unchanged; G-12 unaffected.
 - **Letter reader layout:** the writer's name on the left; "arrived" and "written" as separate tags on the right; the text starts "Name: ".
 - **Letters speak in the first person about the writer's own whereabouts** ("I am at Greybridge"); the writer's walls and raiders stay as "The walls at…".

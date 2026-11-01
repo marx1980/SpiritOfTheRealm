@@ -5,7 +5,7 @@ import { createSim } from "../src/engine.ts";
 import { buildCourt, type AdviceLine } from "../src/presentation/court.ts";
 import { buildMap } from "../src/presentation/map.ts";
 import { letterSentences, planWords, reasonWords } from "../src/presentation/phrasing.ts";
-import { validateDraft, type OrderDraft, type View } from "../src/view.ts";
+import { beliefsAbout, validateDraft, type OrderDraft, type View } from "../src/view.ts";
 import { INTENTS, type Recommendation } from "../src/schemas.ts";
 import type { PlayerAction } from "../src/policies.ts";
 
@@ -21,7 +21,7 @@ const REASON_LABEL: Record<string, string> = { report: "Letters", advice: "Advic
 
 type Sim = ReturnType<typeof createSim>;
 const st = {
-  sim: null as unknown as Sim, seed: __H01__.seed, paused: null as null | string, over: false, letter: null as number | null, advice: null as number | null,
+  sim: null as unknown as Sim, seed: __H01__.seed, paused: null as null | string, over: false, letter: null as number | null, advice: null as number | null, tab: "game" as "game" | "settings",
   queue: [] as PlayerAction[], autoPause: new Set<string>(REASONS), selected: "northwatch",
   draft: { recipient: "", intent: "repair", objective: "northwatch", discretion: "bounded" } as { recipient: string; intent: string; objective: string; discretion: string },
   error: "", observer: location.hash === "#observer", answered: 0, openLetter: null as number | null,
@@ -200,6 +200,28 @@ function observer() {
     <div class="log">${esc(log)}</div></div>`;
 }
 
+/** Coins as Anna believes them (words, never the true amount). Goods are not in the engine yet (Phase 7). */
+function coinStatus(v: View): string {
+  const bs = beliefsAbout(v, content.scenario.ruler, "treasury.balance");
+  const b = bs.sort((x, y) => y.observedAt - x.observedAt)[0];
+  if (!b) return `<span class="stat"><span class="emo" aria-hidden="true">🪙</span> Coins: unknown</span>`;
+  const n = b.believedValue as number;
+  const word = n < 30000 ? "empty" : n < 60000 ? "low" : n < 120000 ? "adequate" : "good";
+  return `<span class="stat${b.effectiveBand === "stale" ? " old" : ""}"><span class="emo" aria-hidden="true">🪙</span> Coins: ${word}</span>
+    <span class="stat-age">seen ${esc(dayAgo(v, b.observedAt))}</span>`;
+}
+
+/** Settings tab: what pauses the game, and the observer panel for H-01 observers. */
+function settingsTab(): string {
+  return `<div class="card settings"><h2>Settings</h2>
+    <div class="setting-group"><h2>Pause on</h2>
+      ${REASONS.map((r) => `<label class="setting"><input type="checkbox" data-pause="${r}" ${st.autoPause.has(r) || r === "danger" ? "checked" : ""} ${r === "danger" ? "disabled" : ""}> ${REASON_LABEL[r]}</label>`).join("")}
+    </div>
+    <div class="setting-group"><h2>Observer</h2>
+      <label class="setting"><input type="checkbox" id="observer-toggle" ${st.observer ? "checked" : ""}> Show observer panel</label>
+    </div></div>`;
+}
+
 function render() {
   const v = st.sim.viewOf("player");
   const o = st.sim.objectiveStatus();
@@ -216,20 +238,22 @@ function render() {
   <div class="top"><h1>Northern March</h1>
     <div class="meta"><span>Day ${Math.floor(v.now / DAY) + 1} / ${__H01__.days}</span><span>${"at" in pos ? esc(name(v, pos.at)) : "on the road to " + esc(name(v, pos.transit.dest))}</span></div>
     <div class="grow"></div>
-    <div class="chips">Pause on ${REASONS.map((r) => `<label class="chip"><input type="checkbox" data-pause="${r}" ${st.autoPause.has(r) ? "checked" : ""} ${r === "danger" ? "disabled" : ""}>${REASON_LABEL[r]}</label>`).join("")}</div>
+    <button id="settings-tab" aria-pressed="${st.tab === "settings"}">${st.tab === "settings" ? "Back" : "Settings"}</button>
     <button id="restart">Restart</button>${cont}
   </div>
+  <div class="status-row" aria-label="Realm status">${coinStatus(v)}</div>
+  ${st.tab === "settings" ? settingsTab() : `
   <div class="pause ${cls}"><span class="what">${esc(pauseText(v))}</span>${why ? `<span class="why-line">${esc(why)}</span>` : ""}${doIt}
     <span class="queue">${st.queue.map((a, i) => `<span class="chip">${esc(actionText(v, a))} <button data-unq="${i}" aria-label="Remove">×</button></span>`).join("")}</span>
     ${st.error ? `<span class="err">${esc(st.error)}</span>` : ""}</div>
   <div class="grid">${court(v)}${map(v)}${side(v)}</div>
-  ${st.observer ? observer() : ""}`;
+  ${st.observer ? observer() : ""}`}`;
   void o;
 }
 
 document.addEventListener("click", (e) => {
   const t = e.target as HTMLElement;
-  const el = t.closest("[data-act],[data-place],[data-q],[data-unq],[data-letter],[data-close-letter],#go,#restart,#o-add,#copy-log") as HTMLElement | null;
+  const el = t.closest("[data-act],[data-place],[data-q],[data-unq],[data-letter],[data-close-letter],#go,#restart,#settings-tab,#o-add,#copy-log") as HTMLElement | null;
   if (!el) return;
   if (el.dataset.letter) { st.openLetter = Number(el.dataset.letter); return render(); }
   if (el.dataset.closeLetter !== undefined) { st.openLetter = null; return render(); }
@@ -239,11 +263,13 @@ document.addEventListener("click", (e) => {
   if (el.dataset.unq) { st.queue.splice(Number(el.dataset.unq), 1); return render(); }
   if (el.id === "go") return send();
   if (el.id === "restart") return start(st.seed);
+  if (el.id === "settings-tab") { st.tab = st.tab === "settings" ? "game" : "settings"; return render(); }
   if (el.id === "o-add") { const d = toDraft(); if (d) queue({ action: "order", order: d }); return; }
   if (el.id === "copy-log") navigator.clipboard?.writeText(st.sim.log.map((x) => JSON.stringify(x)).join("\n")).catch(() => {});
 });
 document.addEventListener("change", (e) => {
   const t = e.target as HTMLInputElement | HTMLSelectElement;
+  if (t.id === "observer-toggle") { st.observer = (t as HTMLInputElement).checked; return render(); }
   if (t.dataset.pause) { (t as HTMLInputElement).checked ? st.autoPause.add(t.dataset.pause) : st.autoPause.delete(t.dataset.pause); return; }
   const k = ({ "o-to": "recipient", "o-intent": "intent", "o-obj": "objective", "o-disc": "discretion" } as Record<string, keyof typeof st.draft>)[t.id];
   if (k) { st.draft[k] = t.value; render(); }
