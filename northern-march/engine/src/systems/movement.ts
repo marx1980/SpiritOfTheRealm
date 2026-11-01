@@ -44,6 +44,8 @@ export const movement: System = {
       }
       // the ruler in person sees the walls she arrives at (P0.07 direct observation)
       if (who === ctx.content.scenario.ruler && ctx.s.fortifications[at]) observe(ctx, who, loc(at), "fortification.condition", arr.id);
+      // arriving at the seat, she looks at the books
+      if (who === ctx.content.scenario.ruler && at === ctx.content.scenario.regency.seat) observe(ctx, who, chr(who), "treasury.balance", arr.id);
     },
   },
 };

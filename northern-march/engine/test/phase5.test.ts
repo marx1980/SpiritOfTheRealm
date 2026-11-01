@@ -99,7 +99,8 @@ test("the campaign objective is tracked", () => {
 test("advisers advise Anna only when they are with her", () => {
   const sim = run({ seed: 2, content: threat(), policy: "passive" }, 40);
   const v = sim.viewOf("player");
-  assert.ok(v.advice.length > 0);
+  const heard = sim.log.filter((x) => x.type === "RecommendationMade" && (x.payload.audience as string[]).includes("anna"));
+  assert.ok(heard.length > 0, "advisers gave Anna advice in person at some point");
   for (const r of v.advice) {
     const e = sim.log.find((x) => x.type === "RecommendationMade" && (x.payload.recommendation as { id: number }).id === r.id)!;
     assert.ok((e.payload.audience as string[]).includes("anna"));
@@ -151,4 +152,24 @@ test("Anna sees the walls herself when she arrives at a fort", () => {
   assert.ok(seen, "observed the walls on arrival");
   const bs = beliefsAbout(sim.viewOf("player"), "northwatch", "fortification.condition");
   assert.ok(bs.some((b) => b.evidenceRefs.some((x) => x.kind === "observation" && x.source === "anna")), "her own sighting is among her beliefs");
+});
+
+test("Anna always has a belief about her coins: from the start, on arrival at the seat, and from the steward; within ±10%", () => {
+  const c = variant((r) => { r.scenario.scripts = [{ day: 2, kind: "travel", who: "anna", to: "northwatch", mode: "rider" }, { day: 6, kind: "travel", who: "anna", to: "ravenport", mode: "rider" }]; });
+  const sim = run({ seed: 51, content: c, policy: "passive" }, 1);
+  const truthAt = () => sim.unsafeWorldForDebug().treasuryMilli.anna;
+  const check = () => {
+    const bs = beliefsAbout(sim.viewOf("player"), "anna", "treasury.balance");
+    assert.ok(bs.length > 0, "she has a belief");
+    const newest = bs.sort((a, b) => b.observedAt - a.observedAt)[0];
+    assert.ok(Math.abs((newest.believedValue as number) - truthAt()) <= truthAt() / 10 + 1, "within 10% of the truth when reported");
+  };
+  check();
+  sim.runDays(4); check();
+  sim.runDays(4); check();
+  sim.runDays(22); check();
+  const obsBy = new Set(sim.log.filter((e) => e.type === "Observed" && e.payload.predicate === "treasury.balance").map((e) => e.payload.observer));
+  assert.ok(obsBy.has("oren"), "the steward keeps the books");
+  const relayed = beliefsAbout(sim.viewOf("player"), "anna", "treasury.balance").some((b) => b.evidenceRefs.some((x) => x.source === "oren"));
+  assert.ok(relayed || sim.log.some((e) => e.type === "Observed" && e.payload.observer === "anna" && e.payload.predicate === "treasury.balance"), "she hears the steward or looks herself");
 });

@@ -24,7 +24,7 @@ export function sourceOf(v: View, b: BeliefView): string {
   const ev = b.evidenceRefs[b.evidenceRefs.length - 1];
   if (!ev) return "unknown";
   if (ev.kind === "observation") return ev.source === v.self.id ? "seen yourself" : `seen by ${nameOf(v, ev.source)}`;
-  if (ev.kind === "report") return `letter from ${nameOf(v, ev.source)}`;
+  if (ev.kind === "report") return ev.reportId === undefined ? `told by ${nameOf(v, ev.source)}` : `letter from ${nameOf(v, ev.source)}`;
   if (ev.kind === "order") return `order from ${nameOf(v, ev.source)}`;
   if (ev.kind === "intercepted") return "seized letter";
   return "common knowledge";

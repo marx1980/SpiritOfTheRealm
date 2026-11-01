@@ -215,7 +215,10 @@ function think(ctx: Ctx, agent: string, cause: number, layer: "strategic" | "ope
   try {
     // the treasury is kept at the seat: whoever is principal and at the seat sees the books (error by their administration)
     const atSeat = "at" in ctx.s.positions[agent] && (ctx.s.positions[agent] as { at: string }).at === c.scenario.regency.seat;
-    if (ch.role === "steward" || (ch.tier === "A" && atSeat)) observe(ctx, agent, chr(c.scenario.ruler), "treasury.balance", cause);
+    // the steward keeps the books and tells the ruler when she is at the seat; other principals at the seat just look
+    const rulerHere = "at" in ctx.s.positions[c.scenario.ruler] && (ctx.s.positions[c.scenario.ruler] as { at: string }).at === c.scenario.regency.seat;
+    if (ch.role === "steward") observe(ctx, agent, chr(c.scenario.ruler), "treasury.balance", cause, rulerHere ? c.scenario.ruler : undefined);
+    else if (ch.tier === "A" && atSeat) observe(ctx, agent, chr(c.scenario.ruler), "treasury.balance", cause);
     if (layer === "strategic") {
       const view = buildView(ctx.s, c, agent, ctx.tick), per = perceiverFromView(view);
       const sit = buildSituation(ctx.s, c, agent, ctx.tick, "act", view);

@@ -29,7 +29,9 @@ export function checkLog(log: readonly SimEvent[]): string[] {
         if (!e.causedBy.includes(ev.eventId)) continue; // evidence merged from earlier events
         const src = log[pos.get(ev.eventId) ?? -1];
         const heard = src?.type === "ReportShared" && src.payload.reportId === ev.reportId && (src.payload.hearers as string[]).includes(holder);
-        if (ev.kind === "report" && !heard && !(src?.type === "ReportDelivered" && src.payload.reportId === ev.reportId && src.payload.recipient === holder))
+        // told in person: the steward's own observation, relayed to someone at the seat (no letter)
+        const told = ev.kind === "report" && ev.reportId === undefined && src?.type === "Observed" && src.payload.observer === ev.source;
+        if (ev.kind === "report" && !told && !heard && !(src?.type === "ReportDelivered" && src.payload.reportId === ev.reportId && src.payload.recipient === holder))
           v.push(`event ${e.id}: belief from report ${ev.reportId} without its ReportDelivered to ${holder} or a reading at court`);
         if (ev.kind === "intercepted" && !(src && ["InterceptedReportReceived", "InterceptedOrderReceived"].includes(src.type) && src.payload.by === holder))
           v.push(`event ${e.id}: intercepted belief for ${holder} without the papers reaching them`);

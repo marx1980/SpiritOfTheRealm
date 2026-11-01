@@ -27,6 +27,13 @@ test("no belief from a report before its ReportDelivered event, and only for its
       if (e.type !== "BeliefUpdated") continue;
       for (const ev of (e.payload.prop as { evidenceRefs: { kind: string; reportId?: number; eventId: number }[] }).evidenceRefs) {
         if (ev.kind !== "report" || !e.causedBy.includes(ev.eventId)) continue;
+        if (ev.reportId === undefined) {
+          // told in person (steward relays what he saw to the ruler at the seat): backed by his observation
+          const obs = sim.log.find((x) => x.id === ev.eventId)!;
+          assert.equal(obs.type, "Observed", `seed ${seed}: told evidence must come from an observation`);
+          assert.equal(obs.payload.observer, (ev as { source?: string }).source);
+          continue;
+        }
         const d = delivered.get(ev.reportId!);
         assert.ok(d, `seed ${seed}: belief from undelivered report ${ev.reportId}`);
         const src = sim.log.find((x) => x.id === ev.eventId)!;

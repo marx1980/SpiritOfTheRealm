@@ -60,7 +60,8 @@ function relevance(ctx: Ctx, holder: string, subj: SubjectRef): number {
 export const CAPABILITY_FOR: Record<string, string> = { "fortification.condition": "engineering", "character.location": "intelligence", "threat.intensity": "intelligence", "treasury.balance": "administration" };
 
 /** A character looks at something where they are. Quality = capability minus conditions; error shrinks with quality. */
-export function observe(ctx: Ctx, observer: string, subject: SubjectRef, predicate: string, cause: number) {
+/** `relay`: someone else who is with the observer hears what they see (the steward tells the ruler at the seat). */
+export function observe(ctx: Ctx, observer: string, subject: SubjectRef, predicate: string, cause: number, relay?: string) {
   const k = ctx.content.scenario.knowledge;
   let value: unknown, quality: number;
   if (predicate === "fortification.condition") {
@@ -80,7 +81,8 @@ export function observe(ctx: Ctx, observer: string, subject: SubjectRef, predica
   } else if (predicate === "treasury.balance") {
     const truth = ctx.s.treasuryMilli[subject.id] ?? 0;
     quality = skill(ctx, observer, "administration");
-    const maxErr = (1000 - quality) * 20;
+    // coins are reported within ±10% of the true value, however skilled the reader; skill sets how often they are right
+    const maxErr = Math.min((1000 - quality) * 20, Math.floor(Math.abs(truth) / 10));
     const r = ctx.keyed(`knowledge:observe:${observer}:${ctx.tick}:${subject.id}:${predicate}`);
     value = truth + r.int(-maxErr, maxErr);
   } else if (predicate === "character.location") {
@@ -92,7 +94,10 @@ export function observe(ctx: Ctx, observer: string, subject: SubjectRef, predica
   const obs = ctx.emit("Observed", [cause], [chr(observer), subject], { observer, subject, predicate, value, qualityPermille: quality, band });
   const here = ctx.s.positions[observer];
   const local = subject.kind === "location" && "at" in here && here.at === subject.id;
-  return learn(ctx, observer, { subject, predicate, value, observedAt: ctx.tick, band }, { kind: "observation", eventId: obs.id, source: observer, ...(local ? { local: true } : {}) }, [obs.id]);
+  const claim = { subject, predicate, value, observedAt: ctx.tick, band };
+  const mine = learn(ctx, observer, claim, { kind: "observation", eventId: obs.id, source: observer, ...(local ? { local: true } : {}) }, [obs.id]);
+  if (relay && relay !== observer) learn(ctx, relay, claim, { kind: "report", eventId: obs.id, source: observer }, [obs.id]); // told, not seen
+  return mine;
 }
 
 /** Best current belief (highest effective band, then freshest, then lowest id). */
@@ -126,6 +131,10 @@ export function seedKnowledge(ctx: Ctx, who: string, cause: number) {
 
 export const knowledge: System = {
   id: "knowledge",
-  start: (ctx) => { for (const ch of sorted(ctx.content.characters, (x) => x.id)) if (ctx.s.tiers[ch.id] !== "C") seedKnowledge(ctx, ch.id, 1); },
+  start: (ctx) => {
+    for (const ch of sorted(ctx.content.characters, (x) => x.id)) if (ctx.s.tiers[ch.id] !== "C") seedKnowledge(ctx, ch.id, 1);
+    // the ruler always knows roughly what is in the treasury (A7: she must not have to track it by hand)
+    observe(ctx, ctx.content.scenario.ruler, chr(ctx.content.scenario.ruler), "treasury.balance", 1);
+  },
   handlers: {},
 };
