@@ -39,6 +39,13 @@ const REASON: Record<string, string> = {
 };
 export const reasonWords = (key: string) => REASON[key] ?? key.replace(/^reason\./, "").replace(/_/g, " ");
 
+/** The fortified place nearest to a site (as the page and the engine's policies both use it). */
+export function nearestFort(v: View, site: string): string | undefined {
+  const s = v.world.places.find((p) => p.id === site);
+  if (!s) return undefined;
+  const d = (p: { pos: [number, number] }) => (p.pos[0] - s.pos[0]) ** 2 + (p.pos[1] - s.pos[1]) ** 2;
+  return v.world.places.filter((p) => p.fortified).sort((a, b) => d(a) - d(b))[0]?.id;
+}
 export function planWords(v: View, planId: string): string {
   const a = JSON.parse(planId) as { kind: string; target?: string };
   const t = a.target ? nameOf(v, a.target) : "";
@@ -46,7 +53,8 @@ export function planWords(v: View, planId: string): string {
     case "advise_wait": return "Wait for more news";
     case "advise_repair": return `Repair ${t}`;
     case "advise_send_captain": return `Send the captain to ${t}`;
-    case "advise_sortie": return `Attack the raiders in ${t}`;
+    // the captain is sent to the nearest fort, from which the attack is made (the wording matches what Do it does)
+    case "advise_sortie": { const f = nearestFort(v, a.target!); return f ? `Send the captain to ${nameOf(v, f)} to attack the raiders at ${t}` : `Attack the raiders at ${t}`; }
     case "advise_levy": return "Raise a levy";
     default: return a.kind.replace(/_/g, " ") + (t ? ` ${t}` : "");
   }
