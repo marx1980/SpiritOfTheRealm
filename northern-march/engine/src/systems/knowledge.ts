@@ -61,6 +61,25 @@ export const CAPABILITY_FOR: Record<string, string> = { "fortification.condition
 
 /** A character looks at something where they are. Quality = capability minus conditions; error shrinks with quality. */
 /** `relay`: someone else who is with the observer hears what they see (the steward tells the ruler at the seat). */
+/** The adviser with the strongest administration skill (ties: alphabetical), who keeps the exact treasury figure. */
+export function admAdviser(ctx: Ctx): string | undefined {
+  let best: string | undefined, bv = -1;
+  for (const [id, c] of ctx.content.byId.character) {
+    if (id === ctx.content.scenario.ruler) continue;
+    const a = (c.capabilities as Record<string, number> | undefined)?.administration ?? 0;
+    if (a > bv || (a === bv && best !== undefined && id < best)) { best = id; bv = a; }
+  }
+  return best;
+}
+
+/** Anna and the Administration adviser see every treasury movement at once. */
+export function observeTreasury(ctx: Ctx, cause: number) {
+  const ruler = ctx.content.scenario.ruler;
+  observe(ctx, ruler, chr(ruler), "treasury.balance", cause);
+  const adm = admAdviser(ctx);
+  if (adm) observe(ctx, adm, chr(ruler), "treasury.balance", cause);
+}
+
 export function observe(ctx: Ctx, observer: string, subject: SubjectRef, predicate: string, cause: number, relay?: string) {
   const k = ctx.content.scenario.knowledge;
   let value: unknown, quality: number;
@@ -80,9 +99,11 @@ export function observe(ctx: Ctx, observer: string, subject: SubjectRef, predica
     value = truth === 0 ? 0 : Math.max(50, Math.min(1000, truth + r.int(-maxErr, maxErr)));
   } else if (predicate === "treasury.balance") {
     const truth = ctx.s.treasuryMilli[subject.id] ?? 0;
-    quality = skill(ctx, observer, "administration");
-    // coins are reported within ±10% of the true value, however skilled the reader; skill sets how often they are right
-    const maxErr = Math.min((1000 - quality) * 20, Math.floor(Math.abs(truth) / 10));
+    // the ruler and the Administration adviser always know the exact amount (simplified rule, to be revisited)
+    const exact = observer === ctx.content.scenario.ruler || observer === admAdviser(ctx);
+    quality = exact ? 1000 : skill(ctx, observer, "administration");
+    // other readers: coins are reported within ±10% of the true value, however skilled; skill sets how often they are right
+    const maxErr = exact ? 0 : Math.min((1000 - quality) * 20, Math.floor(Math.abs(truth) / 10));
     const r = ctx.keyed(`knowledge:observe:${observer}:${ctx.tick}:${subject.id}:${predicate}`);
     value = truth + r.int(-maxErr, maxErr);
   } else if (predicate === "character.location") {

@@ -3,7 +3,7 @@
 import type { Ctx, System } from "./types.ts";
 import { DAY, HOUR, chr, loc, sorted } from "./types.ts";
 import { cmp } from "../world.ts";
-import { best, observe } from "./knowledge.ts";
+import { best, observe, observeTreasury } from "./knowledge.ts";
 
 const presentAt = (ctx: Ctx, where: string) => sorted(Object.entries(ctx.s.positions).filter(([, p]) => "at" in p && p.at === where).map(([id]) => id), (x) => x);
 export function defence(ctx: Ctx, where: string) {
@@ -49,7 +49,8 @@ export const economy: System = {
         const amountMilli = h.dailyIncomeMilli + r.int(-h.jitterMilli, h.jitterMilli);
         ctx.emit("TreasuryCollected", [], [loc(h.location)], { holder: sc.ruler, location: h.location, amountMilli }, "economy");
       }
-      ctx.emit("UpkeepPaid", [], [chr(sc.ruler)], { holder: sc.ruler, amountMilli: sc.economy.dailyUpkeepMilli });
+      const up = ctx.emit("UpkeepPaid", [], [chr(sc.ruler)], { holder: sc.ruler, amountMilli: sc.economy.dailyUpkeepMilli });
+      observeTreasury(ctx, up.id);
       ctx.extraDraws("economy");
       ctx.at(ctx.tick + DAY, "economy:day", {});
     },

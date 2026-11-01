@@ -9,7 +9,7 @@ import { adaptations, decideObedience, interpret, margins, obeyForms } from "../
 import { plan } from "../agents/planner.ts";
 import type { Ctx, System } from "./types.ts";
 import { DAY, chr, loc } from "./types.ts";
-import { best, learn, observe, skill } from "./knowledge.ts";
+import { best, learn, observe, observeTreasury, skill } from "./knowledge.ts";
 import { buildSituation, execute, isIdle, perceiverFromView, promote, traceOf } from "./agents.ts";
 import { travel } from "./movement.ts";
 
@@ -114,10 +114,12 @@ function process(ctx: Ctx, orderId: number, receivedId: number) {
     const spread = (1000 - eng) * 10;
     const restoredMilli = Math.max(0, to - cond + r.int(-spread, Math.floor(spread / 4)));
     const st = ctx.emit("RepairStarted", [ex.id], [loc(where), oref(orderId)], { location: where, payer: sc.ruler, costMilli, startedAt: ctx.tick, orderId, durationTicks, restoreToMilli: to });
+    observeTreasury(ctx, st.id);
     ctx.at(ctx.tick + durationTicks, "orders:completeRepair", { orderId, location: where, restoredMilli, startedEventId: st.id, engineer: who });
   } else if (a.kind === "levy" || a.kind === "half_levy") {
     const amount = a.kind === "levy" ? sc.player.levyMilli : Math.floor(sc.player.levyMilli / 2);
     const lv = ctx.emit("LevyRaised", [ex.id], [chr(sc.ruler), oref(orderId)], { payer: sc.ruler, amountMilli: amount, orderId });
+    observeTreasury(ctx, lv.id);
     finish(ctx, orderId, "completed", lv.id);
   } else if (a.kind === "march_to" && "at" in ctx.s.positions[who] && (ctx.s.positions[who] as { at: string }).at === a.target) {
     finish(ctx, orderId, "completed", ex.id);
