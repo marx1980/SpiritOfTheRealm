@@ -16,12 +16,13 @@ export interface Court { day: number; at: string; issues: Issue[]; advice: Advic
 function adviceLines(v: View, target?: string): AdviceLine[] {
   const latest = new Map<string, number>();
   for (const r of v.advice) if (!latest.has(r.author) || v.advice.find((x) => x.id === latest.get(r.author))!.computedAt < r.computedAt) latest.set(r.author, r.id);
-  // Advice is set aside only while an order of the same kind for the same place is in force (other advice still shows).
+  // Advice is set aside only while an order of the same kind for the same place is recent (other advice still shows).
   const INTENT_OF: Record<string, string> = { advise_repair: "repair", advise_send_captain: "advance" };
   const superseded = (r: { plan: { id: string } }) => {
     const a = JSON.parse(r.plan.id) as { kind: string; target?: string };
     const intent = INTENT_OF[a.kind];
-    return !!intent && v.self.ordersInForce.some((o) => o.intent === intent && o.objective.id === a.target);
+    // an order you issued in the last 20 days (repairs take about two weeks to report back)
+    return !!intent && v.self.orders.some((o) => o.action === intent && o.target === a.target && v.now - o.tick < 20 * 86400);
   };
   return v.advice.filter((r) => (target ? r.plan.id.includes(`"${target}"`) : latest.get(r.author) === r.id) && !superseded(r)).map((r) => ({
     id: r.id, adviser: nameOf(v, r.author), area: SHORT_AREA[v.world.areas[r.author] ?? ""] ?? v.world.areas[r.author] ?? "", plan: planWords(v, r.plan.id),

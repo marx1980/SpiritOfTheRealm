@@ -235,9 +235,8 @@ function coinStatus(v: View): string {
   const b = bs.sort((x, y) => y.observedAt - x.observedAt)[0];
   if (!b) return `<span class="stat"><span class="emo" aria-hidden="true">🪙</span> Coins: unknown</span>`;
   const n = b.believedValue as number;
-  const word = n < 30000 ? "empty" : n < 60000 ? "low" : n < 120000 ? "adequate" : "good";
-  return `<span class="stat${b.effectiveBand === "stale" ? " old" : ""}"><span class="emo" aria-hidden="true">🪙</span> Coins: ${word}</span>
-    <span class="stat-age">seen ${esc(dayAgo(v, b.observedAt))}</span>`;
+  return `<span class="stat${b.effectiveBand === "stale" ? " old" : ""}"><span class="emo" aria-hidden="true">🪙</span> Coins: ${Math.round(n / 1000)}k</span>
+    <em class="stat-age">(${esc(dayAgo(v, b.observedAt))})</em>`;
 }
 
 /** Settings tab: what pauses the game, and the observer panel for H-01 observers. */
