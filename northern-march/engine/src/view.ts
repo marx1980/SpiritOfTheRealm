@@ -44,7 +44,7 @@ export function buildView(s: Readonly<WorldState>, c: Content, who: string, now:
     .filter((r) => r.recipient === who && r.status === "delivered")
     .map((r) => ({ reportId: r.id, author: r.author, subject: r.subject, claims: structuredClone(r.claims), composedAt: r.composedAt, deliveredAt: r.deliveredAt!,
       route: [...r.route], ...(r.authorBias ? { authorBias: [...r.authorBias] } : {}) }))
-    .sort((a, b) => a.reportId - b.reportId);
+    .sort((a, b) => a.deliveredAt - b.deliveredAt || a.reportId - b.reportId); // in the order they arrived
   const known = new Set<string>([who, ...Object.values(beliefs).filter((b) => b.subject.kind === "character").map((b) => b.subject.id), ...reports.map((r) => r.author)]);
   return deepFreeze({
     now,

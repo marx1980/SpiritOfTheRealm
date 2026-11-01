@@ -21,7 +21,7 @@ const REASON_LABEL: Record<string, string> = { report: "Letters", advice: "Advic
 
 type Sim = ReturnType<typeof createSim>;
 const st = {
-  sim: null as unknown as Sim, seed: __H01__.seed, paused: null as null | string, over: false,
+  sim: null as unknown as Sim, seed: __H01__.seed, paused: null as null | string, over: false, letter: null as number | null,
   queue: [] as PlayerAction[], autoPause: new Set<string>(REASONS), selected: "northwatch",
   draft: { recipient: "", intent: "repair", objective: "northwatch", discretion: "bounded" } as { recipient: string; intent: string; objective: string; discretion: string },
   error: "", observer: location.hash === "#observer", answered: 0, openLetter: null as number | null,
@@ -41,7 +41,7 @@ function advance() {
   for (let guard = 0; guard < 5000; guard++) {
     const r = st.sim.next(END);
     if (r.ended || !r.paused) { st.paused = null; st.over = true; return render(); }
-    if (st.autoPause.has(r.reason!) || r.reason === "danger") { st.paused = r.reason!; return render(); }
+    if (st.autoPause.has(r.reason!) || r.reason === "danger") { st.paused = r.reason!; st.letter = r.letterId ?? null; st.openLetter = st.letter; return render(); }
     st.sim.answer([]);
   }
   render();
@@ -79,7 +79,10 @@ function pauseText(v: View): string {
     return o.ended ? (o.ended === "killed" ? `Anna is dead` : `Anna is captured`) : `Day ${__H01__.days}: ${o.met ? "the forts hold" : "fallen: " + o.fortsBelowBreach.map((f) => name(v, f)).join(", ")}`;
   }
   const r = st.paused;
-  if (r === "report") { const l = v.reports.at(-1); return l ? `Letter from ${name(v, l.author)}: ${letterSentences(v, l).join(" ")}` : "Letter"; }
+  if (r === "report") {
+    const l = v.reports.find((x) => x.reportId === st.letter);
+    return l ? `Letter from ${name(v, l.author)}: ${letterSentences(v, l).join(" ")}` : "Letter";
+  }
   if (r === "advice") { const a = [...v.advice].sort((x, y) => y.computedAt - x.computedAt)[0]; return a ? `${name(v, a.author)} advises` : "Advice"; }
   if (r === "danger") return "You are in danger";
   if (r === "arrival") { const p = v.self.position; return "at" in p ? `Arrived at ${name(v, p.at)}` : "Arrived"; }
