@@ -148,19 +148,20 @@ function side(v: View) {
   if (!st.draft.recipient || !known.includes(st.draft.recipient)) st.draft.recipient = known[0] ?? "";
   const draft = toDraft();
   const problems = draft ? validateDraft(v, draft) : ["no recipient"];
-  const quick = `<div class="card"><h2>Act</h2><div class="quick">
-    <select id="q-fort">${forts.map((f) => opt(f.id, f.name, st.selected)).join("")}</select>
-    <button data-q="repair" ${p ? "" : "disabled"}>Repair</button><button data-q="advance" ${p ? "" : "disabled"}>Send captain</button>
-    <button data-act='${esc(JSON.stringify({ action: "levy" }))}' ${p ? "" : "disabled"}>Levy</button></div>
-    <div class="quick" style="margin-top:6px">${travel.map((t) => `<button data-act='${esc(JSON.stringify({ action: "travel", target: t }))}' ${p ? "" : "disabled"}>Travel to ${esc(name(v, t))}</button>`).join("")}</div></div>`;
   const places = [...v.world.places].sort((a, b) => (a.name < b.name ? -1 : 1));
-  const composer = `<div class="card"><h2>Order</h2><div class="form">
-    <label for="o-to">To</label><select id="o-to">${known.map((k) => opt(k, name(v, k), st.draft.recipient)).join("")}</select>
-    <label for="o-intent">Intent</label><select id="o-intent">${INTENTS.map((k) => opt(k, k, st.draft.intent)).join("")}</select>
-    <label for="o-obj">Where</label><select id="o-obj">${places.map((x) => opt(x.id, x.name, st.draft.objective)).join("")}${known.map((k) => opt("@" + k, name(v, k), st.draft.objective)).join("")}</select>
-    <label for="o-disc">Freedom</label><select id="o-disc">${["strict", "bounded", "delegated"].map((k) => opt(k, k, st.draft.discretion)).join("")}</select>
-    <span></span><button id="o-add" ${p && !problems.length ? "" : "disabled"}>Add</button></div>
-    ${problems.length && draft ? `<div class="err">${esc(problems.join("; "))}</div>` : ""}</div>`;
+  const fortId = !st.draft.objective.startsWith("@") && content.byId.location.get(st.draft.objective)?.fortification ? st.draft.objective : null;
+  const act = `<div class="card"><h2>Act</h2>
+    <div class="form">
+      <label for="o-obj">Where</label><select id="o-obj">${places.map((x) => opt(x.id, x.name, st.draft.objective)).join("")}${known.map((k) => opt("@" + k, name(v, k), st.draft.objective)).join("")}</select>
+      <span></span><div class="quick"><button data-q="repair" ${p && fortId ? "" : "disabled"}>Repair</button><button data-q="advance" ${p && fortId ? "" : "disabled"}>Send captain</button>
+        <button data-act='${esc(JSON.stringify({ action: "levy" }))}' ${p ? "" : "disabled"}>Levy</button></div>
+      <label for="o-to">To</label><select id="o-to">${known.map((k) => opt(k, name(v, k), st.draft.recipient)).join("")}</select>
+      <label for="o-intent">Intent</label><select id="o-intent">${INTENTS.map((k) => opt(k, k, st.draft.intent)).join("")}</select>
+      <label for="o-disc">Freedom</label><select id="o-disc">${["strict", "bounded", "delegated"].map((k) => opt(k, k, st.draft.discretion)).join("")}</select>
+      <span></span><button id="o-add" ${p && !problems.length ? "" : "disabled"}>Add order</button>
+    </div>
+    ${problems.length && draft ? `<div class="err">${esc(problems.join("; "))}</div>` : ""}
+    <div class="quick" style="margin-top:8px">${travel.map((t) => `<button data-act='${esc(JSON.stringify({ action: "travel", target: t }))}' ${p ? "" : "disabled"}>Travel to ${esc(name(v, t))}</button>`).join("")}</div></div>`;
   const open = v.reports.find((r) => r.reportId === st.openLetter);
   const reader = open ? `<div class="letter-read">
       <div class="lr-head"><b>${esc(name(v, open.author))}</b>
@@ -176,7 +177,7 @@ function side(v: View) {
     const b = v.beliefs[Object.keys(v.beliefs).find((k) => v.beliefs[k].predicate === "order.status" && v.beliefs[k].subject.id === String(o.orderId)) ?? ""];
     return `<div class="letter"><div class="h"><b>${esc(name(v, o.recipient))}</b><span>${esc(dayAgo(v, o.tick))}</span></div><div class="c">${esc(o.action)} ${esc(name(v, o.target))} · ${esc(b ? String(b.believedValue) : "no word")}</div></div>`;
   }).join("")}</div></div>` : "";
-  return `<div class="col">${quick}${composer}${letters}${orders}</div>`;
+  return `<div class="col">${act}${letters}${orders}</div>`;
 }
 const dayAgo = (v: View, t: number) => { const d = Math.floor(v.now / DAY) - Math.floor(t / DAY); return d <= 0 ? "today" : d === 1 ? "yesterday" : `${d} days ago`; };
 function toDraft(): OrderDraft | null {
@@ -260,7 +261,7 @@ document.addEventListener("click", (e) => {
   if (el.dataset.closeLetter !== undefined) { st.openLetter = null; return render(); }
   if (el.dataset.act) return queue(JSON.parse(el.dataset.act));
   if (el.dataset.place) { st.selected = el.dataset.place; if (content.byId.location.get(st.selected)?.fortification) st.draft.objective = st.selected; return render(); }
-  if (el.dataset.q) return queue({ action: el.dataset.q as "repair", target: (document.getElementById("q-fort") as HTMLSelectElement).value });
+  if (el.dataset.q) return queue({ action: el.dataset.q as "repair", target: st.draft.objective });
   if (el.dataset.unq) { st.queue.splice(Number(el.dataset.unq), 1); return render(); }
   if (el.id === "go") return send();
   if (el.id === "restart") return start(st.seed);
@@ -273,8 +274,8 @@ document.addEventListener("change", (e) => {
   if (t.id === "observer-toggle") { st.observer = (t as HTMLInputElement).checked; return render(); }
   if (t.dataset.pause) { (t as HTMLInputElement).checked ? st.autoPause.add(t.dataset.pause) : st.autoPause.delete(t.dataset.pause); return; }
   const k = ({ "o-to": "recipient", "o-intent": "intent", "o-obj": "objective", "o-disc": "discretion" } as Record<string, keyof typeof st.draft>)[t.id];
+  if (t.id === "o-obj" && content.byId.location.get(t.value)?.fortification) st.selected = t.value;
   if (k) { st.draft[k] = t.value; render(); }
-  if (t.id === "q-fort") st.selected = t.value;
 });
 document.addEventListener("keydown", (e) => { if (e.key === "O" && e.shiftKey) { st.observer = !st.observer; render(); } });
 start(st.seed);
