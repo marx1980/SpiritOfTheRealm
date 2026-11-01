@@ -9,6 +9,8 @@ export interface SimParams {
   extraDraws?: Partial<Record<SystemId, number>>;
   /** Interactive play: a daily decision point for the player. */
   checkpoints?: boolean;
+  /** Interactive play: a decision point at the end of every day on which a letter reached the ruler, after that day's advice. */
+  dayEnd?: boolean;
 }
 
 /** What a system sees. State is read-only by convention: it changes only through emit() -> reducer. */

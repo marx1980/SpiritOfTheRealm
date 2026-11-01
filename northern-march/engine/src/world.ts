@@ -43,6 +43,7 @@ export interface WorldState {
   nextMessengerId: number;
   orders: Record<string, { order: StructuredOrder; status: string }>;
   nextOrderId: number;
+  dayEndDay: number; // last day a day-end decision was set up (interactive play)
   advisePending: Record<string, number>; // adviser -> day their advice is due or was given (given at the end of that day)
   ordersInForce: Record<string, number[]>;
   issued: Record<string, IssuedRecord[]>;
@@ -67,7 +68,7 @@ export function initialState(c: Content): WorldState {
   return {
     treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, tiers, history: {}, agents, recommendations: {}, heard: {}, campaign: { ended: null, lastDanger: -1 }, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, lastStorm: {}, threats: {}, routesClosed: {},
     positions, departures: {}, beliefs: {}, nextPropId: 1, reports: {}, nextReportId: 1, messengers: {}, nextMessengerId: 1,
-    orders: {}, nextOrderId: 1, advisePending: {}, ordersInForce: {}, issued: {}, repairs: {},
+    orders: {}, nextOrderId: 1, advisePending: {}, dayEndDay: -1, ordersInForce: {}, issued: {}, repairs: {},
   };
 }
 
@@ -168,6 +169,7 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   OrderSuperseded: endOrder("superseded"),
   OrderAbandoned: endOrder("abandoned"),
   RepairStarted: (s, p, e) => { s.repairs[p.location] = { startedAt: p.startedAt, orderId: p.orderId, work: p.work, done: 0, lastT: e.tick, men: p.men, gen: 0, restoredMilli: p.restoredMilli, startedEventId: e.id, engineer: p.engineer }; s.treasuryMilli[p.payer] -= p.costMilli; s.lastRepairStart[p.location] = e.tick; },
+  DayEndScheduled: (s, p) => { s.dayEndDay = p.day; },
   AdviceScheduled: (s, p) => { s.advisePending[p.agent] = p.day; },
   AdviceSettled: (s, p) => { s.advisePending[p.agent] = p.day; },
   RepairResynced: (s, p, e) => { const r = s.repairs[p.location]; r.done = p.done; r.lastT = e.tick; r.men = p.men; r.gen = p.gen; },

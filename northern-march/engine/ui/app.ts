@@ -63,31 +63,33 @@ function answer(actions: PlayerAction[]) {
 }
 
 function start(seed: number, restore = true) {
-  st.sim = createSim({ content, seed, policy: "external" });
+  st.sim = createSim({ content, seed, policy: "external", params: { dayEnd: true } });
   st.seed = seed; st.queue = []; st.error = ""; st.over = false; st.log = [];
   st.batch = []; st.letter = null; st.advice = null; st.openLetter = null; st.paused = null; st.shownPause = null; st.tab = "game"; st.answered = 0;
   // the silent prelude, up to the first day of play
   for (let guard = 0; guard < 5000; guard++) { const r = st.sim.next(PRE); if (!r.paused) break; st.sim.answer([]); }
   if (!restore) clearLog(seed);
   const saved = restore ? loadLog(seed) : [];
+  let tail: number[] = []; // letters passed since the last day-end decision: they belong to the pause that was showing
   try {
     for (const acts of saved) {
       const r = st.sim.next(END);
       if (!r.paused) break;
+      if (r.reason === "dayend") tail = []; else if (r.reason === "report" && r.letterId !== undefined) tail.push(r.letterId);
       st.sim.answer(acts); st.log.push(acts);
     }
   } catch {
     // the saved answers no longer fit this version of the game: start again
-    st.sim = createSim({ content, seed, policy: "external" }); st.log = []; clearLog(seed);
+    st.sim = createSim({ content, seed, policy: "external", params: { dayEnd: true } }); st.log = []; clearLog(seed);
   }
   st.answered = st.log.length;
-  advance();
+  advance(tail);
 }
 
 /** Run to the next pause the player wants to see; other decision points pass with no action. */
-function advance() {
+function advance(resumed: number[] = []) {
   // letters of one day are gathered and shown together, before the next decision that is shown
-  let batch: number[] = [], batchDay = -1;
+  let batch: number[] = [...resumed], batchDay = resumed.length ? Math.floor(st.sim.viewOf("player").now / DAY) : -1;
   for (let guard = 0; guard < 5000; guard++) {
     const r = st.sim.next(END);
     if (r.ended || !r.paused) { st.paused = null; st.over = true; st.batch = []; return render(); }
@@ -104,7 +106,7 @@ function advance() {
     }
     if (batch.length || st.autoPause.has(r.reason!) || r.reason === "danger") {
       st.paused = batch.length && !st.autoPause.has(r.reason!) && r.reason !== "danger" ? "report" : r.reason!;
-      st.letter = r.letterId ?? null; st.advice = r.adviceId ?? null; st.batch = batch; st.openLetter = st.letter;
+      st.letter = r.letterId ?? batch[batch.length - 1] ?? null; st.advice = r.adviceId ?? null; st.batch = batch; st.openLetter = st.letter;
       return render();
     }
     answer([]);

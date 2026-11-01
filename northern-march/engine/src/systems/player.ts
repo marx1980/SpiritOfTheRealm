@@ -25,6 +25,7 @@ export function makePlayer(decide: (ctx: Ctx, cause: number | null, reason: stri
         ctx.at(ctx.tick, "player:decide", { cause: null, reason: "checkpoint" });
         ctx.at(ctx.tick + DAY, "player:checkpoint", {});
       },
+      "player:dayend": (ctx, { cause }) => { ctx.at(ctx.tick, "player:decide", { cause, reason: "dayend" }); },
       "player:decide": (ctx, { cause, deliveredEventId, reason }) => {
         if (ctx.s.campaign.ended) return;
         const ruler = ctx.content.scenario.ruler;

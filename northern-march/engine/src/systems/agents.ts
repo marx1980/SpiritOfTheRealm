@@ -254,7 +254,7 @@ function advise(ctx: Ctx, agent: string, cause: number) {
   const day = Math.floor(ctx.tick / DAY);
   if (ctx.s.advisePending[agent] === day) return; // already due or given today
   ctx.emit("AdviceScheduled", [cause], [chr(agent)], { agent, day });
-  ctx.at(day * DAY + DAY - 1, "agents:advise", { agent, cause });
+  ctx.at(day * DAY + DAY - 2, "agents:advise", { agent, cause });
 }
 
 function adviseNow(ctx: Ctx, agent: string, cause: number) {

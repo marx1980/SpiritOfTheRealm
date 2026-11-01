@@ -97,6 +97,11 @@ function deliverReport(ctx: Ctx, m: Messenger, at: string, cause: number) {
       for (const h of hearers) readReport(ctx, h, report, sh.id);
     }
     ctx.at(ctx.tick, "player:decide", { cause: d.id, reason: "report" });
+    const day = Math.floor(ctx.tick / 86400);
+    if (ctx.params.dayEnd && ctx.s.dayEndDay !== day) {
+      ctx.emit("DayEndScheduled", [d.id], [chr(m.recipient)], { day });
+      ctx.at(day * 86400 + 86400 - 1, "player:dayend", { cause: d.id });
+    }
   }
 }
 
