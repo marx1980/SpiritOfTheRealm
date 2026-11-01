@@ -21,7 +21,7 @@ const REASON_LABEL: Record<string, string> = { report: "Letters", advice: "Advic
 
 type Sim = ReturnType<typeof createSim>;
 const st = {
-  sim: null as unknown as Sim, seed: __H01__.seed, paused: null as null | string, over: false, letter: null as number | null, advice: null as number | null, tab: "game" as "game" | "settings",
+  sim: null as unknown as Sim, log: [] as PlayerAction[][], seed: __H01__.seed, paused: null as null | string, over: false, letter: null as number | null, advice: null as number | null, tab: "game" as "game" | "settings",
   queue: [] as PlayerAction[], autoPause: new Set<string>(REASONS), selected: "northwatch",
   draft: { recipient: "", action: "p:repair", objective: "northwatch", discretion: "bounded" } as { recipient: string; action: string; objective: string; discretion: string },
   error: "", observer: location.hash === "#observer", answered: 0, openLetter: null as number | null,
@@ -30,9 +30,36 @@ const st = {
 const esc = (s: unknown) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 const name = (v: View, id: string) => v.world.names[id] ?? id;
 
-function start(seed: number) {
+/** Every answer given so far in this browser, per seed. Replayed on load, so a republish does not restart the game. */
+const LOG_KEY = (seed: number) => `northern-march-log-${seed}`;
+function loadLog(seed: number): PlayerAction[][] {
+  try { const raw = localStorage.getItem(LOG_KEY(seed)); return raw ? (JSON.parse(raw) as PlayerAction[][]) : []; } catch { return []; }
+}
+function saveLog() { try { localStorage.setItem(LOG_KEY(st.seed), JSON.stringify(st.log)); } catch { /* storage may be blocked: the game still plays */ } }
+function clearLog(seed: number) { try { localStorage.removeItem(LOG_KEY(seed)); } catch { /* ignore */ } }
+
+/** Give the engine one answer and remember it. */
+function answer(actions: PlayerAction[]) {
+  st.sim.answer(actions);
+  st.log.push(actions); saveLog();
+}
+
+function start(seed: number, restore = true) {
   st.sim = createSim({ content, seed, policy: "external" });
-  st.seed = seed; st.queue = []; st.error = ""; st.over = false; st.answered = 0;
+  st.seed = seed; st.queue = []; st.error = ""; st.over = false; st.log = [];
+  if (!restore) clearLog(seed);
+  const saved = restore ? loadLog(seed) : [];
+  try {
+    for (const acts of saved) {
+      const r = st.sim.next(END);
+      if (!r.paused) break;
+      st.sim.answer(acts); st.log.push(acts);
+    }
+  } catch {
+    // the saved answers no longer fit this version of the game: start again
+    st.sim = createSim({ content, seed, policy: "external" }); st.log = []; clearLog(seed);
+  }
+  st.answered = st.log.length;
   advance();
 }
 
@@ -44,16 +71,16 @@ function advance() {
     // advice to wait asks for no decision: the page passes it (the engine still records it; G-12 is unaffected)
     if (r.reason === "advice" && r.view) {
       const a = r.view.advice.find((x) => x.id === r.adviceId);
-      if (a && (JSON.parse(a.plan.id) as { kind: string }).kind === "advise_wait") { st.sim.answer([]); continue; }
+      if (a && (JSON.parse(a.plan.id) as { kind: string }).kind === "advise_wait") { answer([]); continue; }
     }
     if (st.autoPause.has(r.reason!) || r.reason === "danger") { st.paused = r.reason!; st.letter = r.letterId ?? null; st.advice = r.adviceId ?? null; st.openLetter = st.letter; return render(); }
-    st.sim.answer([]);
+    answer([]);
   }
   render();
 }
 
 function send() {
-  try { st.sim.answer(st.queue); } catch (e) { st.error = (e as Error).message; return render(); }
+  try { answer(st.queue); } catch (e) { st.error = (e as Error).message; return render(); }
   st.answered++; st.queue = []; st.error = "";
   advance();
 }
@@ -264,7 +291,7 @@ document.addEventListener("click", (e) => {
   if (el.dataset.place) { st.selected = el.dataset.place; if (content.byId.location.get(st.selected)?.fortification) st.draft.objective = st.selected; return render(); }
   if (el.dataset.unq) { st.queue.splice(Number(el.dataset.unq), 1); return render(); }
   if (el.id === "go") return send();
-  if (el.id === "restart") return start(st.seed);
+  if (el.id === "restart") return start(st.seed, false);
   if (el.id === "settings-tab") { st.tab = st.tab === "settings" ? "game" : "settings"; return render(); }
   if (el.id === "o-add") {
     const pa = st.draft.action.slice(2);
