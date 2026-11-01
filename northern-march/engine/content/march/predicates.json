@@ -72,6 +72,14 @@
     "materialDelta": 1
   },
   {
+    "id": "character.troops",
+    "subjectKind": "character",
+    "halfLifeTicks": 864000,
+    "domain": "military",
+    "wakeSignificance": 1,
+    "materialDelta": 1
+  },
+  {
     "id": "request.reinforce",
     "subjectKind": "location",
     "halfLifeTicks": 864000,

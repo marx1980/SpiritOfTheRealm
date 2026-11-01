@@ -6,7 +6,7 @@ import { ago, certainty, nameOf, raiderWords, sourceOf, wallWords } from "./phra
 export interface MapPlace {
   id: string; name: string; x: number; y: number; fortified: boolean;
   wall?: { words: string; age: string; source: string; certainty: string };
-  troops?: { count: number; exact: boolean; observedAt: number };
+  troops?: { fort?: { count: number; exact: boolean; observedAt: number }; captains: { name: string; count: number; exact: boolean; observedAt: number }[] };
   raiders?: { words: string; age: string; source: string; certainty: string };
   people: { name: string; age: string; certainty: string }[];
   you: boolean;
@@ -22,12 +22,22 @@ export function buildMap(v: View): MapModel {
     if (!people.has(at)) people.set(at, []);
     people.get(at)!.push({ name: nameOf(v, b.subject.id), age: ago(v.now, b.observedAt), certainty: certainty[b.effectiveBand] });
   }
+  // captains' companies, placed where the player believes each captain is
+  const companies = new Map<string, NonNullable<MapPlace["troops"]>["captains"]>();
+  for (const id of [...new Set(Object.values(v.beliefs).filter((b) => b.predicate === "character.troops").map((b) => b.subject.id))].sort()) {
+    const t = beliefsAbout(v, id, "character.troops")[0], at = beliefsAbout(v, id, "character.location")[0]?.believedValue as string | undefined;
+    if (!t || !at) continue;
+    if (!companies.has(at)) companies.set(at, []);
+    companies.get(at)!.push({ name: nameOf(v, id), count: t.believedValue as number, exact: t.effectiveBand === "certain", observedAt: t.observedAt });
+  }
   const places = v.world.places.map((p) => {
     const w = beliefsAbout(v, p.id, "fortification.condition")[0], r = beliefsAbout(v, p.id, "threat.intensity")[0];
     const g = beliefsAbout(v, p.id, "fortification.garrison")[0];
+    const captains = companies.get(p.id) ?? [];
+    const troops = g || captains.length ? { ...(g ? { fort: { count: g.believedValue as number, exact: g.effectiveBand === "certain", observedAt: g.observedAt } } : {}), captains } : undefined;
     return {
       id: p.id, name: p.name, x: p.pos[0], y: p.pos[1], fortified: p.fortified, you: here === p.id,
-      ...(g ? { troops: { count: g.believedValue as number, exact: g.effectiveBand === "certain", observedAt: g.observedAt } } : {}),
+      ...(troops ? { troops } : {}),
       ...(w ? { wall: { words: wallWords(w.believedValue as number), age: ago(v.now, w.observedAt), source: sourceOf(v, w), certainty: certainty[w.effectiveBand] } } : {}),
       ...(r ? { raiders: { words: raiderWords(r.believedValue as number), age: ago(v.now, r.observedAt), source: sourceOf(v, r), certainty: certainty[r.effectiveBand] } } : {}),
       people: (people.get(p.id) ?? []).sort((a, b) => (a.name < b.name ? -1 : 1)),

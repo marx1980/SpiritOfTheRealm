@@ -116,7 +116,7 @@ function readReport(ctx: Ctx, reader: string, report: Report, eventId: number) {
   for (const c of report.claims) {
     const band = interpretBand(ctx, reader, c.predicate, low ? downgrade(c.reliabilityBand) : c.reliabilityBand);
     // a letter states the troop count as it stands: the figure is fresh from the day it arrives
-    const observedAt = c.predicate === "fortification.garrison" ? ctx.tick : c.observedAt;
+    const observedAt = c.predicate === "fortification.garrison" || c.predicate === "character.troops" ? ctx.tick : c.observedAt;
     learn(ctx, reader, { subject: c.subject, predicate: c.predicate, value: c.believedValue, observedAt, band },
       { kind: "report", eventId, source: report.author, reportId: report.id }, [eventId]);
   }
@@ -171,7 +171,10 @@ function inspectAndReport(ctx: Ctx, author: string, cause: number) {
   if (ctx.s.tiers[author] === "C" || !("at" in p) || p.at !== ch.location || !ctx.s.fortifications[ch.location] || !ch.reportsTo) return;
   const upd = observe(ctx, author, loc(ch.location), "fortification.condition", cause)!;
   observe(ctx, author, loc(ch.location), "fortification.garrison", cause);
-  const beliefs = [best(ctx, author, ch.location, "fortification.condition"), best(ctx, author, ch.location, "fortification.garrison"),
+  // captains' companies with them at the fort are counted too
+  const companies = Object.entries(ctx.s.positions).filter(([id, p]) => "at" in p && p.at === ch.location && (ctx.s.troops[id] ?? 0) > 0).map(([id]) => id).sort();
+  for (const id of companies) observe(ctx, author, chr(id), "character.troops", cause);
+  const beliefs = [best(ctx, author, ch.location, "fortification.condition"), best(ctx, author, ch.location, "fortification.garrison"), ...companies.map((id) => best(ctx, author, id, "character.troops")),
     ...ctx.content.scenario.threat.sites.filter((x) => x.target === ch.location).map((x) => best(ctx, author, x.site, "threat.intensity"))].filter((x) => !!x);
   const claims = [selfClaim(ctx, author, upd.id), ...beliefs.map((b) => ({ ...b!, reliabilityBand: b!.band as BeliefProposition["reliabilityBand"] }))].map(({ band: _b, ...rest }: any) => rest);
   compose(ctx, author, ch.reportsTo, claims, upd.id);

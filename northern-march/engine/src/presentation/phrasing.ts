@@ -69,6 +69,7 @@ export function letterSentences(v: View, r: { author: string; claims: { predicat
       case "fortification.condition": out.push(`The walls at ${s} are ${wallWords(val as number)}.`); break;
       case "threat.intensity": out.push(`${cap(raiderWords(val as number))} at ${s}.`); break;
       case "fortification.garrison": out.push(`There are ${val} men in the fort at ${s}.`); break;
+      case "character.troops": out.push(me ? `I have ${val} men with me.` : `${s} has ${val} men with them.`); break;
       // people speak of themselves in the first person
       case "character.location": out.push(me ? `I am at ${nameOf(v, String(val))}.` : `${s} is at ${nameOf(v, String(val))}.`); break;
       case "treasury.balance": out.push(`The treasury is ${(val as number) < 60000 ? "low" : "adequate"}.`); break;
@@ -86,7 +87,7 @@ export function letterSentences(v: View, r: { author: string; claims: { predicat
 }
 /** The one sentence that matters most in a letter (for the list): orders, then walls, raiders, treasury, then where someone is. */
 export function letterGist(v: View, r: { author: string; claims: { predicate: string; subject: { id: string }; believedValue: unknown }[] }): string {
-  const rank: Record<string, number> = { "order.status": 0, "fortification.condition": 1, "fortification.garrison": 1, "threat.intensity": 2, "treasury.balance": 3, "character.location": 4 };
+  const rank: Record<string, number> = { "order.status": 0, "fortification.condition": 1, "fortification.garrison": 1, "character.troops": 1, "threat.intensity": 2, "treasury.balance": 3, "character.location": 4 };
   const claims = [...r.claims].sort((a, b) => (rank[a.predicate] ?? 5) - (rank[b.predicate] ?? 5));
   if (!claims.length) return "Nothing new in this letter.";
   return letterSentences(v, { ...r, claims: [claims[0]] })[0];

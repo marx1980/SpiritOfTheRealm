@@ -180,13 +180,19 @@ function map(v: View) {
     const raid = p.raiders && p.raiders.words !== "no raiders" ? `<path class="raid" d="M${p.x + 14} ${p.y - 26} l10 18 h-20 z"/>` : "";
     const you = p.you ? `<circle class="you" cx="${p.x}" cy="${p.y}" r="22"/>` : "";
     const sub = p.fortified ? (p.wall ? p.wall.words : "unknown") : p.raiders && p.raiders.words !== "no raiders" ? p.raiders.words : "";
-    const troops = p.troops ? `<text class="sub" x="${p.x + 18}" y="${p.y + 34}">${p.troops.exact ? "" : "~"}${p.troops.count} men</text>` : "";
+    const troopParts = p.troops ? [...(p.troops.fort ? [`${p.troops.fort.exact ? "" : "~"}${p.troops.fort.count} in fort`] : []), ...p.troops.captains.map((c) => `${esc(c.name)} ${c.exact ? "" : "~"}${c.count}`)] : [];
+    const troops = troopParts.length ? `<text class="sub" x="${p.x + 18}" y="${p.y + 34}">${troopParts.join(" · ")}</text>` : "";
     return `${you}${shape}${raid}<text x="${p.x + 18}" y="${p.y + 5}">${esc(p.name)}</text>${sub ? `<text class="sub" x="${p.x + 18}" y="${p.y + 20}">${esc(sub)}</text>` : ""}${troops}`;
   }).join("");
   const s = byId.get(st.selected);
   const line = (k: string, x?: { words: string; source: string; age: string; certainty: string }) => x ? `<div><span class="k">${k}</span> ${esc(x.words)} · ${esc(x.source)} · ${esc(x.age)} · ${esc(x.certainty)}</div>` : "";
   const hasNews = !!s && (!!s.wall || !!s.raiders || !!s.troops || s.people.length > 0);
-  const troopLine = s?.troops ? `<div><span class="k">Troops</span> ${s.troops.exact ? "" : "about "}${s.troops.count}, day ${Math.floor((s.troops.observedAt - PRE) / DAY) + 1}</div>` : "";
+  const dayNo = (t: number) => Math.floor((t - PRE) / DAY) + 1;
+  const troopItems = s?.troops ? [
+    ...(s.troops.fort ? [`Fort ${s.troops.fort.exact ? "" : "about "}${s.troops.fort.count}, day ${dayNo(s.troops.fort.observedAt)}`] : []),
+    ...s.troops.captains.map((c) => `${esc(c.name)} ${c.exact ? "" : "about "}${c.count}, day ${dayNo(c.observedAt)}`),
+  ] : [];
+  const troopLine = troopItems.length ? `<div><span class="k">Troops</span> ${troopItems.join(" · ")}</div>` : "";
   const detail = hasNews ? `<div class="card detail"><h2>${esc(s.name)}</h2>${line("Walls", s.wall)}${line("Raiders", s.raiders)}${troopLine}
     ${s.people.length ? `<div><span class="k">People</span> ${s.people.map((x) => `${esc(x.name)} (${esc(x.age)}, ${esc(x.certainty)})`).join(", ")}</div>` : ""}
     </div>` : "";
