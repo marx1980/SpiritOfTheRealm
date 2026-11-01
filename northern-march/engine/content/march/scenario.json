@@ -50,7 +50,7 @@
     "holdings": [
       {
         "location": "ravenport",
-        "dailyIncomeMilli": 15000,
+        "dailyIncomeMilli": 19000,
         "jitterMilli": 3000
       },
       {
@@ -115,7 +115,7 @@
     }
   ],
   "player": {
-    "repairCostMilliPerMilli": 2,
+    "repairCostMilliPerMilli": 1,
     "repairRestoreToMilli": 90000,
     "repairDays": 5,
     "levyMilli": 40000

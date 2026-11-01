@@ -60,36 +60,68 @@ export function planWords(v: View, planId: string): string {
   }
 }
 
-/** A letter's content as plain sentences, in words only: what the writer tells the reader, as the writer believes it. */
-export function letterSentences(v: View, r: { author: string; claims: { predicate: string; subject: { id: string }; believedValue: unknown }[] }): string[] {
-  const out: string[] = [];
+type LetterLike = { author: string; composedAt?: number; claims: { predicate: string; subject: { id: string }; believedValue: unknown }[] };
+/** What an earlier letter (written before this one) said about the same thing, if anything. */
+function earlier(v: View, r: LetterLike, c: { predicate: string; subject: { id: string } }): unknown {
+  if (r.composedAt === undefined) return undefined;
+  let best: { at: number; value: unknown } | undefined;
+  for (const x of v.reports) {
+    if (x.composedAt >= r.composedAt) continue;
+    for (const k of x.claims) if (k.predicate === c.predicate && k.subject.id === c.subject.id && (!best || x.composedAt > best.at)) best = { at: x.composedAt, value: k.believedValue };
+  }
+  return best?.value;
+}
+/** Sentences of a letter with their importance (lower first): unchanged walls and men are left out; the fort's own walls and men share a sentence. */
+function letterParts(v: View, r: LetterLike): { rank: number; text: string }[] {
+  const out: { rank: number; text: string }[] = [];
+  const home = r.claims.find((c) => c.predicate === "character.location" && c.subject.id === r.author)?.believedValue as string | undefined;
+  const fort: string[] = [];
   for (const c of r.claims) {
-    const s = nameOf(v, c.subject.id), val = c.believedValue, me = c.subject.id === r.author;
+    const s = nameOf(v, c.subject.id), val = c.believedValue, me = c.subject.id === r.author, prev = earlier(v, r, c);
+    const here = c.subject.id === home;
     switch (c.predicate) {
-      case "fortification.condition": out.push(`The walls at ${s} are ${wallWords(val as number)}.`); break;
-      case "threat.intensity": out.push(`${cap(raiderWords(val as number))} at ${s}.`); break;
-      case "fortification.garrison": out.push(`There are ${val} men in the fort at ${s}.`); break;
-      case "character.troops": out.push(me ? `I have ${val} men with me.` : `${s} has ${val} men with them.`); break;
+      case "fortification.condition":
+        if (prev !== undefined && wallWords(prev as number) === wallWords(val as number)) break; // unchanged
+        if (here) fort.push(`the walls are ${wallWords(val as number)}`); else out.push({ rank: 1, text: `The walls at ${s} are ${wallWords(val as number)}.` });
+        break;
+      case "threat.intensity": out.push({ rank: 2, text: `${cap(raiderWords(val as number))} at ${s}.` }); break;
+      case "fortification.garrison":
+        if (prev === val) break;
+        { const t = prev === undefined ? `${here ? "the fort has" : `the fort at ${s} has`} ${val} men` : `${here ? "the fort now has" : `the fort at ${s} now has`} ${val} men, ${(val as number) > (prev as number) ? "up" : "down"} from ${prev}`;
+          if (here) fort.push(t); else out.push({ rank: 1, text: cap(t) + "." }); }
+        break;
+      case "character.troops":
+        if (prev === val) break;
+        out.push({ rank: 1, text: me ? (prev === undefined ? `I have ${val} men with me.` : `I now have ${val} men with me, ${(val as number) > (prev as number) ? "up" : "down"} from ${prev}.`)
+          : (prev === undefined ? `${s} has ${val} men with them.` : `${s} now has ${val} men with them, ${(val as number) > (prev as number) ? "up" : "down"} from ${prev}.`) });
+        break;
       // people speak of themselves in the first person
-      case "character.location": out.push(me ? `I am at ${nameOf(v, String(val))}.` : `${s} is at ${nameOf(v, String(val))}.`); break;
-      case "treasury.balance": out.push(`The treasury is ${(val as number) < 60000 ? "low" : "adequate"}.`); break;
+      case "character.location": out.push({ rank: 4, text: me ? `I am at ${nameOf(v, String(val))}.` : `${s} is at ${nameOf(v, String(val))}.` }); break;
+      case "treasury.balance": out.push({ rank: 3, text: `The treasury is ${(val as number) < 60000 ? "low" : "adequate"}.` }); break;
       case "order.status": {
         // the subject is the order's number: say what the order was, not its number
         const o = v.self.orders.find((x) => String(x.orderId) === c.subject.id);
         const verb: Record<string, string> = { repair: "repair", advance: "send the captain to", levy: "raise a levy", travel: "travel to" };
-        out.push(o ? `Your order to ${verb[o.action] ?? o.action} ${o.action === "levy" ? "" : nameOf(v, o.target) + " "}is ${String(val)}.`.replace("  ", " ") : `Your order is ${String(val)}.`);
+        out.push({ rank: 0, text: o ? `Your order to ${verb[o.action] ?? o.action} ${o.action === "levy" ? "" : nameOf(v, o.target) + " "}is ${String(val)}.`.replace("  ", " ") : `Your order is ${String(val)}.` });
         break;
       }
-      default: out.push(`${s}: ${c.predicate.replace(/\./g, " ")} ${String(val)}.`);
+      default: out.push({ rank: 5, text: `${s}: ${c.predicate.replace(/\./g, " ")} ${String(val)}.` });
     }
   }
-  return out.length ? out : ["Nothing new in this letter."];
+  if (fort.length) out.push({ rank: 1, text: cap(fort.join(" and ")) + "." });
+  return out;
 }
-/** The one sentence that matters most in a letter (for the list): orders, then walls, raiders, treasury, then where someone is. */
-export function letterGist(v: View, r: { author: string; claims: { predicate: string; subject: { id: string }; believedValue: unknown }[] }): string {
-  const rank: Record<string, number> = { "order.status": 0, "fortification.condition": 1, "fortification.garrison": 1, "character.troops": 1, "threat.intensity": 2, "treasury.balance": 3, "character.location": 4 };
-  const claims = [...r.claims].sort((a, b) => (rank[a.predicate] ?? 5) - (rank[b.predicate] ?? 5));
-  if (!claims.length) return "Nothing new in this letter.";
-  return letterSentences(v, { ...r, claims: [claims[0]] })[0];
+/** A letter's content as plain sentences, in words only: what the writer tells the reader, as the writer believes it. */
+export function letterSentences(v: View, r: LetterLike): string[] {
+  const parts = letterParts(v, r);
+  // where the writer is comes first, then what has changed
+  parts.sort((x, y) => (x.rank === 4 ? -1 : y.rank === 4 ? 1 : 0));
+  return parts.length ? parts.map((p) => p.text) : ["Nothing new in this letter."];
+}
+/** The one sentence that matters most in a letter (for the list): orders, then walls and men, raiders, treasury, then where someone is. */
+export function letterGist(v: View, r: LetterLike): string {
+  const parts = letterParts(v, r);
+  if (!parts.length) return "Nothing new in this letter.";
+  return [...parts].sort((a, b) => a.rank - b.rank)[0].text;
 }
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

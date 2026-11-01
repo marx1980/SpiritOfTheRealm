@@ -197,10 +197,16 @@ function choicesBlock(v: View): string {
 /** The letters of this pause, all together. */
 function batchBlock(v: View): string {
   const ls = st.batch.map((id) => v.reports.find((x) => x.reportId === id)).filter((x): x is NonNullable<typeof x> => !!x);
-  return ls.length ? `<div class="batch">${ls.map((l) => `<div class="batch-letter"><b>${esc(name(v, l.author))}</b> <span class="when">${esc(dayAgo(v, l.deliveredAt))}</span><div>${esc(letterSentences(v, l).join(" "))}</div></div>`).join("")}</div>` : "";
+  return ls.length ? `<div class="batch">${ls.map((l) => `<div class="batch-letter"><b>${esc(name(v, l.author))}</b> <span class="when">${esc(dayAgo(v, l.deliveredAt))}</span><div>${tone(letterSentences(v, l).join(" "))}</div></div>`).join("")}</div>` : "";
 }
 
 const areaShort = (a: string) => ({ Military: "MIL", Administration: "ADM", Construction: "CON", Intelligence: "INT" } as Record<string, string>)[a] ?? a.toUpperCase();
+/** Status words in green (good outcome), red (bad outcome) or amber (under way, at risk): the text is escaped first. */
+const tone = (t: string) => esc(t)
+  .replace(/\b(completed|succeeded|won|held|repaired|sound|no raiders)\b/gi, '<span class="ok">$1</span>')
+  .replace(/\b(abandoned|failed|lost|breached|captured|refused|not enough coins|dead|fallen)\b/gi, '<span class="bad">$1</span>')
+  .replace(/\b(damaged|in progress|under way|low|worn)\b/gi, '<span class="warn">$1</span>');
+const cap1 = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 function pauseText(v: View): string {
   if (st.over) {
     const o = st.sim.objectiveStatus();
@@ -255,14 +261,14 @@ function map(v: View) {
     return `${you}${shape}${raid}<text x="${p.x + 18}" y="${p.y + 5}">${esc(p.name)}</text>${sub ? `<text class="sub" x="${p.x + 18}" y="${p.y + 20}">${esc(sub)}</text>` : ""}${troops}`;
   }).join("");
   const s = byId.get(st.selected);
-  const line = (k: string, x?: { words: string; source: string; age: string; certainty: string }) => x ? `<div><span class="k">${k}</span> ${esc(x.words)} · ${esc(x.source)} · ${esc(x.age)} · ${esc(x.certainty)}</div>` : "";
+  const line = (k: string, x?: { words: string; source: string; age: string; certainty: string }) => x ? `<div><span class="k">${k}:</span> ${tone(cap1(x.words))} <em class="stat-age">(${esc(x.age)}, ${esc(x.source)}, ${esc(x.certainty)})</em></div>` : "";
   const hasNews = !!s && (!!s.wall || !!s.raiders || !!s.troops || s.people.length > 0);
   const dayNo = (d: number) => d - PRE / DAY + 1; // day index from the engine, counted from the first letter day
-  const troopItems = s?.troops ? [
-    ...(s.troops.fort ? [`Fort ${s.troops.fort.exact ? "" : "about "}${s.troops.fort.count}, day ${dayNo(s.troops.fort.day)}`] : []),
-    ...s.troops.captains.map((c) => `${esc(c.name)} ${c.exact ? "" : "about "}${c.count}, day ${dayNo(c.day)}`),
+  const troopParts = s?.troops ? [
+    ...(s.troops.fort ? [{ t: `${s.troops.fort.exact ? "" : "~"}${s.troops.fort.count} (garrison)`, day: s.troops.fort.day }] : []),
+    ...s.troops.captains.map((c) => ({ t: `${c.exact ? "" : "~"}${c.count} (${esc(c.name)})`, day: c.day })),
   ] : [];
-  const troopLine = troopItems.length ? `<div><span class="k">Troops</span> ${troopItems.join(" · ")}</div>` : "";
+  const troopLine = troopParts.length ? `<div><span class="k">Troops:</span> ${troopParts.map((x) => x.t).join(" + ")} <em class="stat-age">(day ${dayNo(Math.min(...troopParts.map((x) => x.day)))})</em></div>` : "";
   const detail = hasNews ? `<div class="card detail"><h2>${esc(s.name)}</h2>${line("Walls", s.wall)}${line("Raiders", s.raiders)}${troopLine}
     ${s.people.length ? `<div><span class="k">People</span> ${s.people.map((x) => `${esc(x.name)} (${esc(x.age)}, ${esc(x.certainty)})`).join(", ")}</div>` : ""}
     </div>` : "";
@@ -310,7 +316,7 @@ function side(v: View) {
   const open = v.reports.find((r) => r.reportId === st.openLetter);
   const letters = `<div class="card"><h2>Letters</h2><div class="letters">${[...v.reports].reverse().slice(0, 40).map((r) => {
     const isOpen = r.reportId === st.openLetter;
-    const body = isOpen ? `<div class="lr-body"><span class="speaker">${esc(name(v, r.author))}:</span> ${esc(letterSentences(v, r).join(" "))}</div>` : `<div class="c">${esc(letterGist(v, r))}</div>`;
+    const body = isOpen ? `<div class="lr-body"><span class="speaker">${esc(name(v, r.author))}:</span> ${tone(letterSentences(v, r).join(" "))}</div>` : `<div class="c">${tone(letterGist(v, r))}</div>`;
     const tags = isOpen ? `<span class="tags"><span class="tag arrived">arrived ${esc(dayAgo(v, r.deliveredAt))}</span><span class="tag written">written ${esc(dayAgo(v, r.composedAt))}</span></span>` : `<span class="when">written ${esc(dayAgo(v, r.composedAt))}</span>`;
     return `<div class="letter${isOpen ? " open" : ""}" data-letter="${r.reportId}" role="button" tabindex="0"><div class="h"><b>${esc(name(v, r.author))}</b>${tags}</div>${body}</div>`;
   }).join("") || `<div class="c">None</div>`}</div></div>`;
@@ -372,7 +378,7 @@ function coinStatus(v: View): string {
   const net = `${netDailyMilli >= 0 ? "+" : "−"}${kCoins(Math.abs(netDailyMilli))} a day`;
   const low = n < LOW_COINS ? ` <span class="low">Low. <button data-use-levy>Raise a levy (about ${kCoins(content.scenario.player.levyMilli)})</button></span>` : "";
   return `<span class="stat${b.effectiveBand === "stale" ? " old" : ""}"><span class="emo" aria-hidden="true">🪙</span> Coins: ${kCoins(n)}</span>
-    <span class="stat-net">${net}</span> <em class="stat-age">(${esc(dayAgo(v, b.observedAt))})</em>${low}`;
+    <span class="stat-net ${netDailyMilli >= 0 ? "ok" : "bad"}">${net}</span> <em class="stat-age">(${esc(dayAgo(v, b.observedAt))})</em>${low}`;
 }
 
 /** Settings tab: what pauses the game, and the observer panel for H-01 observers. */
@@ -412,7 +418,7 @@ function render() {
   </div>
   <div class="status-row" aria-label="Realm status">${coinStatus(v)}</div>
   ${st.tab === "settings" ? settingsTab() : `
-  <div class="pause ${cls}">${batchBlock(v)}<span class="what">${esc(pauseText(v))}</span>${why ? `<span class="why-line">${esc(why)}</span>` : ""}
+  <div class="pause ${cls}">${batchBlock(v)}<span class="what">${tone(pauseText(v))}</span>${why ? `<span class="why-line">${esc(why)}</span>` : ""}
     ${st.paused ? choicesBlock(v) : ""}
     <span class="queue">${st.queue.map((a, i) => ({ a, i })).filter(({ a }) => !isShown(a)).map(({ a, i }) => `<span class="chip">${esc(actionText(v, a))} <button data-unq="${i}" aria-label="Remove">×</button></span>`).join("")}</span>
     ${st.error ? `<span class="err">${esc(st.error)}</span>` : ""}</div>

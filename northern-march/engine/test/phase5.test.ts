@@ -173,3 +173,18 @@ test("Anna always has a belief about her coins: from the start, on arrival at th
   const relayed = beliefsAbout(sim.viewOf("player"), "anna", "treasury.balance").some((b) => b.evidenceRefs.some((x) => x.source === "oren"));
   assert.ok(relayed || sim.log.some((e) => e.type === "Observed" && e.payload.observer === "anna" && e.payload.predicate === "treasury.balance"), "she hears the steward or looks herself");
 });
+
+test("letters say walls and men only when they changed, in natural words, naming the place once", async () => {
+  const { letterSentences } = await import("../src/presentation/phrasing.ts");
+  const sim = run({ seed: 3, policy: "passive" }, 80);
+  const v = sim.viewOf("player");
+  const bren = [...v.reports].filter((r) => r.author === "bren" && r.claims.some((c) => c.predicate === "character.location")).sort((a, b) => a.composedAt - b.composedAt);
+  assert.ok(bren.length >= 3, "several letters from Bren");
+  const texts = bren.map((r) => letterSentences(v, r).join(" "));
+  assert.match(texts[0], /^I am at Northwatch\. The walls are \w+ and the fort has \d+ men\./);
+  for (const t of texts) assert.ok(!/at Northwatch.*at Northwatch/.test(t) && !/There are \d+ men in the fort/.test(t), t);
+  for (let i = 1; i < bren.length; i++) {
+    const prev = bren[i - 1].claims.find((c) => c.predicate === "fortification.garrison")?.believedValue, cur = bren[i].claims.find((c) => c.predicate === "fortification.garrison")?.believedValue;
+    if (prev === cur) assert.ok(!/ men/.test(texts[i]), `unchanged men left out: ${texts[i]}`);
+  }
+});

@@ -115,8 +115,8 @@ function readReport(ctx: Ctx, reader: string, report: Report, eventId: number) {
   const low = trust < ctx.content.scenario.knowledge.lowTrustBelow;
   for (const c of report.claims) {
     const band = interpretBand(ctx, reader, c.predicate, low ? downgrade(c.reliabilityBand) : c.reliabilityBand);
-    // a letter states the troop count as it stands: the figure is fresh from the day it arrives
-    const observedAt = c.predicate === "fortification.garrison" || c.predicate === "character.troops" ? ctx.tick : c.observedAt;
+    // a letter states things as they stood when it was written: every figure in it is as fresh as that day
+    const observedAt = c.observedAt;
     learn(ctx, reader, { subject: c.subject, predicate: c.predicate, value: c.believedValue, observedAt, band },
       { kind: "report", eventId, source: report.author, reportId: report.id }, [eventId]);
   }
