@@ -128,7 +128,7 @@ export class Sim {
   }
 
   /** Interactive play: run until the player must decide (or until `limit`). Returns what she sees at that moment. */
-  next(limit: number): { paused: boolean; reason?: string; letterId?: number; ended?: boolean; view?: View } {
+  next(limit: number): { paused: boolean; reason?: string; letterId?: number; adviceId?: number; ended?: boolean; view?: View } {
     if (!this.pendingDecision) {
       const before = this.tick;
       this.runUntil(Math.max(limit, before));
@@ -137,8 +137,10 @@ export class Sim {
     if (this.pendingDecision) {
       // a report pause names the letter that arrived (the cause is its ReportDelivered event)
       const cause = this.pendingDecision.args.cause as number | null;
-      const del = cause === null ? undefined : this.log.find((e) => e.id === cause && e.type === "ReportDelivered");
-      return { paused: true, reason: this.pendingDecision.args.reason as string ?? "report", ...(del ? { letterId: del.payload.reportId as number } : {}), view: this.viewOf("player"), ended };
+      const ev = cause === null ? undefined : this.log.find((e) => e.id === cause);
+      const letterId = ev?.type === "ReportDelivered" ? (ev.payload.reportId as number) : undefined;
+      const adviceId = ev?.type === "RecommendationMade" ? (ev.payload.recommendation as { id: number }).id : undefined;
+      return { paused: true, reason: this.pendingDecision.args.reason as string ?? "report", ...(letterId !== undefined ? { letterId } : {}), ...(adviceId !== undefined ? { adviceId } : {}), view: this.viewOf("player"), ended };
     }
     return { paused: false, ended };
   }

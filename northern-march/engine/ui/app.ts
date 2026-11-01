@@ -4,7 +4,7 @@ import { deriveContent, type RawContent } from "../src/content.ts";
 import { createSim } from "../src/engine.ts";
 import { buildCourt, type AdviceLine } from "../src/presentation/court.ts";
 import { buildMap } from "../src/presentation/map.ts";
-import { letterSentences } from "../src/presentation/phrasing.ts";
+import { letterSentences, planWords, reasonWords } from "../src/presentation/phrasing.ts";
 import { validateDraft, type OrderDraft, type View } from "../src/view.ts";
 import { INTENTS, type Recommendation } from "../src/schemas.ts";
 import type { PlayerAction } from "../src/policies.ts";
@@ -21,7 +21,7 @@ const REASON_LABEL: Record<string, string> = { report: "Letters", advice: "Advic
 
 type Sim = ReturnType<typeof createSim>;
 const st = {
-  sim: null as unknown as Sim, seed: __H01__.seed, paused: null as null | string, over: false, letter: null as number | null,
+  sim: null as unknown as Sim, seed: __H01__.seed, paused: null as null | string, over: false, letter: null as number | null, advice: null as number | null,
   queue: [] as PlayerAction[], autoPause: new Set<string>(REASONS), selected: "northwatch",
   draft: { recipient: "", intent: "repair", objective: "northwatch", discretion: "bounded" } as { recipient: string; intent: string; objective: string; discretion: string },
   error: "", observer: location.hash === "#observer", answered: 0, openLetter: null as number | null,
@@ -41,7 +41,12 @@ function advance() {
   for (let guard = 0; guard < 5000; guard++) {
     const r = st.sim.next(END);
     if (r.ended || !r.paused) { st.paused = null; st.over = true; return render(); }
-    if (st.autoPause.has(r.reason!) || r.reason === "danger") { st.paused = r.reason!; st.letter = r.letterId ?? null; st.openLetter = st.letter; return render(); }
+    // advice to wait asks for no decision: the page passes it (the engine still records it; G-12 is unaffected)
+    if (r.reason === "advice" && r.view) {
+      const a = r.view.advice.find((x) => x.id === r.adviceId);
+      if (a && (JSON.parse(a.plan.id) as { kind: string }).kind === "advise_wait") { st.sim.answer([]); continue; }
+    }
+    if (st.autoPause.has(r.reason!) || r.reason === "danger") { st.paused = r.reason!; st.letter = r.letterId ?? null; st.advice = r.adviceId ?? null; st.openLetter = st.letter; return render(); }
     st.sim.answer([]);
   }
   render();
@@ -83,7 +88,10 @@ function pauseText(v: View): string {
     const l = v.reports.find((x) => x.reportId === st.letter);
     return l ? `Letter from ${name(v, l.author)}: ${letterSentences(v, l).join(" ")}` : "Letter";
   }
-  if (r === "advice") { const a = [...v.advice].sort((x, y) => y.computedAt - x.computedAt)[0]; return a ? `${name(v, a.author)} advises` : "Advice"; }
+  if (r === "advice") {
+    const a = v.advice.find((x) => x.id === st.advice);
+    return a ? `${name(v, a.author)} advises: ${planWords(v, a.plan.id)}` : "Advice";
+  }
   if (r === "danger") return "You are in danger";
   if (r === "arrival") { const p = v.self.position; return "at" in p ? `Arrived at ${name(v, p.at)}` : "Arrived"; }
   return REASON_LABEL[r ?? ""] ?? "";
@@ -196,16 +204,19 @@ function render() {
   const o = st.sim.objectiveStatus();
   const pos = v.self.position;
   const cls = st.over ? "ended" : st.paused === "danger" ? "danger" : "";
+  const cont = st.over ? "" : `<button class="primary" id="go">${st.queue.length ? "Send and continue" : "Continue"}</button>`;
+  const adv = st.paused === "advice" ? v.advice.find((x) => x.id === st.advice) : undefined;
+  const why = adv ? adv.reasons.filter((x) => x.weight !== 0).slice(0, 3).map((x) => `${x.weight > 0 ? "for" : "against"}: ${reasonWords(x.textKey)}`).join(" · ") : "";
+  const doIt = adv && adviceAction(v, adv) && st.paused ? `<button data-act='${esc(JSON.stringify(adviceAction(v, adv)))}'>Do it</button>` : "";
   document.getElementById("app")!.innerHTML = `
   <div class="top"><h1>Northern March</h1>
     <div class="meta"><span>Day ${Math.floor(v.now / DAY) + 1} / ${__H01__.days}</span><span>${"at" in pos ? esc(name(v, pos.at)) : "on the road to " + esc(name(v, pos.transit.dest))}</span></div>
     <div class="grow"></div>
     <div class="chips">Pause on ${REASONS.map((r) => `<label class="chip"><input type="checkbox" data-pause="${r}" ${st.autoPause.has(r) ? "checked" : ""} ${r === "danger" ? "disabled" : ""}>${REASON_LABEL[r]}</label>`).join("")}</div>
-    <button id="restart">Restart</button>
+    <button id="restart">Restart</button>${cont}
   </div>
-  <div class="pause ${cls}"><span class="what">${esc(pauseText(v))}</span>
+  <div class="pause ${cls}"><span class="what">${esc(pauseText(v))}</span>${why ? `<span class="why-line">${esc(why)}</span>` : ""}${doIt}
     <span class="queue">${st.queue.map((a, i) => `<span class="chip">${esc(actionText(v, a))} <button data-unq="${i}" aria-label="Remove">×</button></span>`).join("")}</span>
-    ${st.over ? "" : `<button class="primary" id="go">${st.queue.length ? "Send and continue" : "Continue"}</button>`}
     ${st.error ? `<span class="err">${esc(st.error)}</span>` : ""}</div>
   <div class="grid">${court(v)}${map(v)}${side(v)}</div>
   ${st.observer ? observer() : ""}`;
