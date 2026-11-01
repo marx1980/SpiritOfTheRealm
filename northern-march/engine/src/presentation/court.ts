@@ -5,6 +5,9 @@ import { dayOf, pct } from "./format.ts";
 import { ago, certainty, nameOf, planWords, raiderWords, reasonWords, sourceOf, wallWords } from "./phrasing.ts";
 
 export interface Evidence { text: string; age: string; source: string; certainty: string }
+/** Short area labels for the council list. */
+const SHORT_AREA: Record<string, string> = { Military: "Mil", Administration: "Adm", Works: "Con", Intelligence: "Int" };
+
 export interface AdviceLine { id: number; adviser: string; area: string; plan: string; supports: string[]; concerns: string[]; unsure: number; heard: string; fresh: boolean }
 export interface Issue { key: string; title: string; priority: number; evidence: Evidence[]; advice: AdviceLine[]; place?: string }
 export interface Court { day: number; at: string; issues: Issue[]; advice: AdviceLine[]; letters: { from: string; about: string; written: string; arrived: string; route: number }[] }
@@ -14,10 +17,10 @@ function adviceLines(v: View, target?: string): AdviceLine[] {
   const latest = new Map<string, number>();
   for (const r of v.advice) if (!latest.has(r.author) || v.advice.find((x) => x.id === latest.get(r.author))!.computedAt < r.computedAt) latest.set(r.author, r.id);
   return v.advice.filter((r) => (target ? r.plan.id.includes(`"${target}"`) : latest.get(r.author) === r.id)).map((r) => ({
-    id: r.id, adviser: nameOf(v, r.author), area: v.world.areas[r.author] ?? "", plan: planWords(v, r.plan.id),
+    id: r.id, adviser: nameOf(v, r.author), area: SHORT_AREA[v.world.areas[r.author] ?? ""] ?? v.world.areas[r.author] ?? "", plan: planWords(v, r.plan.id),
     supports: r.reasons.filter((x) => x.weight > 0).slice(0, 3).map((x) => reasonWords(x.textKey)),
     concerns: r.reasons.filter((x) => x.weight < 0).slice(0, 3).map((x) => reasonWords(x.textKey)),
-    unsure: r.uncertainties.length, heard: `heard ${ago(v.now, r.computedAt)}`, fresh: v.now - r.computedAt < 2 * 86400,
+    unsure: r.uncertainties.length, heard: ago(v.now, r.computedAt), fresh: v.now - r.computedAt < 2 * 86400,
   }));
 }
 

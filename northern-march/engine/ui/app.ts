@@ -100,9 +100,9 @@ function pauseText(v: View): string {
 function adviceRows(v: View, lines: AdviceLine[]) {
   return lines.map((l) => {
     const r = v.advice.find((x) => x.id === l.id), a = r ? adviceAction(v, r) : null;
-    return `<div class="row"><span class="who">${esc(l.adviser)}${l.area ? ` <small class="area">(${esc(l.area)})</small>` : ""}</span><span>${esc(l.plan)}</span>
+    return `<div class="row"><span class="who">${esc(l.adviser)}${l.area ? ` <small class="area">(${esc(l.area)})</small>` : ""}</span><span>${esc(l.plan)} <span class="${l.fresh ? "" : "old"}">(${esc(l.heard)})</span></span>
       ${a && st.paused ? `<button data-act='${esc(JSON.stringify(a))}'>Do it</button>` : ""}
-      <span class="why">${l.supports.length ? `Supports: ${esc(l.supports.join(", "))}. ` : ""}${l.concerns.length ? `Concerns: ${esc(l.concerns.join(", "))}. ` : ""}<span class="${l.fresh ? "" : "old"}">${esc(l.heard)}</span></span></div>`;
+      <span class="why">${l.supports.length ? `Supports: ${esc(l.supports.join(", "))}. ` : ""}${l.concerns.length ? `Concerns: ${esc(l.concerns.join(", "))}.` : ""}</span></div>`;
   }).join("");
 }
 
