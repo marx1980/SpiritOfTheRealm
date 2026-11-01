@@ -53,14 +53,15 @@ export function planWords(v: View, planId: string): string {
 }
 
 /** A letter's content as plain sentences, in words only: what the writer tells the reader, as the writer believes it. */
-export function letterSentences(v: View, r: { claims: { predicate: string; subject: { id: string }; believedValue: unknown }[] }): string[] {
+export function letterSentences(v: View, r: { author: string; claims: { predicate: string; subject: { id: string }; believedValue: unknown }[] }): string[] {
   const out: string[] = [];
   for (const c of r.claims) {
-    const s = nameOf(v, c.subject.id), val = c.believedValue;
+    const s = nameOf(v, c.subject.id), val = c.believedValue, me = c.subject.id === r.author;
     switch (c.predicate) {
       case "fortification.condition": out.push(`The walls at ${s} are ${wallWords(val as number)}.`); break;
       case "threat.intensity": out.push(`${cap(raiderWords(val as number))} at ${s}.`); break;
-      case "character.location": out.push(`${s} is at ${nameOf(v, String(val))}.`); break;
+      // people speak of themselves in the first person
+      case "character.location": out.push(me ? `I am at ${nameOf(v, String(val))}.` : `${s} is at ${nameOf(v, String(val))}.`); break;
       case "treasury.balance": out.push(`The treasury is ${(val as number) < 60000 ? "low" : "adequate"}.`); break;
       case "order.status": out.push(`Your order at ${s} is ${String(val)}.`); break;
       default: out.push(`${s}: ${c.predicate.replace(/\./g, " ")} ${String(val)}.`);
