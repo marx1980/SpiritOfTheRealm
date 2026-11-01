@@ -85,6 +85,7 @@ export const EVENT_TYPES: Readonly<Record<string, EventTypeDef>> = Object.freeze
   OrderAbandoned: T("orders", "political", 2),
   RepairStarted: T("orders", "military", 1),
   RepairCompleted: T("orders", "military", 1),
+  RepairResynced: T("orders", "military", 1),
   LevyRaised: T("orders", "economic", 2),
   // player and advice
   PlayerInput: T("player", "political", 3, true),

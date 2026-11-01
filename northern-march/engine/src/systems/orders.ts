@@ -12,6 +12,7 @@ import { DAY, chr, loc } from "./types.ts";
 import { best, learn, observe, observeTreasury, skill } from "./knowledge.ts";
 import { buildSituation, execute, isIdle, perceiverFromView, promote, traceOf } from "./agents.ts";
 import { travel } from "./movement.ts";
+import { menAt, resyncRepair, scheduleRepairEnd } from "./repairs.ts";
 
 const oref = (id: number) => ({ kind: "order" as const, id: String(id) });
 
@@ -109,19 +110,21 @@ function process(ctx: Ctx, orderId: number, receivedId: number) {
     if (ctx.s.treasuryMilli[sc.ruler] < costMilli) return finish(ctx, orderId, "abandoned", ex.id, "funds");
     // execution quality: a skilled engineer works faster and lands closer to the target
     const eng = skill(ctx, who, "engineering");
-    // captains' companies at the fort work alongside the garrison: the work goes faster in proportion to the men
+    // the job is measured as the garrison's days of work; captains' companies at the fort add men and speed it up
     const garrison = Math.max(1, ctx.s.fortifications[where].garrison);
-    const helpers = Object.entries(ctx.s.positions).filter(([, p]) => "at" in p && p.at === where).reduce((n, [id]) => n + (ctx.s.troops[id] ?? 0), 0);
     const base = Math.floor((sc.player.repairDays * DAY * (1500 - eng)) / 1000);
-    const durationTicks = Math.max(DAY, Math.floor((base * garrison) / (garrison + helpers)));
+    const work = base * garrison;
+    const men = Math.max(1, menAt(ctx, where));
+    const durationTicks = Math.ceil(work / men);
     const r = ctx.keyed(`orders:repair:${orderId}`);
     const spread = (1000 - eng) * 10;
     // a full repair can fall short of its target by at most 5 points, so the walls are never worse than "sound"
     const jitter = a.kind === "repair_works" ? r.int(-Math.min(spread, 5000), 0) : r.int(-spread, Math.floor(spread / 4));
     const restoredMilli = Math.max(0, to - cond + jitter);
-    const st = ctx.emit("RepairStarted", [ex.id], [loc(where), oref(orderId)], { location: where, payer: sc.ruler, costMilli, startedAt: ctx.tick, orderId, durationTicks, restoreToMilli: to });
+    const st = ctx.emit("RepairStarted", [ex.id], [loc(where), oref(orderId)], { location: where, payer: sc.ruler, costMilli, startedAt: ctx.tick, orderId, durationTicks, restoreToMilli: to,
+      work, men, restoredMilli, engineer: who });
     observeTreasury(ctx, st.id);
-    ctx.at(ctx.tick + durationTicks, "orders:completeRepair", { orderId, location: where, restoredMilli, startedEventId: st.id, engineer: who });
+    scheduleRepairEnd(ctx, where);
   } else if (a.kind === "levy" || a.kind === "half_levy") {
     const amount = a.kind === "levy" ? sc.player.levyMilli : Math.floor(sc.player.levyMilli / 2);
     const lv = ctx.emit("LevyRaised", [ex.id], [chr(sc.ruler), oref(orderId)], { payer: sc.ruler, amountMilli: amount, orderId });
@@ -206,9 +209,13 @@ export const orders: System = {
       const all = [...claims, ...(st ? [{ ...st, reliabilityBand: st.band }] : [])].map(({ band: _b, ...rest }: any) => rest);
       ctx.at(ctx.tick, "messenger:compose", { author: regent, recipient: ctx.content.scenario.ruler, claims: all, cause, purpose: `regency:ordered:${intent}:${objective.id}` });
     },
-    "orders:completeRepair": (ctx, { orderId, location, restoredMilli, startedEventId, engineer }) => {
-      const rc = ctx.emit("RepairCompleted", [startedEventId], [loc(location), oref(orderId)], { location, restoredMilli, orderId });
+    "orders:completeRepair": (ctx, { orderId, location, gen }) => {
+      const r = ctx.s.repairs[location];
+      // a repair whose pace has changed since this end was scheduled is ended by the newer schedule
+      if (!r || r.orderId !== orderId || r.gen !== gen) return;
+      const rc = ctx.emit("RepairCompleted", [r.startedEventId], [loc(location), oref(orderId)], { location, restoredMilli: r.restoredMilli, orderId });
       const exp = ctx.content.scenario.agents.experience;
+      const engineer = r.engineer;
       if (ctx.s.agents[engineer]) ctx.emit("ExperienceGained", [rc.id], [chr(engineer)], { agent: engineer, domain: "engineering", amount: exp.perTaskPermille, cap: exp.capPermille });
       finish(ctx, orderId, "completed", rc.id);
     },

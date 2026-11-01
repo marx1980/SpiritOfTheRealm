@@ -45,7 +45,7 @@ export interface WorldState {
   nextOrderId: number;
   ordersInForce: Record<string, number[]>;
   issued: Record<string, IssuedRecord[]>;
-  repairs: Record<string, { startedAt: number; orderId: number }>;
+  repairs: Record<string, { startedAt: number; orderId: number; work: number; done: number; lastT: number; men: number; gen: number; restoredMilli: number; startedEventId: number; engineer: string }>;
 }
 
 export const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
@@ -166,7 +166,8 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   OrderCompleted: endOrder("completed"),
   OrderSuperseded: endOrder("superseded"),
   OrderAbandoned: endOrder("abandoned"),
-  RepairStarted: (s, p, e) => { s.repairs[p.location] = { startedAt: p.startedAt, orderId: p.orderId }; s.treasuryMilli[p.payer] -= p.costMilli; s.lastRepairStart[p.location] = e.tick; },
+  RepairStarted: (s, p, e) => { s.repairs[p.location] = { startedAt: p.startedAt, orderId: p.orderId, work: p.work, done: 0, lastT: e.tick, men: p.men, gen: 0, restoredMilli: p.restoredMilli, startedEventId: e.id, engineer: p.engineer }; s.treasuryMilli[p.payer] -= p.costMilli; s.lastRepairStart[p.location] = e.tick; },
+  RepairResynced: (s, p, e) => { const r = s.repairs[p.location]; r.done = p.done; r.lastT = e.tick; r.men = p.men; r.gen = p.gen; },
   RepairCompleted: (s, p, e) => { const f = s.fortifications[p.location]; f.conditionMilli = clampCond(f.conditionMilli + p.restoredMilli); f.lastChangeEvent = e.id; delete s.repairs[p.location]; },
   LevyRaised: (s, p) => { s.treasuryMilli[p.payer] += p.amountMilli; },
   PlayerInput: noop,
