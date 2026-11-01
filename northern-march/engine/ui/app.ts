@@ -216,7 +216,8 @@ const areaShort = (a: string) => ({ Military: "MIL", Administration: "ADM", Cons
 /** Status words in green (good outcome), red (bad outcome) or amber (under way, at risk): the text is escaped first. */
 const tone = (t: string) => esc(t)
   .replace(/\b(completed|succeeded|won|held|repaired|sound|no raiders)\b/gi, '<span class="ok">$1</span>')
-  .replace(/\b(abandoned|failed|lost|breached|captured|refused|beaten|not enough coins|dead|fallen)\b/gi, '<span class="bad">$1</span>')
+  .replace(/\b(abandoned|failed|lost|breached|captured|refused|beaten|not enough coins|dead|fallen|a small band|a strong band|a large host)\b/gi, '<span class="bad">$1</span>')
+  .replace(/(?<!no )\b(raiders)\b/gi, '<span class="bad">$1</span>')
   .replace(/\b(damaged|in progress|under way|low|worn)\b/gi, '<span class="warn">$1</span>');
 const cap1 = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 function pauseText(v: View): string {
@@ -323,7 +324,7 @@ function side(v: View) {
       ${pAct === "advance" ? `<label for="o-mission">Mission</label><select id="o-mission">${[["defend", "Defend the fort"], ["scout", "Scout the raiders"], ["attack", "Attack the raiders"]].map(([k, l]) => opt(k, l, st.draft.mission)).join("")}</select>` : ""}
       ${isPlayer ? "" : `<label for="o-disc">Freedom</label><select id="o-disc">${[["strict", "Exactly as told"], ["bounded", "Some freedom"], ["delegated", "Full freedom"]].map(([k, l]) => opt(k, l, st.draft.discretion)).join("")}</select>`}
       ${costLine}
-      <span></span><button id="o-add" ${p && !problems.length ? "" : "disabled"}>Add</button>
+      <span></span><button id="o-add" ${p && !problems.length ? "" : "disabled"}>Make an order</button>
     </div>
     ${problems.length ? `<div class="err">${esc(problems.join("; "))}</div>` : ""}</div>`;
   const open = v.reports.find((r) => r.reportId === st.openLetter);
