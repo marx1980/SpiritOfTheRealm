@@ -188,3 +188,55 @@ test("letters say walls and men only when they changed, in natural words, naming
     if (prev === cur) assert.ok(!/ men/.test(texts[i]), `unchanged men left out: ${texts[i]}`);
   }
 });
+
+test("wear on walls is mended from the daily upkeep: with no storms or raids the walls climb to sound by themselves", () => {
+  const c = variant((r) => { r.scenario.threat.startPermillePerDay = 0; r.scenario.scripts = []; for (const l of r.locations) l.exposurePermille = 0; });
+  const sim = run({ seed: 4, content: c, policy: "passive" }, 90);
+  const w = sim.unsafeWorldForDebug();
+  assert.equal(w.fortifications["northwatch"].conditionMilli, 90000, "Northwatch (75k at the start) is back to sound");
+  assert.ok(!sim.log.some((e) => e.type === "OrderIssued"), "without any order from the ruler");
+});
+
+test("a scouting order always brings word: no raiders seen is news too", () => {
+  const c = variant((r) => {
+    r.scenario.threat.startPermillePerDay = 0;
+    r.scenario.scripts = [{ day: 1, kind: "order", from: "anna", to: "caron", intent: "investigate", objective: { kind: "location", id: "blackwood" } }];
+    r.scenario.messenger.lossPermillePerDay = 0; r.scenario.interception = [];
+  });
+  const sim = run({ seed: 2, content: c, policy: "passive" }, 40);
+  const v = sim.viewOf("player");
+  const letter = v.reports.find((r) => r.author === "caron" && r.claims.some((x) => x.predicate === "threat.intensity" && x.subject.id === "blackwood"));
+  assert.ok(letter, "Caron's letter says what he saw at Blackwood");
+  assert.equal(letter!.claims.find((x) => x.predicate === "threat.intensity")!.believedValue, 0);
+});
+
+test("once a captain is at the fort, advice is to attack the raiders, not to send him", async () => {
+  const { planWords } = await import("../src/presentation/phrasing.ts");
+  const c = variant((r) => {
+    r.scenario.scripts = [{ day: 2, kind: "threat", site: "blackwood", intensityPermille: 800, durationDays: 60 }];
+    r.scenario.messenger.lossPermillePerDay = 0; r.scenario.interception = [];
+  });
+  const sim = run({ seed: 3, content: c, policy: "passive" }, 5);
+  const v = sim.viewOf("player");
+  const plan = JSON.stringify({ kind: "advise_sortie", target: "blackwood" });
+  assert.match(planWords(v, plan), /^Send the captain to Northwatch to attack the raiders at Blackwood$/);
+});
+
+test("an attack order sends the captain to the fort that answers the site, he sorties, and the order is done with news of the site", () => {
+  const c = variant((r) => {
+    r.scenario.scripts = [{ day: 2, kind: "threat", site: "blackwood", intensityPermille: 700, durationDays: 80 }];
+    r.scenario.messenger.lossPermillePerDay = 0; r.scenario.interception = [];
+  });
+  const sim = createSim({ content: c, seed: 51, policy: "external", params: { dayEnd: true } });
+  let sent = false;
+  for (let g = 0; g < 4000; g++) {
+    const r = sim.next(40 * DAY);
+    if (!r.paused) break;
+    if (!sent && sim.tick >= 8 * DAY) { sent = true; sim.answer([{ action: "advance", target: "northwatch", mission: "attack", raid: "blackwood" }]); } else sim.answer([]);
+  }
+  const ours = sim.log.find((e) => e.type === "OrderIssued" && (e.payload.order as { intent: string }).intent === "attack");
+  assert.ok(ours, "an attack order was issued");
+  const launched = sim.log.find((e) => e.type === "SortieLaunched" && e.payload.commander === "caron" && e.tick > ours!.tick);
+  assert.ok(launched && launched.payload.from === "northwatch" && launched.payload.site === "blackwood", "Caron sorties from Northwatch against Blackwood");
+  assert.ok(sim.log.some((e) => e.type === "OrderCompleted" && e.payload.orderId === (ours!.payload.order as { id: number }).id), "the attack order is completed");
+});

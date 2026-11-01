@@ -1,11 +1,12 @@
 // A6: scripted player policies. A policy sees only ViewOf(player) and may draw from the "player" stream.
 import type { Rng } from "./rng.ts";
 import { beliefsAbout, type OrderDraft, type View } from "./view.ts";
+import { captainSentTo } from "./presentation/phrasing.ts";
 
 
 export type PolicyId = "passive" | "delegating" | "aggressive" | "random-valid" | "follow-best-adviser" | "follow-worst-adviser" | "external" | "replay" | `follow:${string}`;
-/** `mission` (for sending a captain): defend the fort (default), or patrol / attack the raiders at `raid`. */
-export interface PlayerAction { action: "repair" | "levy" | "advance" | "travel" | "order"; target?: string; order?: OrderDraft; decision?: number; followed?: string; mission?: "defend" | "patrol" | "attack"; raid?: string }
+/** `mission` (for sending a captain): defend the fort (default), or scout / attack the raiders at `raid`. */
+export interface PlayerAction { action: "repair" | "levy" | "advance" | "travel" | "order"; target?: string; order?: OrderDraft; decision?: number; followed?: string; mission?: "defend" | "scout" | "attack"; raid?: string }
 export type PolicyFn = (v: View, rng: () => Rng) => PlayerAction[];
 
 const DAY = 86400;
@@ -43,10 +44,14 @@ export function followAdviser(adviser: string): PolicyFn {
       const a = JSON.parse(rec.plan.id) as { kind: string; target?: string };
       const map: Record<string, PlayerAction["action"]> = { advise_repair: "repair", advise_send_captain: "advance", advise_levy: "levy" };
       let action = map[a.kind], target = a.target;
-      if (a.kind === "advise_sortie") { action = "advance"; target = fortOfSite(v, a.target!); } // send the captain to the fort nearest the raiders
+let mission: PlayerAction["mission"], raid: string | undefined;
+      if (a.kind === "advise_sortie") { // send the captain to the fort nearest the raiders; once he is there, attack
+        action = "advance"; target = fortOfSite(v, a.target!);
+        if (target && captainSentTo(v, target)) { mission = "attack"; raid = a.target; }
+      }
       if (!action || recently(v, action, action === "levy" ? null : target ?? null, 10)) continue;
       if (out.some((x) => x.action === action && x.target === target)) continue;
-      out.push({ action, ...(target ? { target } : {}), followed: adviser });
+      out.push({ action, ...(target ? { target } : {}), ...(mission ? { mission, raid } : {}), followed: adviser });
     }
     return out;
   };

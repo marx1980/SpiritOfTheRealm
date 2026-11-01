@@ -37,13 +37,21 @@ export function settledCheck(v: View): (r: { plan: { id: string } }) => boolean 
   const learnedSince = (place: string, t: number) => Object.values(v.beliefs).some((b) => b.subject.id === place && b.observedAt > t);
   // an order sent for a mission (investigate or advance on a site) also covers the fort nearest that site
   const covers = (o: { action: string; target: string }, want: { action: string; target: string }) =>
-    (o.action === want.action && o.target === want.target) || (want.action === "advance" && (o.action === "advance" || o.action === "investigate") && nearestFort(v, o.target) === want.target);
+    (o.action === want.action && o.target === want.target) || (want.action === "advance" && (o.action === "advance" || o.action === "investigate" || o.action === "attack") && nearestFort(v, o.target) === want.target);
   // an order to send a captain, once reported done, stands until she gives him another order: his own letters
   // are about where he is, not about where the company she sent is
   const captainStillThere = (o: { recipient: string; tick: number }, _place: string) => !v.self.orders.some((x) => x.recipient === o.recipient && x.tick > o.tick);
   const superseded = (r: { plan: { id: string } }) => {
     const want = orderOf(JSON.parse(r.plan.id) as { kind: string; target?: string });
     if (!want) return false;
+    const plan = JSON.parse(r.plan.id) as { kind: string; target?: string };
+    if (plan.kind === "advise_sortie" && plan.target) {
+      // attack advice: set aside while a captain is on his way to the fort or already sent against that site; a captain who has
+      // arrived (or was sent to scout) is exactly when the advice to attack makes sense
+      const site = plan.target;
+      if (inProgress.some((o) => o.target === site || covers(o, want))) return true;
+      return doneOrders.some((o) => o.target === site && (o.action === "advance" || o.action === "attack") && !learnedSince(site, o.doneAt));
+    }
     if (inProgress.some((o) => covers(o, want))) return true;
     const a = JSON.parse(r.plan.id) as { kind: string; target?: string };
     // an attack on raiders is set aside while any order is under way for that place or its fort

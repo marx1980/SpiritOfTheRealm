@@ -46,6 +46,12 @@ export function nearestFort(v: View, site: string): string | undefined {
   const d = (p: { pos: [number, number] }) => (p.pos[0] - s.pos[0]) ** 2 + (p.pos[1] - s.pos[1]) ** 2;
   return v.world.places.filter((p) => p.fortified).sort((a, b) => d(a) - d(b))[0]?.id;
 }
+/** A captain she sent to this fort (or on a mission from it) whose order is reported done, with no later order to him. */
+export function captainSentTo(v: View, fort: string): boolean {
+  const done = new Set(Object.values(v.beliefs).filter((b) => b.predicate === "order.status" && String(b.believedValue) === "completed").map((b) => b.subject.id));
+  return v.self.orders.some((o) => (o.action === "advance" || o.action === "investigate") && done.has(String(o.orderId)) && (o.target === fort || nearestFort(v, o.target) === fort)
+    && !v.self.orders.some((x) => x.recipient === o.recipient && x.tick > o.tick));
+}
 export function planWords(v: View, planId: string): string {
   const a = JSON.parse(planId) as { kind: string; target?: string };
   const t = a.target ? nameOf(v, a.target) : "";
@@ -54,7 +60,7 @@ export function planWords(v: View, planId: string): string {
     case "advise_repair": return `Repair ${t}`;
     case "advise_send_captain": return `Send the captain to ${t}`;
     // the captain is sent to the nearest fort, from which the attack is made (the wording matches what Do it does)
-    case "advise_sortie": { const f = nearestFort(v, a.target!); return f ? `Send the captain to ${nameOf(v, f)} to attack the raiders at ${t}` : `Attack the raiders at ${t}`; }
+    case "advise_sortie": { const f = nearestFort(v, a.target!); return f && !captainSentTo(v, f) ? `Send the captain to ${nameOf(v, f)} to attack the raiders at ${t}` : `Attack the raiders at ${t}`; }
     case "advise_levy": return "Raise a levy";
     default: return a.kind.replace(/_/g, " ") + (t ? ` ${t}` : "");
   }
@@ -101,7 +107,7 @@ function letterParts(v: View, r: LetterLike): { rank: number; text: string }[] {
       case "order.status": {
         // the subject is the order's number: say what the order was, not its number
         const o = v.self.orders.find((x) => String(x.orderId) === c.subject.id);
-        const verb: Record<string, string> = { repair: "repair", advance: "send the captain to", levy: "raise a levy", travel: "travel to" };
+        const verb: Record<string, string> = { repair: "repair", advance: "send the captain to", levy: "raise a levy", travel: "travel to", investigate: "scout", attack: "attack the raiders at" };
         out.push({ rank: 0, text: o ? `Your order to ${verb[o.action] ?? o.action} ${o.action === "levy" ? "" : nameOf(v, o.target) + " "}is ${String(val)}.`.replace("  ", " ") : `Your order is ${String(val)}.` });
         break;
       }

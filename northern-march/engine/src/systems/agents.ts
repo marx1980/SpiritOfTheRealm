@@ -447,6 +447,7 @@ export const agents: System = {
           { kind: "observation", eventId: res.id, source: who }, [res.id]);
         else observe(ctx, who, loc(site), "threat.intensity", res.id);
       }
+      ctx.at(ctx.tick, "orders:sortieDone", { commander, site, resolvedEventId: res.id });
     },
     // Was a request answered? The asker sees it for themselves: work started on the wall, or the help arrived.
     "agents:assess": (ctx, { agent, of, fort, kind, sentAt, decisionEventId }) => {

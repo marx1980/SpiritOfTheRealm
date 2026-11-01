@@ -4,13 +4,13 @@
 import { validateOrder, type IntentKind, type Reason, type StructuredOrder } from "../schemas.ts";
 import type { SubjectRef } from "../events.ts";
 import { buildView } from "../view.ts";
-import { actionKey, type ActionRef, type Perceiver, type Situation } from "../agents/model.ts";
+import { act, actionKey, type ActionRef, type Perceiver, type Situation } from "../agents/model.ts";
 import { adaptations, decideObedience, interpret, margins, obeyForms } from "../agents/obedience.ts";
 import { plan } from "../agents/planner.ts";
 import type { Ctx, System } from "./types.ts";
 import { DAY, chr, loc } from "./types.ts";
 import { best, learn, observe, observeTreasury, skill } from "./knowledge.ts";
-import { buildSituation, execute, isIdle, perceiverFromView, promote, traceOf } from "./agents.ts";
+import { buildSituation, defenceAt, execute, isIdle, perceiverFromView, promote, traceOf } from "./agents.ts";
 import { travel } from "./movement.ts";
 import { menAt, resyncRepair, scheduleRepairEnd } from "./repairs.ts";
 
@@ -65,6 +65,29 @@ export function orderChoice(sit: Situation, per: Perceiver, o: StructuredOrder, 
   return { res, chosen, d, m };
 }
 
+/** The fort that answers a site: the nearest fortified place on the map. */
+function fortAnswering(ctx: Ctx, site: string): string | undefined {
+  const s = ctx.content.byId.location.get(site);
+  if (!s) return undefined;
+  const d = (p: { pos: [number, number] }) => (p.pos[0] - s.pos[0]) ** 2 + (p.pos[1] - s.pos[1]) ** 2;
+  return ctx.content.locations.filter((l) => l.fortification).sort((a, b) => d(a) - d(b) || (a.id < b.id ? -1 : 1))[0]?.id;
+}
+/** An order to attack raiders: the captain goes to the fort that answers the site (if he is not there) and sorties from it with the men there. */
+function startAttack(ctx: Ctx, orderId: number, receivedId: number) {
+  const o = ctx.s.orders[String(orderId)].order, who = o.recipient, site = o.objective.id, fort = fortAnswering(ctx, site);
+  const subj = [chr(who), oref(orderId)];
+  const ex = ctx.emit("ExecutionStarted", [receivedId], subj, { orderId, action: act("sortie", site) });
+  const pos = ctx.s.positions[who];
+  if (!fort || !("at" in pos)) return finish(ctx, orderId, "abandoned", ex.id, "cannotAttack");
+  if (pos.at === fort) return launchAttack(ctx, orderId, ex.id);
+  travel(ctx, who, fort, "army", false, ex.id);
+}
+function launchAttack(ctx: Ctx, orderId: number, cause: number) {
+  const o = ctx.s.orders[String(orderId)].order, who = o.recipient, pos = ctx.s.positions[who];
+  if (!("at" in pos) || (defenceAt(ctx.s, pos.at) ?? 0) <= 0) return finish(ctx, orderId, "abandoned", cause, "noMen");
+  execute(ctx, who, act("sortie", o.objective.id), cause);
+}
+
 function process(ctx: Ctx, orderId: number, receivedId: number) {
   const o = ctx.s.orders[String(orderId)].order;
   const who = o.recipient;
@@ -73,6 +96,7 @@ function process(ctx: Ctx, orderId: number, receivedId: number) {
     if ((ctx.s.ordersInForce[who] ?? []).includes(old))
       ctx.emit("OrderSuperseded", [receivedId], [chr(who), oref(old)], { orderId: old, by: orderId, recipient: who });
   if (!ctx.s.agents[who]) return; // no agent behind the recipient (e.g. the ruler herself): the order simply stays in force
+  if (o.intent === "attack") return startAttack(ctx, orderId, receivedId);
 
   const view = buildView(ctx.s, ctx.content, who, ctx.tick), per = perceiverFromView(view);
   const sit = buildSituation(ctx.s, ctx.content, who, ctx.tick, "obey", view, o);
@@ -173,7 +197,7 @@ function report(ctx: Ctx, o: StructuredOrder, outcome: string, cause: number) {
   if (o.intent === "repair" && "at" in p && p.at === o.objective.id) observe(ctx, o.recipient, loc(o.objective.id), "fortification.condition", cause);
   const claims = [best(ctx, o.recipient, String(o.id), "order.status"),
     o.intent === "repair" ? best(ctx, o.recipient, o.objective.id, "fortification.condition") : null,
-    o.intent === "investigate" ? best(ctx, o.recipient, o.objective.id, "threat.intensity") ?? best(ctx, o.recipient, o.objective.id, "fortification.condition") : null]
+    (o.intent === "investigate" || o.intent === "attack") ? best(ctx, o.recipient, o.objective.id, "threat.intensity") ?? best(ctx, o.recipient, o.objective.id, "fortification.condition") : null]
     .filter((x): x is NonNullable<typeof x> => !!x).map(({ band, ...rest }) => ({ ...rest, reliabilityBand: band as "certain" }));
   if (o.recipient !== o.issuer) ctx.at(ctx.tick, "messenger:compose", { author: o.recipient, recipient: o.issuer, claims, cause });
 }
@@ -222,6 +246,7 @@ export const orders: System = {
     "orders:arrived": (ctx, { who, at, arrivedEventId }) => {
       for (const id of [...(ctx.s.ordersInForce[who] ?? [])]) {
         const o = ctx.s.orders[String(id)];
+        if (o.status === "executing" && o.order.intent === "attack" && fortAnswering(ctx, o.order.objective.id) === at) { launchAttack(ctx, id, arrivedEventId); continue; }
         if (o.status !== "executing" || o.order.objective.id !== at) continue;
         if (o.order.intent === "advance") finish(ctx, id, "completed", arrivedEventId);
         else if (o.order.intent === "investigate") scouted(ctx, who, id, arrivedEventId);
@@ -235,6 +260,13 @@ export const orders: System = {
         const parent = sub?.parentOrderId ? ctx.s.orders[String(sub.parentOrderId)] : undefined;
         if (parent && parent.order.recipient === recipient && parent.status === "executing")
           finish(ctx, parent.order.id, c.believedValue === "completed" ? "completed" : "abandoned", deliveredEventId);
+      }
+    },
+    // the sortie ordered against a site has been fought: the order is done, and the report says what he saw
+    "orders:sortieDone": (ctx, { commander, site, resolvedEventId }) => {
+      for (const id of [...(ctx.s.ordersInForce[commander] ?? [])]) {
+        const o = ctx.s.orders[String(id)];
+        if (o.status === "executing" && o.order.intent === "attack" && o.order.objective.id === site) finish(ctx, id, "completed", resolvedEventId);
       }
     },
     "orders:detachmentArrived": (ctx, { commander, to, arrivedEventId }) => {

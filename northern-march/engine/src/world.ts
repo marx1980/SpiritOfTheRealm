@@ -201,7 +201,7 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
     for (const [who, n] of Object.entries(p.troopsLost as Record<string, number>)) s.troops[who] -= n;
   },
   DetachmentSent: (s, p) => { s.troops[p.commander] -= p.men; },
-  DetachmentArrived: (s, p, e) => { s.fortifications[p.to].garrison += p.men; (s.lastArrival[p.to] ??= {})[p.commander] = e.tick; },
+  DetachmentArrived: (s, p, e) => { if (s.fortifications[p.to]) s.fortifications[p.to].garrison += p.men; (s.lastArrival[p.to] ??= {})[p.commander] = e.tick; },
   ResponseAssessed: (s, p) => { s.agents[p.agent].answerRate[p.of] = p.rate; },
   CharacterPromoted: (s, p, e) => {
     s.tiers[p.who] = p.to;

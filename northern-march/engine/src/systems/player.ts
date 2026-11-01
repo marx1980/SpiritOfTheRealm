@@ -44,8 +44,8 @@ export function makePlayer(decide: (ctx: Ctx, cause: number | null, reason: stri
           const to = recipientFor(ctx, a);
           if (!to) continue;
           if (a.action === "advance" && a.mission && a.mission !== "defend" && a.raid) {
-            // patrol: go and look at the raiders; attack: advance on them
-            issue(ctx, ruler, to, a.mission === "patrol" ? "investigate" : "advance", loc(a.raid), input.id);
+            // scout: go and look at the raiders; attack: advance on them
+            issue(ctx, ruler, to, a.mission === "scout" ? "investigate" : "attack", loc(a.raid), input.id);
             continue;
           }
           issue(ctx, ruler, to, a.action, a.action === "levy" ? chr(ruler) : loc(a.target!), input.id);

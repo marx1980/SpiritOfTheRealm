@@ -50,7 +50,7 @@ export interface Scenario {
   knowledge: { beliefCaps: Record<(typeof TIERS)[number], number>; bands: { certain: number; probable: number; uncertain: number };
     stormPenaltyPermille: number; maxErrorMilliPerMissingPermille: number; lowTrustBelow: number };
   economy: { holdings: { location: string; dailyIncomeMilli: number; jitterMilli: number }[]; dailyUpkeepMilli: number };
-  weather: { decayMilliPerDay: number; stormDamageMilli: [number, number] };
+  weather: { decayMilliPerDay: number; stormDamageMilli: [number, number]; /** business as usual: castellans repair wear from the daily upkeep, up to maintainToMilli */ maintenanceMilliPerDay?: number; maintainToMilli?: number };
   threat: { sites: { site: string; target: string }[]; startPermillePerDay: number; intensityPermille: [number, number];
     durationDays: [number, number]; raidDamageMilliAtFullIntensity: number };
   messenger: { reportEveryDays: number; alarmBelowMilli: number; legJitterPermille: [number, number]; lossPermillePerDay: number;

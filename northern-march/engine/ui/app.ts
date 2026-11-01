@@ -4,7 +4,7 @@ import { deriveContent, type RawContent } from "../src/content.ts";
 import { createSim } from "../src/engine.ts";
 import { adviceSettled, buildCourt, type AdviceLine } from "../src/presentation/court.ts";
 import { buildMap } from "../src/presentation/map.ts";
-import { certainty, letterSentences, letterGist, planWords, reasonWords, sourceOf } from "../src/presentation/phrasing.ts";
+import { captainSentTo, certainty, letterSentences, letterGist, planWords, reasonWords, sourceOf } from "../src/presentation/phrasing.ts";
 import { beliefsAbout, validateDraft, type OrderDraft, type View } from "../src/view.ts";
 import { INTENTS, type Recommendation } from "../src/schemas.ts";
 import type { PlayerAction } from "../src/policies.ts";
@@ -62,6 +62,19 @@ function answer(actions: PlayerAction[]) {
   st.log.push(actions); saveLog();
 }
 
+/** What a decision point means to the page: pass it silently, gather its letter into the day's batch, or stop and show it. */
+function triage(r: ReturnType<Sim["next"]>, batch: number[], batchDay: number): "pass" | "gather" | "show" {
+  if (r.reason === "advice" && r.view) {
+    const a = r.view.advice.find((x) => x.id === r.adviceId);
+    if (a && (JSON.parse(a.plan.id) as { kind: string }).kind === "advise_wait") return "pass"; // advice to wait asks for no decision
+    if (r.adviceId !== undefined && adviceSettled(r.view, r.adviceId)) return "pass"; // advice already carried out is not put again
+  }
+  if (r.reason === "report" && r.letterId !== undefined && st.autoPause.has("report")) {
+    const day = Math.floor(st.sim.viewOf("player").now / DAY);
+    if (batchDay === -1 || batchDay === day) return "gather";
+  }
+  return batch.length || st.autoPause.has(r.reason!) || r.reason === "danger" ? "show" : "pass";
+}
 function start(seed: number, restore = true) {
   st.sim = createSim({ content, seed, policy: "external", params: { dayEnd: true } });
   st.seed = seed; st.queue = []; st.error = ""; st.over = false; st.log = [];
@@ -70,12 +83,13 @@ function start(seed: number, restore = true) {
   for (let guard = 0; guard < 5000; guard++) { const r = st.sim.next(PRE); if (!r.paused) break; st.sim.answer([]); }
   if (!restore) clearLog(seed);
   const saved = restore ? loadLog(seed) : [];
-  let tail: number[] = []; // letters passed since the last day-end decision: they belong to the pause that was showing
+  let tail: number[] = [], tailDay = -1; // letters gathered for a pause that was still showing when the page was left
   try {
     for (const acts of saved) {
       const r = st.sim.next(END);
       if (!r.paused) break;
-      if (r.reason === "dayend") tail = []; else if (r.reason === "report" && r.letterId !== undefined) tail.push(r.letterId);
+      const t = triage(r, tail, tailDay);
+      if (t === "gather") { tail.push(r.letterId!); tailDay = Math.floor(st.sim.viewOf("player").now / DAY); } else if (t === "show") { tail = []; tailDay = -1; }
       st.sim.answer(acts); st.log.push(acts);
     }
   } catch {
@@ -93,23 +107,14 @@ function advance(resumed: number[] = []) {
   for (let guard = 0; guard < 5000; guard++) {
     const r = st.sim.next(END);
     if (r.ended || !r.paused) { st.paused = null; st.over = true; st.batch = []; return render(); }
-    // advice to wait asks for no decision: the page passes it (the engine still records it; G-12 is unaffected)
-    if (r.reason === "advice" && r.view) {
-      const a = r.view.advice.find((x) => x.id === r.adviceId);
-      if (a && (JSON.parse(a.plan.id) as { kind: string }).kind === "advise_wait") { answer([]); continue; }
-      // advice already carried out (or under way) is not put to the ruler again
-      if (r.adviceId !== undefined && adviceSettled(r.view, r.adviceId)) { answer([]); continue; }
-    }
-    if (r.reason === "report" && r.letterId !== undefined && st.autoPause.has("report")) {
-      const day = Math.floor(st.sim.viewOf("player").now / DAY);
-      if (batchDay === -1 || batchDay === day) { batchDay = day; batch.push(r.letterId); answer([]); continue; }
-    }
-    if (batch.length || st.autoPause.has(r.reason!) || r.reason === "danger") {
+    const t = triage(r, batch, batchDay);
+    if (t === "pass") { answer([]); continue; }
+    if (t === "gather") { batchDay = Math.floor(st.sim.viewOf("player").now / DAY); batch.push(r.letterId!); answer([]); continue; }
+    {
       st.paused = batch.length && !st.autoPause.has(r.reason!) && r.reason !== "danger" ? "report" : r.reason!;
       st.letter = r.letterId ?? batch[batch.length - 1] ?? null; st.advice = r.adviceId ?? null; st.batch = batch; st.openLetter = st.letter;
       return render();
     }
-    answer([]);
   }
   render();
 }
@@ -130,11 +135,11 @@ function adviceAction(v: View, r: Recommendation): PlayerAction | null {
   const a = JSON.parse(r.plan.id) as { kind: string; target?: string };
   if (a.kind === "advise_repair") return { action: "repair", target: a.target, followed: r.author };
   if (a.kind === "advise_send_captain") return { action: "advance", target: a.target, followed: r.author };
-  if (a.kind === "advise_sortie") { const f = fortNear(v, a.target!); return f ? { action: "advance", target: f, followed: r.author } : null; }
+  if (a.kind === "advise_sortie") { const f = fortNear(v, a.target!); return !f ? null : captainSentTo(v, f) ? { action: "advance", target: f, mission: "attack", raid: a.target, followed: r.author } : { action: "advance", target: f, followed: r.author }; }
   if (a.kind === "advise_levy") return { action: "levy", followed: r.author };
   return null;
 }
-/** The raiders' site a captain would patrol or attack from this fort: the strongest believed raid that fort answers. */
+/** The raiders' site a captain would scout or attack from this fort: the strongest believed raid that fort answers. */
 function raidNear(v: View, fort: string): string | undefined {
   const raids = v.world.places.filter((p) => fortNear(v, p.id) === fort)
     .map((p) => ({ id: p.id, b: beliefsAbout(v, p.id, "threat.intensity")[0] })).filter((x) => x.b && (x.b.believedValue as number) > 0);
@@ -143,7 +148,8 @@ function raidNear(v: View, fort: string): string | undefined {
 const actionText = (v: View, a: PlayerAction) =>
   a.action === "order" ? `Order ${name(v, a.order!.recipient)}: ${a.order!.intent} ${name(v, a.order!.objective.id)}`
   : a.action === "levy" ? "Raise a levy" : a.action === "travel" ? `Travel to ${name(v, a.target!)}`
-  : a.action === "repair" ? `Repair ${name(v, a.target!)}` : `Send the captain to ${name(v, a.target!)}`;
+  : a.action === "repair" ? `Repair ${name(v, a.target!)}`
+  : a.mission === "attack" && a.raid ? `Attack the raiders at ${name(v, a.raid)}` : a.mission === "scout" && a.raid ? `Scout the raiders at ${name(v, a.raid)}` : `Send the captain to ${name(v, a.target!)}`;
 const queue = (a: PlayerAction) => {
   if (!st.paused) return;
   // the same action from two advisers (e.g. raiders and captain both mean "send the captain to Northwatch") is queued once
@@ -177,11 +183,11 @@ function choices(v: View): { action: PlayerAction; text: string; by: string[] }[
 function attackersOf(v: View, raid: string): string[] {
   return latestAdvice(v).filter((r) => { const a = JSON.parse(r.plan.id) as { kind: string; target?: string }; return a.kind === "advise_sortie" && a.target === raid; }).map((r) => name(v, r.author));
 }
-/** Once a send is checked: defend the fort (default), or attack or patrol the raiders it answers. */
+/** Once a send is checked: defend the fort (default), or attack or scout the raiders it answers. */
 function missionBlock(v: View, fort: string, q: PlayerAction): string {
   const raid = raidNear(v, fort);
   const opts: { mission: string; label: string; by: string[] }[] = [{ mission: "defend", label: `Defend ${name(v, fort)}`, by: [] }];
-  if (raid) opts.push({ mission: "attack", label: `Attack the raiders at ${name(v, raid)}`, by: attackersOf(v, raid) }, { mission: "patrol", label: `Patrol the raiders at ${name(v, raid)}`, by: [] });
+  if (raid) opts.push({ mission: "attack", label: `Attack the raiders at ${name(v, raid)}`, by: attackersOf(v, raid) }, { mission: "scout", label: `Scout the raiders at ${name(v, raid)}`, by: [] });
   const cur = q.mission ?? "defend";
   return `<div class="mission">${opts.map((o) => `<button data-mission='${esc(JSON.stringify({ fort, mission: o.mission, raid }))}' class="${cur === o.mission ? "primary" : ""}" aria-pressed="${cur === o.mission}">${esc(o.label)}${o.by.length ? ` (recommended by ${esc(listNames(o.by))})` : ""}</button>`).join("")}</div>`;
 }
@@ -243,7 +249,7 @@ function adviceRows(v: View, lines: AdviceLine[]) {
 function orderDetails(v: View, id: string): string {
   const o = v.self.orders.find((x) => String(x.orderId) === id);
   if (!o) return "";
-  const verb: Record<string, string> = { repair: "Repair", advance: "Send to", levy: "Raise a levy", travel: "Travel to", investigate: "Investigate" };
+  const verb: Record<string, string> = { repair: "Repair", advance: "Send to", levy: "Raise a levy", travel: "Travel to", investigate: "Scout the raiders at", attack: "Attack the raiders at" };
   const hist = beliefsAbout(v, id, "order.status").sort((a, b) => b.observedAt - a.observedAt)
     .map((b) => `<div>${tone(String(b.believedValue))} · ${esc(sourceOf(v, b))} · ${esc(dayAgo(v, b.observedAt))} · ${esc(certainty[b.effectiveBand])}</div>`).filter((x, i, a) => a.indexOf(x) === i).join("");
   return `<div class="ev order-detail"><div><span class="k">To:</span> ${esc(name(v, o.recipient))}</div><div><span class="k">Order:</span> ${esc(verb[o.action] ?? o.action)}${o.action === "levy" ? "" : " " + esc(name(v, o.target))}</div>
@@ -272,7 +278,8 @@ function map(v: View) {
     const sub = p.fortified ? (p.wall ? p.wall.words : "unknown") : p.raiders && p.raiders.words !== "no raiders" ? p.raiders.words : "";
     const troopParts = p.troops ? [...(p.troops.fort ? [`${p.troops.fort.exact ? "" : "~"}${p.troops.fort.count} in fort`] : []), ...p.troops.captains.map((c) => `${esc(c.name)} ${c.exact ? "" : "~"}${c.count}`)] : [];
     const troops = troopParts.length ? `<text class="sub" x="${p.x + 18}" y="${p.y + 34}">${troopParts.join(" · ")}</text>` : "";
-    return `${you}${shape}${raid}<text x="${p.x + 18}" y="${p.y + 5}">${esc(p.name)}</text>${sub ? `<text class="sub" x="${p.x + 18}" y="${p.y + 20}">${esc(sub)}</text>` : ""}${troops}`;
+    const hit = `<circle class="hit" cx="${p.x}" cy="${p.y}" r="26" data-place="${p.id}"/>`;
+    return `${you}${shape}${raid}${hit}<text x="${p.x + 18}" y="${p.y + 5}">${esc(p.name)}</text>${sub ? `<text class="sub" x="${p.x + 18}" y="${p.y + 20}">${esc(sub)}</text>` : ""}${troops}`;
   }).join("");
   const s = byId.get(st.selected);
   const line = (k: string, x?: { words: string; source: string; age: string; certainty: string }) => x ? `<div><span class="k">${k}:</span> ${tone(cap1(x.words))} <em class="stat-age">(${esc(x.age)}, ${esc(x.source)}, ${esc(x.certainty)})</em></div>` : "";
@@ -283,7 +290,8 @@ function map(v: View) {
     ...s.troops.captains.map((c) => ({ t: `${c.exact ? "" : "~"}${c.count} (${esc(c.name)})`, day: c.day })),
   ] : [];
   const troopLine = troopParts.length ? `<div><span class="k">Troops:</span> ${troopParts.map((x) => x.t).join(" + ")} <em class="stat-age">(day ${dayNo(Math.min(...troopParts.map((x) => x.day)))})</em></div>` : "";
-  const detail = hasNews ? `<div class="card detail"><h2>${esc(s.name)}</h2>${line("Walls", s.wall)}${line("Raiders", s.raiders)}${troopLine}
+  const kind = s ? v.world.places.find((x) => x.id === s.id)?.kind ?? "" : "";
+  const detail = s ? `<div class="card detail"><h2>${esc(s.name)}${kind ? ` <small>(${esc(kind)})</small>` : ""}</h2>${hasNews ? "" : `<div class="k">No news</div>`}${line("Walls", s.wall)}${line("Raiders", s.raiders)}${troopLine}
     ${s.people.length ? `<div><span class="k">People</span> ${s.people.map((x) => `${esc(x.name)} (${esc(x.age)}, ${esc(x.certainty)})`).join(", ")}</div>` : ""}
     </div>` : "";
   return `<div class="col"><div class="card map"><svg viewBox="40 30 980 920" role="img" aria-label="Map of the realm">
@@ -321,7 +329,7 @@ function side(v: View) {
       <label for="o-to">To</label><select id="o-to">${known.map((k) => opt(k, name(v, k), st.draft.recipient)).join("")}</select>
       <label for="o-action">Action</label><select id="o-action">${ACTIONS.map(([k, l]) => opt(k, l, st.draft.action)).join("")}</select>
       <label for="o-obj">Where</label><select id="o-obj">${places.map((x) => opt(x.id, x.name, st.draft.objective)).join("")}${known.map((k) => opt("@" + k, name(v, k), st.draft.objective)).join("")}</select>
-      ${pAct === "advance" ? `<label for="o-mission">Mission</label><select id="o-mission">${[["defend", "Defend the fort"], ["patrol", "Patrol the raiders"], ["attack", "Attack the raiders"]].map(([k, l]) => opt(k, l, st.draft.mission)).join("")}</select>` : ""}
+      ${pAct === "advance" ? `<label for="o-mission">Mission</label><select id="o-mission">${[["defend", "Defend the fort"], ["scout", "Scout the raiders"], ["attack", "Attack the raiders"]].map(([k, l]) => opt(k, l, st.draft.mission)).join("")}</select>` : ""}
       ${isPlayer ? "" : `<label for="o-disc">Freedom</label><select id="o-disc">${[["strict", "Exactly as told"], ["bounded", "Some freedom"], ["delegated", "Full freedom"]].map(([k, l]) => opt(k, l, st.draft.discretion)).join("")}</select>`}
       ${costLine}
       <span></span><button id="o-add" ${p && !problems.length ? "" : "disabled"}>Add</button>
@@ -456,7 +464,7 @@ document.addEventListener("click", (e) => {
     return queue(a);
   }
   if (el.dataset.mission) {
-    const m = JSON.parse(el.dataset.mission) as { fort: string; mission: "defend" | "attack" | "patrol"; raid?: string };
+    const m = JSON.parse(el.dataset.mission) as { fort: string; mission: "defend" | "attack" | "scout"; raid?: string };
     const a: PlayerAction = { action: "advance", target: m.fort, ...(m.mission !== "defend" ? { mission: m.mission, raid: m.raid } : {}) };
     const i = st.queue.findIndex((q) => matches(q, a));
     if (i >= 0) st.queue[i] = a; else queue(a);
@@ -477,7 +485,7 @@ document.addEventListener("click", (e) => {
     if (st.draft.action.startsWith("p:")) {
       if (pa === "levy") return queue({ action: "levy" });
       if (pa === "travel") return queue({ action: "travel", target: st.draft.objective });
-      if (pa === "advance" && st.draft.mission !== "defend") { const raid = raidNear(st.sim.viewOf("player"), st.draft.objective); return queue({ action: "advance", target: st.draft.objective, mission: st.draft.mission as "patrol" | "attack", raid }); }
+      if (pa === "advance" && st.draft.mission !== "defend") { const raid = raidNear(st.sim.viewOf("player"), st.draft.objective); return queue({ action: "advance", target: st.draft.objective, mission: st.draft.mission as "scout" | "attack", raid }); }
       return queue({ action: pa as "repair" | "advance", target: st.draft.objective });
     }
     const d = toDraft(); if (d) queue({ action: "order", order: d }); return;

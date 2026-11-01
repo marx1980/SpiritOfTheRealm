@@ -67,7 +67,9 @@
     "dailyUpkeepMilli": 21000
   },
   "weather": {
-    "decayMilliPerDay": 250,
+    "decayMilliPerDay": 0,
+    "maintenanceMilliPerDay": 400,
+    "maintainToMilli": 90000,
     "stormDamageMilli": [
       5000,
       25000
