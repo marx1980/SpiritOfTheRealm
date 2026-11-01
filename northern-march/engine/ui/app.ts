@@ -131,9 +131,10 @@ function map(v: View) {
   }).join("");
   const s = byId.get(st.selected);
   const line = (k: string, x?: { words: string; source: string; age: string; certainty: string }) => x ? `<div><span class="k">${k}</span> ${esc(x.words)} · ${esc(x.source)} · ${esc(x.age)} · ${esc(x.certainty)}</div>` : "";
-  const detail = s ? `<div class="card detail"><h2>${esc(s.name)}</h2>${line("Walls", s.wall)}${line("Raiders", s.raiders)}
+  const hasNews = !!s && (!!s.wall || !!s.raiders || s.people.length > 0);
+  const detail = hasNews ? `<div class="card detail"><h2>${esc(s.name)}</h2>${line("Walls", s.wall)}${line("Raiders", s.raiders)}
     ${s.people.length ? `<div><span class="k">People</span> ${s.people.map((x) => `${esc(x.name)} (${esc(x.age)}, ${esc(x.certainty)})`).join(", ")}</div>` : ""}
-    ${!s.wall && !s.raiders && !s.people.length ? `<div class="k">No news</div>` : ""}</div>` : "";
+    </div>` : "";
   return `<div class="col"><div class="card map"><svg viewBox="40 30 980 920" role="img" aria-label="Map of the realm">
     <rect x="40" y="30" width="980" height="920" fill="var(--land)"/>${routes}${places}</svg></div>${detail}</div>`;
 }
@@ -157,23 +158,19 @@ function side(v: View) {
         <button data-act='${esc(JSON.stringify({ action: "levy" }))}' ${p ? "" : "disabled"}>Levy</button></div>
       <label for="o-to">To</label><select id="o-to">${known.map((k) => opt(k, name(v, k), st.draft.recipient)).join("")}</select>
       <label for="o-intent">Intent</label><select id="o-intent">${INTENTS.map((k) => opt(k, k, st.draft.intent)).join("")}</select>
-      <label for="o-disc">Freedom</label><select id="o-disc">${["strict", "bounded", "delegated"].map((k) => opt(k, k, st.draft.discretion)).join("")}</select>
+      <label for="o-disc">Freedom</label><select id="o-disc">${[["strict", "Exactly as told"], ["bounded", "Some freedom"], ["delegated", "Full freedom"]].map(([k, l]) => opt(k, l, st.draft.discretion)).join("")}</select>
       <span></span><button id="o-add" ${p && !problems.length ? "" : "disabled"}>Add order</button>
     </div>
     ${problems.length && draft ? `<div class="err">${esc(problems.join("; "))}</div>` : ""}
     <div class="quick" style="margin-top:8px">${travel.map((t) => `<button data-act='${esc(JSON.stringify({ action: "travel", target: t }))}' ${p ? "" : "disabled"}>Travel to ${esc(name(v, t))}</button>`).join("")}</div></div>`;
   const open = v.reports.find((r) => r.reportId === st.openLetter);
-  const reader = open ? `<div class="letter-read">
-      <div class="lr-head"><b>${esc(name(v, open.author))}</b>
-        <span class="tags"><span class="tag arrived">arrived ${esc(dayAgo(v, open.deliveredAt))}</span><span class="tag written">written ${esc(dayAgo(v, open.composedAt))}</span></span></div>
-      <p class="lr-body"><span class="speaker">${esc(name(v, open.author))}:</span> ${esc(letterSentences(v, open).join(" "))}</p>
-      <button data-close-letter>Close</button></div>` : "";
-  const letters = `<div class="card"><h2>Letters · ${v.reports.length}</h2>${reader}<div class="letters">${[...v.reports].reverse().slice(0, 40).map((r) => {
-    const first = letterSentences(v, r)[0];
-    return `<div class="letter" data-letter="${r.reportId}" role="button" tabindex="0"><div class="h"><b>${esc(name(v, r.author))}</b><span>${esc(dayAgo(v, r.deliveredAt))}</span></div>
-      <div class="c">${esc(first)}</div></div>`;
+  const letters = `<div class="card"><h2>Letters</h2><div class="letters">${[...v.reports].reverse().slice(0, 40).map((r) => {
+    const isOpen = r.reportId === st.openLetter;
+    const body = isOpen ? `<div class="lr-body"><span class="speaker">${esc(name(v, r.author))}:</span> ${esc(letterSentences(v, r).join(" "))}</div>` : `<div class="c">${esc(letterSentences(v, r)[0])}</div>`;
+    const tags = isOpen ? `<span class="tags"><span class="tag arrived">arrived ${esc(dayAgo(v, r.deliveredAt))}</span><span class="tag written">written ${esc(dayAgo(v, r.composedAt))}</span></span>` : `<span class="when">${esc(dayAgo(v, r.deliveredAt))}</span>`;
+    return `<div class="letter${isOpen ? " open" : ""}" data-letter="${r.reportId}" role="button" tabindex="0"><div class="h"><b>${esc(name(v, r.author))}</b>${tags}</div>${body}</div>`;
   }).join("") || `<div class="c">None</div>`}</div></div>`;
-  const orders = v.self.orders.length ? `<div class="card"><h2>Orders given · ${v.self.orders.length}</h2><div class="letters">${[...v.self.orders].reverse().slice(0, 20).map((o) => {
+  const orders = v.self.orders.length ? `<div class="card"><h2>Orders given</h2><div class="letters">${[...v.self.orders].reverse().slice(0, 20).map((o) => {
     const b = v.beliefs[Object.keys(v.beliefs).find((k) => v.beliefs[k].predicate === "order.status" && v.beliefs[k].subject.id === String(o.orderId)) ?? ""];
     return `<div class="letter"><div class="h"><b>${esc(name(v, o.recipient))}</b><span>${esc(dayAgo(v, o.tick))}</span></div><div class="c">${esc(o.action)} ${esc(name(v, o.target))} · ${esc(b ? String(b.believedValue) : "no word")}</div></div>`;
   }).join("")}</div></div>` : "";
@@ -257,7 +254,7 @@ document.addEventListener("click", (e) => {
   const t = e.target as HTMLElement;
   const el = t.closest("[data-act],[data-place],[data-q],[data-unq],[data-letter],[data-close-letter],#go,#restart,#settings-tab,#o-add,#copy-log") as HTMLElement | null;
   if (!el) return;
-  if (el.dataset.letter) { st.openLetter = Number(el.dataset.letter); return render(); }
+  if (el.dataset.letter) { const id = Number(el.dataset.letter); st.openLetter = st.openLetter === id ? null : id; return render(); }
   if (el.dataset.closeLetter !== undefined) { st.openLetter = null; return render(); }
   if (el.dataset.act) return queue(JSON.parse(el.dataset.act));
   if (el.dataset.place) { st.selected = el.dataset.place; if (content.byId.location.get(st.selected)?.fortification) st.draft.objective = st.selected; return render(); }
