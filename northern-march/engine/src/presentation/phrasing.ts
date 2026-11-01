@@ -69,4 +69,11 @@ export function letterSentences(v: View, r: { author: string; claims: { predicat
   }
   return out.length ? out : ["Nothing new in this letter."];
 }
+/** The one sentence that matters most in a letter (for the list): orders, then walls, raiders, treasury, then where someone is. */
+export function letterGist(v: View, r: { author: string; claims: { predicate: string; subject: { id: string }; believedValue: unknown }[] }): string {
+  const rank: Record<string, number> = { "order.status": 0, "fortification.condition": 1, "threat.intensity": 2, "treasury.balance": 3, "character.location": 4 };
+  const claims = [...r.claims].sort((a, b) => (rank[a.predicate] ?? 5) - (rank[b.predicate] ?? 5));
+  if (!claims.length) return "Nothing new in this letter.";
+  return letterSentences(v, { ...r, claims: [claims[0]] })[0];
+}
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

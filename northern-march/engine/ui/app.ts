@@ -4,7 +4,7 @@ import { deriveContent, type RawContent } from "../src/content.ts";
 import { createSim } from "../src/engine.ts";
 import { buildCourt, type AdviceLine } from "../src/presentation/court.ts";
 import { buildMap } from "../src/presentation/map.ts";
-import { letterSentences, planWords, reasonWords } from "../src/presentation/phrasing.ts";
+import { letterSentences, letterGist, planWords, reasonWords } from "../src/presentation/phrasing.ts";
 import { beliefsAbout, validateDraft, type OrderDraft, type View } from "../src/view.ts";
 import { INTENTS, type Recommendation } from "../src/schemas.ts";
 import type { PlayerAction } from "../src/policies.ts";
@@ -170,8 +170,8 @@ function side(v: View) {
   const open = v.reports.find((r) => r.reportId === st.openLetter);
   const letters = `<div class="card"><h2>Letters</h2><div class="letters">${[...v.reports].reverse().slice(0, 40).map((r) => {
     const isOpen = r.reportId === st.openLetter;
-    const body = isOpen ? `<div class="lr-body"><span class="speaker">${esc(name(v, r.author))}:</span> ${esc(letterSentences(v, r).join(" "))}</div>` : `<div class="c">${esc(letterSentences(v, r)[0])}</div>`;
-    const tags = isOpen ? `<span class="tags"><span class="tag arrived">arrived ${esc(dayAgo(v, r.deliveredAt))}</span><span class="tag written">written ${esc(dayAgo(v, r.composedAt))}</span></span>` : `<span class="when">${esc(dayAgo(v, r.deliveredAt))}</span>`;
+    const body = isOpen ? `<div class="lr-body"><span class="speaker">${esc(name(v, r.author))}:</span> ${esc(letterSentences(v, r).join(" "))}</div>` : `<div class="c">${esc(letterGist(v, r))}</div>`;
+    const tags = isOpen ? `<span class="tags"><span class="tag arrived">arrived ${esc(dayAgo(v, r.deliveredAt))}</span><span class="tag written">written ${esc(dayAgo(v, r.composedAt))}</span></span>` : `<span class="when">written ${esc(dayAgo(v, r.composedAt))}</span>`;
     return `<div class="letter${isOpen ? " open" : ""}" data-letter="${r.reportId}" role="button" tabindex="0"><div class="h"><b>${esc(name(v, r.author))}</b>${tags}</div>${body}</div>`;
   }).join("") || `<div class="c">None</div>`}</div></div>`;
   const orders = v.self.orders.length ? `<div class="card"><h2>Orders given</h2><div class="letters">${[...v.self.orders].reverse().slice(0, 20).map((o) => {
