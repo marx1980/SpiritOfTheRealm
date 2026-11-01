@@ -4,6 +4,7 @@ import { deriveContent, type RawContent } from "../src/content.ts";
 import { createSim } from "../src/engine.ts";
 import { buildCourt, type AdviceLine } from "../src/presentation/court.ts";
 import { buildMap } from "../src/presentation/map.ts";
+import { letterSentences } from "../src/presentation/phrasing.ts";
 import { validateDraft, type OrderDraft, type View } from "../src/view.ts";
 import { INTENTS, type Recommendation } from "../src/schemas.ts";
 import type { PlayerAction } from "../src/policies.ts";
@@ -23,7 +24,7 @@ const st = {
   sim: null as unknown as Sim, seed: __H01__.seed, paused: null as null | string, over: false,
   queue: [] as PlayerAction[], autoPause: new Set<string>(REASONS), selected: "northwatch",
   draft: { recipient: "", intent: "repair", objective: "northwatch", discretion: "bounded" } as { recipient: string; intent: string; objective: string; discretion: string },
-  error: "", observer: location.hash === "#observer", answered: 0,
+  error: "", observer: location.hash === "#observer", answered: 0, openLetter: null as number | null,
 };
 
 const esc = (s: unknown) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -78,7 +79,7 @@ function pauseText(v: View): string {
     return o.ended ? (o.ended === "killed" ? `Anna is dead` : `Anna is captured`) : `Day ${__H01__.days}: ${o.met ? "the forts hold" : "fallen: " + o.fortsBelowBreach.map((f) => name(v, f)).join(", ")}`;
   }
   const r = st.paused;
-  if (r === "report") { const l = v.reports.at(-1); return l ? `Letter from ${name(v, l.author)}` : "Letter"; }
+  if (r === "report") { const l = v.reports.at(-1); return l ? `Letter from ${name(v, l.author)}: ${letterSentences(v, l).join(" ")}` : "Letter"; }
   if (r === "advice") { const a = [...v.advice].sort((x, y) => y.computedAt - x.computedAt)[0]; return a ? `${name(v, a.author)} advises` : "Advice"; }
   if (r === "danger") return "You are in danger";
   if (r === "arrival") { const p = v.self.position; return "at" in p ? `Arrived at ${name(v, p.at)}` : "Arrived"; }
@@ -149,10 +150,15 @@ function side(v: View) {
     <label for="o-disc">Freedom</label><select id="o-disc">${["strict", "bounded", "delegated"].map((k) => opt(k, k, st.draft.discretion)).join("")}</select>
     <span></span><button id="o-add" ${p && !problems.length ? "" : "disabled"}>Add</button></div>
     ${problems.length && draft ? `<div class="err">${esc(problems.join("; "))}</div>` : ""}</div>`;
-  const letters = `<div class="card"><h2>Letters · ${v.reports.length}</h2><div class="letters">${[...v.reports].reverse().slice(0, 40).map((r) => {
-    const c = r.claims[0];
-    return `<div class="letter"><div class="h"><b>${esc(name(v, r.author))}</b><span>${esc(dayAgo(v, r.deliveredAt))}</span></div>
-      <div class="c">${esc(name(v, r.subject.id))} · written ${esc(dayAgo(v, r.composedAt))}${c ? " · " + esc(claimWords(v, c.predicate, c.believedValue)) : ""}</div></div>`;
+  const open = v.reports.find((r) => r.reportId === st.openLetter);
+  const reader = open ? `<div class="letter-read"><div class="h"><b>${esc(name(v, open.author))}</b><span>arrived ${esc(dayAgo(v, open.deliveredAt))}</span></div>
+      <div class="c">written ${esc(dayAgo(v, open.composedAt))}</div>
+      ${letterSentences(v, open).map((s) => `<p>${esc(s)}</p>`).join("")}
+      <button data-close-letter>Close</button></div>` : "";
+  const letters = `<div class="card"><h2>Letters · ${v.reports.length}</h2>${reader}<div class="letters">${[...v.reports].reverse().slice(0, 40).map((r) => {
+    const first = letterSentences(v, r)[0];
+    return `<div class="letter" data-letter="${r.reportId}" role="button" tabindex="0"><div class="h"><b>${esc(name(v, r.author))}</b><span>${esc(dayAgo(v, r.deliveredAt))}</span></div>
+      <div class="c">${esc(first)}</div></div>`;
   }).join("") || `<div class="c">None</div>`}</div></div>`;
   const orders = v.self.orders.length ? `<div class="card"><h2>Orders given · ${v.self.orders.length}</h2><div class="letters">${[...v.self.orders].reverse().slice(0, 20).map((o) => {
     const b = v.beliefs[Object.keys(v.beliefs).find((k) => v.beliefs[k].predicate === "order.status" && v.beliefs[k].subject.id === String(o.orderId)) ?? ""];
@@ -161,13 +167,6 @@ function side(v: View) {
   return `<div class="col">${quick}${composer}${letters}${orders}</div>`;
 }
 const dayAgo = (v: View, t: number) => { const d = Math.floor(v.now / DAY) - Math.floor(t / DAY); return d <= 0 ? "today" : d === 1 ? "yesterday" : `${d} days ago`; };
-function claimWords(v: View, pred: string, val: unknown) {
-  if (pred === "character.location") return `at ${name(v, val as string)}`;
-  if (pred === "fortification.condition") { const p = (val as number) / 1000; return `walls ${p >= 85 ? "sound" : p >= 70 ? "worn" : p >= 55 ? "damaged" : p >= 40 ? "badly damaged" : p >= 30 ? "near collapse" : "breached"}`; }
-  if (pred === "threat.intensity") { const s = val as number; return s <= 0 ? "no raiders" : s < 350 ? "a small band" : s < 650 ? "a strong band" : "a large host"; }
-  if (pred === "order.status") return `order ${val}`;
-  return pred.split(".").pop()!;
-}
 function toDraft(): OrderDraft | null {
   if (!st.draft.recipient) return null;
   const obj = st.draft.objective.startsWith("@") ? { kind: "character" as const, id: st.draft.objective.slice(1) } : { kind: "location" as const, id: st.draft.objective };
@@ -212,8 +211,10 @@ function render() {
 
 document.addEventListener("click", (e) => {
   const t = e.target as HTMLElement;
-  const el = t.closest("[data-act],[data-place],[data-q],[data-unq],#go,#restart,#o-add,#copy-log") as HTMLElement | null;
+  const el = t.closest("[data-act],[data-place],[data-q],[data-unq],[data-letter],[data-close-letter],#go,#restart,#o-add,#copy-log") as HTMLElement | null;
   if (!el) return;
+  if (el.dataset.letter) { st.openLetter = Number(el.dataset.letter); return render(); }
+  if (el.dataset.closeLetter !== undefined) { st.openLetter = null; return render(); }
   if (el.dataset.act) return queue(JSON.parse(el.dataset.act));
   if (el.dataset.place) { st.selected = el.dataset.place; if (content.byId.location.get(st.selected)?.fortification) st.draft.objective = st.selected; return render(); }
   if (el.dataset.q) return queue({ action: el.dataset.q as "repair", target: (document.getElementById("q-fort") as HTMLSelectElement).value });

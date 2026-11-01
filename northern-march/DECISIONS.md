@@ -35,6 +35,7 @@ Newest first. Numbers come from `phase0/results/` (files named in each entry). A
 - **Campaign objective** (`scenario.objective`): `objectiveStatus()` and the `objectiveMet` metric.
 - **Advice audience:** advisers advise whoever is with them; Anna hears advice only in person. She keeps each adviser's latest advice per target for 15 days.
 - **Adviser policies:** `follow:<id>`, and `follow-best-adviser` / `follow-worst-adviser` through measured aliases.
+- **Letters are readable:** each letter's content is shown as plain sentences (`letterSentences`, in words), in the letter list and in the reader opened by clicking a letter; the pause box shows the letter's content too. Found after the first play: the list showed only one phrase per letter and nothing could be opened.
 - **Debug UI** (`ui/`, bundled by esbuild into one HTML page): Court, Map, letters, orders given, quick actions, order composer, travel, pause settings per decision type, hidden observer panel (Shift+O) with hidden truth and the event log. Published as a private artifact.
 - **Invariant change:** a player input must be caused by something she perceived (a letter delivered to her, advice in her audience, a danger warning to her, her own arrival) or by nothing (a checkpoint).
 - `canonical.ts`: SHA-256 in pure JS (byte-identical to node:crypto; needed in the browser).

@@ -66,6 +66,9 @@ select { border: 1px solid var(--line); background: var(--panel); border-radius:
 .letter { font-size: 13px; border-bottom: 1px solid var(--line); padding-bottom: 5px; }
 .letter .h { display: flex; justify-content: space-between; gap: 8px; } .letter .h b { font-weight: 600; }
 .letter .c { color: var(--mute); }
+.letter[data-letter] { cursor: pointer; } .letter[data-letter]:hover b { color: var(--accent); }
+.letter-read { border: 1px solid var(--accent); border-radius: 4px; padding: 8px 10px; margin-bottom: 8px; font-size: 14px; }
+.letter-read p { margin: 4px 0; }
 .form { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 8px; align-items: center; font-size: 14px; }
 .form label { color: var(--mute); }
 .err { color: var(--bad); font-size: 13px; }
