@@ -1,7 +1,7 @@
 // A6: scripted player policies. A policy sees only ViewOf(player) and may draw from the "player" stream.
 import type { Rng } from "./rng.ts";
 import { beliefsAbout, type OrderDraft, type View } from "./view.ts";
-import { captainSentTo } from "./presentation/phrasing.ts";
+import { captainSentTo, planOf } from "./presentation/phrasing.ts";
 
 
 export type PolicyId = "passive" | "delegating" | "aggressive" | "random-valid" | "follow-best-adviser" | "follow-worst-adviser" | "external" | "replay" | `follow:${string}`;
@@ -41,7 +41,7 @@ export function followAdviser(adviser: string): PolicyFn {
   return (v) => {
     const out: PlayerAction[] = [];
     for (const rec of v.advice.filter((r) => r.author === adviser)) {
-      const a = JSON.parse(rec.plan.id) as { kind: string; target?: string };
+      const a = planOf(v, rec.plan.id);
       const map: Record<string, PlayerAction["action"]> = { advise_repair: "repair", advise_send_captain: "advance", advise_levy: "levy" };
       let action = map[a.kind], target = a.target;
 let mission: PlayerAction["mission"], raid: string | undefined;

@@ -1,5 +1,5 @@
 // Templated phrasing (A7: the game is playable without a language model). Words, not hidden numbers.
-import { areaOf, type BeliefView, type View } from "../view.ts";
+import { areaOf, beliefsAbout, type BeliefView, type View } from "../view.ts";
 import { dayOf } from "./format.ts";
 
 export const certainty: Record<string, string> = { certain: "certain", probable: "probably", uncertain: "perhaps", doubtful: "doubtful", stale: "out of date" };
@@ -52,8 +52,18 @@ export function captainSentTo(v: View, fort: string): boolean {
   return v.self.orders.some((o) => (o.action === "advance" || o.action === "investigate") && done.has(String(o.orderId)) && (o.target === fort || nearestFort(v, o.target) === fort)
     && !v.self.orders.some((x) => x.recipient === o.recipient && x.tick > o.tick));
 }
-export function planWords(v: View, planId: string): string {
+/** An adviser's plan as it stands now: advice to send the captain to a fort he has already reached, while raiders are
+ *  believed near it, is advice to attack those raiders. */
+export function planOf(v: View, planId: string): { kind: string; target?: string } {
   const a = JSON.parse(planId) as { kind: string; target?: string };
+  if (a.kind === "advise_send_captain" && a.target && captainSentTo(v, a.target)) {
+    const site = v.world.places.find((p) => !p.fortified && nearestFort(v, p.id) === a.target && beliefsAbout(v, p.id, "threat.intensity").some((b) => (b.believedValue as number) > 0));
+    if (site) return { kind: "advise_sortie", target: site.id };
+  }
+  return a;
+}
+export function planWords(v: View, planId: string): string {
+  const a = planOf(v, planId);
   const t = a.target ? nameOf(v, a.target) : "";
   switch (a.kind) {
     case "advise_wait": return "Wait for more news";

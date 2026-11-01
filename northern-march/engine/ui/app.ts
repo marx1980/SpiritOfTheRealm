@@ -5,7 +5,7 @@ import { createSim } from "../src/engine.ts";
 import { adviceSettled, buildCourt, type AdviceLine } from "../src/presentation/court.ts";
 import { buildMap } from "../src/presentation/map.ts";
 import { mapSvg } from "./maparts.ts";
-import { captainSentTo, certainty, letterSentences, letterGist, planWords, reasonWords, sourceOf } from "../src/presentation/phrasing.ts";
+import { captainSentTo, planOf, certainty, letterSentences, letterGist, planWords, reasonWords, sourceOf } from "../src/presentation/phrasing.ts";
 import { beliefsAbout, validateDraft, type OrderDraft, type View } from "../src/view.ts";
 import { INTENTS, type Recommendation } from "../src/schemas.ts";
 import type { PlayerAction } from "../src/policies.ts";
@@ -133,7 +133,7 @@ function fortNear(v: View, site: string) {
   return v.world.places.filter((p) => p.fortified).sort((a, b) => d(a) - d(b))[0]?.id;
 }
 function adviceAction(v: View, r: Recommendation): PlayerAction | null {
-  const a = JSON.parse(r.plan.id) as { kind: string; target?: string };
+  const a = planOf(v, r.plan.id);
   if (a.kind === "advise_repair") return { action: "repair", target: a.target, followed: r.author };
   if (a.kind === "advise_send_captain") return { action: "advance", target: a.target, followed: r.author };
   if (a.kind === "advise_sortie") { const f = fortNear(v, a.target!); return !f ? null : captainSentTo(v, f) ? { action: "advance", target: f, mission: "attack", raid: a.target, followed: r.author } : { action: "advance", target: f, followed: r.author }; }
@@ -182,7 +182,7 @@ function choices(v: View): { action: PlayerAction; text: string; by: string[] }[
 }
 /** Advisers who want the raiders at a site attacked. */
 function attackersOf(v: View, raid: string): string[] {
-  return latestAdvice(v).filter((r) => { const a = JSON.parse(r.plan.id) as { kind: string; target?: string }; return a.kind === "advise_sortie" && a.target === raid; }).map((r) => name(v, r.author));
+  return latestAdvice(v).filter((r) => { const a = planOf(v, r.plan.id); return a.kind === "advise_sortie" && a.target === raid; }).map((r) => name(v, r.author));
 }
 /** Once a send is checked: defend the fort (default), or attack or scout the raiders it answers. */
 function missionBlock(v: View, fort: string, q: PlayerAction): string {
@@ -260,11 +260,17 @@ function orderDetails(v: View, id: string): string {
 }
 function court(v: View) {
   const c = buildCourt(v);
-  const issues = c.issues.map((i) => `<div class="card issue ${i.priority >= 45 ? "p-hi" : i.priority >= 25 ? "p-mid" : ""}"${i.key.startsWith("order:") ? ` data-issue="${esc(i.key)}" role="button" tabindex="0"` : ""}>
+  // advice already put to her in the decision box above is not listed again; nor is news a letter on top of the page has just given
+  const boxed = st.paused ? choices(v).map((x) => x.action) : [];
+  const inBox = (l: AdviceLine) => { const r = v.advice.find((x) => x.id === l.id), act = r ? adviceAction(v, r) : null; return !!act && boxed.some((q) => matches(q, act)); };
+  const shown = c.issues.map((i) => ({ i, advice: i.advice.filter((l) => !inBox(l)) }))
+    .filter(({ i, advice }) => !(st.batch.length && /^(walls|raiders):/.test(i.key) && !advice.length && i.evidence[0]?.age === "today"));
+  const issues = shown.map(({ i, advice }) => `<div class="card issue ${i.priority >= 45 ? "p-hi" : i.priority >= 25 ? "p-mid" : ""}"${i.key.startsWith("order:") ? ` data-issue="${esc(i.key)}" role="button" tabindex="0"` : ""}>
     <div class="t">${tone(i.title)}</div>${st.openIssue === i.key ? orderDetails(v, i.key.slice(6)) : ""}
     <div class="ev">${i.evidence.map((e) => `<span><b>${esc(e.text)}</b> · ${esc(e.source)} · ${esc(e.age)} · ${esc(e.certainty)}</span>`).join("")}</div>
-    ${i.advice.length ? `<div class="adv">${adviceRows(v, i.advice)}</div>` : ""}</div>`).join("");
-  const general = c.advice.length ? `<div class="card"><h2>Council</h2><div class="adv">${adviceRows(v, c.advice)}</div></div>` : "";
+    ${advice.length ? `<div class="adv">${adviceRows(v, advice)}</div>` : ""}</div>`).join("");
+  const rest = c.advice.filter((l) => !inBox(l));
+  const general = rest.length ? `<div class="card"><h2>Council</h2><div class="adv">${adviceRows(v, rest)}</div></div>` : "";
   return `<div class="col"><h2>Court · ${esc(c.at)}</h2>${issues || `<div class="card">No pressing matters</div>`}${general}</div>`;
 }
 
@@ -293,7 +299,7 @@ function side(v: View) {
   const opt = (val: string, label: string, cur: string) => `<option value="${esc(val)}"${val === cur ? " selected" : ""}>${esc(label)}</option>`;
   const here = "at" in v.self.position ? v.self.position.at : null;
   const travel = content.scenario.presence.travelTo.filter((t) => t !== here);
-  const others = [...new Set(Object.values(v.beliefs).filter((b) => b.predicate === "character.location" && b.subject.id !== v.self.id).map((b) => b.subject.id))].sort();
+  const others = [...new Set(Object.values(v.beliefs).filter((b) => (b.predicate === "character.location" || b.predicate === "character.seat") && b.subject.kind === "character" && b.subject.id !== v.self.id).map((b) => b.subject.id))].sort();
   const known = [...others, v.self.id];
   if (!st.draft.recipient || !known.includes(st.draft.recipient)) st.draft.recipient = known[0] ?? "";
   const places = [...v.world.places].sort((a, b) => (a.name < b.name ? -1 : 1));
@@ -432,7 +438,7 @@ function render() {
   </div>
   <div class="status-row" aria-label="Realm status">${coinStatus(v)}</div>
   ${st.tab === "settings" ? settingsTab() : `
-  <div class="pause ${cls}">${batchBlock(v)}${st.paused === "report" && batchBlock(v) ? "" : `<span class="what">${tone(pauseText(v))}</span>`}${why ? `<span class="why-line">${esc(why)}</span>` : ""}
+  <div class="pause ${cls}">${batchBlock(v)}${(st.paused === "report" && batchBlock(v)) || (st.paused === "advice" && choices(v).length) ? "" : `<span class="what">${tone(pauseText(v))}</span>`}${why ? `<span class="why-line">${esc(why)}</span>` : ""}
     ${st.paused ? choicesBlock(v) : ""}
     <span class="queue">${st.queue.map((a, i) => ({ a, i })).filter(({ a }) => !isShown(a)).map(({ a, i }) => `<span class="chip">${esc(actionText(v, a))} <button data-unq="${i}" aria-label="Remove">×</button></span>`).join("")}</span>
     ${st.error ? `<span class="err">${esc(st.error)}</span>` : ""}</div>

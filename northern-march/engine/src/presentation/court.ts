@@ -2,7 +2,7 @@
 // separately. Built from the player's view only (A7).
 import { beliefsAbout, type View } from "../view.ts";
 import { dayOf, pct } from "./format.ts";
-import { ago, certainty, nameOf, nearestFort, planWords, raiderWords, reasonWords, sourceOf, wallWords } from "./phrasing.ts";
+import { ago, certainty, nameOf, nearestFort, planOf, planWords, raiderWords, reasonWords, sourceOf, wallWords } from "./phrasing.ts";
 
 export interface Evidence { text: string; age: string; source: string; certainty: string }
 /** Short area labels for the council list. */
@@ -40,11 +40,16 @@ export function settledCheck(v: View): (r: { plan: { id: string } }) => boolean 
     (o.action === want.action && o.target === want.target) || (want.action === "advance" && (o.action === "advance" || o.action === "investigate" || o.action === "attack") && nearestFort(v, o.target) === want.target);
   // an order to send a captain, once reported done, stands until she gives him another order: his own letters
   // are about where he is, not about where the company she sent is
-  const captainStillThere = (o: { recipient: string; tick: number }, _place: string) => !v.self.orders.some((x) => x.recipient === o.recipient && x.tick > o.tick);
+  const captainStillThere = (o: { recipient: string; tick: number; doneAt?: number }, place: string) => {
+    if (v.self.orders.some((x) => x.recipient === o.recipient && x.tick > o.tick)) return false;
+    // unless a later word on where he is says he is somewhere else (he went home, or on)
+    const where = Object.values(v.beliefs).find((b) => b.predicate === "character.location" && b.subject.id === o.recipient);
+    return !(where && where.believedValue !== place && where.observedAt >= (o.doneAt ?? o.tick));
+  };
   const superseded = (r: { plan: { id: string } }) => {
-    const want = orderOf(JSON.parse(r.plan.id) as { kind: string; target?: string });
+    const want = orderOf(planOf(v, r.plan.id));
     if (!want) return false;
-    const plan = JSON.parse(r.plan.id) as { kind: string; target?: string };
+    const plan = planOf(v, r.plan.id);
     if (plan.kind === "advise_sortie" && plan.target) {
       // attack advice: set aside while a captain is on his way to the fort or already sent against that site; a captain who has
       // arrived (or was sent to scout) is exactly when the advice to attack makes sense
@@ -53,7 +58,7 @@ export function settledCheck(v: View): (r: { plan: { id: string } }) => boolean 
       return doneOrders.some((o) => o.target === site && (o.action === "advance" || o.action === "attack") && !learnedSince(site, o.doneAt));
     }
     if (inProgress.some((o) => covers(o, want))) return true;
-    const a = JSON.parse(r.plan.id) as { kind: string; target?: string };
+    const a = planOf(v, r.plan.id);
     // an attack on raiders is set aside while any order is under way for that place or its fort
     if (a.kind === "advise_sortie" && a.target && inProgress.some((o) => o.target === a.target || o.target === want.target)) return true;
     // a captain (one with a company) is already believed to be at the place: sending one there is settled
@@ -74,7 +79,7 @@ function adviceLines(v: View, target?: string): AdviceLine[] {
   const latest = new Map<string, number>();
   for (const r of v.advice) if (!latest.has(r.author) || v.advice.find((x) => x.id === latest.get(r.author))!.computedAt < r.computedAt) latest.set(r.author, r.id);
   const superseded = settledCheck(v);
-  return v.advice.filter((r) => (target ? r.plan.id.includes(`"${target}"`) : latest.get(r.author) === r.id) && !superseded(r)).map((r) => ({
+  return v.advice.filter((r) => (target ? (r.plan.id.includes(`"${target}"`) || planOf(v, r.plan.id).target === target) : latest.get(r.author) === r.id) && !superseded(r)).map((r) => ({
     id: r.id, adviser: nameOf(v, r.author), area: SHORT_AREA[v.world.areas[r.author] ?? ""] ?? v.world.areas[r.author] ?? "", plan: planWords(v, r.plan.id),
     supports: r.reasons.filter((x) => x.weight > 0).slice(0, 3).map((x) => reasonWords(x.textKey)),
     concerns: r.reasons.filter((x) => x.weight < 0).slice(0, 3).map((x) => reasonWords(x.textKey)),
