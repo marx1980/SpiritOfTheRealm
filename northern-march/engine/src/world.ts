@@ -43,6 +43,7 @@ export interface WorldState {
   nextMessengerId: number;
   orders: Record<string, { order: StructuredOrder; status: string }>;
   nextOrderId: number;
+  advisePending: Record<string, number>; // adviser -> day their advice is due (given at the end of that day)
   ordersInForce: Record<string, number[]>;
   issued: Record<string, IssuedRecord[]>;
   repairs: Record<string, { startedAt: number; orderId: number; work: number; done: number; lastT: number; men: number; gen: number; restoredMilli: number; startedEventId: number; engineer: string }>;
@@ -66,7 +67,7 @@ export function initialState(c: Content): WorldState {
   return {
     treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, tiers, history: {}, agents, recommendations: {}, heard: {}, campaign: { ended: null, lastDanger: -1 }, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, lastStorm: {}, threats: {}, routesClosed: {},
     positions, departures: {}, beliefs: {}, nextPropId: 1, reports: {}, nextReportId: 1, messengers: {}, nextMessengerId: 1,
-    orders: {}, nextOrderId: 1, ordersInForce: {}, issued: {}, repairs: {},
+    orders: {}, nextOrderId: 1, advisePending: {}, ordersInForce: {}, issued: {}, repairs: {},
   };
 }
 
@@ -167,6 +168,8 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   OrderSuperseded: endOrder("superseded"),
   OrderAbandoned: endOrder("abandoned"),
   RepairStarted: (s, p, e) => { s.repairs[p.location] = { startedAt: p.startedAt, orderId: p.orderId, work: p.work, done: 0, lastT: e.tick, men: p.men, gen: 0, restoredMilli: p.restoredMilli, startedEventId: e.id, engineer: p.engineer }; s.treasuryMilli[p.payer] -= p.costMilli; s.lastRepairStart[p.location] = e.tick; },
+  AdviceScheduled: (s, p) => { s.advisePending[p.agent] = p.day; },
+  AdviceSettled: (s, p) => { delete s.advisePending[p.agent]; },
   RepairResynced: (s, p, e) => { const r = s.repairs[p.location]; r.done = p.done; r.lastT = e.tick; r.men = p.men; r.gen = p.gen; },
   RepairCompleted: (s, p, e) => { const f = s.fortifications[p.location]; f.conditionMilli = clampCond(f.conditionMilli + p.restoredMilli); f.lastChangeEvent = e.id; delete s.repairs[p.location]; },
   LevyRaised: (s, p) => { s.treasuryMilli[p.payer] += p.amountMilli; },

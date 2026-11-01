@@ -249,7 +249,15 @@ function think(ctx: Ctx, agent: string, cause: number, layer: "strategic" | "ope
   }
 }
 
+/** Advice is worked out at the end of the day, after every letter of that day has arrived, so it takes them all in. */
 function advise(ctx: Ctx, agent: string, cause: number) {
+  const day = Math.floor(ctx.tick / DAY);
+  if (ctx.s.advisePending[agent] === day) return; // already due today
+  ctx.emit("AdviceScheduled", [cause], [chr(agent)], { agent, day });
+  ctx.at(day * DAY + DAY - 1, "agents:advise", { agent, cause });
+}
+
+function adviseNow(ctx: Ctx, agent: string, cause: number) {
   const c = ctx.content;
   const view = buildView(ctx.s, c, agent, ctx.tick), per = perceiverFromView(view);
   const sit = buildSituation(ctx.s, c, agent, ctx.tick, "advise", view);
@@ -389,6 +397,12 @@ export const agents: System = {
       const layer = p.sig >= 3 ? "strategic" : "operational";
       const w = ctx.emit("AgentWoke", p.triggers, [chr(agent)], { agent, triggers: p.triggers, layer, reason: "triggers", tier: ctx.s.tiers[agent] });
       think(ctx, agent, w.id, layer, "triggers");
+    },
+    "agents:advise": (ctx, { agent, cause }) => {
+      ctx.emit("AdviceSettled", [cause], [chr(agent)], { agent });
+      const pos = ctx.s.positions[agent], rp = ctx.s.positions[ctx.content.scenario.ruler];
+      // advice is only given while the adviser is with the ruler
+      if ("at" in pos && "at" in rp && pos.at === rp.at) adviseNow(ctx, agent, cause);
     },
     "agents:review": (ctx, { agent, decisionEventId }) => {
       if (ctx.s.agents[agent]?.operational?.decisionEventId !== decisionEventId) return; // the intention has changed since
