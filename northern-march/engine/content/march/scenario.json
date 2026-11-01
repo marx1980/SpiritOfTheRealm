@@ -116,7 +116,7 @@
   ],
   "player": {
     "repairCostMilliPerMilli": 2,
-    "repairRestoreToMilli": 85000,
+    "repairRestoreToMilli": 90000,
     "repairDays": 5,
     "levyMilli": 40000
   },
@@ -181,7 +181,7 @@
   "regency": {
     "regent": "elara",
     "seat": "ravenport",
-    "maxRepairCostMilli": 50000,
+    "maxRepairCostMilli": 60000,
     "mayLevy": false,
     "maySendCaptain": false
   },

@@ -112,7 +112,9 @@ function process(ctx: Ctx, orderId: number, receivedId: number) {
     const durationTicks = Math.max(DAY, Math.floor((sc.player.repairDays * DAY * (1500 - eng)) / 1000));
     const r = ctx.keyed(`orders:repair:${orderId}`);
     const spread = (1000 - eng) * 10;
-    const restoredMilli = Math.max(0, to - cond + r.int(-spread, Math.floor(spread / 4)));
+    // a full repair can fall short of its target by at most 5 points, so the walls are never worse than "sound"
+    const jitter = a.kind === "repair_works" ? r.int(-Math.min(spread, 5000), 0) : r.int(-spread, Math.floor(spread / 4));
+    const restoredMilli = Math.max(0, to - cond + jitter);
     const st = ctx.emit("RepairStarted", [ex.id], [loc(where), oref(orderId)], { location: where, payer: sc.ruler, costMilli, startedAt: ctx.tick, orderId, durationTicks, restoreToMilli: to });
     observeTreasury(ctx, st.id);
     ctx.at(ctx.tick + durationTicks, "orders:completeRepair", { orderId, location: where, restoredMilli, startedEventId: st.id, engineer: who });
