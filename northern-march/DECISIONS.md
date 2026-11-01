@@ -29,7 +29,9 @@ Newest first. Numbers come from `phase0/results/` (files named in each entry). A
 - Not done: a full ledger the player can always read. The player sees the belief with its age and source, as for any other fact.
 - Sealed run for this version: block 70000..70999 (`node tools/phase5_g12.ts gate 70000 1000`, results/phase5_g12_70000.txt). Blocks 50000 and 60000 are already used and are not rerun. PASS/AMBER/FAIL recorded as they come out, with the same rule as above. Expectation: about the same as block 60000 (PASS was 18.6 points); not tuned to pass.
 
-**Built (129 tests pass; `npx tsc -p .` clean, now also over `tools/` and `ui/`):**
+**Sealed result, block 70000..70999 (results/phase5_g12_70000.txt): PASS.** Follow Elara 19.1% (Wilson 16.8-21.7%), follow Oren 0.0% (0-0.4%); difference 19.1 points, paired bootstrap interval 16.8-21.5. Calibration key `c9ce105911ef+3bf207370427` (engine changed with the coin rule, so the key changed). Advice followed about 26.5 times per run for Elara and 4.3 for Oren. Verdict as pre-registered: PASS (difference ≥ 10, lower bound > 0).
+
+**Built (130 tests pass; `npx tsc -p .` clean, now also over `tools/` and `ui/`):**
 - **Interactive play:** `next(limit)` runs to the next decision point and returns what Anna sees; `answer(actions)` resumes. Decision points: a letter delivered to her, advice given in her presence, a danger warning, her arrival somewhere (and an optional daily checkpoint). Saves record answers and replay exactly; a save cannot be taken while a decision is open.
 - **Court** (`presentation/court.ts`): issues ranked by urgency (walls, raiders, her own orders), each with its evidence (what, source, age, certainty) and each adviser's standing advice on that issue; the council's latest advice per adviser; letters. Built from `ViewOf(player)` only; no exact numbers (test).
 - **Map** (`presentation/map.ts`): places from static knowledge, walls and raiders as Anna believes them with source, age and certainty, people where she last heard they were, her own position. Locations gained map coordinates (content).
