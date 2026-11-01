@@ -16,7 +16,6 @@ export interface Court { day: number; at: string; issues: Issue[]; advice: Advic
 function adviceLines(v: View, target?: string): AdviceLine[] {
   const latest = new Map<string, number>();
   for (const r of v.advice) if (!latest.has(r.author) || v.advice.find((x) => x.id === latest.get(r.author))!.computedAt < r.computedAt) latest.set(r.author, r.id);
-  // Advice is set aside only while an order of the same kind for the same place is recent (other advice still shows).
   // the order each kind of advice turns into: attacking the raiders is sending the captain to the nearest fort
   const orderOf = (a: { kind: string; target?: string }): { action: string; target: string } | undefined => {
     if (a.kind === "advise_levy") return { action: "levy", target: v.self.id };
@@ -29,15 +28,12 @@ function adviceLines(v: View, target?: string): AdviceLine[] {
   // Orders in place: issued by you and not yet reported finished in a letter (for up to 60 days).
   const finished = new Set(Object.values(v.beliefs).filter((b) => b.predicate === "order.status" && ["completed", "abandoned", "superseded"].includes(String(b.believedValue))).map((b) => b.subject.id));
   const completed = new Set(Object.values(v.beliefs).filter((b) => b.predicate === "order.status" && String(b.believedValue) === "completed").map((b) => b.subject.id));
-  const recent = v.self.orders.filter((o) => v.now - o.tick < 60 * 86400);
-  const inPlace = recent.filter((o) => !finished.has(String(o.orderId)));
-  // a captain sent to a fort stays there after the order is completed, so that advice is already done too
-  const captainThere = recent.filter((o) => o.action === "advance" && completed.has(String(o.orderId)));
+  // an action just issued or just reported completed is not offered again
+  const inPlace = v.self.orders.filter((o) => v.now - o.tick < 60 * 86400 && !finished.has(String(o.orderId)));
+  const justDone = v.self.orders.filter((o) => v.now - o.tick < 20 * 86400 && completed.has(String(o.orderId)));
   const superseded = (r: { plan: { id: string } }) => {
     const want = orderOf(JSON.parse(r.plan.id) as { kind: string; target?: string });
-    if (!want) return false;
-    const pool = want.action === "advance" ? [...inPlace, ...captainThere] : inPlace;
-    return pool.some((o) => o.action === want.action && o.target === want.target);
+    return !!want && [...inPlace, ...justDone].some((o) => o.action === want.action && o.target === want.target);
   };
   return v.advice.filter((r) => (target ? r.plan.id.includes(`"${target}"`) : latest.get(r.author) === r.id) && !superseded(r)).map((r) => ({
     id: r.id, adviser: nameOf(v, r.author), area: SHORT_AREA[v.world.areas[r.author] ?? ""] ?? v.world.areas[r.author] ?? "", plan: planWords(v, r.plan.id),
