@@ -25,7 +25,7 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); o
 button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
 button:disabled { opacity: .45; cursor: default; }
 select { border: 1px solid var(--line); background: var(--panel); border-radius: 4px; padding: 3px 6px; max-width: 100%; }
-.top { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.top { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding-bottom: 10px; border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; background: var(--bg); padding-top: 4px; }
 .top .meta { font-family: var(--f-data); font-size: 13px; color: var(--mute); display: flex; gap: 14px; flex-wrap: wrap; }
 .top .grow { flex: 1; }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 13px; }
