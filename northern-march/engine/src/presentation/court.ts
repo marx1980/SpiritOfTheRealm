@@ -16,7 +16,9 @@ export interface Court { day: number; at: string; issues: Issue[]; advice: Advic
 function adviceLines(v: View, target?: string): AdviceLine[] {
   const latest = new Map<string, number>();
   for (const r of v.advice) if (!latest.has(r.author) || v.advice.find((x) => x.id === latest.get(r.author))!.computedAt < r.computedAt) latest.set(r.author, r.id);
-  return v.advice.filter((r) => (target ? r.plan.id.includes(`"${target}"`) : latest.get(r.author) === r.id)).map((r) => ({
+  // Advice about a place is superseded once you have issued an order for that place after it was given.
+  const superseded = (r: { plan: { id: string }; computedAt: number }) => v.self.orders.some((o) => r.computedAt < o.tick && r.plan.id.includes(`"${o.target}"`));
+  return v.advice.filter((r) => (target ? r.plan.id.includes(`"${target}"`) : latest.get(r.author) === r.id) && !superseded(r)).map((r) => ({
     id: r.id, adviser: nameOf(v, r.author), area: SHORT_AREA[v.world.areas[r.author] ?? ""] ?? v.world.areas[r.author] ?? "", plan: planWords(v, r.plan.id),
     supports: r.reasons.filter((x) => x.weight > 0).slice(0, 3).map((x) => reasonWords(x.textKey)),
     concerns: r.reasons.filter((x) => x.weight < 0).slice(0, 3).map((x) => reasonWords(x.textKey)),
