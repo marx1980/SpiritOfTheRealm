@@ -13,6 +13,16 @@ Newest first. Numbers come from `phase0/results/` (files named in each entry). A
 - Sealed block 50000..50999, paired by seed, bootstrap 2,000. PASS: difference ≥ 10 points and interval lower bound > 0. AMBER: one of the two. FAIL: neither.
 - Expectation from TUNE: about 7 points, so AMBER is the likely verdict. Not tuning to pass; see the findings below.
 
+**G-12 amendment (Marko asked to fix G-12 first; D-015 option 3 and part of option 2).**
+- Cause, found on TUNE seeds: only the steward observed the treasury. Elara and Selene never knew the money, so their repairs were abandoned and no adviser but Oren could recommend a levy.
+- Change (rule, not per-adviser tuning): a principal (Tier A) who is at the seat (Ravenport, `scenario.regency.seat`) observes the treasury, with error set by their own administration skill, just as the steward always did. The treasury is kept there.
+- Diagnostic on TUNE seeds 1..60, before the rule was made permanent: Elara 20.0%, Selene 16.7%, Oren 0.0%.
+- Re-measured on TUNE seeds 1..200 (results/phase5_g12_tune_v2.txt): Elara 24.0%, Selene 17.0%, Oren 0.0%, passive 0.0%. Best = Elara, worst = Oren (results/g12_aliases.json).
+- **The first sealed run (block 50000, AMBER, 5.9 points) is kept as recorded.** This change was made after seeing that result. It is disclosed here, and the rule was chosen from TUNE evidence only.
+- **Second sealed run, block 60000..60999 (results/phase5_g12_60000.txt): PASS.** Follow Elara 18.6% (Wilson 16.3-21.1%), follow Oren 0.0% (0-0.4%); difference 18.6 points, paired bootstrap interval 16.3-21.0. Calibration key `c9ce105911ef+df72cad8a755`. Advice followed about 26.9 times per run for Elara and 4.4 for Oren.
+- What this does and does not show: the gate measures that advice from a better-informed adviser leads to better outcomes. It does not show that the advisers differ by design. Their traits, capabilities and objectives are unchanged, and the "narrow" and "biased" roles of option 3 are not built yet. Selene (17% on TUNE) is nearly as good as Elara; only Oren is clearly worse, because of his treasury objective. H-01 and H-02 still have to show whether testers can tell the advisers apart from what they say.
+- Not changed: the advisers' contents (traits, capabilities, objectives). Option 3's "narrow" and "biased" roles are not yet designed in. Elara, Selene and Oren are not differentiated by design; only Oren's objective (treasury first) makes him worse. That is still open (BACKLOG).
+
 **Built (129 tests pass; `npx tsc -p .` clean, now also over `tools/` and `ui/`):**
 - **Interactive play:** `next(limit)` runs to the next decision point and returns what Anna sees; `answer(actions)` resumes. Decision points: a letter delivered to her, advice given in her presence, a danger warning, her arrival somewhere (and an optional daily checkpoint). Saves record answers and replay exactly; a save cannot be taken while a decision is open.
 - **Court** (`presentation/court.ts`): issues ranked by urgency (walls, raiders, her own orders), each with its evidence (what, source, age, certainty) and each adviser's standing advice on that issue; the council's latest advice per adviser; letters. Built from `ViewOf(player)` only; no exact numbers (test).
@@ -33,7 +43,7 @@ Newest first. Numbers come from `phase0/results/` (files named in each entry). A
 - The levy candidate was generated last in advise mode and always cut by the candidate cap: no adviser could ever advise a levy. Now it is generated, before repairs, when the believed treasury cannot cover the repairs the adviser believes are needed.
 - `random-valid` answered every piece of advice with a new order, which woke the advisers again (30,000 events in 30 days). It no longer repeats an order given in the last 10 days.
 
-**G-12 result:** **AMBER** on sealed block 50000..50999. Follow Elara 5.9% (Wilson 4.6-7.5%), follow Oren 0.0% (0-0.4%); difference 5.9 points, paired bootstrap 95% interval 4.4-7.5. The interval is above 0 but the difference is below 10 points. Run first on the pre-final code and again on the final code (gate key `c9ce105911ef+61f15c4bfccc`): identical numbers. Advice was followed about 24.5 times per run for Elara and 4.4 for Oren (results/phase5_g12_50000*.txt).
+**G-12 result (first run, kept):** **AMBER** on sealed block 50000..50999. Follow Elara 5.9% (Wilson 4.6-7.5%), follow Oren 0.0% (0-0.4%); difference 5.9 points, paired bootstrap 95% interval 4.4-7.5. The interval is above 0 but the difference is below 10 points. Run first on the pre-final code and again on the final code (gate key `c9ce105911ef+61f15c4bfccc`): identical numbers. Advice was followed about 24.5 times per run for Elara and 4.4 for Oren (results/phase5_g12_50000*.txt).
 
 **Finding: no single adviser holds the realm.** Only the steward reads the books, so Elara and Selene never advise a levy and many of the repairs they advise are abandoned for lack of funds. Oren advises waiting or a levy and never a repair. The scripted aggressive ruler (repair below 80%, levy every 30 days) meets the objective on 20 of 30 TUNE seeds; following any one adviser meets it on 0-7%. The advisers differ in kind (each sees part of the problem), not enough in overall quality for G-12.
 
@@ -44,7 +54,7 @@ Options (Marko to choose; none applied):
 4. Soften the objective (e.g. no fort breached for more than N days), since passive play scores 0%.
 Recommendation: 3, plus 2 for the steward only when he is at court.
 
-**Regressions (final code):** G-01 PASS: combined hash `8e008aeeec3bd99180141f348ea7095595e8388b7a3c02d3080462fc53581bec` under Node, and under Bun in another time zone and locale (the hash changed from Phase 4 because the logs now carry Phase 5 events). G-02 PASS (300/300 first divergences in the perturbed system). 1,000 seeds × 2 arms × 240 days: 0 invariant violations (results/phase5_regression.txt).
+**Regressions (final code):** G-01 PASS on the final code (after the seat-treasury rule): combined hash `95c062a8f7a076ca61ba6caed75beadc290e5bab798189e9da302aff7a7d740b` under Node and under Bun (results/phase5_g01_v2*.txt). The earlier hash `8e008…` is superseded. G-02 PASS (300/300 first divergences in the perturbed system). 1,000 seeds × 2 arms × 240 days: 0 invariant violations (results/phase5_regression_v2.txt, final code; mean 5,448 events per run, breached 96.5% on / 94.2% off).
 
 **Not verified (needs humans):** H-01 and H-02. Protocol and observer sheets in `docs/H01_PROTOCOL.md`; scenario in `engine/ui/h01.json` (seed 51, 90 days, two raider waves).
 

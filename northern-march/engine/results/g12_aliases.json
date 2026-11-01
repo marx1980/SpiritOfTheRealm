@@ -1,9 +1,9 @@
 {
  "tuneSeeds": "1..200",
  "rates": {
-  "elara": 0.07,
+  "elara": 0.24,
   "oren": 0,
-  "selene": 0.04
+  "selene": 0.17
  },
  "passive": 0,
  "aliases": {

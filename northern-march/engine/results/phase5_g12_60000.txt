@@ -1,0 +1,2 @@
+{"gate":"G-12","phase":5,"seedBlock":60000,"seeds":"60000..60999","calibrationHash":"c9ce105911ef+df72cad8a755","contentVersion":"march-0.5","aliases":{"follow-best-adviser":"elara","follow-worst-adviser":"oren"},"best":{"rate":0.186,"ci":[0.16310078087999175,0.21130251143226153],"ends":{},"followedPerRun":26.891},"worst":{"rate":0,"ci":[0,0.003826898586390522],"ends":{},"followedPerRun":4.359},"diff":0.186,"diffCi":[0.163,0.21],"verdict":"PASS","t":"2026-11-01T04:27:03.548Z"}
+done

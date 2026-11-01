@@ -59,7 +59,7 @@ Phase 1 base:
 - Phase 1: G-01, G-02 PASS (D-009). Phase 2: built (D-010).
 - Phase 3: G-10 PASS, **G-11 FAIL** (wrong beliefs do not lead to worse outcomes under passive or delegating rulers). Proceeded at Marko's instruction; needs his confirmation as an override (D-012, D-013).
 - Phase 4: G-14 PASS on block 40000 with the final code; G-01 PASS (D-014). G-02 redefined (first divergence belongs to the perturbed system); G-02 and the 1,000-seed invariant batch PASS on the final Phase 4 code.
-- Phase 5: built. G-12 AMBER (5.9 points, interval 4.4-7.5; needs 10). H-01 and H-02 not run (need testers) (D-015).
+- Phase 5: built. G-12 AMBER on block 50000 (5.9 points), then fixed by a seat-level treasury rule and PASS on block 60000 (18.6 points, interval 16.3-21.0) (D-015). H-01 and H-02 not run (need testers).
 
 ## Stubbed / not built (by design)
 - The composer sets intent, objective, discretion and reporting; constraints and contingencies are accepted but not yet offered in the UI.
@@ -70,16 +70,18 @@ Phase 1 base:
 
 ## Known gaps
 - G-11 open (D-013): information does not yet matter enough under passive or delegating rulers.
-- G-01 not yet run on a second physical machine. In `engine/`: `node src/cli.ts g01 --seeds 1..100` must end with `combined 8e008aeeec3bd99180141f348ea7095595e8388b7a3c02d3080462fc53581bec`.
+- G-01 not yet run on a second physical machine. In `engine/`: `node src/cli.ts g01 --seeds 1..100` must end with `combined 95c062a8f7a076ca61ba6caed75beadc290e5bab798189e9da302aff7a7d740b`.
 - Tier B's busiest day sits exactly at its budget (3). Tier B sergeants wake but have no options yet.
 - Placeholder physical systems (economy, weather, threat): storms dominate outcomes.
 - Route closures exist but nothing triggers them (Phase 10).
-- G-12 AMBER: no single adviser holds the realm (D-015 findings and options).
+- G-12 passes only because the best adviser is now informed about the treasury. Advisers are not yet differentiated by design (traits, capabilities, objectives); Selene is nearly as good as Elara on TUNE (D-015).
+- H-01 scenario: the first pause comes on day 12 (first letter to Anna), so testers see no opening. Not yet fixed (see below).
 - Only the steward knows the treasury; adviser quality is not yet differentiated by design.
 
 ## Needs a human
 - **Run H-01 (and H-02 over two sessions)** with 3-5 testers who have not seen the design: `docs/H01_PROTOCOL.md`. Share the debug page from its Share menu, or build it locally (`cd engine && npm install && node ui/build.ts`).
-- Choose a G-12 option from D-015 (recommended: differentiated adviser quality, plus the steward reading the books at court).
+- Decide whether to design the advisers' differences (D-015, option 3, not built) before or after H-01.
+- Decide the H-01 opening: start paused at Day 1 and/or move the first raid earlier in ui/h01.json (not applied).
 - Confirm the G-11 override, or pick an option from D-013.
 - Optional: run the G-01 command above on your own computer (Node 22.18+).
 
