@@ -8,6 +8,14 @@ import type { IssuedRecord, Position, WorldState } from "./world.ts";
 /** Advice heard more than this long ago is no longer shown as standing advice. */
 export const ADVICE_FRESH = 15 * 86400;
 
+/** Skill names as people in the realm would say them. */
+export const AREA: Record<string, string> = { engineering: "Works", military: "Military", intelligence: "Intelligence", administration: "Administration" };
+/** The strongest skill (ties: alphabetical) as the area someone is known for. */
+export function areaOf(caps: Record<string, number>): string {
+  const best = Object.entries(caps).filter(([k]) => k in AREA).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))[0];
+  return best ? AREA[best[0]] : "";
+}
+
 export type BeliefView = BeliefProposition & { effectiveBand: EffectiveBand; ageTicks: number };
 export interface DeliveredReport {
   reportId: number; author: string; subject: { kind: string; id: string }; claims: BeliefProposition[];
@@ -18,6 +26,8 @@ export interface WorldKnowledge {
   places: { id: string; name: string; province: string; kind: string; pos: [number, number]; fortified: boolean }[];
   routes: { from: string; to: string; crossing?: string }[];
   names: Record<string, string>;
+  /** What each known person is known for: their strongest skill, in words (the area they advise on). */
+  areas: Record<string, string>;
 }
 export interface View {
   readonly now: number;
@@ -58,6 +68,7 @@ export function buildView(s: Readonly<WorldState>, c: Content, who: string, now:
       places: c.locations.map((l) => ({ id: l.id, name: l.name, province: l.province, kind: l.kind, pos: [...l.pos] as [number, number], fortified: !!l.fortification })),
       routes: c.routes.map((r) => ({ from: r.from, to: r.to, ...(r.crossing ? { crossing: r.crossing.kind } : {}) })),
       names: Object.fromEntries([...c.locations.map((l) => [l.id, l.name]), ...[...known].sort().map((id) => [id, c.byId.character.get(id)?.name ?? id])]),
+      areas: Object.fromEntries([...known].sort().map((id) => [id, areaOf(c.byId.character.get(id)?.capabilities ?? {})])),
     },
   });
 }

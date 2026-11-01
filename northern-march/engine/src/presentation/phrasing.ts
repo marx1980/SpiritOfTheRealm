@@ -1,5 +1,5 @@
 // Templated phrasing (A7: the game is playable without a language model). Words, not hidden numbers.
-import type { BeliefView, View } from "../view.ts";
+import { areaOf, type BeliefView, type View } from "../view.ts";
 import { dayOf } from "./format.ts";
 
 export const certainty: Record<string, string> = { certain: "certain", probable: "probably", uncertain: "perhaps", doubtful: "doubtful", stale: "out of date" };

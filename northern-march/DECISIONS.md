@@ -35,6 +35,7 @@ Newest first. Numbers come from `phase0/results/` (files named in each entry). A
 - **Campaign objective** (`scenario.objective`): `objectiveStatus()` and the `objectiveMet` metric.
 - **Advice audience:** advisers advise whoever is with them; Anna hears advice only in person. She keeps each adviser's latest advice per target for 15 days.
 - **Adviser policies:** `follow:<id>`, and `follow-best-adviser` / `follow-worst-adviser` through measured aliases.
+- **Advice reads plainly:** each adviser shows their area in brackets, taken from their strongest skill (Elara Military, Oren Administration, Selene Works); reasons are grouped as "Supports" and "Concerns" (a Concern under a plan is a cost or risk of that plan, not of the reader); "heard today" instead of "today". Advisers' areas are public knowledge in the view. Engine decisions unchanged; G-12 unaffected.
 - **Letter reader layout:** the writer's name on the left; "arrived" and "written" as separate tags on the right; the text starts "Name: ".
 - **Letters speak in the first person about the writer's own whereabouts** ("I am at Greybridge"); the writer's walls and raiders stay as "The walls at…".
 - **Advice pauses name their advice:** `next()` returns `adviceId`; the pause shows that advice with its reasons and a Do it button. The page passes advice to wait (the engine still records it, so G-12 and the tests are unchanged). Continue moved to the top row.

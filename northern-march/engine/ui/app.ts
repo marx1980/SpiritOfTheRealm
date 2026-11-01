@@ -90,7 +90,7 @@ function pauseText(v: View): string {
   }
   if (r === "advice") {
     const a = v.advice.find((x) => x.id === st.advice);
-    return a ? `${name(v, a.author)} advises: ${planWords(v, a.plan.id)}` : "Advice";
+    return a ? `${name(v, a.author)}${v.world.areas[a.author] ? ` (${v.world.areas[a.author]})` : ""} advises: ${planWords(v, a.plan.id)}` : "Advice";
   }
   if (r === "danger") return "You are in danger";
   if (r === "arrival") { const p = v.self.position; return "at" in p ? `Arrived at ${name(v, p.at)}` : "Arrived"; }
@@ -100,9 +100,9 @@ function pauseText(v: View): string {
 function adviceRows(v: View, lines: AdviceLine[]) {
   return lines.map((l) => {
     const r = v.advice.find((x) => x.id === l.id), a = r ? adviceAction(v, r) : null;
-    return `<div class="row"><span class="who">${esc(l.adviser)}</span><span>${esc(l.plan)}</span>
+    return `<div class="row"><span class="who">${esc(l.adviser)}${l.area ? ` <small class="area">(${esc(l.area)})</small>` : ""}</span><span>${esc(l.plan)}</span>
       ${a && st.paused ? `<button data-act='${esc(JSON.stringify(a))}'>Do it</button>` : ""}
-      <span class="why">${esc([...l.because, l.heard].join(" · "))}</span></div>`;
+      <span class="why">${l.supports.length ? `Supports: ${esc(l.supports.join(", "))}. ` : ""}${l.concerns.length ? `Concerns: ${esc(l.concerns.join(", "))}. ` : ""}${esc(l.heard)}</span></div>`;
   }).join("");
 }
 
@@ -207,7 +207,10 @@ function render() {
   const cls = st.over ? "ended" : st.paused === "danger" ? "danger" : "";
   const cont = st.over ? "" : `<button class="primary" id="go">${st.queue.length ? "Send and continue" : "Continue"}</button>`;
   const adv = st.paused === "advice" ? v.advice.find((x) => x.id === st.advice) : undefined;
-  const why = adv ? adv.reasons.filter((x) => x.weight !== 0).slice(0, 3).map((x) => `${x.weight > 0 ? "for" : "against"}: ${reasonWords(x.textKey)}`).join(" · ") : "";
+  const why = adv ? [
+    ...(adv.reasons.some((x) => x.weight > 0) ? [`Supports: ${adv.reasons.filter((x) => x.weight > 0).slice(0, 3).map((x) => reasonWords(x.textKey)).join(", ")}`] : []),
+    ...(adv.reasons.some((x) => x.weight < 0) ? [`Concerns: ${adv.reasons.filter((x) => x.weight < 0).slice(0, 3).map((x) => reasonWords(x.textKey)).join(", ")}`] : []),
+  ].join(". ") : "";
   const doIt = adv && adviceAction(v, adv) && st.paused ? `<button data-act='${esc(JSON.stringify(adviceAction(v, adv)))}'>Do it</button>` : "";
   document.getElementById("app")!.innerHTML = `
   <div class="top"><h1>Northern March</h1>
