@@ -35,6 +35,10 @@ export function dispatch(ctx: Ctx, kind: "report" | "order", id: number, sender:
   if (!path) return ctx.emit(T(kind, "Undeliverable"), [cause], subj, { ...ref({ kind }, id), messengerId: null, at: from, reason: "no open route" });
   const mid = ctx.s.nextMessengerId;
   const arrivals = legs(ctx, mid, path, "out");
+  // Word sent on a later day does not arrive on the same day as, or before, word of the same kind already on its way.
+  const day = Math.floor(ctx.tick / DAY);
+  const ahead = Object.values(ctx.s.messengers).filter((m) => m.kind === kind && m.sender === sender && m.recipient === recipient && Math.floor(m.departedAt / DAY) < day);
+  if (ahead.length && arrivals.length) arrivals[arrivals.length - 1] = Math.max(arrivals[arrivals.length - 1], Math.max(...ahead.map((m) => m.arrivals[m.arrivals.length - 1] ?? 0)) + DAY);
   const ev = ctx.emit(T(kind, "Dispatched"), [cause], subj, { ...ref({ kind }, id), messengerId: mid, sender, recipient, path: path.locations, arrivals });
   schedule(ctx, mid, arrivals, ev.id);
   return ev;
@@ -180,7 +184,10 @@ function inspectAndReport(ctx: Ctx, author: string, cause: number) {
   const companies = Object.entries(ctx.s.positions).filter(([id, p]) => "at" in p && p.at === ch.location && (ctx.s.troops[id] ?? 0) > 0).map(([id]) => id).sort();
   for (const id of companies) observe(ctx, author, chr(id), "character.troops", cause);
   const beliefs = [best(ctx, author, ch.location, "fortification.condition"), best(ctx, author, ch.location, "fortification.garrison"), ...companies.map((id) => best(ctx, author, id, "character.troops")),
-    ...ctx.content.scenario.threat.sites.filter((x) => x.target === ch.location).map((x) => best(ctx, author, x.site, "threat.intensity"))].filter((x) => !!x);
+    ...ctx.content.scenario.threat.sites.filter((x) => x.target === ch.location).map((x) => best(ctx, author, x.site, "threat.intensity")),
+    // a fight since the last routine letter is told, so that a change in men is explained
+    ...ctx.content.scenario.threat.sites.filter((x) => x.target === ch.location).map((x) => best(ctx, author, x.site, "battle.result"))
+      .filter((b) => b && ctx.tick - b.observedAt <= ctx.content.scenario.messenger.reportEveryDays * DAY)].filter((x) => !!x);
   const claims = [selfClaim(ctx, author, upd.id), ...beliefs.map((b) => ({ ...b!, reliabilityBand: b!.band as BeliefProposition["reliabilityBand"] }))].map(({ band: _b, ...rest }: any) => rest);
   compose(ctx, author, ch.reportsTo, claims, upd.id);
 }

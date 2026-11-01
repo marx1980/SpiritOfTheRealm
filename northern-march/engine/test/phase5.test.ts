@@ -277,3 +277,13 @@ test("a captain's company refills 2% a day, only in his home town", () => {
   assert.ok(w.troops.caron <= caron.troops!);
   for (const e of sim.log.filter((x) => x.type === "CompanyRecovered")) for (const [, n] of (e.payload as { changes: [string, number][] }).changes) assert.ok(n >= 1 && n <= 4);
 });
+
+test("letters from one hand arrive in the order written, never on the same day as one written earlier", () => {
+  for (const seed of [3, 5, 9]) {
+    const v = run({ seed, content: threat(3, 800, 60) }, 120).viewOf("player");
+    for (const a of v.reports) for (const b of v.reports) {
+      if (a.author !== b.author || Math.floor(a.composedAt / DAY) >= Math.floor(b.composedAt / DAY)) continue;
+      assert.ok(Math.floor(b.deliveredAt / DAY) > Math.floor(a.deliveredAt / DAY), `seed ${seed}: ${a.author} letter ${b.reportId} overtook ${a.reportId}`);
+    }
+  }
+});

@@ -208,8 +208,12 @@ function choicesBlock(v: View): string {
 /** The letters of this pause, all together. */
 function batchBlock(v: View): string {
   const ids = [...st.batch]; if (st.paused === "report" && st.letter !== null && !ids.includes(st.letter)) ids.push(st.letter);
-  const ls = ids.map((id) => v.reports.find((x) => x.reportId === id)).filter((x): x is NonNullable<typeof x> => !!x);
-  return ls.length ? `<div class="batch">${ls.map((l) => `<div class="batch-letter"><span class="what">${tone(`Letter from ${name(v, l.author)}: ${letterSentences(v, l).join(" ")}`)}</span></div>`).join("")}</div>` : "";
+  const all = ids.map((id) => v.reports.find((x) => x.reportId === id)).filter((x): x is NonNullable<typeof x> => !!x).sort((x, y) => x.composedAt - y.composedAt);
+  // a letter that only repeats what another letter from the same hand says in full is not shown twice
+  const keys = (l: (typeof all)[number]) => new Set(l.claims.map((c) => `${c.predicate}|${c.subject.id}|${JSON.stringify(c.believedValue)}`));
+  const ls = all.filter((l, i) => !all.some((m, j) => j !== i && m.author === l.author && (() => { const a = keys(l), b = keys(m); return [...a].every((k) => b.has(k)) && (b.size > a.size || j < i); })()));
+  const written = (l: (typeof all)[number]) => { const d = Math.floor(v.now / DAY) - Math.floor(l.composedAt / DAY); return d > 0 && Math.floor(l.deliveredAt / DAY) - Math.floor(l.composedAt / DAY) > 0 && all.length > 1 ? ` (written ${d === 1 ? "yesterday" : d + " days ago"})` : ""; };
+  return ls.length ? `<div class="batch">${ls.map((l) => `<div class="batch-letter"><span class="what">${tone(`Letter from ${name(v, l.author)}${written(l)}: ${letterSentences(v, l).join(" ")}`)}</span></div>`).join("")}</div>` : "";
 }
 
 const areaShort = (a: string) => ({ Military: "MIL", Administration: "ADM", Construction: "CON", Intelligence: "INT" } as Record<string, string>)[a] ?? a.toUpperCase();
