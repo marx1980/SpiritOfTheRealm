@@ -44,7 +44,7 @@ Options (Marko to choose; none applied):
 4. Soften the objective (e.g. no fort breached for more than N days), since passive play scores 0%.
 Recommendation: 3, plus 2 for the steward only when he is at court.
 
-**Regressions (final code):** {{REG}}
+**Regressions (final code):** G-01 PASS: combined hash `8e008aeeec3bd99180141f348ea7095595e8388b7a3c02d3080462fc53581bec` under Node, and under Bun in another time zone and locale (the hash changed from Phase 4 because the logs now carry Phase 5 events). G-02 PASS (300/300 first divergences in the perturbed system). 1,000 seeds × 2 arms × 240 days: 0 invariant violations (results/phase5_regression.txt).
 
 **Not verified (needs humans):** H-01 and H-02. Protocol and observer sheets in `docs/H01_PROTOCOL.md`; scenario in `engine/ui/h01.json` (seed 51, 90 days, two raider waves).
 
