@@ -34,6 +34,7 @@ export function checkLog(log: readonly SimEvent[]): string[] {
         if (ev.kind === "intercepted" && !(src && ["InterceptedReportReceived", "InterceptedOrderReceived"].includes(src.type) && src.payload.by === holder))
           v.push(`event ${e.id}: intercepted belief for ${holder} without the papers reaching them`);
         if (ev.kind === "observation" && ev.source !== holder) v.push(`event ${e.id}: ${holder} holds someone else's observation as first-hand`);
+        if (ev.kind === "order" && !(src?.type === "OrderReceived" && src.payload.recipient === holder)) v.push(`event ${e.id}: ${holder} learned from an order it did not receive`);
       }
     }
     if (e.type === "PlayerInput") {

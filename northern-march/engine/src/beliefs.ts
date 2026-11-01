@@ -7,7 +7,7 @@ export type EffectiveBand = Band | "stale";
 /** Index = reliability; higher is better. */
 export const BANDS: readonly EffectiveBand[] = ["stale", "doubtful", "uncertain", "probable", "certain"];
 
-export interface Evidence { kind: "observation" | "report" | "intercepted" | "scenario"; eventId: number; source: string; reportId?: number; local?: boolean }
+export interface Evidence { kind: "observation" | "report" | "intercepted" | "scenario" | "order"; eventId: number; source: string; reportId?: number; local?: boolean }
 export interface BeliefProposition<T = unknown> {
   id: number;
   subject: SubjectRef;

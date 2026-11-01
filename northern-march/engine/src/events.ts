@@ -94,6 +94,10 @@ export const EVENT_TYPES: Readonly<Record<string, EventTypeDef>> = Object.freeze
   DecisionMade: T("agents", "political", 1),
   ExperienceGained: T("agents", "info", 0),
   ResponseAssessed: T("agents", "info", 0), // was a request answered? (agents learn whom they can count on)
+  // tiers (Phase 4)
+  CharacterPromoted: T("agents", "political", 2),
+  CharacterDemoted: T("agents", "political", 1, true), // a clock-driven review: time passing is its cause
+  LeaderAppointed: T("agents", "political", 2),
   SortieLaunched: T("battle", "military", 2),
   SortieResolved: T("battle", "military", 3),
   LossesTaken: T("battle", "military", 2),

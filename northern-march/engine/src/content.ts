@@ -24,10 +24,11 @@ export interface Predicate { id: string; subjectKind: SubjectRefC["kind"]; halfL
 export interface Relationship { to: string; kind: string; value: number }
 export interface ObjectiveDef { id: string; kind: "role" | "personal" | "political" | "situational"; objective: ObjectiveKind; priorityPermille: number; target?: string; reserveMilli?: number }
 export interface Character { id: string; name: string; role: string; location: string; tier: (typeof TIERS)[number]; traits: string[]; reportsTo?: string;
-  capabilities: Record<string, number>; relationships: Relationship[]; house: string; objectives: ObjectiveDef[]; troops?: number }
+  capabilities: Record<string, number>; relationships: Relationship[]; house: string; objectives: ObjectiveDef[]; troops?: number;
+  household?: string; occupation?: string }
 export type Script =
   | { day: number; kind: "travel"; who: string; to: string; mode: Mode; secret?: boolean }
-  | { day: number; kind: "order"; from: string; to: string; intent: string; objective: SubjectRefC; supersedesPrevious?: boolean }
+  | { day: number; kind: "order"; from: string; to: string; intent: string; objective: SubjectRefC; supersedesPrevious?: boolean; discretion?: "strict" | "bounded" | "delegated" }
   | { day: number; kind: "threat"; site: string; intensityPermille: number; durationDays: number };
 export interface AgentParams {
   reviewDays: { strategic: number; operational: number };
@@ -37,6 +38,7 @@ export interface AgentParams {
   horizonDays: number; quietDaysToEnd: number; requestAssessDays: number; answerLearningPermille: number; wakeBudgetPerDay: Record<(typeof TIERS)[number], number>;
   values: { manMilli: number; renownMilli: number; postMilli: number; breachPenaltyMilli: number; goodConditionMilli: number };
   experience: { perTaskPermille: number; capPermille: number };
+  demoteAfterDays: number; recommendationTrustMin: number;
 }
 export interface BattleParams {
   sortie: { skillBasePermille: number; intensityFactorPermille: number; lossOnSuccessPermille: number; lossOnFailurePermille: number; hours: number };
@@ -175,6 +177,23 @@ export function deriveContent(raw: RawContent): Content {
     ...raw, version: raw.manifest.contentVersion, hash: hashOf(raw),
     byId: { location: m(raw.locations), character: m(raw.characters), route: m(raw.routes), predicate: m(raw.predicates), trait: m(raw.traits) },
   };
+}
+
+/** Strip the derived fields of a Content back to its raw files. */
+export function rawOf(c: Content): RawContent {
+  const { version: _v, hash: _h, byId: _b, ...raw } = c;
+  return structuredClone(raw) as RawContent;
+}
+
+/** A variant with the background cast (Tier C) multiplied, for scaling tests (G-14). Copies live where the originals do. */
+export function withExtraBackground(c: Content, factor: number): Content {
+  const raw = rawOf(c);
+  const bg = raw.characters.filter((x) => x.tier === "C");
+  for (let k = 2; k <= factor; k++)
+    for (const x of bg) raw.characters.push({ ...structuredClone(x), id: `${x.id}_${k}`, name: `${x.name} (${k})`,
+      relationships: x.relationships.filter((r) => r.kind !== "recommends") });
+  raw.manifest = { ...raw.manifest, contentVersion: `${raw.manifest.contentVersion}+bg${factor}` };
+  return deriveContent(raw);
 }
 
 export function loadContent(dir: string): Content {

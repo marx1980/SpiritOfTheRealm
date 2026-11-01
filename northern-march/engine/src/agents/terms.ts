@@ -110,6 +110,8 @@ export function expect(sit: Situation, per: Perceiver, a: ActionRef): Expectatio
       e.costMilli = repairCost(T!, to);
       break;
     }
+    case "investigate": e.leavesPost = sit.at === sit.post && T !== sit.post; break;
+    case "delegate_investigation": break; // someone else goes
     case "levy": e.gainMilli = sit.p.levyMilli; break;
     case "half_levy": e.gainMilli = Math.floor(sit.p.levyMilli / 2); break;
     // advice: what the adviser expects if the ruler did this

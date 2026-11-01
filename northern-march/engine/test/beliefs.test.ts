@@ -85,8 +85,11 @@ test("eviction plan removes the lowest (band x recency x relevance) first, ties 
   assert.deepEqual(plan.map((x) => x.id), [1]);
 });
 
-test("every content character is seeded with knowledge of the people they deal with", () => {
+test("the ruler knows where every principal character is; the background she does not know", () => {
   const sim = run({ seed: 1, policy: "passive", ablate: ["messenger"] }, 0);
   const v = sim.viewOf("anna");
-  for (const c of CONTENT.characters) if (c.id !== "anna") assert.ok(beliefsAbout(v, c.id, "character.location").length, c.id);
+  for (const c of CONTENT.characters) {
+    if (c.id === "anna") continue;
+    assert.equal(beliefsAbout(v, c.id, "character.location").length > 0, c.tier === "A", c.id);
+  }
 });

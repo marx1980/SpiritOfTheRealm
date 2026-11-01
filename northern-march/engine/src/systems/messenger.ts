@@ -51,6 +51,7 @@ function arrive(ctx: Ctx, m: Messenger, cause: number) {
   if ("at" in rp && rp.at === dest) {
     if (m.kind === "order") {
       const r = ctx.emit("OrderReceived", [cause], subj, { orderId: m.ref, recipient: m.recipient, at: dest, messengerId: m.id });
+      learnSender(ctx, m.recipient, ctx.s.orders[String(m.ref)].order.issuer, m.path[0], m.departedAt, r.id);
       ctx.at(ctx.tick, "orders:received", { orderId: m.ref, receivedEventId: r.id });
       return;
     }
@@ -86,6 +87,14 @@ function deliverReport(ctx: Ctx, m: Messenger, at: string, cause: number) {
     }
     ctx.at(ctx.tick, "player:decide", { deliveredEventId: d.id });
   }
+}
+
+/** An order says who sent it and from where: the recipient learns the issuer's seat and whereabouts (B5 evidence "order"). */
+export function learnSender(ctx: Ctx, recipient: string, issuer: string, from: string, sentAt: number, receivedEventId: number) {
+  if (recipient === issuer) return;
+  const ev = { kind: "order" as const, eventId: receivedEventId, source: issuer };
+  learn(ctx, recipient, { subject: chr(issuer), predicate: "character.seat", value: ctx.content.byId.character.get(issuer)!.location, observedAt: sentAt, band: "certain" }, ev, [receivedEventId]);
+  learn(ctx, recipient, { subject: chr(issuer), predicate: "character.location", value: from, observedAt: sentAt, band: "probable" }, ev, [receivedEventId]);
 }
 
 /** A reader weighs a report by their trust in the author and their own skill in its domain. */
@@ -146,7 +155,7 @@ function selfClaim(ctx: Ctx, who: string, eventId: number): BeliefProposition {
 function inspectAndReport(ctx: Ctx, author: string, cause: number) {
   const ch = ctx.content.byId.character.get(author)!;
   const p = ctx.s.positions[author];
-  if (!("at" in p) || p.at !== ch.location || !ctx.s.fortifications[ch.location] || !ch.reportsTo) return;
+  if (ctx.s.tiers[author] === "C" || !("at" in p) || p.at !== ch.location || !ctx.s.fortifications[ch.location] || !ch.reportsTo) return;
   const upd = observe(ctx, author, loc(ch.location), "fortification.condition", cause)!;
   const beliefs = [best(ctx, author, ch.location, "fortification.condition"),
     ...ctx.content.scenario.threat.sites.filter((x) => x.target === ch.location).map((x) => best(ctx, author, x.site, "threat.intensity"))].filter((x) => !!x);
@@ -168,7 +177,9 @@ export const messenger: System = {
       ctx.at(ctx.tick + ctx.content.scenario.messenger.reportEveryDays * DAY, "messenger:routine", { author });
     },
     "messenger:urgent": (ctx, { location, cause }) => {
-      for (const ch of sorted(ctx.content.characters, (c) => c.id)) if (ch.location === location && ch.reportsTo) { inspectAndReport(ctx, ch.id, cause); break; }
+      // the senior person posted there writes: principal characters first, then the locally relevant
+      const posted = sorted(ctx.content.characters.filter((c) => c.location === location && c.reportsTo && ctx.s.tiers[c.id] !== "C"), (c) => `${ctx.s.tiers[c.id]}:${c.id}`);
+      if (posted.length) inspectAndReport(ctx, posted[0].id, cause);
     },
     "messenger:compose": (ctx, { author, recipient, claims, cause, purpose }) => compose(ctx, author, recipient, claims, cause, purpose),
     "messenger:dispatchOrder": (ctx, { orderId, cause }) => {

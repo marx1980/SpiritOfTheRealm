@@ -4,7 +4,7 @@ import { mkdirSync, writeFileSync, appendFileSync } from "node:fs";
 import { loadContent, readContentDir, validateContent } from "./content.ts";
 import { createSim, hashLog } from "./engine.ts";
 import { sha256 } from "./canonical.ts";
-import { runBatch, calibrationHash } from "./batch.ts";
+import { runBatch, gateKey } from "./batch.ts";
 import { evaluateCausalGate, GateLog, policyRuleDetail } from "./gates.ts";
 import { ancestry, timeline } from "./inspect.ts";
 import type { SystemId } from "./events.ts";
@@ -54,7 +54,7 @@ switch (cmd) {
     const c = content(), block = Number(opt("block")), n = Number(opt("n", "1000")), days = Number(opt("days", "240"));
     const policies = (opt("policies", "passive,delegating,aggressive,random-valid")!).split(",") as PolicyId[];
     const log = new GateLog(opt("log", "results/gate_log.jsonl")!);
-    const cal = calibrationHash(c);
+    const cal = gateKey(c);
     log.claim(block, cal);
     const seeds = Array.from({ length: n }, (_, i) => block + i);
     const per: Record<string, ReturnType<typeof evaluateCausalGate>> = {}, logHashes: Record<string, string[]> = {};

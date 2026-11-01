@@ -170,7 +170,7 @@ Each trait is a data entry defining modifiers on: risk weighting, obedience-when
 Thresholds are initial guesses, revised after the first real batch. The protocol (C0) is not a guess: Phase 0 showed that a "rate within a band" gate can be passed by background strain alone, so gates now measure what the system *caused*, with uncertainty, on seeds nobody tuned on (DECISIONS D-001, D-007).
 
 ## C0. Gate evaluation protocol
-1. **Seed blocks.** TUNE seeds 1-9,999: free use for development, diagnostics and sweeps. GATE blocks of 1,000: 10,000-10,999, 20,000-20,999, 30,000-30,999 and so on. A GATE block gives one verdict per calibration (a hash of the full parameter set and content, defaults included, not only the overrides). After any change, that block is spent and the next one is used. Never tune on a GATE block. Every evaluation is appended to `results/gate_log.jsonl`, and the first evaluation on a block is the verdict.
+1. **Seed blocks.** TUNE seeds 1-9,999: free use for development, diagnostics and sweeps. GATE blocks of 1,000: 10,000-10,999, 20,000-20,999, 30,000-30,999 and so on. A GATE block gives one verdict per calibration: a hash of the full parameter set and content (defaults included, not only the overrides) plus a hash of the engine source, since a code change is a change too (added in Phase 4). After any change, that block is spent and the next one is used. Never tune on a GATE block. Every evaluation is appended to `results/gate_log.jsonl`, and the first evaluation on a block is the verdict.
 2. **Sample size.** Proportion gates use at least 1,000 seeds per arm. Phase 0 check: a true 6.0% measured on 1,000 seeds had a 95% Wilson interval of 4.7-7.6%; 600 seeds is too wide to decide a 5% edge.
 3. **Paired arms.** ON and OFF arms use the same master seed and per-system RNG streams (A3) and differ only in one ablation switch. Differences and ratios use a paired bootstrap (2,000 resamples) over seeds. The two logs must match until the ablated system first emits an event (C3).
 4. **Three-state verdicts.** For a metric with band [lo, hi]: **PASS** if its 95% interval lies inside the band; **AMBER** if the point estimate is inside but the interval crosses an edge; **FAIL** if the point estimate is outside. AMBER gets one extension (double the seeds on a fresh GATE block); still AMBER counts as FAIL. A phase is complete only on PASS, or a recorded override by Marko.
@@ -197,7 +197,7 @@ Thresholds are initial guesses, revised after the first real batch. The protocol
 | ID | Phase | Metric | Arms and n | Pass rule |
 |---|---|---|---|---|
 | G-01 | 1 | Same seed and inputs give an identical log hash on two machines | 100 seeds | all identical |
-| G-02 | 1 | Adding RNG draws to one stream leaves every other stream's outcomes unchanged | 100 seeds | identical |
+| G-02 | 1 | Adding RNG draws to one stream changes nothing before that system's own outcomes change: the first event that differs between the two runs belongs to the perturbed system (redefined in Phase 4: once systems interact, later differences are cause and effect) | 100 seeds | all seeds |
 | G-03 | 7, 14 | Attributable rate A of the chain end state | ON/OFF paired, 1,000 seeds, 3 policies | A in [5%, 40%] (C0.4) |
 | G-04 | 7, 14 | Lift R_on / R_off | same | PASS: ratio >= 1.5 and interval lower bound > 1.0; AMBER: ratio >= 1.5 only; else FAIL |
 | G-05 | 7 | Link necessity: disabling any one named link cuts A by at least 50% | 600 seeds per link | every link (links named in DECISIONS at Phase 7 start) |
@@ -298,11 +298,13 @@ Rebellion is a mobilisation state with structural gates plus a continuous score.
 **Deliver:** objectives, intentions with commitment/hysteresis, trait vocabulary (B6), capabilities and domain experience, relationships, wake subscription index, layered planning, obedience decision (ARCHITECTURE §20.8), DecisionTrace, Recommendation generation.
 **Tests:** inactive characters do no work; a meaningful event wakes only implicated agents; same evidence gives different, explainable plans for Elara and Caron; an agent does not flip between two near-equal plans on successive minor events.
 **Gate:** G-10, G-11 on scripted runs.
+**Result (1 Nov):** G-10 PASS; G-11 FAIL (wrong beliefs do not lead to worse outcomes under passive or delegating rulers; they do under aggressive). Proceeded at Marko's instruction with G-11 open. See DECISIONS D-012 and D-013.
 
 ## Phase 4 - Simulation tiers
 **Deliver:** Tier A/B/C, promotion/demotion, background representation, relevance triggers, measured wake budgets per tier.
 **Tests:** Stefan promotes from background to expedition commander without pre-running full AI; demoted people keep history and relationships.
 **Gate:** G-14.
+**Result (1 Nov):** PASS (block 30000). See DECISIONS D-014.
 
 ## Phase 5 - Court, Map and personal presence (GO/NO-GO)
 **Deliver:** Court issue aggregator; adviser interpretation and disagreement; belief-based map with report age, source and uncertainty; structured order composer; messenger delivery; Anna's travel between Ravenport, Greybridge and Northwatch; who holds court and decides while she is absent; campaign objective tracking; defeat on Anna's death or capture; debug UI with templated phrasing.

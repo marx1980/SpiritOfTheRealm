@@ -4,6 +4,60 @@ Newest first. Numbers come from `phase0/results/` (files named in each entry). A
 
 ---
 
+## D-014 (Phase 4) Simulation tiers: built, G-14 PASS
+
+**Built (118 tests pass):**
+- Tiers A/B/C as world state. 24 background characters (Tier C) with identity, household, occupation, home, two traits and one or two relationships. They hold no beliefs, observe nothing and never wake until something makes them relevant.
+- **Promotion** (ARCHITECTURE §20.9): given independent responsibility, to Tier A; caught up in a significant military event where they stand (a raid, a sortie, losses), to Tier B. The promoted start with what their station would tell them (seat and whereabouts of their superior and the people they deal with); nothing about them was simulated before.
+- **Demotion:** when the role has ended (no order in force, not travelling, no live intention) and nothing has stirred them for 30 days, one step down. Plans are dropped; history, experience, learned answer rates, beliefs and relationships are kept. Principal characters never go below their content tier.
+- **Choosing a leader** (adopted decision 5): a delegate's candidates are its own retainers and anyone recommended by someone it trusts at least 500; busy or travelling people are excluded; score = trust x recommendation (or the retainer bond). With delegated discretion, handing an expedition to a chosen leader counts as obeying.
+- **Delegated expeditions:** the "investigate" intent; the senior's order goes LocalPlanFormed -> SubordinateOrdersIssued -> ExecutionStarted and completes when the subordinate order does (`parentOrderId`, a B2 addition). The leader rides out, scouts, reports back and goes home.
+- **Tier B plans lightly:** 3 options, no strategic layer, compressed traces (selected option and its top three reasons).
+- **Wake accounting** by tier on every `AgentWoke`.
+
+**Test: Stefan** (seed 1). Anna orders Caron (delegated discretion) on day 2 to investigate the Blackwood. Caron trusts Bren (550) and Bren recommends Stefan (850): score 467 beats Caron's own retainer, Sergeant Tobin (400). On day 2.9 Stefan is promoted C to A and Caron's order goes out; Stefan receives it on day 3.1, obeys, rides to the Blackwood (day 4.0), scouts, writes to Caron and rides home. Caron's own order completes on day 4.2, when Stefan's report reaches him. Stefan steps down to B on day 34 and to C on day 64, keeping his history, experience and memories. Nothing about Stefan existed in the log before his promotion. If Caron's trust in Bren is 300, Stefan is never considered.
+
+**Found while testing:**
+- The reporting routine treated anyone at a fort who reports to someone as a reporting castellan, so sergeants were inspecting walls and writing to their castellans. At Eastmarch the urgent report would have gone to Sergeant Rurik before Varos, by alphabet. Reporting duty now belongs to Tier A/B, senior first.
+- The ruler now knows the whereabouts of principal (Tier A) characters only, not the whole background.
+- Demotion has no causing event: it is a clock-driven review, registered as a root event type.
+- *Demotion ran two steps in one day* (A to B, then B to C a day later): "quiet for 30 days" was measured from the last activity both times. Each step now restarts the clock.
+- *Information leak:* Caron's order completed, and he reported to the queen, the moment Stefan reached the Blackwood, before he could know. A delegated order now completes when the leader's report reaches the delegate; if it is lost, the delegate never hears.
+- *Nowhere to reply:* Stefan, promoted from the background, did not know where Caron was, so his report was undeliverable. Receiving an order now teaches the recipient the issuer's seat and where the order was sent from (B5 evidence kind `order`, an addition; checked by the invariant harness).
+- *G-02 failed, correctly.* Extra draws in weather or economy changed threat outcomes on 11-33% of seeds: a storm changes a wall, Bren sorties, the threat ends early, and the threat system rolls on days it used to skip. That is cause and effect, not stream coupling, which the old definition could not tell apart once systems interact. G-02 is redefined (plan C2): the first event that differs must belong to the perturbed system. The threat system now draws a fixed schedule (three draws per site per day, used or not), so its stream stays aligned day by day.
+- *Gate key includes the engine.* The calibration hash covered content and parameters but not code, so the fixes above would not have forced a fresh block. Gate verdicts are now claimed under calibration + engine source hash (plan C0.1). G-14 was re-run on block 40000 with the final code.
+- *An ablated messenger still drew random numbers:* agents composed request letters directly; they now go through the messenger's handler and vanish with it.
+
+**G-14 (sealed block 30000-30099, `engine/results/phase4_gate_30000.txt`): PASS** under all three policies.
+
+| Policy | Busiest agent-day, A / B / C (budget 20 / 3 / 0) | Tier A wakes with the background doubled | Worst wall-clock per simulated year |
+|---|---|---|---|
+| passive | 6 / 3 / 0 | -1.2% | 0.6 s |
+| delegating | 6 / 3 / 0 | +3.5% | 0.9 s |
+| aggressive | 6 / 3 / 0 | -1.8% | 1.4 s |
+
+**Regressions:** G-01 PASS (combined hash `ef76fab53ecb1bc2c47376355e0f1be8f71eca88c8a321a88474d891257001b8`, Node and Bun, two time zones and locales). G-02 and the 1,000-seed invariant batch: see `engine/results/phase4_regression.txt`.
+
+**Watch:**
+- The busiest Tier B day is exactly at its budget (3). Fine now; more Tier B roles may need a larger budget or lighter triggers.
+- Tier B sergeants wake on wall news but have no role options yet, so they wake and do nothing. Cheap, but pointless until Phase 6-8 give them something to do.
+- Recommendations are static content; recommendation and appointment chains that change in play come with Phase 14 (P0.08).
+
+---
+
+## D-013 Proceeding to Phase 4 with G-11 open
+
+Marko asked to proceed to Phase 4 after being told the Phase 3 gate would fail G-11 (D-012). Recorded as his decision to proceed, not as a fix: G-11 stays FAIL until re-tested. Phase 4 (tiers, performance) does not depend on it.
+
+Options for making information matter, to decide before Phase 7 at the latest:
+1. **Make the common choices belief-sensitive.** Requests carry the castellan's estimate of urgency, and the ruler or steward triages by it; a wrong estimate then sends help to the wrong place. Partly a Phase 5 (Court) and Phase 7 (economy) concern.
+2. **Reduce exogenous noise.** The placeholder storms (5-25 points, up to 2.5% a day) swamp decisions; Phase 10 replaces the weather.
+3. **Re-test at Phase 7**, when requisition and grievance decisions hinge on beliefs about stocks and villages, and again at Phase 14 (G-11 is a Phase 14 gate too).
+
+Recommendation: 3, with 1 folded into Phase 5's Court design. Needs Marko's confirmation as an override (C0.4).
+
+---
+
 ## D-012 (Phase 3) Event-driven BDI-lite agents: built
 
 **Built (110 tests pass):**
@@ -34,9 +88,19 @@ Newest first. Numbers come from `phase0/results/` (files named in each entry). A
 - v4: breaches without a failed agent decision are traced to the ruler (told and gave no order: choice; never told or order lost: communication; could not be carried out: execution). G-10 had failed for passive without this.
 - G-11(b) did not move with any of these: under passive and delegating rulers the ratio stayed near 1. No change was made to pass it.
 
-**Sealed gate (block 20000, pre-registered in D-011):** {{GATE}}
+**Sealed gate (block 20000, pre-registered in D-011; `engine/results/phase3_gate_20000.txt`):**
 
-**Regressions:** {{REGRESSION}}
+| Policy | Bad outcomes | G-10 attributed | G-11(a) wrong/stale (95% CI) | G-11(b) ratio, luck-adjusted (95% CI) | raw ratio |
+|---|---|---|---|---|---|
+| passive | 8,790 | 100% PASS | 21.0% (20.6-21.4) PASS | 0.88 (0.82-0.94) FAIL | 0.86 |
+| delegating | 17,186 | 100% PASS | 17.0% (16.7-17.3) PASS | 1.09 (1.05-1.14) FAIL | 1.03 |
+| aggressive | 8,188 | 100% PASS | 8.8% (8.7-9.0) PASS | 2.22 (2.07-2.37) PASS | 1.61 |
+
+**Verdict: G-10 PASS, G-11 FAIL** (two of three policy groups fail G-11(b)). As predicted on TUNE seeds.
+
+What it means: under a passive or delegating ruler, an agent acting on wrong or stale beliefs is not more likely to end badly. The most common agent choice there (Bren and Varos asking for repairs) barely depends on beliefs, and the commonest belief error (misjudging raider strength) cuts both ways: overestimating is harmless or even protective, which is why passive comes out below 1. When the captain is sent and sorties happen (aggressive), information becomes decisive and the ratio is 2.2. Most bad outcomes are still execution (storm luck beyond the adjustment, empty treasury, unanswered requests).
+
+**Regressions:** G-01 and G-02 re-run with Phase 4 (D-014).
 
 ---
 

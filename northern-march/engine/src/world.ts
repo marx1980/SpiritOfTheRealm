@@ -13,12 +13,16 @@ export interface Messenger {
 }
 export interface IssuedRecord { orderId: number; action: string; target: string; recipient: string; tick: number }
 export interface Intention { action: ActionRef; score: number; adoptedAt: number; decisionEventId: number; idle: boolean; orderId?: number }
-export interface AgentState { operational: Intention | null; focus: string | null; experience: Record<string, number>; lastDecision: number | null; answerRate: Record<string, number> }
+export interface AgentState { operational: Intention | null; focus: string | null; experience: Record<string, number>; lastDecision: number | null; answerRate: Record<string, number>; lastActive: number }
+export type Tier = "A" | "B" | "C";
+export interface HistoryEntry { tick: number; event: "promoted" | "demoted" | "appointed"; from?: Tier; to?: Tier; role?: string; reason?: string }
 
 export interface WorldState {
   treasuryMilli: Record<string, number>;
   fortifications: Record<string, { conditionMilli: number; lastChangeEvent: number; garrison: number }>;
   troops: Record<string, number>;
+  tiers: Record<string, Tier>;
+  history: Record<string, HistoryEntry[]>;
   agents: Record<string, AgentState>;
   recommendations: Record<string, Recommendation>;
   lastRaid: Record<string, number>;
@@ -43,20 +47,22 @@ export interface WorldState {
 }
 
 export const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+export const newAgent = (): AgentState => ({ operational: null, focus: null, experience: {}, lastDecision: null, answerRate: {}, lastActive: 0 });
 
 export function initialState(c: Content): WorldState {
   const fortifications: WorldState["fortifications"] = {};
   for (const l of [...c.locations].sort((a, b) => cmp(a.id, b.id)))
     if (l.fortification) fortifications[l.id] = { conditionMilli: l.fortification.conditionMilli, lastChangeEvent: 1, garrison: l.fortification.garrison };
   const positions: WorldState["positions"] = {};
-  const troops: WorldState["troops"] = {}, agents: WorldState["agents"] = {};
+  const troops: WorldState["troops"] = {}, agents: WorldState["agents"] = {}, tiers: WorldState["tiers"] = {};
   for (const ch of [...c.characters].sort((a, b) => cmp(a.id, b.id))) {
     positions[ch.id] = { at: ch.location };
+    tiers[ch.id] = ch.tier;
     if (ch.troops) troops[ch.id] = ch.troops;
-    if (ch.id !== c.scenario.ruler) agents[ch.id] = { operational: null, focus: null, experience: {}, lastDecision: null, answerRate: {} };
+    if (ch.id !== c.scenario.ruler && ch.tier !== "C") agents[ch.id] = newAgent();
   }
   return {
-    treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, agents, recommendations: {}, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, lastStorm: {}, threats: {}, routesClosed: {},
+    treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, tiers, history: {}, agents, recommendations: {}, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, lastStorm: {}, threats: {}, routesClosed: {},
     positions, departures: {}, beliefs: {}, nextPropId: 1, reports: {}, nextReportId: 1, messengers: {}, nextMessengerId: 1,
     orders: {}, nextOrderId: 1, ordersInForce: {}, issued: {}, repairs: {},
   };
@@ -69,6 +75,8 @@ const removeFromForce = (s: WorldState, who: string, id: number) => { s.ordersIn
 const setOrder = (status: string) => (s: WorldState, p: P) => { s.orders[String(p.orderId)].status = status; };
 const endOrder = (status: string) => (s: WorldState, p: P) => {
   const o = s.orders[String(p.orderId)]; o.status = status; removeFromForce(s, o.order.recipient, p.orderId);
+  const a = s.agents[o.order.recipient];
+  if (a?.operational?.orderId === p.orderId) a.operational = null; // the order's intention ends with the order
 };
 const messenger = (s: WorldState, p: P, kind: Messenger["kind"], ref: number, e: SimEvent) => {
   s.messengers[String(p.messengerId)] = { id: p.messengerId, kind, ref, sender: p.sender, recipient: p.recipient, path: p.path, arrivals: p.arrivals, departedAt: e.tick, redirects: 0 };
@@ -142,8 +150,9 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   OrderIntercepted: (s, p, e) => { s.orders[String(p.orderId)].status = "intercepted"; capture(s, p, "order", e); },
   InterceptedOrderReceived: (s, p) => dropMessenger(s, p),
   OrderUndeliverable: (s, p) => { s.orders[String(p.orderId)].status = "undeliverable"; dropMessenger(s, p); },
-  OrderReceived: (s, p) => {
+  OrderReceived: (s, p, e) => {
     s.orders[String(p.orderId)].status = "received";
+    if (s.agents[p.recipient]) s.agents[p.recipient].lastActive = e.tick;
     (s.ordersInForce[p.recipient] ??= []).push(p.orderId);
     dropMessenger(s, p);
   },
@@ -160,10 +169,10 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   LevyRaised: (s, p) => { s.treasuryMilli[p.payer] += p.amountMilli; },
   PlayerInput: noop,
   RecommendationMade: (s, p) => { s.recommendations[p.recommendation.author] = p.recommendation; },
-  AgentWoke: noop,
+  AgentWoke: (s, p, e) => { s.agents[p.agent].lastActive = e.tick; },
   DecisionMade: (s, p, e) => {
     const t = p.trace, a = s.agents[t.agent];
-    a.lastDecision = e.id;
+    a.lastDecision = e.id; a.lastActive = e.tick;
     if (t.kind === "focus") a.focus = t.selected.target ?? null;
     else if (t.kind === "plan" || t.kind === "obedience") {
       if (t.keptCurrentIntention && a.operational) a.operational = { ...a.operational, score: p.score };
@@ -180,6 +189,20 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   DetachmentSent: (s, p) => { s.troops[p.commander] -= p.men; },
   DetachmentArrived: (s, p, e) => { s.fortifications[p.to].garrison += p.men; (s.lastArrival[p.to] ??= {})[p.commander] = e.tick; },
   ResponseAssessed: (s, p) => { s.agents[p.agent].answerRate[p.of] = p.rate; },
+  CharacterPromoted: (s, p, e) => {
+    s.tiers[p.who] = p.to;
+    const a = (s.agents[p.who] ??= newAgent());
+    a.lastActive = e.tick;
+    (s.history[p.who] ??= []).push({ tick: e.tick, event: "promoted", from: p.from, to: p.to, reason: p.reason });
+  },
+  CharacterDemoted: (s, p, e) => {
+    s.tiers[p.who] = p.to;
+    const a = s.agents[p.who];
+    a.operational = null; a.focus = null; // plans are dropped; experience, learned trust and memories are kept
+    a.lastActive = e.tick; // each step down needs its own quiet period
+    (s.history[p.who] ??= []).push({ tick: e.tick, event: "demoted", from: p.from, to: p.to, reason: p.reason });
+  },
+  LeaderAppointed: (s, p, e) => { (s.history[p.leader] ??= []).push({ tick: e.tick, event: "appointed", role: p.role, reason: `by ${p.by}` }); },
 };
 
 export function applyEvent(s: WorldState, e: SimEvent): void {

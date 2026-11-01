@@ -14,8 +14,7 @@ import { actionKey } from "../agents/model.ts";
 import { chooseFocus, plan, type PlanResult } from "../agents/planner.ts";
 import type { Ctx, System } from "./types.ts";
 import { DAY, HOUR, chr, loc, sorted } from "./types.ts";
-import { best, learn, observe } from "./knowledge.ts";
-import { compose } from "./messenger.ts";
+import { best, learn, observe, seedKnowledge } from "./knowledge.ts";
 import { travel } from "./movement.ts";
 
 // ---- what an agent can know ---------------------------------------------------------------------------------------
@@ -67,6 +66,22 @@ export function defenceAt(s: Readonly<WorldState>, where: string) {
   return men;
 }
 
+/** Whom an agent could put in charge (adopted decision 5, plan §G): its own retainers, and people recommended by someone
+ *  it trusts at least `recommendationTrustMin`. Busy people (an order in force, or travelling) are not available. */
+export function leaderCandidates(s: Readonly<WorldState>, c: Content, agent: string) {
+  const ch = c.byId.character.get(agent)!;
+  const min = c.scenario.agents.recommendationTrustMin;
+  const free = (id: string) => id !== agent && !(s.ordersInForce[id] ?? []).length && "at" in s.positions[id];
+  const out: { id: string; recommendedBy: string; score: number }[] = [];
+  for (const r of ch.relationships) if (r.kind === "retainer" && free(r.to)) out.push({ id: r.to, recommendedBy: agent, score: r.value });
+  for (const r of ch.relationships) {
+    if (!(r.kind === "trust" || r.kind === "loyalty") || r.value < min) continue;
+    for (const rec of c.byId.character.get(r.to)!.relationships)
+      if (rec.kind === "recommends" && free(rec.to)) out.push({ id: rec.to, recommendedBy: r.to, score: Math.floor((r.value * rec.value) / 1000) });
+  }
+  return out.sort((a, b) => b.score - a.score || (a.id < b.id ? -1 : 1));
+}
+
 export function buildSituation(s: Readonly<WorldState>, c: Content, agent: string, now: number, mode: Situation["mode"], view: View, order?: StructuredOrder): Situation {
   const ch = c.byId.character.get(agent)!;
   const pos = s.positions[agent];
@@ -80,7 +95,8 @@ export function buildSituation(s: Readonly<WorldState>, c: Content, agent: strin
   for (const d of Object.keys(ch.capabilities)) caps[d] = capability(s, c, agent, d);
   const seatOf = (id: string) => (beliefsAbout(view, id, "character.seat")[0]?.believedValue as string | undefined) ?? c.byId.character.get(id)!.location;
   return {
-    now, agent, role: ch.role, house: ch.house, post: ch.location, at, superior: ch.reportsTo, ruler: ruler.id, rulerSeat: seatOf(ruler.id),
+    now, agent, role: ch.role, house: ch.house, tier: s.tiers[agent], leaderCandidates: leaderCandidates(s, c, agent),
+    post: ch.location, at, superior: ch.reportsTo, ruler: ruler.id, rulerSeat: seatOf(ruler.id),
     traits: ch.traits.map((t) => c.byId.trait.get(t)!), cap: caps, objectives: ch.objectives, focus: st?.focus ?? null,
     troops: s.troops[agent] ?? 0, defenceHere: at ? defenceAt(s, at) : null,
     forts: sorted(c.locations.filter((l) => l.fortification), (l) => l.id).map((l) => ({ id: l.id, garrison: l.fortification!.garrison,
@@ -159,7 +175,19 @@ function rebuild(ctx: Ctx, agent: string) {
   }
 }
 
-const isAgent = (ctx: Ctx, who: string) => !!ctx.s.agents[who] && ctx.content.byId.character.get(who)!.tier !== "C";
+const isAgent = (ctx: Ctx, who: string) => !!ctx.s.agents[who] && ctx.s.tiers[who] !== "C";
+const RANK = { C: 0, B: 1, A: 2 } as const;
+
+/** Promotion (ARCHITECTURE §20.9). The promoted start with what their station would tell them: whom they answer to and
+ *  the people they deal with. Nothing about them was simulated before. */
+export function promote(ctx: Ctx, who: string, to: "A" | "B", reason: string, cause: number) {
+  const from = ctx.s.tiers[who];
+  if (RANK[from] >= RANK[to]) return null;
+  const ev = ctx.emit("CharacterPromoted", [cause], [chr(who)], { who, from, to, reason });
+  seedKnowledge(ctx, who, ev.id);
+  rebuild(ctx, who);
+  return ev;
+}
 
 function queueWake(ctx: Ctx, agent: string, trigger: number, sig: number) {
   const r = rt(ctx);
@@ -171,8 +199,17 @@ function queueWake(ctx: Ctx, agent: string, trigger: number, sig: number) {
 }
 
 // ---- thinking ----------------------------------------------------------------------------------------------------
+/** Tier B: keep only the selected option and its top reasons (ARCHITECTURE §20.14). */
+function compress(t: DecisionTrace): DecisionTrace {
+  const sel = t.candidates.find((c) => actionKey(c.action) === actionKey(t.selected))!;
+  const top = [...sel.contributions].sort((a, b) => Math.abs(b.weight) - Math.abs(a.weight)).slice(0, 3);
+  return { ...t, candidates: [{ ...sel, contributions: top }], beliefsConsulted: t.beliefsConsulted.slice(0, 3), compressed: true };
+}
+
 function think(ctx: Ctx, agent: string, cause: number, layer: "strategic" | "operational", reason: "triggers" | "review") {
   const c = ctx.content, ch = c.byId.character.get(agent)!;
+  const tierB = ctx.s.tiers[agent] === "B";
+  if (tierB) layer = "operational"; // locally relevant people do not replan strategically
   const r = rt(ctx);
   r.awake = agent;
   try {
@@ -190,8 +227,9 @@ function think(ctx: Ctx, agent: string, cause: number, layer: "strategic" | "ope
       const res = plan(sit, per);
       if (res) {
         const idle = isIdle(res.selected, sit);
+        const tr = traceOf(sit, per, res, cause, "operational", "plan");
         const d = ctx.emit("DecisionMade", [cause], [chr(agent), ...(res.selected.target ? [loc(res.selected.target)] : [])],
-          { trace: traceOf(sit, per, res, cause, "operational", "plan"), score: res.score, idle });
+          { trace: tierB ? compress(tr) : tr, score: res.score, idle });
         if (!res.kept) execute(ctx, agent, res.selected, d.id);
         if (!res.kept && needsReview(res.selected, sit)) ctx.at(ctx.tick + c.scenario.agents.reviewDays.operational * DAY, "agents:review", { agent, decisionEventId: d.id });
       }
@@ -241,14 +279,14 @@ export function execute(ctx: Ctx, agent: string, a: ActionRef, decisionId: numbe
     case "hold": return;
     case "request_repair":
       if (!ch.reportsTo) return;
-      compose(ctx, agent, ch.reportsTo, claimsFor(ctx, agent, ch.location), decisionId, "request_repair");
+      ctx.at(ctx.tick, "messenger:compose", { author: agent, recipient: ch.reportsTo, claims: claimsFor(ctx, agent, ch.location), cause: decisionId, purpose: "request_repair" });
       ctx.at(ctx.tick + c.scenario.agents.requestAssessDays * DAY, "agents:assess", { agent, of: ch.reportsTo, fort: ch.location, kind: "repair", sentAt: ctx.tick, decisionEventId: decisionId });
       return;
     case "request_reinforcement": {
       const cap = c.byId.character.get(a.target!)!;
       const req = { id: 0, subject: loc(ch.location), predicate: "request.reinforce", believedValue: cap.troops ?? 0,
         evidenceRefs: [{ kind: "observation" as const, eventId: decisionId, source: agent }], observedOrLearnedAt: ctx.tick, observedAt: ctx.tick, learnedAt: ctx.tick, reliabilityBand: "certain" as const };
-      compose(ctx, agent, a.target!, [...claimsFor(ctx, agent, ch.location), req], decisionId, "request_reinforcement");
+      ctx.at(ctx.tick, "messenger:compose", { author: agent, recipient: a.target!, claims: [...claimsFor(ctx, agent, ch.location), req], cause: decisionId, purpose: "request_reinforcement" });
       ctx.at(ctx.tick + c.scenario.agents.requestAssessDays * DAY, "agents:assess", { agent, of: a.target, fort: ch.location, kind: "reinforce", sentAt: ctx.tick, decisionEventId: decisionId });
       return;
     }
@@ -281,7 +319,10 @@ function present(s: Readonly<WorldState>, where: string) {
 
 export const agents: System = {
   id: "agents",
-  start: (ctx) => { for (const id of Object.keys(ctx.s.agents).sort()) if (isAgent(ctx, id)) rebuild(ctx, id); },
+  start: (ctx) => {
+    for (const id of Object.keys(ctx.s.agents).sort()) if (isAgent(ctx, id)) rebuild(ctx, id);
+    ctx.at(DAY + 23 * HOUR, "agents:tiers", {});
+  },
   onEvent: (ctx, e: SimEvent) => {
     if (e.type === "BeliefUpdated" && e.payload.material) {
       const holder = e.payload.holder as string, prop = e.payload.prop as { subject: { id: string }; predicate: string };
@@ -294,7 +335,13 @@ export const agents: System = {
       if (who && isAgent(ctx, who)) rebuild(ctx, who);
     } else if (e.type === "Arrived") {
       ctx.at(ctx.tick, "orders:arrived", { who: e.payload.who, at: e.payload.at, arrivedEventId: e.id });
+    } else if (e.type === "ReportDelivered") {
+      ctx.at(ctx.tick, "orders:reportArrived", { reportId: e.payload.reportId, recipient: e.payload.recipient, deliveredEventId: e.id });
     }
+    // Relevance: background people caught up in a significant military event where they stand become locally relevant.
+    const where = e.type === "RaidDamage" || e.type === "LossesTaken" ? (e.payload.location as string) : e.type === "SortieResolved" ? (e.payload.from as string) : null;
+    if (where) for (const [who, p] of Object.entries(ctx.s.positions))
+      if (ctx.s.tiers[who] === "C" && "at" in p && p.at === where) ctx.at(ctx.tick, "agents:implicate", { who, cause: e.id, why: e.type });
   },
   handlers: {
     "agents:wake": (ctx, { agent }) => {
@@ -302,7 +349,7 @@ export const agents: System = {
       if (!p || p.tick !== ctx.tick) return;
       r.pending.delete(agent);
       const layer = p.sig >= 3 ? "strategic" : "operational";
-      const w = ctx.emit("AgentWoke", p.triggers, [chr(agent)], { agent, triggers: p.triggers, layer, reason: "triggers" });
+      const w = ctx.emit("AgentWoke", p.triggers, [chr(agent)], { agent, triggers: p.triggers, layer, reason: "triggers", tier: ctx.s.tiers[agent] });
       think(ctx, agent, w.id, layer, "triggers");
     },
     "agents:review": (ctx, { agent, decisionEventId }) => {
@@ -310,7 +357,7 @@ export const agents: System = {
       const r = rt(ctx), p = r.pending.get(agent);
       const triggers = p && p.tick === ctx.tick ? p.triggers : [];
       if (p && p.tick === ctx.tick) r.pending.delete(agent);
-      const w = ctx.emit("AgentWoke", [decisionEventId, ...triggers], [chr(agent)], { agent, triggers, layer: "operational", reason: "review" });
+      const w = ctx.emit("AgentWoke", [decisionEventId, ...triggers], [chr(agent)], { agent, triggers, layer: "operational", reason: "review", tier: ctx.s.tiers[agent] });
       think(ctx, agent, w.id, "operational", triggers.length ? "triggers" : "review");
       if (ctx.s.agents[agent]?.operational?.decisionEventId === decisionEventId)
         ctx.at(ctx.tick + ctx.content.scenario.agents.reviewDays.operational * DAY, "agents:review", { agent, decisionEventId });
@@ -342,7 +389,7 @@ export const agents: System = {
       }
       const exp = ctx.content.scenario.agents.experience;
       if (ctx.s.agents[commander]) ctx.emit("ExperienceGained", [res.id], [chr(commander)], { agent: commander, domain: "military", amount: exp.perTaskPermille, cap: exp.capPermille });
-      for (const who of present(ctx.s, from)) {
+      for (const who of present(ctx.s, from).filter((x) => ctx.s.tiers[x] !== "C")) {
         if (!threat || success) learn(ctx, who, { subject: loc(site), predicate: "threat.intensity", value: 0, observedAt: ctx.tick, band: "certain" },
           { kind: "observation", eventId: res.id, source: who }, [res.id]);
         else observe(ctx, who, loc(site), "threat.intensity", res.id);
@@ -356,6 +403,21 @@ export const agents: System = {
       const k = ctx.content.scenario.agents.answerLearningPermille;
       const rate = Math.floor((prior * (1000 - k) + (answered ? 1000 : 0) * k) / 1000);
       ctx.emit("ResponseAssessed", [decisionEventId], [chr(agent), chr(of), loc(fort)], { agent, of, fort, kind, answered, rate });
+    },
+    "agents:implicate": (ctx, { who, cause, why }) => { promote(ctx, who, "B", `implicated: ${why}`, cause); },
+    // Demotion (ARCHITECTURE §20.9): the role has ended and nothing has stirred them for a while. One step at a time.
+    "agents:tiers": (ctx) => {
+      const quiet = ctx.content.scenario.agents.demoteAfterDays * DAY;
+      for (const id of Object.keys(ctx.s.tiers).sort()) {
+        const tier = ctx.s.tiers[id], base = ctx.content.byId.character.get(id)!.tier, a = ctx.s.agents[id];
+        if (!a || RANK[tier] <= RANK[base]) continue;
+        const busy = (ctx.s.ordersInForce[id] ?? []).length > 0 || !("at" in ctx.s.positions[id]) || (a.operational && !a.operational.idle);
+        if (busy || ctx.tick - a.lastActive < quiet) continue;
+        const to = tier === "A" ? "B" : "C";
+        ctx.emit("CharacterDemoted", [], [chr(id)], { who: id, from: tier, to, reason: `role ended; quiet for ${ctx.content.scenario.agents.demoteAfterDays} days` });
+        rebuild(ctx, id);
+      }
+      ctx.at(ctx.tick + DAY, "agents:tiers", {});
     },
     "agents:detachmentArrive": (ctx, { commander, to, men, sentEventId }) => {
       const ev = ctx.emit("DetachmentArrived", [sentEventId], [chr(commander), loc(to)], { commander, to, men });

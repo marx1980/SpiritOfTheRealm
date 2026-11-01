@@ -23,6 +23,9 @@ export interface Situation {
   agent: string;
   role: string;
   house: string;
+  tier: "A" | "B" | "C";
+  /** People the agent could put in charge of a task: its own retainers, and anyone recommended by someone it trusts enough. */
+  leaderCandidates: { id: string; recommendedBy: string; score: number }[];
   post: string;                          // where the agent belongs
   at: string | null;                     // null while travelling
   superior?: string;

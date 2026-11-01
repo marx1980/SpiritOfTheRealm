@@ -28,6 +28,7 @@ export interface StructuredOrder {
   supersedes?: number[];
   sourceTranscriptRef?: string;
   affirmedByPlayerAt?: number;
+  parentOrderId?: number; // addition (Phase 4): set on subordinate orders
 }
 
 export const ORDER_LIFECYCLE = {
@@ -84,6 +85,7 @@ export interface DecisionTrace {
   selected: ActionRef;
   keptCurrentIntention: boolean;
   margin?: number;
+  compressed?: boolean; // Tier B: only the selected option and its top reasons (ARCHITECTURE §20.14)
   outcome?: { eventId: number; failureOrigin?: "belief" | "choice" | "communication" | "execution" };
 }
 
@@ -113,7 +115,7 @@ export function validateOrder(x: unknown): V {
   if (!isObj(rp) || typeof rp.onReceipt !== "boolean" || typeof rp.onCompletion !== "boolean" || typeof rp.onFailure !== "boolean") v.push("reportingPolicy must have onReceipt/onCompletion/onFailure");
   else int(v, rp, "everyDays", true);
   arr(v, x, "supersedes", (s, i) => { if (!Number.isSafeInteger(s)) v.push(`supersedes[${i}]`); }, true);
-  str(v, x, "sourceTranscriptRef", true); int(v, x, "affirmedByPlayerAt", true);
+  str(v, x, "sourceTranscriptRef", true); int(v, x, "affirmedByPlayerAt", true); int(v, x, "parentOrderId", true);
   return v;
 }
 
@@ -123,7 +125,7 @@ export function validateProposition(x: unknown): V {
   int(v, x, "id"); ref(v, x.subject, "subject"); str(v, x, "predicate");
   if (!("believedValue" in x)) v.push("believedValue missing");
   arr(v, x, "evidenceRefs", (e, i) => {
-    if (!isObj(e) || !["observation", "report", "intercepted", "scenario"].includes(e.kind as string) || !Number.isSafeInteger(e.eventId) || typeof e.source !== "string" || (e.local !== undefined && typeof e.local !== "boolean")) v.push(`evidenceRefs[${i}]`);
+    if (!isObj(e) || !["observation", "report", "intercepted", "scenario", "order"].includes(e.kind as string) || !Number.isSafeInteger(e.eventId) || typeof e.source !== "string" || (e.local !== undefined && typeof e.local !== "boolean")) v.push(`evidenceRefs[${i}]`);
   });
   int(v, x, "observedOrLearnedAt"); oneOf(v, x, "reliabilityBand", ["certain", "probable", "uncertain", "doubtful"]);
   return v;

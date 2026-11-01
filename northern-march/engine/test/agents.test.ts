@@ -132,15 +132,16 @@ test("commitment: a near-equal challenger does not replace the current intention
 test("no agent flips between plans and back on successive minor events", () => {
   for (const seed of [1, 2, 3, 4, 5, 6]) {
     const sim = run({ seed, content: crisis }, 120);
-    const byAgent = new Map<string, { tick: number; sel: string; layer: string }[]>();
+    const byAgent = new Map<string, { tick: number; sel: string; options: string[] }[]>();
     for (const { t } of traces(sim)) if (t.kind === "plan") {
       if (!byAgent.has(t.agent)) byAgent.set(t.agent, []);
-      byAgent.get(t.agent)!.push({ tick: t.tick, sel: JSON.stringify(t.selected), layer: t.layer });
+      byAgent.get(t.agent)!.push({ tick: t.tick, sel: JSON.stringify(t.selected), options: t.candidates.map((c) => JSON.stringify(c.action)) });
     }
+    // Dithering = going back to A while B was still possible. Returning because B is done or impossible is not.
     for (const [agent, xs] of byAgent)
       for (let i = 2; i < xs.length; i++)
         if (xs[i].sel === xs[i - 2].sel && xs[i].sel !== xs[i - 1].sel && xs[i].tick - xs[i - 2].tick < 3 * DAY)
-          assert.ok(xs[i - 1].layer === "strategic" || xs[i].layer === "strategic", `${agent} flipped A-B-A within 3 days at ${xs[i].tick} (seed ${seed})`);
+          assert.ok(!xs[i].options.includes(xs[i - 1].sel), `${agent} flipped A-B-A within 3 days at ${xs[i].tick} (seed ${seed})`);
   }
 });
 
@@ -168,9 +169,14 @@ test("the planner reads only beliefs: agent modules import nothing that exposes 
 });
 
 test("better planners consider more options", () => {
-  const sim = run({ seed: 1, content: crisis }, 60);
-  const n = (agent: string) => Math.max(0, ...traces(sim, agent).filter(({ t }) => t.kind === "advise").map(({ t }) => t.candidates.length));
-  assert.ok(n("elara") > n("selene"), `elara ${n("elara")} vs selene ${n("selene")} (military 800 vs 200)`);
+  // Same beliefs for both: a worn fort and raiders nearby. Elara (military 800) sees more ways to act than Selene (200).
+  const sim = run({ seed: 1, content: crisis, policy: "passive", ablate: ["messenger"] }, 3);
+  const w = sim.unsafeWorldForDebug();
+  const B: Record<string, number> = { "northwatch|fortification.condition": 55000, "blackwood|threat.intensity": 700, "eastmarch|fortification.condition": 60000, "greybridge|fortification.condition": 65000 };
+  const per = () => ({ get: (id: string, p: string) => B[`${id}|${p}`] === undefined ? null
+    : ({ value: B[`${id}|${p}`], propId: 1, ageTicks: 0, band: "probable", subject: { kind: "location", id }, predicate: p }) as Seen, consulted: () => [] });
+  const n = (who: string) => plan(buildSituation(w, sim.content, who, sim.tick, "advise", sim.viewOf(who)), per())!.candidates.length;
+  assert.ok(n("elara") > n("selene"), `elara ${n("elara")} vs selene ${n("selene")}`);
 });
 
 test("obedience: obey, adapt and refuse follow margins, never a roll", () => {

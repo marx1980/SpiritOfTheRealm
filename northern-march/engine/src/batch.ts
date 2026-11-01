@@ -1,5 +1,6 @@
 // A6 / C1: headless batch runner and per-run metrics row. Fields not measurable before their phase are null.
-import { hashOf } from "./canonical.ts";
+import { readdirSync, readFileSync } from "node:fs";
+import { hashOf, sha256 } from "./canonical.ts";
 import type { Content } from "./content.ts";
 import { createSim, hashLog, type Sim, type SimParams } from "./engine.ts";
 import type { SystemId } from "./events.ts";
@@ -16,6 +17,16 @@ export const METRIC_FIELDS = [
 export interface BatchSpec { content: Content; seeds: number[]; days: number; policy: PolicyId; ablate?: SystemId[]; params?: SimParams }
 
 export const calibrationHash = (content: Content, params: SimParams = {}) => hashOf({ content: content.hash, params }).slice(0, 12);
+
+/** Hash of the engine's source files: a gate verdict belongs to the code it ran on, not only to the content. */
+export function engineHash(): string {
+  const dir = new URL("./", import.meta.url).pathname;
+  const walk = (d: string): string[] => readdirSync(d, { withFileTypes: true }).flatMap((f) => (f.isDirectory() ? walk(`${d}${f.name}/`) : f.name.endsWith(".ts") ? [`${d}${f.name}`] : []));
+  const files = walk(dir).sort();
+  return sha256(files.map((f) => `${f.slice(dir.length)}\n${readFileSync(f, "utf8")}`).join("\n")).slice(0, 12);
+}
+/** The key a GATE block is claimed under (C0.1): calibration plus engine code. */
+export const gateKey = (content: Content, params: SimParams = {}) => `${calibrationHash(content, params)}+${engineHash()}`;
 export const seedBlockOf = (seed: number) => (seed < 10000 ? "TUNE" : Math.floor(seed / 10000) * 10000);
 
 export function metricsRow(sim: Sim, spec: BatchSpec, wallMs: number) {

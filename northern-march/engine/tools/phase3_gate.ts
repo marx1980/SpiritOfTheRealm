@@ -6,7 +6,7 @@ import { loadContent } from "../src/content.ts";
 import { createSim } from "../src/engine.ts";
 import { analyzeRun } from "../src/chronicle.ts";
 import { bandVerdict, clusteredRateRatio, GateLog, policyRuleDetail, wilson, type Verdict } from "../src/gates.ts";
-import { calibrationHash } from "../src/batch.ts";
+import { gateKey } from "../src/batch.ts";
 import { hashLog } from "../src/engine.ts";
 import type { PolicyId } from "../src/policies.ts";
 
@@ -16,7 +16,7 @@ const POLICIES: PolicyId[] = ["passive", "delegating", "aggressive"];
 let seeds: number[];
 if (mode === "tune") { const [x, y] = a.split("..").map(Number); seeds = Array.from({ length: y - x + 1 }, (_, i) => x + i); if (y >= 10000) throw new Error("TUNE seeds are below 10,000"); }
 else { const start = Number(a), n = Number(b ?? 1000); seeds = Array.from({ length: n }, (_, i) => start + i); }
-const cal = calibrationHash(content);
+const cal = gateKey(content);
 const log = new GateLog("results/gate_log.jsonl");
 if (mode === "gate") log.claim(seeds[0], cal);
 

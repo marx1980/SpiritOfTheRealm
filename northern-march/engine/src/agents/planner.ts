@@ -9,6 +9,7 @@ import { expect, picture } from "./terms.ts";
 /** How many candidates the agent can think of: better planners consider more (capped). */
 export function candidateCap(sit: Situation, domain = "military") {
   const pl = sit.p.agents.planning;
+  if (sit.tier === "B") return pl.minCandidates; // locally relevant people plan lightly
   return Math.max(pl.minCandidates, Math.min(pl.maxCandidates, pl.minCandidates + Math.floor((sit.cap[domain] ?? 0) / pl.skillPerExtraCandidate)));
 }
 
@@ -138,6 +139,8 @@ export function feasible(sit: Situation, per: Perceiver, a: ActionRef): boolean 
     case "request_repair": return !!sit.superior && sit.at === sit.post;
     case "request_reinforcement": return sit.at === sit.post && sit.captains.some((c) => c.id === a.target);
     case "hold": return true;
+    case "investigate": return sit.at !== a.target;
+    case "delegate_investigation": return sit.leaderCandidates.length > 0;
     default: return false;
   }
 }

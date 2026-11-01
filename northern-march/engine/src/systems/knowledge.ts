@@ -17,8 +17,7 @@ export function learn(ctx: Ctx, holder: string, claim: Claim, evidence: Evidence
   const material = isMaterial(ctx, claim.predicate, prev?.believedValue, claim.value);
   const upd = ctx.emit("BeliefUpdated", causedBy, [chr(holder), claim.subject], { holder, prop: upsert, material });
   if (dropIds.length) ctx.emit("BeliefResolved", [upd.id], [chr(holder), claim.subject], { holder, kept: upsert.id, dropped: dropIds, reason });
-  const ch = ctx.content.byId.character.get(holder)!;
-  const cap = ctx.content.scenario.knowledge.beliefCaps[ch.tier];
+  const cap = ctx.content.scenario.knowledge.beliefCaps[ctx.s.tiers[holder]];
   const plan = evictionPlan(ctx.s.beliefs[holder], cap, {
     now: ctx.tick, halfLifeOf: (p) => ctx.halfLife(p.predicate), relevanceOf: (p) => relevance(ctx, holder, p.subject),
   });
@@ -106,25 +105,27 @@ export function best(ctx: Ctx, holder: string, subjectId: string, predicate: str
   return xs[0] ?? null;
 }
 
+/** What someone's station tells them: the seat (stable) and last known whereabouts of their superior, their subordinates
+ *  and the people they deal with; the ruler knows them for every principal (Tier A) character. Background people
+ *  (Tier C) hold no beliefs until they are promoted, and then get the same. */
+export function seedKnowledge(ctx: Ctx, who: string, cause: number) {
+  const c = ctx.content, ch = c.byId.character.get(who)!;
+  const known = new Set<string>(ch.relationships.map((r) => r.to));
+  if (ch.reportsTo) known.add(ch.reportsTo);
+  if (who === c.scenario.ruler) for (const o of c.characters) if (o.tier === "A") known.add(o.id);
+  for (const o of c.characters) if (o.reportsTo === who && o.tier !== "C") known.add(o.id);
+  known.delete(who);
+  const at = cause === 1 ? 0 : ctx.tick;
+  for (const id of [...known].sort()) {
+    const home = c.byId.character.get(id)!.location;
+    const ev = { kind: "scenario" as const, eventId: cause, source: "scenario" };
+    learn(ctx, who, { subject: chr(id), predicate: "character.seat", value: home, observedAt: at, band: "certain" }, ev, [cause]);
+    learn(ctx, who, { subject: chr(id), predicate: "character.location", value: home, observedAt: at, band: "probable" }, ev, [cause]);
+  }
+}
+
 export const knowledge: System = {
   id: "knowledge",
-  // Scenario knowledge: everyone knows the seat (stable) and the last known whereabouts (ages from tick 0) of their
-  // superior, their subordinates and the people they deal with; the ruler knows them for every named character.
-  start: (ctx) => {
-    const c = ctx.content;
-    for (const ch of sorted(c.characters, (x) => x.id)) {
-      const known = new Set<string>(ch.relationships.map((r) => r.to));
-      if (ch.reportsTo) known.add(ch.reportsTo);
-      if (ch.id === c.scenario.ruler) for (const o of c.characters) known.add(o.id);
-      for (const o of c.characters) if (o.reportsTo === ch.id) known.add(o.id);
-      known.delete(ch.id);
-      for (const id of [...known].sort()) {
-        const home = c.byId.character.get(id)!.location;
-        const ev = { kind: "scenario" as const, eventId: 1, source: "scenario" };
-        learn(ctx, ch.id, { subject: chr(id), predicate: "character.seat", value: home, observedAt: 0, band: "certain" }, ev, [1]);
-        learn(ctx, ch.id, { subject: chr(id), predicate: "character.location", value: home, observedAt: 0, band: "probable" }, ev, [1]);
-      }
-    }
-  },
+  start: (ctx) => { for (const ch of sorted(ctx.content.characters, (x) => x.id)) if (ctx.s.tiers[ch.id] !== "C") seedKnowledge(ctx, ch.id, 1); },
   handlers: {},
 };

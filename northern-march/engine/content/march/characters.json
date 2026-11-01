@@ -62,6 +62,11 @@
         "to": "anna",
         "kind": "loyalty",
         "value": 800
+      },
+      {
+        "to": "corwin",
+        "kind": "recommends",
+        "value": 500
       }
     ],
     "house": "crown",
@@ -187,6 +192,11 @@
         "to": "bren",
         "kind": "trust",
         "value": 550
+      },
+      {
+        "to": "tobin",
+        "kind": "retainer",
+        "value": 400
       }
     ],
     "house": "caron",
@@ -251,6 +261,11 @@
         "to": "caron",
         "kind": "trust",
         "value": 500
+      },
+      {
+        "to": "stefan",
+        "kind": "recommends",
+        "value": 850
       }
     ],
     "house": "crown",
@@ -326,6 +341,11 @@
         "to": "anna",
         "kind": "rivalry",
         "value": 600
+      },
+      {
+        "to": "rurik",
+        "kind": "recommends",
+        "value": 600
       }
     ],
     "house": "varos",
@@ -350,5 +370,696 @@
         "priorityPermille": 500
       }
     ]
+  },
+  {
+    "id": "stefan",
+    "name": "Stefan Veyr",
+    "role": "scout",
+    "location": "pinegate",
+    "tier": "C",
+    "traits": [
+      "curious",
+      "patient"
+    ],
+    "capabilities": {
+      "engineering": 300,
+      "military": 450,
+      "intelligence": 750,
+      "administration": 200
+    },
+    "relationships": [
+      {
+        "to": "bren",
+        "kind": "trust",
+        "value": 600
+      }
+    ],
+    "house": "veyr",
+    "household": "widowed mother in Pinegate",
+    "occupation": "forest scout",
+    "objectives": []
+  },
+  {
+    "id": "tobin",
+    "name": "Tobin Hale",
+    "role": "sergeant",
+    "location": "greybridge",
+    "tier": "C",
+    "traits": [
+      "loyal",
+      "stubborn"
+    ],
+    "capabilities": {
+      "engineering": 300,
+      "military": 500,
+      "intelligence": 350,
+      "administration": 200
+    },
+    "relationships": [
+      {
+        "to": "caron",
+        "kind": "loyalty",
+        "value": 750
+      }
+    ],
+    "house": "caron",
+    "household": "wife and two children",
+    "occupation": "garrison sergeant",
+    "objectives": [
+      {
+        "id": "hold_fortification:greybridge",
+        "kind": "role",
+        "objective": "hold_fortification",
+        "priorityPermille": 500,
+        "target": "greybridge"
+      }
+    ],
+    "reportsTo": "caron"
+  },
+  {
+    "id": "edda",
+    "name": "Edda Marsh",
+    "role": "sergeant",
+    "location": "northwatch",
+    "tier": "C",
+    "traits": [
+      "honest",
+      "pragmatic"
+    ],
+    "capabilities": {
+      "engineering": 400,
+      "military": 450,
+      "intelligence": 400,
+      "administration": 250
+    },
+    "relationships": [
+      {
+        "to": "bren",
+        "kind": "loyalty",
+        "value": 700
+      }
+    ],
+    "house": "crown",
+    "household": "unmarried",
+    "occupation": "garrison sergeant",
+    "objectives": [
+      {
+        "id": "hold_fortification:northwatch",
+        "kind": "role",
+        "objective": "hold_fortification",
+        "priorityPermille": 500,
+        "target": "northwatch"
+      }
+    ],
+    "reportsTo": "bren"
+  },
+  {
+    "id": "rurik",
+    "name": "Rurik Fenn",
+    "role": "sergeant",
+    "location": "eastmarch",
+    "tier": "C",
+    "traits": [
+      "proud",
+      "loyal"
+    ],
+    "capabilities": {
+      "engineering": 300,
+      "military": 550,
+      "intelligence": 300,
+      "administration": 200
+    },
+    "relationships": [
+      {
+        "to": "varos",
+        "kind": "loyalty",
+        "value": 800
+      }
+    ],
+    "house": "varos",
+    "household": "brother in Bellmoor",
+    "occupation": "garrison sergeant",
+    "objectives": [
+      {
+        "id": "hold_fortification:eastmarch",
+        "kind": "role",
+        "objective": "hold_fortification",
+        "priorityPermille": 500,
+        "target": "eastmarch"
+      }
+    ],
+    "reportsTo": "varos"
+  },
+  {
+    "id": "ilka",
+    "name": "Ilka Morrow",
+    "role": "scout",
+    "location": "coldmere",
+    "tier": "C",
+    "traits": [
+      "cautious",
+      "curious"
+    ],
+    "capabilities": {
+      "engineering": 200,
+      "military": 300,
+      "intelligence": 700,
+      "administration": 200
+    },
+    "relationships": [
+      {
+        "to": "mara",
+        "kind": "trust",
+        "value": 600
+      }
+    ],
+    "house": "greyfen",
+    "household": "married to a fisher",
+    "occupation": "marsh guide",
+    "objectives": []
+  },
+  {
+    "id": "hesta",
+    "name": "Hesta Crane",
+    "role": "villager",
+    "location": "greyfen",
+    "tier": "C",
+    "traits": [
+      "stubborn",
+      "compassionate"
+    ],
+    "capabilities": {
+      "engineering": 300,
+      "military": 150,
+      "intelligence": 250,
+      "administration": 200
+    },
+    "relationships": [
+      {
+        "to": "mara",
+        "kind": "trust",
+        "value": 700
+      }
+    ],
+    "house": "greyfen",
+    "household": "three children",
+    "occupation": "woodcutter",
+    "objectives": [
+      {
+        "id": "protect_community:greyfen",
+        "kind": "role",
+        "objective": "protect_community",
+        "priorityPermille": 600,
+        "target": "greyfen"
+      }
+    ]
+  },
+  {
+    "id": "oswin",
+    "name": "Oswin Reed",
+    "role": "villager",
+    "location": "greyfen",
+    "tier": "C",
+    "traits": [
+      "patient",
+      "honest"
+    ],
+    "capabilities": {
+      "engineering": 250,
+      "military": 100,
+      "intelligence": 200,
+      "administration": 150
+    },
+    "relationships": [
+      {
+        "to": "mara",
+        "kind": "trust",
+        "value": 650
+      }
+    ],
+    "house": "greyfen",
+    "household": "elderly father",
+    "occupation": "charcoal burner",
+    "objectives": [
+      {
+        "id": "protect_community:greyfen",
+        "kind": "role",
+        "objective": "protect_community",
+        "priorityPermille": 500,
+        "target": "greyfen"
+      }
+    ]
+  },
+  {
+    "id": "brannoc",
+    "name": "Brannoc Tull",
+    "role": "villager",
+    "location": "fenhollow",
+    "tier": "C",
+    "traits": [
+      "vengeful",
+      "stubborn"
+    ],
+    "capabilities": {
+      "engineering": 200,
+      "military": 200,
+      "intelligence": 300,
+      "administration": 100
+    },
+    "relationships": [],
+    "house": "greyfen",
+    "household": "large family",
+    "occupation": "eel trapper",
+    "objectives": [
+      {
+        "id": "protect_community:fenhollow",
+        "kind": "role",
+        "objective": "protect_community",
+        "priorityPermille": 500,
+        "target": "fenhollow"
+      }
+    ]
+  },
+  {
+    "id": "wenna",
+    "name": "Wenna Holt",
+    "role": "villager",
+    "location": "coldmere",
+    "tier": "C",
+    "traits": [
+      "curious",
+      "pragmatic"
+    ],
+    "capabilities": {
+      "engineering": 250,
+      "military": 100,
+      "intelligence": 350,
+      "administration": 200
+    },
+    "relationships": [
+      {
+        "to": "ilka",
+        "kind": "trust",
+        "value": 600
+      }
+    ],
+    "house": "greyfen",
+    "household": "none",
+    "occupation": "reed cutter",
+    "objectives": [
+      {
+        "id": "protect_community:coldmere",
+        "kind": "role",
+        "objective": "protect_community",
+        "priorityPermille": 400,
+        "target": "coldmere"
+      }
+    ]
+  },
+  {
+    "id": "garet",
+    "name": "Garet Lowe",
+    "role": "villager",
+    "location": "pinegate",
+    "tier": "C",
+    "traits": [
+      "greedy",
+      "pragmatic"
+    ],
+    "capabilities": {
+      "engineering": 350,
+      "military": 150,
+      "intelligence": 200,
+      "administration": 300
+    },
+    "relationships": [
+      {
+        "to": "stefan",
+        "kind": "trust",
+        "value": 500
+      }
+    ],
+    "house": "crown",
+    "household": "wife",
+    "occupation": "timber haulier",
+    "objectives": []
+  },
+  {
+    "id": "sabeth",
+    "name": "Sabeth Quill",
+    "role": "merchant",
+    "location": "saltmere",
+    "tier": "C",
+    "traits": [
+      "greedy",
+      "ambitious"
+    ],
+    "capabilities": {
+      "engineering": 150,
+      "military": 100,
+      "intelligence": 500,
+      "administration": 700
+    },
+    "relationships": [
+      {
+        "to": "oren",
+        "kind": "trust",
+        "value": 500
+      }
+    ],
+    "house": "crown",
+    "household": "two apprentices",
+    "occupation": "salt merchant",
+    "objectives": []
+  },
+  {
+    "id": "dorran",
+    "name": "Dorran Pike",
+    "role": "merchant",
+    "location": "marchend",
+    "tier": "C",
+    "traits": [
+      "ambitious",
+      "greedy"
+    ],
+    "capabilities": {
+      "engineering": 150,
+      "military": 150,
+      "intelligence": 550,
+      "administration": 650
+    },
+    "relationships": [
+      {
+        "to": "varos",
+        "kind": "loyalty",
+        "value": 600
+      }
+    ],
+    "house": "varos",
+    "household": "married into House Varos",
+    "occupation": "grain factor",
+    "objectives": []
+  },
+  {
+    "id": "ulla",
+    "name": "Ulla Wren",
+    "role": "innkeeper",
+    "location": "kingsroad",
+    "tier": "C",
+    "traits": [
+      "curious",
+      "compassionate"
+    ],
+    "capabilities": {
+      "engineering": 200,
+      "military": 100,
+      "intelligence": 600,
+      "administration": 500
+    },
+    "relationships": [],
+    "house": "crown",
+    "household": "widow",
+    "occupation": "innkeeper",
+    "objectives": []
+  },
+  {
+    "id": "mattias",
+    "name": "Mattias Fell",
+    "role": "clerk",
+    "location": "ravenport",
+    "tier": "C",
+    "traits": [
+      "honest",
+      "patient"
+    ],
+    "capabilities": {
+      "engineering": 200,
+      "military": 100,
+      "intelligence": 300,
+      "administration": 750
+    },
+    "relationships": [
+      {
+        "to": "oren",
+        "kind": "loyalty",
+        "value": 600
+      }
+    ],
+    "house": "crown",
+    "household": "bachelor",
+    "occupation": "exchequer clerk",
+    "objectives": [],
+    "reportsTo": "oren"
+  },
+  {
+    "id": "liesl",
+    "name": "Liesl Arden",
+    "role": "clerk",
+    "location": "ravenport",
+    "tier": "C",
+    "traits": [
+      "cautious",
+      "loyal"
+    ],
+    "capabilities": {
+      "engineering": 200,
+      "military": 150,
+      "intelligence": 450,
+      "administration": 650
+    },
+    "relationships": [
+      {
+        "to": "elara",
+        "kind": "loyalty",
+        "value": 650
+      }
+    ],
+    "house": "crown",
+    "household": "sister at court",
+    "occupation": "chancery clerk",
+    "objectives": [],
+    "reportsTo": "elara"
+  },
+  {
+    "id": "anselm",
+    "name": "Brother Anselm",
+    "role": "healer",
+    "location": "oldmill",
+    "tier": "C",
+    "traits": [
+      "compassionate",
+      "patient"
+    ],
+    "capabilities": {
+      "engineering": 300,
+      "military": 50,
+      "intelligence": 450,
+      "administration": 300
+    },
+    "relationships": [],
+    "house": "crown",
+    "household": "a small priory",
+    "occupation": "herbalist",
+    "objectives": []
+  },
+  {
+    "id": "kell",
+    "name": "Kell Brine",
+    "role": "ferryman",
+    "location": "saltmere",
+    "tier": "C",
+    "traits": [
+      "pragmatic",
+      "stubborn"
+    ],
+    "capabilities": {
+      "engineering": 400,
+      "military": 150,
+      "intelligence": 400,
+      "administration": 250
+    },
+    "relationships": [
+      {
+        "to": "sabeth",
+        "kind": "trust",
+        "value": 550
+      }
+    ],
+    "house": "crown",
+    "household": "two sons",
+    "occupation": "ferryman",
+    "objectives": []
+  },
+  {
+    "id": "tamsin",
+    "name": "Tamsin Oake",
+    "role": "miller",
+    "location": "oldmill",
+    "tier": "C",
+    "traits": [
+      "patient",
+      "honest"
+    ],
+    "capabilities": {
+      "engineering": 550,
+      "military": 100,
+      "intelligence": 250,
+      "administration": 400
+    },
+    "relationships": [],
+    "house": "crown",
+    "household": "husband and daughter",
+    "occupation": "miller",
+    "objectives": []
+  },
+  {
+    "id": "corwin",
+    "name": "Corwin Ash",
+    "role": "forester",
+    "location": "crownwood",
+    "tier": "C",
+    "traits": [
+      "curious",
+      "cautious"
+    ],
+    "capabilities": {
+      "engineering": 300,
+      "military": 250,
+      "intelligence": 650,
+      "administration": 250
+    },
+    "relationships": [
+      {
+        "to": "elara",
+        "kind": "trust",
+        "value": 500
+      }
+    ],
+    "house": "crown",
+    "household": "none",
+    "occupation": "royal forester",
+    "objectives": []
+  },
+  {
+    "id": "petra",
+    "name": "Petra Lusk",
+    "role": "villager",
+    "location": "ashford",
+    "tier": "C",
+    "traits": [
+      "stubborn",
+      "pragmatic"
+    ],
+    "capabilities": {
+      "engineering": 200,
+      "military": 100,
+      "intelligence": 200,
+      "administration": 250
+    },
+    "relationships": [],
+    "house": "crown",
+    "household": "five children",
+    "occupation": "farmer",
+    "objectives": []
+  },
+  {
+    "id": "aldo",
+    "name": "Aldo Finch",
+    "role": "shepherd",
+    "location": "highcairn",
+    "tier": "C",
+    "traits": [
+      "patient",
+      "curious"
+    ],
+    "capabilities": {
+      "engineering": 150,
+      "military": 150,
+      "intelligence": 550,
+      "administration": 100
+    },
+    "relationships": [],
+    "house": "crown",
+    "household": "none",
+    "occupation": "shepherd",
+    "objectives": []
+  },
+  {
+    "id": "neve",
+    "name": "Neve Thorne",
+    "role": "hunter",
+    "location": "bellmoor",
+    "tier": "C",
+    "traits": [
+      "aggressive",
+      "curious"
+    ],
+    "capabilities": {
+      "engineering": 200,
+      "military": 500,
+      "intelligence": 650,
+      "administration": 150
+    },
+    "relationships": [
+      {
+        "to": "rurik",
+        "kind": "trust",
+        "value": 600
+      }
+    ],
+    "house": "varos",
+    "household": "twin brother",
+    "occupation": "hunter",
+    "objectives": []
+  },
+  {
+    "id": "piran",
+    "name": "Piran Dale",
+    "role": "toll-keeper",
+    "location": "veyford",
+    "tier": "C",
+    "traits": [
+      "greedy",
+      "cautious"
+    ],
+    "capabilities": {
+      "engineering": 250,
+      "military": 150,
+      "intelligence": 450,
+      "administration": 450
+    },
+    "relationships": [],
+    "house": "crown",
+    "household": "wife",
+    "occupation": "toll-keeper",
+    "objectives": []
+  },
+  {
+    "id": "hob",
+    "name": "Hob Garner",
+    "role": "carter",
+    "location": "redbarrow",
+    "tier": "C",
+    "traits": [
+      "pragmatic",
+      "loyal"
+    ],
+    "capabilities": {
+      "engineering": 250,
+      "military": 200,
+      "intelligence": 300,
+      "administration": 200
+    },
+    "relationships": [
+      {
+        "to": "dorran",
+        "kind": "loyalty",
+        "value": 500
+      }
+    ],
+    "house": "varos",
+    "household": "none",
+    "occupation": "carter",
+    "objectives": []
   }
 ]

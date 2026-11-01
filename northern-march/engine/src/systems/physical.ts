@@ -78,10 +78,12 @@ export const threat: System = {
       const t = ctx.content.scenario.threat, r = ctx.rng("threat");
       for (const { site, target } of sorted(t.sites, (x) => x.site)) {
         const active = ctx.s.threats[site];
+        // A fixed draw schedule (three draws per site per day, used or not), so this stream stays aligned day by day
+        // whatever other systems do to the world (G-02).
+        const roll = r.int(0, 999), intensityPermille = r.int(t.intensityPermille[0], t.intensityPermille[1]), days = r.int(t.durationDays[0], t.durationDays[1]);
         if (!active) {
-          if (!r.chancePermille(t.startPermillePerDay)) continue;
-          const intensityPermille = r.int(t.intensityPermille[0], t.intensityPermille[1]);
-          const untilTick = ctx.tick + DAY * r.int(t.durationDays[0], t.durationDays[1]);
+          if (roll >= t.startPermillePerDay) continue;
+          const untilTick = ctx.tick + DAY * days;
           ctx.emit("ThreatBegan", [], [loc(site), loc(target)], { site, target, intensityPermille, untilTick }, "threat");
         } else if (ctx.tick >= active.untilTick) {
           ctx.emit("ThreatEnded", [active.eventId], [loc(site)], { site });
@@ -91,7 +93,7 @@ export const threat: System = {
           const damageMilli = Math.floor((t.raidDamageMilliAtFullIntensity * active.intensityPermille) / (1000 + men * ctx.content.scenario.battle.raidMitigationPerManPermille));
           const e = ctx.emit("RaidDamage", [active.eventId], [loc(target)], { site, location: target, damageMilli, defenders: men });
           // Those present experience the raid: they see the damage and estimate the raiders' strength.
-          for (const who of presentAt(ctx, target)) {
+          for (const who of presentAt(ctx, target).filter((x) => ctx.s.tiers[x] !== "C")) {
             observe(ctx, who, loc(target), "fortification.condition", e.id);
             observe(ctx, who, loc(site), "threat.intensity", e.id);
           }
@@ -103,7 +105,7 @@ export const threat: System = {
         if (ctx.s.threats[site]) continue;
         const last = ctx.s.lastRaid[target];
         if (last === undefined || ctx.tick - last < ctx.content.scenario.agents.quietDaysToEnd * DAY) continue;
-        for (const who of presentAt(ctx, target)) {
+        for (const who of presentAt(ctx, target).filter((x) => ctx.s.tiers[x] !== "C")) {
           const b = best(ctx, who, site, "threat.intensity");
           if (b && (b.believedValue as number) > 0) observe(ctx, who, loc(site), "threat.intensity", ctx.s.fortifications[target].lastChangeEvent);
         }

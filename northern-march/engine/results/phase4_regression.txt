@@ -1,0 +1,1 @@
+G-02 {"perSystem":{"economy":{"seeds":100,"otherStreamsUnchanged":89,"perturbedChanged":100},"weather":{"seeds":100,"otherStreamsUnchanged":67,"perturbedChanged":100},"threat":{"seeds":100,"otherStreamsUnchanged":100,"perturbedChanged":89}},"verdict":"FAIL"}

@@ -5,8 +5,9 @@ import type { Ctx, System } from "./types.ts";
 import { chr, loc, sorted } from "./types.ts";
 import { learn, observe } from "./knowledge.ts";
 
+/** Those present who notice comings and goings: principal and locally relevant people (Tier A/B), not the background. */
 const present = (ctx: Ctx, where: string, except: string) =>
-  sorted(Object.entries(ctx.s.positions).filter(([id, p]) => id !== except && "at" in p && p.at === where).map(([id]) => id), (x) => x);
+  sorted(Object.entries(ctx.s.positions).filter(([id, p]) => id !== except && ctx.s.tiers[id] !== "C" && "at" in p && p.at === where).map(([id]) => id), (x) => x);
 
 export function travel(ctx: Ctx, who: string, to: string, mode: Mode, secret: boolean, cause: number): boolean {
   const pos = ctx.s.positions[who];
@@ -39,7 +40,7 @@ export const movement: System = {
       const arr = ctx.emit("Arrived", [departedEventId], [chr(who), loc(at)], { who, at });
       for (const other of present(ctx, at, who)) {
         observe(ctx, other, chr(who), "character.location", arr.id);
-        observe(ctx, who, chr(other), "character.location", arr.id);
+        if (ctx.s.tiers[who] !== "C") observe(ctx, who, chr(other), "character.location", arr.id);
       }
     },
   },

@@ -164,7 +164,9 @@
       "capPermille": 200
     },
     "requestAssessDays": 10,
-    "answerLearningPermille": 300
+    "answerLearningPermille": 300,
+    "demoteAfterDays": 30,
+    "recommendationTrustMin": 500
   },
   "battle": {
     "sortie": {

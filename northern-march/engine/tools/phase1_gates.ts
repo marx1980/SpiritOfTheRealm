@@ -6,26 +6,34 @@ import { createSim, type Sim } from "../src/engine.ts";
 import { runBatch } from "../src/batch.ts";
 import { checkRun, checkPairing } from "../src/invariants.ts";
 import { canonicalJson } from "../src/canonical.ts";
-import type { SystemId } from "../src/events.ts";
+import { EVENT_TYPES, type SystemId } from "../src/events.ts";
 
 const content = loadContent(new URL("../content/march/", import.meta.url).pathname);
 const out: Record<string, unknown> = {};
 
-// G-02
+// G-02 (redefined in Phase 4, DECISIONS D-014): extra draws in one system's stream must not change any other system's
+// draws. Once systems interact, the world they act on legitimately differs AFTER the perturbed system's outcomes change;
+// so the test is: the first event that differs between the two runs belongs to the perturbed system.
+// Also reported (not gated): how often other systems' drawn events stayed identical overall (causal spill-over).
 const ROOT_DRAWN: Record<string, string> = { economy: "TreasuryCollected", weather: "Storm", threat: "ThreatBegan" };
 const sig = (s: Sim, type: string) => canonicalJson(s.log.filter((e) => e.type === type).map((e) => [e.tick, e.payload]));
-const g02: Record<string, { seeds: number; otherStreamsUnchanged: number; perturbedChanged: number }> = {};
+const g02: Record<string, { seeds: number; firstDivergenceOwn: number; perturbedChanged: number; otherDrawnEventsIdentical: number; firstForeign: string[] }> = {};
 for (const perturbed of Object.keys(ROOT_DRAWN) as SystemId[]) {
-  let unchanged = 0, changed = 0;
+  let own = 0, changed = 0, identical = 0;
+  const foreign: string[] = [];
   for (let seed = 1; seed <= 100; seed++) {
     const a = createSim({ content, seed, policy: "delegating" }); a.runDays(240);
     const b = createSim({ content, seed, policy: "delegating", params: { extraDraws: { [perturbed]: 3 } } }); b.runDays(240);
-    if (Object.entries(ROOT_DRAWN).every(([sys, t]) => sys === perturbed || sig(a, t) === sig(b, t))) unchanged++;
+    let i = 0;
+    while (i < a.log.length && i < b.log.length && canonicalJson(a.log[i]) === canonicalJson(b.log[i])) i++;
+    const first = b.log[i] ?? a.log[i];
+    if (!first || EVENT_TYPES[first.type].system === perturbed) own++; else foreign.push(`seed ${seed}: ${first.type}`);
     if (sig(a, ROOT_DRAWN[perturbed]) !== sig(b, ROOT_DRAWN[perturbed])) changed++;
+    if (Object.entries(ROOT_DRAWN).every(([sys, t]) => sys === perturbed || sig(a, t) === sig(b, t))) identical++;
   }
-  g02[perturbed] = { seeds: 100, otherStreamsUnchanged: unchanged, perturbedChanged: changed };
+  g02[perturbed] = { seeds: 100, firstDivergenceOwn: own, perturbedChanged: changed, otherDrawnEventsIdentical: identical, firstForeign: foreign.slice(0, 5) };
 }
-out.G02 = { perSystem: g02, verdict: Object.values(g02).every((x) => x.otherStreamsUnchanged === 100) ? "PASS" : "FAIL" };
+out.G02 = { perSystem: g02, verdict: Object.values(g02).every((x) => x.firstDivergenceOwn === 100) ? "PASS" : "FAIL" };
 console.log("G-02", JSON.stringify(out.G02));
 
 // 1,000 seeds per arm, invariants on every seed

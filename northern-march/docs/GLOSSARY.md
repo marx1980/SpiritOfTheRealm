@@ -61,3 +61,9 @@
 | **Surprise / regret** | Chronicle tests for a bad decision outcome: more than 10 points worse than the decider expected, or with the truth another option was more than 10 points better. |
 | **Luck adjustment** | Storm damage beyond its climatic expectation is not counted against a decision when judging surprise. |
 | **Council at court** | Characters reporting to the ruler and present with her; dispatches delivered to her are read out to them (`ReportShared`). |
+
+| **Tier A / B / C** | Principal decision-makers (full planning) / locally relevant people (3 options, no strategic layer, compressed traces) / background (identity only: no beliefs, no observation, no wakes). |
+| **Promotion** | Independent responsibility makes someone Tier A; being caught up in a significant military event where they stand makes them Tier B. They start with what their station tells them. |
+| **Demotion** | After the role ends and 30 quiet days, one step down. Plans dropped; history, experience, learned trust, beliefs and relationships kept. |
+| **Leader candidates** | Whom a delegate can put in charge: its retainers and anyone recommended by someone it trusts at least 500, unless busy or travelling. |
+| **Subordinate order** | An order a delegate issues to carry out its own; the parent order completes when the subordinate one does. |

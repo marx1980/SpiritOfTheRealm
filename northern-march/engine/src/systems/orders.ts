@@ -5,25 +5,27 @@ import { validateOrder, type IntentKind, type Reason, type StructuredOrder } fro
 import type { SubjectRef } from "../events.ts";
 import { buildView } from "../view.ts";
 import { actionKey, type ActionRef, type Perceiver, type Situation } from "../agents/model.ts";
-import { adaptations, decideObedience, interpret, margins } from "../agents/obedience.ts";
+import { adaptations, decideObedience, interpret, margins, obeyForms } from "../agents/obedience.ts";
 import { plan } from "../agents/planner.ts";
 import type { Ctx, System } from "./types.ts";
 import { DAY, chr, loc } from "./types.ts";
 import { best, learn, observe, skill } from "./knowledge.ts";
-import { buildSituation, execute, isIdle, perceiverFromView, traceOf } from "./agents.ts";
+import { buildSituation, execute, isIdle, perceiverFromView, promote, traceOf } from "./agents.ts";
+import { travel } from "./movement.ts";
 
 const oref = (id: number) => ({ kind: "order" as const, id: String(id) });
 
-export function issue(ctx: Ctx, issuer: string, recipient: string, intent: IntentKind, objective: SubjectRef, cause: number, supersedesPrevious = false) {
+export function issue(ctx: Ctx, issuer: string, recipient: string, intent: IntentKind, objective: SubjectRef, cause: number, supersedesPrevious = false,
+  opts: { discretion?: StructuredOrder["discretion"]; parentOrderId?: number } = {}) {
   const id = ctx.s.nextOrderId;
   const supersedes = supersedesPrevious
     ? (ctx.s.issued[issuer] ?? []).filter((r) => r.recipient === recipient && r.target === objective.id).map((r) => r.orderId)
     : [];
   const order: StructuredOrder = {
     schemaVersion: 1, id, issuer, recipient, issuedAt: ctx.tick, kind: "strategic", intent, objective,
-    constraints: [], contingencies: [], discretion: "bounded",
+    constraints: [], contingencies: [], discretion: opts.discretion ?? "bounded",
     reportingPolicy: { onReceipt: false, onCompletion: true, onFailure: true },
-    ...(supersedes.length ? { supersedes } : {}),
+    ...(supersedes.length ? { supersedes } : {}), ...(opts.parentOrderId ? { parentOrderId: opts.parentOrderId } : {}),
   };
   const problems = validateOrder(order);
   if (problems.length) throw new Error(`invalid order: ${problems.join("; ")}`);
@@ -37,20 +39,23 @@ export function issue(ctx: Ctx, issuer: string, recipient: string, intent: Inten
 }
 
 const SERVES = (o: StructuredOrder, a: ActionRef, understood: ActionRef) =>
-  actionKey(a) === actionKey(understood) || adaptations(o).some((x) => actionKey(x) === actionKey(a));
+  actionKey(a) === actionKey(understood) || [...obeyForms(o), ...adaptations(o)].some((x) => actionKey(x) === actionKey(a));
+const OBEYS = (o: StructuredOrder, a: ActionRef) => obeyForms(o).some((x) => actionKey(x) === actionKey(a));
 
 /** Score the ways to answer an order (obey, adapt, or the recipient's own alternatives) and decide. Shared with the
  *  chronicle's oracle, which calls it with the true state of the world instead of the recipient's beliefs. */
 export function orderChoice(sit: Situation, per: Perceiver, o: StructuredOrder, understood: ActionRef, changed: boolean) {
-  const res = plan({ ...sit, current: null }, per, [understood, ...adaptations(o)])!;
+  const usable = (a: ActionRef) => a.kind !== "delegate_investigation" || sit.leaderCandidates.length > 0;
+  const res = plan({ ...sit, current: null }, per, [...obeyForms(o), ...adaptations(o)].filter(usable))!;
+  res.candidates = res.candidates.filter((c) => usable(c.action));
   const duty = Math.floor((sit.p.agents.obedience.dutyMilli * sit.loyalty(o.issuer)) / 1000);
   for (const c of res.candidates) if (SERVES(o, c.action, understood)) {
     const r: Reason = { kind: "order", ref: { kind: "order", id: String(o.id) }, weight: duty, textKey: "reason.duty" };
     c.contributions = [...c.contributions, r]; c.score += duty;
   }
   res.candidates.sort((a, b) => b.score - a.score || (actionKey(a.action) < actionKey(b.action) ? -1 : 1));
-  const obeyC = res.candidates.find((c) => actionKey(c.action) === actionKey(understood))!;
-  const serving = res.candidates.filter((c) => c !== obeyC && SERVES(o, c.action, understood));
+  const obeyC = res.candidates.find((c) => OBEYS(o, c.action))!; // best of the ways that count as obeying
+  const serving = res.candidates.filter((c) => !OBEYS(o, c.action) && SERVES(o, c.action, understood));
   const other = res.candidates.filter((c) => !SERVES(o, c.action, understood));
   const m = margins(sit, o, changed);
   const d = decideObedience({ obey: obeyC.score, bestServing: serving[0]?.score ?? -1e12, bestOther: other[0]?.score ?? -1e12, ...m });
@@ -88,6 +93,7 @@ function process(ctx: Ctx, orderId: number, receivedId: number) {
   }
   // 3. local plan with the recipient's own skill, then execution
   const pl = ctx.emit("LocalPlanFormed", [ob.id], subj, { orderId, steps: [chosen.action], skillPermille: skill(ctx, who, it.domain) });
+  if (chosen.action.kind === "delegate_investigation") return delegate(ctx, o, sit.leaderCandidates[0], pl.id);
   const ex = ctx.emit("ExecutionStarted", [pl.id], subj, { orderId, action: chosen.action });
   const sc = ctx.content.scenario;
   const a = chosen.action;
@@ -114,9 +120,38 @@ function process(ctx: Ctx, orderId: number, receivedId: number) {
     finish(ctx, orderId, "completed", lv.id);
   } else if (a.kind === "march_to" && "at" in ctx.s.positions[who] && (ctx.s.positions[who] as { at: string }).at === a.target) {
     finish(ctx, orderId, "completed", ex.id);
+  } else if (a.kind === "investigate") {
+    const pos = ctx.s.positions[who];
+    if ("at" in pos && pos.at === a.target) scouted(ctx, who, orderId, ex.id);
+    else travel(ctx, who, a.target!, "rider", false, ex.id);
   } else {
     execute(ctx, who, a, dec.id); // march, detachment, hold: completion comes from arrival events
   }
+}
+
+/** The senior delegate picks a leader (ARCHITECTURE §20.9: independent responsibility promotes), orders them, and waits. */
+function delegate(ctx: Ctx, o: StructuredOrder, leader: { id: string; recommendedBy: string; score: number }, cause: number) {
+  const who = o.recipient;
+  const ap = ctx.emit("LeaderAppointed", [cause], [chr(who), chr(leader.id), o.objective], { by: who, leader: leader.id, recommendedBy: leader.recommendedBy,
+    score: leader.score, role: "expedition leader", objective: o.objective, orderId: o.id });
+  promote(ctx, leader.id, "A", "given independent responsibility", ap.id);
+  // the delegate knows where to find the leader from whoever recommended them
+  learn(ctx, who, { subject: chr(leader.id), predicate: "character.seat", value: ctx.content.byId.character.get(leader.id)!.location, observedAt: ctx.tick, band: "probable" },
+    { kind: "scenario", eventId: ap.id, source: leader.recommendedBy }, [ap.id]);
+  const sub = issue(ctx, who, leader.id, o.intent, o.objective, ap.id, false, { parentOrderId: o.id });
+  const so = ctx.emit("SubordinateOrdersIssued", [ap.id], [chr(who), oref(o.id)], { orderId: o.id, subordinateOrderIds: [sub], leader: leader.id });
+  ctx.emit("ExecutionStarted", [so.id], [chr(who), oref(o.id)], { orderId: o.id, action: { kind: "delegate_investigation", target: o.objective.id } });
+}
+
+/** At the place: look, then report as the order asks, and head home. */
+function scouted(ctx: Ctx, who: string, orderId: number, cause: number) {
+  const o = ctx.s.orders[String(orderId)].order;
+  const site = o.objective.id;
+  if (ctx.content.scenario.threat.sites.some((x) => x.site === site)) observe(ctx, who, loc(site), "threat.intensity", cause);
+  else if (ctx.s.fortifications[site]) observe(ctx, who, loc(site), "fortification.condition", cause);
+  finish(ctx, orderId, "completed", cause);
+  const home = ctx.content.byId.character.get(who)!.location;
+  travel(ctx, who, home, "rider", false, cause);
 }
 
 function report(ctx: Ctx, o: StructuredOrder, outcome: string, cause: number) {
@@ -124,7 +159,9 @@ function report(ctx: Ctx, o: StructuredOrder, outcome: string, cause: number) {
     { kind: "observation", eventId: cause, source: o.recipient }, [cause]);
   const p = ctx.s.positions[o.recipient];
   if (o.intent === "repair" && "at" in p && p.at === o.objective.id) observe(ctx, o.recipient, loc(o.objective.id), "fortification.condition", cause);
-  const claims = [best(ctx, o.recipient, String(o.id), "order.status"), o.intent === "repair" ? best(ctx, o.recipient, o.objective.id, "fortification.condition") : null]
+  const claims = [best(ctx, o.recipient, String(o.id), "order.status"),
+    o.intent === "repair" ? best(ctx, o.recipient, o.objective.id, "fortification.condition") : null,
+    o.intent === "investigate" ? best(ctx, o.recipient, o.objective.id, "threat.intensity") ?? best(ctx, o.recipient, o.objective.id, "fortification.condition") : null]
     .filter((x): x is NonNullable<typeof x> => !!x).map(({ band, ...rest }) => ({ ...rest, reliabilityBand: band as "certain" }));
   if (o.recipient !== o.issuer) ctx.at(ctx.tick, "messenger:compose", { author: o.recipient, recipient: o.issuer, claims, cause });
 }
@@ -136,6 +173,7 @@ export function finish(ctx: Ctx, orderId: number, outcome: "completed" | "abando
     { orderId, recipient: o.recipient, ...(reason ? { reason } : {}) });
   const wants = outcome === "completed" ? o.reportingPolicy.onCompletion : o.reportingPolicy.onFailure;
   if (wants) report(ctx, o, outcome, ev.id);
+  // a delegated task ends when the delegate HEARS that the subordinate order ended (orders:reportArrived), not before
 }
 
 export const orders: System = {
@@ -148,7 +186,7 @@ export const orders: System = {
       const s = ctx.content.scenario.scripts[i];
       if (s.kind !== "order") return;
       const ev = ctx.emit("OrderScripted", [], [chr(s.from), chr(s.to)], { from: s.from, to: s.to, intent: s.intent, objective: s.objective });
-      issue(ctx, s.from, s.to, s.intent as IntentKind, s.objective, ev.id, !!s.supersedesPrevious);
+      issue(ctx, s.from, s.to, s.intent as IntentKind, s.objective, ev.id, !!s.supersedesPrevious, { discretion: s.discretion });
     },
     "orders:received": (ctx, { orderId, receivedEventId }) => process(ctx, orderId, receivedEventId),
     "orders:completeRepair": (ctx, { orderId, location, restoredMilli, startedEventId, engineer }) => {
@@ -160,7 +198,19 @@ export const orders: System = {
     "orders:arrived": (ctx, { who, at, arrivedEventId }) => {
       for (const id of [...(ctx.s.ordersInForce[who] ?? [])]) {
         const o = ctx.s.orders[String(id)];
-        if (o.order.intent === "advance" && o.order.objective.id === at && o.status === "executing") finish(ctx, id, "completed", arrivedEventId);
+        if (o.status !== "executing" || o.order.objective.id !== at) continue;
+        if (o.order.intent === "advance") finish(ctx, id, "completed", arrivedEventId);
+        else if (o.order.intent === "investigate") scouted(ctx, who, id, arrivedEventId);
+      }
+    },
+    // A delegate learns from its leader's report that the subordinate order ended; only then does its own order end.
+    "orders:reportArrived": (ctx, { reportId, recipient, deliveredEventId }) => {
+      for (const c of ctx.s.reports[String(reportId)].claims) {
+        if (c.predicate !== "order.status") continue;
+        const sub = ctx.s.orders[c.subject.id]?.order;
+        const parent = sub?.parentOrderId ? ctx.s.orders[String(sub.parentOrderId)] : undefined;
+        if (parent && parent.order.recipient === recipient && parent.status === "executing")
+          finish(ctx, parent.order.id, c.believedValue === "completed" ? "completed" : "abandoned", deliveredEventId);
       }
     },
     "orders:detachmentArrived": (ctx, { commander, to, arrivedEventId }) => {

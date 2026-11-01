@@ -99,12 +99,12 @@ Done when: H-01 passes (plan §C4): at least 4 of 5 testers explain their decisi
 Done when: Anna can leave Ravenport, decisions at court continue within delegated authority, and she learns of them by report.
 
 ## P0.08 Character network and Houses — Phases 4 and 14, Core (basic) / Full
-- [ ] Tier A/B/C with promotion and demotion
+- [x] Tier A/B/C with promotion and demotion
 - [ ] 25-30 active characters
-- [ ] 20-30 background characters
+- [x] 20-30 background characters (24)
 - [ ] Houses Varos, Veyr, Greyfen and Caron
-- [ ] Recommendation and appointment chains
-- [ ] Patronage, debt, rivalry and promotion to relevance
+- [ ] Recommendation and appointment chains (static recommendations and leader appointment done in Phase 4; chains that change in play in Phase 14)
+- [ ] Patronage, debt, rivalry and promotion to relevance (promotion to relevance done in Phase 4; patronage and debt in Phase 14)
 
 Done when: a background character promotes to a commanding role without pre-running full AI, and keeps history on demotion.
 

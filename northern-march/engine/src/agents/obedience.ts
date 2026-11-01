@@ -19,8 +19,15 @@ export function understoodAction(o: StructuredOrder): ActionRef {
     case "repair": return act("repair_works", o.objective.id);
     case "levy": return act("levy");
     case "advance": return act("march_to", o.objective.id);
+    case "investigate": return act("investigate", o.objective.id);
     default: return act("hold");
   }
+}
+
+/** With delegated discretion, handing the task to a chosen subordinate is obeying, not adapting. */
+export function obeyForms(o: StructuredOrder): ActionRef[] {
+  const u = understoodAction(o);
+  return o.intent === "investigate" && o.discretion === "delegated" ? [u, act("delegate_investigation", o.objective.id)] : [u];
 }
 
 /** Ways to carry out the order's purpose in part (adaptations). */
@@ -29,6 +36,7 @@ export function adaptations(o: StructuredOrder): ActionRef[] {
     case "repair": return [act("partial_repair", o.objective.id)];
     case "levy": return [act("half_levy")];
     case "advance": return [act("send_detachment", o.objective.id)];
+    case "investigate": return o.discretion === "delegated" ? [] : [act("delegate_investigation", o.objective.id)];
     default: return [];
   }
 }
