@@ -28,15 +28,15 @@ Newest first. Numbers come from `phase0/results/` (files named in each entry). A
 - *Gate key includes the engine.* The calibration hash covered content and parameters but not code, so the fixes above would not have forced a fresh block. Gate verdicts are now claimed under calibration + engine source hash (plan C0.1). G-14 was re-run on block 40000 with the final code.
 - *An ablated messenger still drew random numbers:* agents composed request letters directly; they now go through the messenger's handler and vanish with it.
 
-**G-14 (sealed block 30000-30099, `engine/results/phase4_gate_30000.txt`): PASS** under all three policies.
+**G-14: PASS** under all three policies, first on block 30000 (code before the fixes below), then on block 40000 with the final code (gate key `921518d99555+5b8ecf930310`, `engine/results/phase4_gate_40000.txt`):
 
 | Policy | Busiest agent-day, A / B / C (budget 20 / 3 / 0) | Tier A wakes with the background doubled | Worst wall-clock per simulated year |
 |---|---|---|---|
-| passive | 6 / 3 / 0 | -1.2% | 0.6 s |
-| delegating | 6 / 3 / 0 | +3.5% | 0.9 s |
-| aggressive | 6 / 3 / 0 | -1.8% | 1.4 s |
+| passive | 6 / 3 / 0 | +1.9% | 0.9 s |
+| delegating | 6 / 3 / 0 | -1.0% | 1.0 s |
+| aggressive | 5 / 3 / 0 | -1.0% | 1.5 s |
 
-**Regressions:** G-01 PASS (combined hash `ef76fab53ecb1bc2c47376355e0f1be8f71eca88c8a321a88474d891257001b8`, Node and Bun, two time zones and locales). G-02 and the 1,000-seed invariant batch: see `engine/results/phase4_regression.txt`.
+**Regressions (final code):** G-01 PASS (combined hash `4238030536c7f39d09f7a9e1ffdfa62e8a50b6147a2c6fbf73e39dc630a006d7`, Node and Bun, two time zones and locales). G-02 and the 1,000-seed invariant batch: {{REGRESSION}}
 
 **Watch:**
 - The busiest Tier B day is exactly at its budget (3). Fine now; more Tier B roles may need a larger budget or lighter triggers.

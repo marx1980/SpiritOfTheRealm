@@ -1,9 +1,16 @@
 # STATE
 
-Updated: 31 Oct 2026, end of Phase 3 (Opus 5.5).
+Updated: 1 Nov 2026, end of Phase 4 (Opus 5.5).
 
 ## Built
-**Engine (`engine/`, TypeScript on Node 22, no build step).** `npm test` runs 110 tests, all passing; `npx tsc -p .` is clean.
+**Engine (`engine/`, TypeScript on Node 22, no build step).** `npm test` runs 118 tests, all passing; `npx tsc -p .` is clean.
+
+Phase 4 added:
+- Tiers A/B/C as world state; 24 background characters in content (identity, household, occupation, home).
+- Promotion (independent responsibility -> A; caught up in a military event -> B), demotion after 30 quiet days, one step at a time, history kept.
+- Leader appointment by recommendation and trust; delegated "investigate" expeditions with subordinate orders.
+- Tier B light planning and compressed traces; wake accounting by tier.
+- `tools/phase4_gate.ts` (G-14); `withExtraBackground` content variant; gate key includes the engine source hash.
 
 Phase 3 added:
 - `src/agents/` (pure, reads only beliefs): `model.ts` (Situation, Perceiver), `terms.ts` (expected consequences), `planner.ts` (candidate templates capped by skill, scoring with reasons, commitment, strategic focus), `obedience.ts` (interpretation, margins, obey/adapt/refuse).
@@ -39,8 +46,9 @@ Phase 1 base:
 **Phase 0 / 0b prototypes (`phase0/`, throwaway):** see D-001 to D-008.
 
 ## Result
-- Phase 1: G-01 and G-02 PASS (D-009).
-- Phase 2: built; G-01 PASS (new hash below), G-02 PASS, 1,000 seeds per arm with every invariant including order lifecycles: 0 violations (D-010).
+- Phase 1: G-01, G-02 PASS (D-009). Phase 2: built (D-010).
+- Phase 3: G-10 PASS, **G-11 FAIL** (wrong beliefs do not lead to worse outcomes under passive or delegating rulers). Proceeded at Marko's instruction; needs his confirmation as an override (D-012, D-013).
+- Phase 4: G-14 PASS on block 40000 with the final code; G-01 PASS (D-014). G-02 redefined (first divergence belongs to the perturbed system).
 
 ## Stubbed / not built (by design)
 - Agents: interpretation and obedience are a stub (literal, always obey) until Phase 3; no DecisionTrace yet.
@@ -51,14 +59,15 @@ Phase 1 base:
 - Metrics fields that need later systems are null.
 
 ## Known gaps
-- G-01 not yet run on a second physical machine. Run `node src/cli.ts g01 --seeds 1..100` in `engine/`: the last line must read `combined 7c0765250e9ba7fcf46c76a958c23de976f3c688d12f6e292a3c4604b4d7f66b`.
-- Cost per run is 152 ms per simulated year (was 22); profile in Phase 4.
-- The placeholder end state is saturated (true in every run); real end states come in Phases 6-7.
-- Route closures exist as events but nothing triggers them yet (environment, Phase 10).
+- G-11 open (D-013): information does not yet matter enough under passive or delegating rulers.
+- G-01 not yet run on a second physical machine. In `engine/`: `node src/cli.ts g01 --seeds 1..100` must end with `combined 4238030536c7f39d09f7a9e1ffdfa62e8a50b6147a2c6fbf73e39dc630a006d7`.
+- Tier B's busiest day sits exactly at its budget (3). Tier B sergeants wake but have no options yet.
+- Placeholder physical systems (economy, weather, threat): storms dominate outcomes.
+- Route closures exist but nothing triggers them (Phase 10).
 
 ## Needs a human
-Optional: run the G-01 command above on your own computer (needs Node 22.18+).
-Optional: `node src/cli.ts timeline --seed 3 --types ReportComposed,ReportDelivered,ReportIntercepted,OrderIssued,OrderReceived,OrderCompleted` shows the information flow of one run.
+- Confirm the G-11 override, or pick an option from D-013.
+- Optional: run the G-01 command above on your own computer (Node 22.18+).
 
 ## Next phase
-Phase 3: event-driven BDI-lite agents (wake index, DecisionTrace, commitment, real obedience). Recommended: Opus 5.5, xhigh effort.
+Phase 5: Court, Map and personal presence. This is the GO/NO-GO human gate (H-01, with H-02 and G-12). Build the debug Court and Map with templated phrasing, then stop for testers. Recommended: Opus 5.5, high effort.

@@ -3,7 +3,7 @@
 import { writeFileSync, mkdirSync } from "node:fs";
 import { loadContent } from "../src/content.ts";
 import { createSim, type Sim } from "../src/engine.ts";
-import { runBatch } from "../src/batch.ts";
+import { runBatch, type metricsRow } from "../src/batch.ts";
 import { checkRun, checkPairing } from "../src/invariants.ts";
 import { canonicalJson } from "../src/canonical.ts";
 import { EVENT_TYPES, type SystemId } from "../src/events.ts";
@@ -26,8 +26,10 @@ for (const perturbed of Object.keys(ROOT_DRAWN) as SystemId[]) {
     const b = createSim({ content, seed, policy: "delegating", params: { extraDraws: { [perturbed]: 3 } } }); b.runDays(240);
     let i = 0;
     while (i < a.log.length && i < b.log.length && canonicalJson(a.log[i]) === canonicalJson(b.log[i])) i++;
-    const first = b.log[i] ?? a.log[i];
-    if (!first || EVENT_TYPES[first.type].system === perturbed) own++; else foreign.push(`seed ${seed}: ${first.type}`);
+    // at the first differing position, either run may hold the perturbed system's event (one run has it, the other not)
+    const sides = [a.log[i], b.log[i]].filter((x) => !!x);
+    if (!sides.length || sides.some((x) => EVENT_TYPES[x.type].system === perturbed)) own++;
+    else foreign.push(`seed ${seed}: ${sides.map((x) => x.type).join(" / ")}`);
     if (sig(a, ROOT_DRAWN[perturbed]) !== sig(b, ROOT_DRAWN[perturbed])) changed++;
     if (Object.entries(ROOT_DRAWN).every(([sys, t]) => sys === perturbed || sig(a, t) === sig(b, t))) identical++;
   }
@@ -36,19 +38,21 @@ for (const perturbed of Object.keys(ROOT_DRAWN) as SystemId[]) {
 out.G02 = { perSystem: g02, verdict: Object.values(g02).every((x) => x.firstDivergenceOwn === 100) ? "PASS" : "FAIL" };
 console.log("G-02", JSON.stringify(out.G02));
 
-// 1,000 seeds per arm, invariants on every seed
+// 1,000 seeds per arm, invariants on every seed; ON and OFF run seed by seed so no logs are kept
 const t0 = performance.now();
 const violations: string[] = [];
 const seeds = Array.from({ length: 1000 }, (_, i) => i + 1);
-const logsOn = new Map<number, Sim["log"]>();
-const on = runBatch({ content, seeds, days: 240, policy: "delegating" }, (row, sim) => {
-  for (const v of checkRun(sim)) violations.push(`on seed ${row.seed}: ${v}`);
-  logsOn.set(row.seed, sim.log);
-});
-const off = runBatch({ content, seeds, days: 240, policy: "delegating", ablate: ["threat"] }, (row, sim) => {
-  for (const v of checkRun(sim)) violations.push(`off seed ${row.seed}: ${v}`);
-  for (const v of checkPairing(logsOn.get(row.seed)!, sim.log, "threat")) violations.push(`pairing seed ${row.seed}: ${v}`);
-});
+const on: ReturnType<typeof metricsRow>[] = [], off: ReturnType<typeof metricsRow>[] = [];
+for (const seed of seeds) {
+  const specOn = { content, seeds: [seed], days: 240, policy: "delegating" as const };
+  const specOff = { ...specOn, ablate: ["threat" as SystemId] };
+  let logOn: Sim["log"] = [];
+  on.push(...runBatch(specOn, (row, sim) => { for (const v of checkRun(sim)) violations.push(`on seed ${seed}: ${v}`); logOn = sim.log; }));
+  off.push(...runBatch(specOff, (row, sim) => {
+    for (const v of checkRun(sim)) violations.push(`off seed ${seed}: ${v}`);
+    for (const v of checkPairing(logOn, sim.log, "threat")) violations.push(`pairing seed ${seed}: ${v}`);
+  }));
+}
 const secs = (performance.now() - t0) / 1000;
 const rate = (rows: typeof on, f: (r: (typeof on)[number]) => boolean) => rows.filter(f).length / rows.length;
 out.batch = {
