@@ -19,16 +19,19 @@ function adviceLines(v: View, target?: string): AdviceLine[] {
   // Advice is set aside only while an order of the same kind for the same place is recent (other advice still shows).
   // the order each kind of advice turns into: attacking the raiders is sending the captain to the nearest fort
   const orderOf = (a: { kind: string; target?: string }): { action: string; target: string } | undefined => {
+    if (a.kind === "advise_levy") return { action: "levy", target: v.self.id };
     if (!a.target) return undefined;
     if (a.kind === "advise_repair") return { action: "repair", target: a.target };
     if (a.kind === "advise_send_captain") return { action: "advance", target: a.target };
     if (a.kind === "advise_sortie") { const f = nearestFort(v, a.target); return f ? { action: "advance", target: f } : undefined; }
     return undefined;
   };
+  // Orders in place: issued by you and not yet reported finished in a letter (for up to 60 days).
+  const finished = new Set(Object.values(v.beliefs).filter((b) => b.predicate === "order.status" && ["completed", "abandoned", "superseded"].includes(String(b.believedValue))).map((b) => b.subject.id));
+  const inPlace = v.self.orders.filter((o) => !finished.has(String(o.orderId)) && v.now - o.tick < 60 * 86400);
   const superseded = (r: { plan: { id: string } }) => {
     const want = orderOf(JSON.parse(r.plan.id) as { kind: string; target?: string });
-    // an order you issued in the last 20 days (repairs take about two weeks to report back)
-    return !!want && v.self.orders.some((o) => o.action === want.action && o.target === want.target && v.now - o.tick < 20 * 86400);
+    return !!want && inPlace.some((o) => o.action === want.action && o.target === want.target);
   };
   return v.advice.filter((r) => (target ? r.plan.id.includes(`"${target}"`) : latest.get(r.author) === r.id) && !superseded(r)).map((r) => ({
     id: r.id, adviser: nameOf(v, r.author), area: SHORT_AREA[v.world.areas[r.author] ?? ""] ?? v.world.areas[r.author] ?? "", plan: planWords(v, r.plan.id),
