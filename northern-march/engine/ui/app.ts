@@ -65,6 +65,7 @@ function answer(actions: PlayerAction[]) {
 function start(seed: number, restore = true) {
   st.sim = createSim({ content, seed, policy: "external" });
   st.seed = seed; st.queue = []; st.error = ""; st.over = false; st.log = [];
+  st.batch = []; st.letter = null; st.advice = null; st.openLetter = null; st.paused = null; st.shownPause = null; st.tab = "game"; st.answered = 0;
   // the silent prelude, up to the first day of play
   for (let guard = 0; guard < 5000; guard++) { const r = st.sim.next(PRE); if (!r.paused) break; st.sim.answer([]); }
   if (!restore) clearLog(seed);
