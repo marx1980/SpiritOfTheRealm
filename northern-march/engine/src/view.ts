@@ -89,8 +89,8 @@ export interface OrderDraft {
 export function validateDraft(v: View, d: OrderDraft): string[] {
   const out: string[] = [];
   if (!INTENTS.includes(d.intent)) out.push(`unknown intent ${d.intent}`);
-  if (d.recipient === v.self.id) out.push("cannot order yourself");
-  if (!beliefsAbout(v, d.recipient, "character.seat").length && !beliefsAbout(v, d.recipient, "character.location").length) out.push(`you do not know who or where ${d.recipient} is`);
+  // The ruler may order herself (for now, in the debug UI); anyone else must be known to her.
+  if (d.recipient !== v.self.id && !beliefsAbout(v, d.recipient, "character.seat").length && !beliefsAbout(v, d.recipient, "character.location").length) out.push(`you do not know who or where ${d.recipient} is`);
   if (d.objective?.kind === "location" && !v.world.places.some((p) => p.id === d.objective.id)) out.push(`no place called ${d.objective.id} on your map`);
   if (d.objective?.kind === "character" && !(d.objective.id in v.world.names)) out.push(`you know of no one called ${d.objective.id}`);
   if (!d.objective || !["location", "character"].includes(d.objective.kind)) out.push("an order needs an objective");

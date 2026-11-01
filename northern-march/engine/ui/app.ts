@@ -23,7 +23,7 @@ type Sim = ReturnType<typeof createSim>;
 const st = {
   sim: null as unknown as Sim, seed: __H01__.seed, paused: null as null | string, over: false, letter: null as number | null, advice: null as number | null, tab: "game" as "game" | "settings",
   queue: [] as PlayerAction[], autoPause: new Set<string>(REASONS), selected: "northwatch",
-  draft: { recipient: "", intent: "repair", objective: "northwatch", discretion: "bounded" } as { recipient: string; intent: string; objective: string; discretion: string },
+  draft: { recipient: "", action: "p:repair", objective: "northwatch", discretion: "bounded" } as { recipient: string; action: string; objective: string; discretion: string },
   error: "", observer: location.hash === "#observer", answered: 0, openLetter: null as number | null,
 };
 
@@ -145,24 +145,28 @@ function side(v: View) {
   const opt = (val: string, label: string, cur: string) => `<option value="${esc(val)}"${val === cur ? " selected" : ""}>${esc(label)}</option>`;
   const here = "at" in v.self.position ? v.self.position.at : null;
   const travel = content.scenario.presence.travelTo.filter((t) => t !== here);
-  const known = [...new Set(Object.values(v.beliefs).filter((b) => b.predicate === "character.location" && b.subject.id !== v.self.id).map((b) => b.subject.id))].sort();
+  const others = [...new Set(Object.values(v.beliefs).filter((b) => b.predicate === "character.location" && b.subject.id !== v.self.id).map((b) => b.subject.id))].sort();
+  const known = [...others, v.self.id];
   if (!st.draft.recipient || !known.includes(st.draft.recipient)) st.draft.recipient = known[0] ?? "";
-  const draft = toDraft();
-  const problems = draft ? validateDraft(v, draft) : ["no recipient"];
   const places = [...v.world.places].sort((a, b) => (a.name < b.name ? -1 : 1));
+  const isPlayer = st.draft.action.startsWith("p:");
+  const pAct = st.draft.action.slice(2);
   const fortId = !st.draft.objective.startsWith("@") && content.byId.location.get(st.draft.objective)?.fortification ? st.draft.objective : null;
+  const ACTIONS: [string, string][] = [["p:repair", "Repair"], ["p:advance", "Send captain"], ["p:levy", "Levy"], ["p:travel", "Travel"], ...INTENTS.map((k) => [`o:${k}`, k] as [string, string])];
+  const draft = isPlayer ? null : toDraft();
+  const problems: string[] = isPlayer ? (
+      (pAct === "repair" || pAct === "advance") && !fortId ? ["choose a fort under Where"]
+      : pAct === "travel" && !travel.includes(st.draft.objective) ? ["choose a place to travel to under Where"] : [])
+    : draft ? validateDraft(v, draft) : ["no recipient"];
   const act = `<div class="card"><h2>Act</h2>
     <div class="form">
-      <label for="o-obj">Where</label><select id="o-obj">${places.map((x) => opt(x.id, x.name, st.draft.objective)).join("")}${known.map((k) => opt("@" + k, name(v, k), st.draft.objective)).join("")}</select>
-      <span></span><div class="quick"><button data-q="repair" ${p && fortId ? "" : "disabled"}>Repair</button><button data-q="advance" ${p && fortId ? "" : "disabled"}>Send captain</button>
-        <button data-act='${esc(JSON.stringify({ action: "levy" }))}' ${p ? "" : "disabled"}>Levy</button></div>
       <label for="o-to">To</label><select id="o-to">${known.map((k) => opt(k, name(v, k), st.draft.recipient)).join("")}</select>
-      <label for="o-intent">Intent</label><select id="o-intent">${INTENTS.map((k) => opt(k, k, st.draft.intent)).join("")}</select>
-      <label for="o-disc">Freedom</label><select id="o-disc">${[["strict", "Exactly as told"], ["bounded", "Some freedom"], ["delegated", "Full freedom"]].map(([k, l]) => opt(k, l, st.draft.discretion)).join("")}</select>
-      <span></span><button id="o-add" ${p && !problems.length ? "" : "disabled"}>Add order</button>
+      <label for="o-action">Action</label><select id="o-action">${ACTIONS.map(([k, l]) => opt(k, l, st.draft.action)).join("")}</select>
+      <label for="o-obj">Where</label><select id="o-obj">${places.map((x) => opt(x.id, x.name, st.draft.objective)).join("")}${known.map((k) => opt("@" + k, name(v, k), st.draft.objective)).join("")}</select>
+      ${isPlayer ? "" : `<label for="o-disc">Freedom</label><select id="o-disc">${[["strict", "Exactly as told"], ["bounded", "Some freedom"], ["delegated", "Full freedom"]].map(([k, l]) => opt(k, l, st.draft.discretion)).join("")}</select>`}
+      <span></span><button id="o-add" ${p && !problems.length ? "" : "disabled"}>Add</button>
     </div>
-    ${problems.length && draft ? `<div class="err">${esc(problems.join("; "))}</div>` : ""}
-    <div class="quick" style="margin-top:8px">${travel.map((t) => `<button data-act='${esc(JSON.stringify({ action: "travel", target: t }))}' ${p ? "" : "disabled"}>Travel to ${esc(name(v, t))}</button>`).join("")}</div></div>`;
+    ${problems.length ? `<div class="err">${esc(problems.join("; "))}</div>` : ""}</div>`;
   const open = v.reports.find((r) => r.reportId === st.openLetter);
   const letters = `<div class="card"><h2>Letters</h2><div class="letters">${[...v.reports].reverse().slice(0, 40).map((r) => {
     const isOpen = r.reportId === st.openLetter;
@@ -180,7 +184,7 @@ const dayAgo = (v: View, t: number) => { const d = Math.floor(v.now / DAY) - Mat
 function toDraft(): OrderDraft | null {
   if (!st.draft.recipient) return null;
   const obj = st.draft.objective.startsWith("@") ? { kind: "character" as const, id: st.draft.objective.slice(1) } : { kind: "location" as const, id: st.draft.objective };
-  return { recipient: st.draft.recipient, intent: st.draft.intent as OrderDraft["intent"], objective: obj, discretion: st.draft.discretion as OrderDraft["discretion"],
+  return { recipient: st.draft.recipient, intent: st.draft.action.slice(2) as OrderDraft["intent"], objective: obj, discretion: st.draft.discretion as OrderDraft["discretion"],
     reportingPolicy: { onReceipt: true, onCompletion: true, onFailure: true } };
 }
 
@@ -258,19 +262,26 @@ document.addEventListener("click", (e) => {
   if (el.dataset.closeLetter !== undefined) { st.openLetter = null; return render(); }
   if (el.dataset.act) return queue(JSON.parse(el.dataset.act));
   if (el.dataset.place) { st.selected = el.dataset.place; if (content.byId.location.get(st.selected)?.fortification) st.draft.objective = st.selected; return render(); }
-  if (el.dataset.q) return queue({ action: el.dataset.q as "repair", target: st.draft.objective });
   if (el.dataset.unq) { st.queue.splice(Number(el.dataset.unq), 1); return render(); }
   if (el.id === "go") return send();
   if (el.id === "restart") return start(st.seed);
   if (el.id === "settings-tab") { st.tab = st.tab === "settings" ? "game" : "settings"; return render(); }
-  if (el.id === "o-add") { const d = toDraft(); if (d) queue({ action: "order", order: d }); return; }
+  if (el.id === "o-add") {
+    const pa = st.draft.action.slice(2);
+    if (st.draft.action.startsWith("p:")) {
+      if (pa === "levy") return queue({ action: "levy" });
+      if (pa === "travel") return queue({ action: "travel", target: st.draft.objective });
+      return queue({ action: pa as "repair" | "advance", target: st.draft.objective });
+    }
+    const d = toDraft(); if (d) queue({ action: "order", order: d }); return;
+  }
   if (el.id === "copy-log") navigator.clipboard?.writeText(st.sim.log.map((x) => JSON.stringify(x)).join("\n")).catch(() => {});
 });
 document.addEventListener("change", (e) => {
   const t = e.target as HTMLInputElement | HTMLSelectElement;
   if (t.id === "observer-toggle") { st.observer = (t as HTMLInputElement).checked; return render(); }
   if (t.dataset.pause) { (t as HTMLInputElement).checked ? st.autoPause.add(t.dataset.pause) : st.autoPause.delete(t.dataset.pause); return; }
-  const k = ({ "o-to": "recipient", "o-intent": "intent", "o-obj": "objective", "o-disc": "discretion" } as Record<string, keyof typeof st.draft>)[t.id];
+  const k = ({ "o-to": "recipient", "o-action": "action", "o-obj": "objective", "o-disc": "discretion" } as Record<string, keyof typeof st.draft>)[t.id];
   if (t.id === "o-obj" && content.byId.location.get(t.value)?.fortification) st.selected = t.value;
   if (k) { st.draft[k] = t.value; render(); }
 });
