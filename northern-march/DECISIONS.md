@@ -72,7 +72,7 @@ Options (Marko to choose; none applied):
 4. Soften the objective (e.g. no fort breached for more than N days), since passive play scores 0%.
 Recommendation: 3, plus 2 for the steward only when he is at court.
 
-**Regressions (final code):** G-01 PASS on the final code (after the seat-treasury rule): combined hash `95c062a8f7a076ca61ba6caed75beadc290e5bab798189e9da302aff7a7d740b` under Node and under Bun (results/phase5_g01_v2*.txt). The earlier hash `8e008…` is superseded. G-02 PASS (300/300 first divergences in the perturbed system). 1,000 seeds × 2 arms × 240 days: 0 invariant violations (results/phase5_regression_v2.txt, final code; mean 5,448 events per run, breached 96.5% on / 94.2% off).
+**Regressions (final code):** G-01 PASS on the final code (after the coin belief rule, D-015): combined hash `dd80352c194e7df3344c6d550f22be9fc8fdbb0eb23c0a40b814040f62bb21fa` under Node and under Bun (results/phase5_g01_v3.txt, results/phase5_g01_v3_bun.txt). Superseded: `95c062a8f7a076ca61ba6caed75beadc290e5bab798189e9da302aff7a7d740b` (after the seat-treasury rule, before the coin rule; results/phase5_g01_v2*.txt), and `8e008…`. G-02 PASS (300/300 first divergences in the perturbed system). 1,000 seeds × 2 arms × 240 days: 0 invariant violations (results/phase5_regression_v2.txt, final code; mean 5,448 events per run, breached 96.5% on / 94.2% off).
 
 **Not verified (needs humans):** H-01 and H-02. Protocol and observer sheets in `docs/H01_PROTOCOL.md`; scenario in `engine/ui/h01.json` (seed 51, 90 days, two raider waves).
 

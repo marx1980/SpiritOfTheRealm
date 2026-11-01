@@ -70,7 +70,7 @@ Phase 1 base:
 
 ## Known gaps
 - G-11 open (D-013): information does not yet matter enough under passive or delegating rulers.
-- G-01 not yet run on a second physical machine. In `engine/`: `node src/cli.ts g01 --seeds 1..100` must end with `combined 95c062a8f7a076ca61ba6caed75beadc290e5bab798189e9da302aff7a7d740b`.
+- G-01 not yet run on a second physical machine. In `engine/`: `node src/cli.ts g01 --seeds 1..100` must end with `combined dd80352c194e7df3344c6d550f22be9fc8fdbb0eb23c0a40b814040f62bb21fa`.
 - Tier B's busiest day sits exactly at its budget (3). Tier B sergeants wake but have no options yet.
 - Placeholder physical systems (economy, weather, threat): storms dominate outcomes.
 - Route closures exist but nothing triggers them (Phase 10).
