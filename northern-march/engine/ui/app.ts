@@ -300,7 +300,7 @@ function coinStatus(v: View): string {
   const net = `${netDailyMilli >= 0 ? "+" : "−"}${kCoins(Math.abs(netDailyMilli))} a day`;
   const low = n < LOW_COINS ? ` <span class="low">Low. <button data-use-levy>Raise a levy (about ${kCoins(content.scenario.player.levyMilli)})</button></span>` : "";
   return `<span class="stat${b.effectiveBand === "stale" ? " old" : ""}"><span class="emo" aria-hidden="true">🪙</span> Coins: ${kCoins(n)}</span>
-    <em class="stat-age">(${esc(dayAgo(v, b.observedAt))})</em> <span class="stat-net">net about ${net}</span>${low}`;
+    <span class="stat-net">${net}</span> <em class="stat-age">(${esc(dayAgo(v, b.observedAt))})</em>${low}`;
 }
 
 /** Settings tab: what pauses the game, and the observer panel for H-01 observers. */
