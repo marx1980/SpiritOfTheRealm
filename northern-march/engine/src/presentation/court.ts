@@ -39,8 +39,11 @@ export function settledCheck(v: View): (r: { plan: { id: string } }) => boolean 
     const want = orderOf(JSON.parse(r.plan.id) as { kind: string; target?: string });
     if (!want) return false;
     if (inProgress.some((o) => o.action === want.action && o.target === want.target)) return true;
+    const a = JSON.parse(r.plan.id) as { kind: string; target?: string };
+    // an attack on raiders is set aside while any order is under way for that place or its fort
+    if (a.kind === "advise_sortie" && a.target && inProgress.some((o) => o.target === a.target || o.target === want.target)) return true;
     // a captain (one with a company) is already believed to be at the place: sending one there is settled
-    if (want.action === "advance" && captainBelievedAt(want.target)) return true;
+    if (a.kind === "advise_send_captain" && captainBelievedAt(want.target)) return true;
     return doneOrders.some((o) => o.action === want.action && o.target === want.target && !learnedSince(want.target, o.doneAt));
   };
   return superseded;

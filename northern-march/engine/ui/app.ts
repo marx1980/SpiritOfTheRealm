@@ -121,6 +121,22 @@ function adviceAction(v: View, r: Recommendation): PlayerAction | null {
   if (a.kind === "advise_levy") return { action: "levy", followed: r.author };
   return null;
 }
+/** The captain to give an order to: one believed at the fort if there is one, else any captain the player knows of. */
+function captainFor(v: View, fort: string | undefined): string | undefined {
+  const captains = [...new Set(Object.values(v.beliefs).filter((b) => b.predicate === "character.troops").map((b) => b.subject.id))].sort();
+  const at = (id: string) => beliefsAbout(v, id, "character.location")[0]?.believedValue;
+  return captains.find((id) => at(id) === fort) ?? captains[0];
+}
+/** Choices for advice to attack raiders: each is an order to the captain. */
+function sortieOptions(v: View, r: Recommendation): { label: string; action: PlayerAction }[] {
+  const a = JSON.parse(r.plan.id) as { kind: string; target?: string };
+  if (a.kind !== "advise_sortie" || !a.target) return [];
+  const fort = fortNear(v, a.target), who = captainFor(v, fort);
+  if (!who || !fort) return [];
+  const order = (intent: OrderDraft["intent"], place: string): PlayerAction => ({ action: "order", followed: r.author,
+    order: { recipient: who, intent, objective: { kind: "location", id: place }, discretion: "bounded", reportingPolicy: { onReceipt: true, onCompletion: true, onFailure: true } } });
+  return [{ label: "Defend", action: order("hold", fort) }, { label: "Patrol", action: order("investigate", a.target) }, { label: "Attack", action: order("advance", a.target) }];
+}
 const actionText = (v: View, a: PlayerAction) =>
   a.action === "order" ? `Order ${name(v, a.order!.recipient)}: ${a.order!.intent} ${name(v, a.order!.objective.id)}`
   : a.action === "levy" ? "Raise a levy" : a.action === "travel" ? `Travel to ${name(v, a.target!)}`
@@ -328,8 +344,11 @@ function render() {
     ...(adv.reasons.some((x) => x.weight < 0) ? [`Concerns: ${adv.reasons.filter((x) => x.weight < 0).slice(0, 3).map((x) => reasonWords(x.textKey)).join(", ")}`] : []),
   ].map((x) => x + ".").join(" ") : "";
   const advAct = adv ? adviceAction(v, adv) : null;
-  const advQueued = !!advAct && st.queue.some((q) => JSON.stringify(q) === JSON.stringify(advAct));
-  const doIt = advAct && (advQueued || affordable(v, advAct)) && st.paused ? `<button data-act='${esc(JSON.stringify(advAct))}' class="${advQueued ? "primary" : ""}" aria-pressed="${advQueued}">Do it</button>` : "";
+  const sortie = adv ? sortieOptions(v, adv) : [];
+  const isQueued = (a: PlayerAction) => st.queue.some((q) => JSON.stringify(q) === JSON.stringify(a));
+  const button = (a: PlayerAction, label: string) => `<button data-act='${esc(JSON.stringify(a))}' class="${isQueued(a) ? "primary" : ""}" aria-pressed="${isQueued(a)}">${label}</button>`;
+  const doIt = sortie.length && st.paused ? sortie.map((o) => button(o.action, o.label)).join("")
+    : advAct && (isQueued(advAct) || affordable(v, advAct)) && st.paused ? button(advAct, "Do it") : "";
   const pauseKey = `${st.paused}:${st.letter}:${st.advice}`;
   const newPause = st.paused !== null && pauseKey !== st.shownPause;
   st.shownPause = st.paused !== null ? pauseKey : null;
@@ -344,7 +363,7 @@ function render() {
   <div class="status-row" aria-label="Realm status">${coinStatus(v)}</div>
   ${st.tab === "settings" ? settingsTab() : `
   <div class="pause ${cls}"><span class="what">${esc(pauseText(v))}</span>${why ? `<span class="why-line">${esc(why)}</span>` : ""}${doIt}
-    <span class="queue">${st.queue.map((a, i) => ({ a, i })).filter(({ a }) => !advAct || JSON.stringify(a) !== JSON.stringify(advAct)).map(({ a, i }) => `<span class="chip">${esc(actionText(v, a))} <button data-unq="${i}" aria-label="Remove">×</button></span>`).join("")}</span>
+    <span class="queue">${st.queue.map((a, i) => ({ a, i })).filter(({ a }) => !sortie.some((o) => JSON.stringify(o.action) === JSON.stringify(a)) && !(advAct && JSON.stringify(a) === JSON.stringify(advAct))).map(({ a, i }) => `<span class="chip">${esc(actionText(v, a))} <button data-unq="${i}" aria-label="Remove">×</button></span>`).join("")}</span>
     ${st.error ? `<span class="err">${esc(st.error)}</span>` : ""}</div>
   <div class="grid">${court(v)}${map(v)}${side(v)}</div>
   ${st.observer ? observer() : ""}`}`;
