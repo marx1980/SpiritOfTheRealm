@@ -2,7 +2,7 @@
 // separately. Built from the player's view only (A7).
 import { beliefsAbout, type View } from "../view.ts";
 import { dayOf, pct } from "./format.ts";
-import { ago, certainty, nameOf, planWords, raiderWords, reasonWords, sourceOf, wallWords } from "./phrasing.ts";
+import { ago, certainty, nameOf, nearestFort, planWords, raiderWords, reasonWords, sourceOf, wallWords } from "./phrasing.ts";
 
 export interface Evidence { text: string; age: string; source: string; certainty: string }
 /** Short area labels for the council list. */
@@ -17,12 +17,18 @@ function adviceLines(v: View, target?: string): AdviceLine[] {
   const latest = new Map<string, number>();
   for (const r of v.advice) if (!latest.has(r.author) || v.advice.find((x) => x.id === latest.get(r.author))!.computedAt < r.computedAt) latest.set(r.author, r.id);
   // Advice is set aside only while an order of the same kind for the same place is recent (other advice still shows).
-  const INTENT_OF: Record<string, string> = { advise_repair: "repair", advise_send_captain: "advance" };
+  // the order each kind of advice turns into: attacking the raiders is sending the captain to the nearest fort
+  const orderOf = (a: { kind: string; target?: string }): { action: string; target: string } | undefined => {
+    if (!a.target) return undefined;
+    if (a.kind === "advise_repair") return { action: "repair", target: a.target };
+    if (a.kind === "advise_send_captain") return { action: "advance", target: a.target };
+    if (a.kind === "advise_sortie") { const f = nearestFort(v, a.target); return f ? { action: "advance", target: f } : undefined; }
+    return undefined;
+  };
   const superseded = (r: { plan: { id: string } }) => {
-    const a = JSON.parse(r.plan.id) as { kind: string; target?: string };
-    const intent = INTENT_OF[a.kind];
+    const want = orderOf(JSON.parse(r.plan.id) as { kind: string; target?: string });
     // an order you issued in the last 20 days (repairs take about two weeks to report back)
-    return !!intent && v.self.orders.some((o) => o.action === intent && o.target === a.target && v.now - o.tick < 20 * 86400);
+    return !!want && v.self.orders.some((o) => o.action === want.action && o.target === want.target && v.now - o.tick < 20 * 86400);
   };
   return v.advice.filter((r) => (target ? r.plan.id.includes(`"${target}"`) : latest.get(r.author) === r.id) && !superseded(r)).map((r) => ({
     id: r.id, adviser: nameOf(v, r.author), area: SHORT_AREA[v.world.areas[r.author] ?? ""] ?? v.world.areas[r.author] ?? "", plan: planWords(v, r.plan.id),

@@ -71,7 +71,13 @@ export function letterSentences(v: View, r: { author: string; claims: { predicat
       // people speak of themselves in the first person
       case "character.location": out.push(me ? `I am at ${nameOf(v, String(val))}.` : `${s} is at ${nameOf(v, String(val))}.`); break;
       case "treasury.balance": out.push(`The treasury is ${(val as number) < 60000 ? "low" : "adequate"}.`); break;
-      case "order.status": out.push(`Your order at ${s} is ${String(val)}.`); break;
+      case "order.status": {
+        // the subject is the order's number: say what the order was, not its number
+        const o = v.self.orders.find((x) => String(x.orderId) === c.subject.id);
+        const verb: Record<string, string> = { repair: "repair", advance: "send the captain to", levy: "raise a levy", travel: "travel to" };
+        out.push(o ? `Your order to ${verb[o.action] ?? o.action} ${o.action === "levy" ? "" : nameOf(v, o.target) + " "}is ${String(val)}.`.replace("  ", " ") : `Your order is ${String(val)}.`);
+        break;
+      }
       default: out.push(`${s}: ${c.predicate.replace(/\./g, " ")} ${String(val)}.`);
     }
   }
