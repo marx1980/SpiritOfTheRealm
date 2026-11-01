@@ -137,6 +137,7 @@ Done when: G-13 passes: maximum grievance alone never produces revolt, and every
 
 ## P0.11 Material economy — Phase 7, Core
 - [ ] Grain, timber, iron, horses and coin
+- [ ] Production goods in the status row (goods are not in the engine until this phase; Phase 5 shows coin only)
 - [ ] Harvest, consumption and stores
 - [ ] Taxation and requisition
 - [ ] Repairs, expeditions and military supply

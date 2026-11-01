@@ -12,6 +12,9 @@ Phase 5 added:
 - Anna's travel (Ravenport, Greybridge, Northwatch); letters read to the council in her absence then forwarded; direct observation of walls in person.
 - Regency (Elara, delegated authority, letters to Anna); personal danger and campaign end (killed or captured); campaign objective and `objectiveMet` metric.
 - Advice heard only in person; `follow:<adviser>` policies; G-12 tool (`tools/phase5_g12.ts`).
+- Anna always holds a belief about the treasury (±10% when freshly reported): observed at start, on arrival at Ravenport, and from the steward's reports (relayed in person, recorded as told evidence).
+- Gates: G-12 PASS on sealed block 70000 (Elara 19.1%, Oren 0.0%); G-01 combined `dd80352c…` (Node and Bun); regression v3 G-02 PASS, 0 invariant violations (1,000 seeds × 2 arms × 240 days); 130 tests pass.
+- Debug page: artifact version 12 (council labels Mil/Adm/Con/Int; timing after the advice).
 - Debug UI: `ui/` → `node ui/build.ts` → `ui/dist/northern-march.html` (published as a private artifact); H-01 scenario `ui/h01.json`; protocol `docs/H01_PROTOCOL.md`.
 - Pure-JS SHA-256 (browser).
 
