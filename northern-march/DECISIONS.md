@@ -13,6 +13,41 @@ Newest first. Numbers come from `phase0/results/` (files named in each entry). A
 - Sealed block 50000..50999, paired by seed, bootstrap 2,000. PASS: difference ≥ 10 points and interval lower bound > 0. AMBER: one of the two. FAIL: neither.
 - Expectation from TUNE: about 7 points, so AMBER is the likely verdict. Not tuning to pass; see the findings below.
 
+**Built (129 tests pass; `npx tsc -p .` clean, now also over `tools/` and `ui/`):**
+- **Interactive play:** `next(limit)` runs to the next decision point and returns what Anna sees; `answer(actions)` resumes. Decision points: a letter delivered to her, advice given in her presence, a danger warning, her arrival somewhere (and an optional daily checkpoint). Saves record answers and replay exactly; a save cannot be taken while a decision is open.
+- **Court** (`presentation/court.ts`): issues ranked by urgency (walls, raiders, her own orders), each with its evidence (what, source, age, certainty) and each adviser's standing advice on that issue; the council's latest advice per adviser; letters. Built from `ViewOf(player)` only; no exact numbers (test).
+- **Map** (`presentation/map.ts`): places from static knowledge, walls and raiders as Anna believes them with source, age and certainty, people where she last heard they were, her own position. Locations gained map coordinates (content).
+- **Templated phrasing** (`presentation/phrasing.ts`): walls in words, raider strength in words, ages in days, certainty bands as words, reasons as words.
+- **Order composer:** `OrderDraft` validated against what Anna knows (a recipient she knows where to find, a place on her map or a person she knows of, an intent from the frozen list, a discretion level). Invalid drafts are refused with the reason.
+- **Presence:** Anna travels between Ravenport, Greybridge and Northwatch by rider. Letters for her reach Ravenport, are read to the councillors present (`ReportShared {inAbsence}`), then follow her. In person she sees the walls of a fort when she arrives and when raiders strike it while she is there; people present see each other.
+- **Regency** (content `scenario.regency`): while Anna is away, Elara at Ravenport decides within delegated authority (repairs up to a cost cap; no levy, no sending the captain). Within authority she orders it and writes to Anna; beyond it she writes asking. DecisionTrace kind `regency`.
+- **Personal danger and defeat:** if Anna is in a fort whose believed walls drop below the danger line, `DangerSignalled` and a forced pause; if the walls are breached with her inside, `CampaignEnded` (killed or captured, keyed draw) and nothing happens after it.
+- **Campaign objective** (`scenario.objective`): `objectiveStatus()` and the `objectiveMet` metric.
+- **Advice audience:** advisers advise whoever is with them; Anna hears advice only in person. She keeps each adviser's latest advice per target for 15 days.
+- **Adviser policies:** `follow:<id>`, and `follow-best-adviser` / `follow-worst-adviser` through measured aliases.
+- **Debug UI** (`ui/`, bundled by esbuild into one HTML page): Court, Map, letters, orders given, quick actions, order composer, travel, pause settings per decision type, hidden observer panel (Shift+O) with hidden truth and the event log. Published as a private artifact.
+- **Invariant change:** a player input must be caused by something she perceived (a letter delivered to her, advice in her audience, a danger warning to her, her own arrival) or by nothing (a checkpoint).
+- `canonical.ts`: SHA-256 in pure JS (byte-identical to node:crypto; needed in the browser).
+
+**Fixed along the way:**
+- The levy candidate was generated last in advise mode and always cut by the candidate cap: no adviser could ever advise a levy. Now it is generated, before repairs, when the believed treasury cannot cover the repairs the adviser believes are needed.
+- `random-valid` answered every piece of advice with a new order, which woke the advisers again (30,000 events in 30 days). It no longer repeats an order given in the last 10 days.
+
+**G-12 result:** **AMBER** on sealed block 50000..50999. Follow Elara 5.9% (Wilson 4.6-7.5%), follow Oren 0.0% (0-0.4%); difference 5.9 points, paired bootstrap 95% interval 4.4-7.5. The interval is above 0 but the difference is below 10 points. Run first on the pre-final code and again on the final code (gate key `c9ce105911ef+61f15c4bfccc`): identical numbers. Advice was followed about 24.5 times per run for Elara and 4.4 for Oren (results/phase5_g12_50000*.txt).
+
+**Finding: no single adviser holds the realm.** Only the steward reads the books, so Elara and Selene never advise a levy and many of the repairs they advise are abandoned for lack of funds. Oren advises waiting or a levy and never a repair. The scripted aggressive ruler (repair below 80%, levy every 30 days) meets the objective on 20 of 30 TUNE seeds; following any one adviser meets it on 0-7%. The advisers differ in kind (each sees part of the problem), not enough in overall quality for G-12.
+
+Options (Marko to choose; none applied):
+1. Accept AMBER now and re-test G-12 at Phase 14 with the full cast and economy.
+2. The steward reads the books to the council (treasury shared at court like dispatches), so every councillor can advise a levy. Expected to raise the best adviser's rate a lot; it also makes advisers more alike.
+3. Make adviser quality deliberately different in content: one sound generalist, one narrow expert, one biased or careless adviser. This is what H-02 needs testers to be able to learn.
+4. Soften the objective (e.g. no fort breached for more than N days), since passive play scores 0%.
+Recommendation: 3, plus 2 for the steward only when he is at court.
+
+**Regressions (final code):** {{REG}}
+
+**Not verified (needs humans):** H-01 and H-02. Protocol and observer sheets in `docs/H01_PROTOCOL.md`; scenario in `engine/ui/h01.json` (seed 51, 90 days, two raider waves).
+
 ## D-014 (Phase 4) Simulation tiers: built, G-14 PASS
 
 **Built (118 tests pass):**

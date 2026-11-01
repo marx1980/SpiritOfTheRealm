@@ -1,9 +1,19 @@
 # STATE
 
-Updated: 1 Nov 2026, end of Phase 4 (Opus 5.5).
+Updated: 1 Nov 2026, end of Phase 5 build; stopped at the human gate (Opus 5.5).
 
 ## Built
-**Engine (`engine/`, TypeScript on Node 22, no build step).** `npm test` runs 118 tests, all passing; `npx tsc -p .` is clean.
+**Engine (`engine/`, TypeScript on Node 22, no build step).** `npm test` runs 129 tests, all passing; `npx tsc -p .` is clean (src, test, tools, ui).
+
+Phase 5 added:
+- Interactive play: `next()` / `answer()` with decision points (letter, advice in person, danger, arrival, optional daily checkpoint); exact replay of answers from saves.
+- `src/presentation/`: `court.ts` (ranked issues with evidence and per-adviser advice), `map.ts` (belief map), `phrasing.ts` (templated words, no hidden numbers).
+- Order composer: `OrderDraft` + `validateDraft` against what Anna knows.
+- Anna's travel (Ravenport, Greybridge, Northwatch); letters read to the council in her absence then forwarded; direct observation of walls in person.
+- Regency (Elara, delegated authority, letters to Anna); personal danger and campaign end (killed or captured); campaign objective and `objectiveMet` metric.
+- Advice heard only in person; `follow:<adviser>` policies; G-12 tool (`tools/phase5_g12.ts`).
+- Debug UI: `ui/` → `node ui/build.ts` → `ui/dist/northern-march.html` (published as a private artifact); H-01 scenario `ui/h01.json`; protocol `docs/H01_PROTOCOL.md`.
+- Pure-JS SHA-256 (browser).
 
 Phase 4 added:
 - Tiers A/B/C as world state; 24 background characters in content (identity, household, occupation, home).
@@ -48,26 +58,30 @@ Phase 1 base:
 ## Result
 - Phase 1: G-01, G-02 PASS (D-009). Phase 2: built (D-010).
 - Phase 3: G-10 PASS, **G-11 FAIL** (wrong beliefs do not lead to worse outcomes under passive or delegating rulers). Proceeded at Marko's instruction; needs his confirmation as an override (D-012, D-013).
-- Phase 4: G-14 PASS on block 40000 with the final code; G-01 PASS (D-014). G-02 redefined (first divergence belongs to the perturbed system).
+- Phase 4: G-14 PASS on block 40000 with the final code; G-01 PASS (D-014). G-02 redefined (first divergence belongs to the perturbed system); G-02 and the 1,000-seed invariant batch PASS on the final Phase 4 code.
+- Phase 5: built. G-12 AMBER (5.9 points, interval 4.4-7.5; needs 10). H-01 and H-02 not run (need testers) (D-015).
 
 ## Stubbed / not built (by design)
-- Agents: interpretation and obedience are a stub (literal, always obey) until Phase 3; no DecisionTrace yet.
-- Orders carry empty constraints and contingencies until the Phase 5 composer.
-- Recommendations: schema only; produced from Phase 5.
+- The composer sets intent, objective, discretion and reporting; constraints and contingencies are accepted but not yet offered in the UI.
+- Saves cannot be taken while a decision is open.
 - Physical systems (economy, weather, threat) are placeholders.
 - Snapshots (load replays from the start).
 - Metrics fields that need later systems are null.
 
 ## Known gaps
 - G-11 open (D-013): information does not yet matter enough under passive or delegating rulers.
-- G-01 not yet run on a second physical machine. In `engine/`: `node src/cli.ts g01 --seeds 1..100` must end with `combined 4238030536c7f39d09f7a9e1ffdfa62e8a50b6147a2c6fbf73e39dc630a006d7`.
+- G-01 not yet run on a second physical machine. In `engine/`: `node src/cli.ts g01 --seeds 1..100` must end with `combined 8e008aeeec3bd99180141f348ea7095595e8388b7a3c02d3080462fc53581bec`.
 - Tier B's busiest day sits exactly at its budget (3). Tier B sergeants wake but have no options yet.
 - Placeholder physical systems (economy, weather, threat): storms dominate outcomes.
 - Route closures exist but nothing triggers them (Phase 10).
+- G-12 AMBER: no single adviser holds the realm (D-015 findings and options).
+- Only the steward knows the treasury; adviser quality is not yet differentiated by design.
 
 ## Needs a human
+- **Run H-01 (and H-02 over two sessions)** with 3-5 testers who have not seen the design: `docs/H01_PROTOCOL.md`. Share the debug page from its Share menu, or build it locally (`cd engine && npm install && node ui/build.ts`).
+- Choose a G-12 option from D-015 (recommended: differentiated adviser quality, plus the steward reading the books at court).
 - Confirm the G-11 override, or pick an option from D-013.
 - Optional: run the G-01 command above on your own computer (Node 22.18+).
 
 ## Next phase
-Phase 5: Court, Map and personal presence. This is the GO/NO-GO human gate (H-01, with H-02 and G-12). Build the debug Court and Map with templated phrasing, then stop for testers. Recommended: Opus 5.5, high effort.
+Do not start Phase 6 until H-01 passes. If H-01 fails, fix the information design and re-test with new testers (Opus 5.5, high). After H-01 passes: Phase 6, population communities and rebellion — Opus 5.5, high effort.

@@ -42,6 +42,8 @@ export const movement: System = {
         observe(ctx, other, chr(who), "character.location", arr.id);
         if (ctx.s.tiers[who] !== "C") observe(ctx, who, chr(other), "character.location", arr.id);
       }
+      // the ruler in person sees the walls she arrives at (P0.07 direct observation)
+      if (who === ctx.content.scenario.ruler && ctx.s.fortifications[at]) observe(ctx, who, loc(at), "fortification.condition", arr.id);
     },
   },
 };

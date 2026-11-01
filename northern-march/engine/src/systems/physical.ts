@@ -30,6 +30,7 @@ function presence(ctx: Ctx, fort: string, raid: number): boolean {
     ctx.emit("CampaignEnded", [raid], [chr(ruler), loc(fort)], { ending, where: fort });
     return true;
   }
+  observe(ctx, ruler, loc(fort), "fortification.condition", raid); // she is on the walls when the raiders strike
   const believed = best(ctx, ruler, fort, "fortification.condition");
   if (believed && (believed.believedValue as number) < sc.presence.dangerBelowMilli && ctx.tick - ctx.s.campaign.lastDanger > 5 * DAY) {
     const w = ctx.emit("DangerSignalled", [raid], [chr(ruler), loc(fort)], { who: ruler, where: fort, believedMilli: believed.believedValue });

@@ -141,3 +141,14 @@ test("follow-the-adviser policies carry out an adviser's recommendations", () =>
   assert.ok(inputs.length > 0);
   for (const e of inputs) assert.equal(e.payload.followed, "elara");
 });
+
+test("Anna sees the walls herself when she arrives at a fort", () => {
+  const c = variant((r) => { r.scenario.scripts = [{ day: 1, kind: "travel", who: "anna", to: "northwatch", mode: "rider" }]; });
+  const sim = run({ seed: 1, content: c, policy: "passive" }, 20);
+  const arr = sim.log.find((e) => e.type === "Arrived" && e.payload.who === "anna" && e.payload.at === "northwatch")!;
+  assert.ok(arr, "she arrived");
+  const seen = sim.log.find((e) => e.type === "Observed" && e.payload.observer === "anna" && e.payload.predicate === "fortification.condition" && e.causedBy[0] === arr.id);
+  assert.ok(seen, "observed the walls on arrival");
+  const bs = beliefsAbout(sim.viewOf("player"), "northwatch", "fortification.condition");
+  assert.ok(bs.some((b) => b.evidenceRefs.some((x) => x.kind === "observation" && x.source === "anna")), "her own sighting is among her beliefs");
+});

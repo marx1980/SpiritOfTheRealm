@@ -74,11 +74,14 @@ export const POLICIES: Record<"passive" | "delegating" | "aggressive" | "random-
   },
   "random-valid": {
     fn: (v, rng) => {
-      const opts: PlayerAction[][] = [[], [{ action: "levy" }], ...believedForts(v).map((f) => [{ action: "repair" as const, target: f.loc }]),
-        ...believedThreats(v, 1).map((f) => [{ action: "advance" as const, target: f }])];
+      // valid = not repeating an order given in the last 10 days (advice now opens decision points too; without this a
+      // random ruler answers every piece of advice with a fresh order, which wakes the advisers again)
+      const opts: PlayerAction[][] = [[], ...(recently(v, "levy", null, 10) ? [] : [[{ action: "levy" as const }]]),
+        ...believedForts(v).filter((f) => !recently(v, "repair", f.loc, 10)).map((f) => [{ action: "repair" as const, target: f.loc }]),
+        ...believedThreats(v, 1).filter((f) => !recently(v, "advance", f, 10)).map((f) => [{ action: "advance" as const, target: f }])];
       return opts[rng().int(0, opts.length - 1)];
     },
-    note: "uniform over valid actions",
+    note: "uniform over valid actions (no repeat of the same order within 10 days)",
   },
   "follow-best-adviser": { fn: null, note: "needs advisers and recommendations: available from Phase 5" },
   "follow-worst-adviser": { fn: null, note: "needs advisers and recommendations: available from Phase 5" },

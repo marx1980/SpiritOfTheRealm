@@ -309,6 +309,7 @@ Rebellion is a mobilisation state with structural gates plus a continuous score.
 ## Phase 5 - Court, Map and personal presence (GO/NO-GO)
 **Deliver:** Court issue aggregator; adviser interpretation and disagreement; belief-based map with report age, source and uncertainty; structured order composer; messenger delivery; Anna's travel between Ravenport, Greybridge and Northwatch; who holds court and decides while she is absent; campaign objective tracking; defeat on Anna's death or capture; debug UI with templated phrasing.
 **Gate:** H-01 (protocol in C4), plus G-12 and H-02. If testers cannot explain their decisions from the information shown, fix this before any further phase.
+**Result (1 Nov):** built; G-12 AMBER (5.9 points, interval 4.4-7.5, block 50000); H-01 and H-02 waiting for testers (docs/H01_PROTOCOL.md). See DECISIONS D-015.
 
 ## Phase 6 - Population communities and rebellion
 **Deliver:** 8-12 communities, relevant cohorts, material condition, sparse collective beliefs, competing narratives, memory and grievance, trusted leaders and organisations, rebellion function (section D), cooperation/evasion/protest/migration/sabotage/revolt behaviours.

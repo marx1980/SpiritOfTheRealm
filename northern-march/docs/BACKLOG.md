@@ -18,7 +18,7 @@ Each epic lists its phase, scope and acceptance criterion ("Done when"). Detaile
 - [x] Per-run metrics row and results aggregation
 - [x] Ablation switches per system, with paired ON/OFF arms
 - [x] Gate evaluator: sealed seed blocks, bootstrap intervals, three-state verdicts (PASS / AMBER / FAIL), gate log (plan §C0)
-- [ ] Scripted player policies: passive, delegating, aggressive done; follow-best-adviser, follow-worst-adviser wait for Phase 5
+- [x] Scripted player policies: passive, delegating, aggressive, follow:<adviser>, follow-best/worst-adviser (aliases measured on TUNE seeds)
 - [x] Invariant test harness run on every seed in CI
 - [x] Content-as-data loader and validator
 - [x] Frozen schemas: SimEvent, StructuredOrder, Recommendation/Reason, BeliefProposition, Report, DecisionTrace
@@ -80,23 +80,26 @@ Done when: an order's lifecycle is fully visible in the inspector, including fai
 Done when: Elara and Caron reach different, explainable plans from the same evidence, and no agent dithers between near-equal plans.
 
 ## P0.06 Court and Map — Phase 5, Core
-- [ ] Prioritised Court issues
-- [ ] Adviser interpretation and disagreement, shown per adviser
-- [ ] Belief-based Map
-- [ ] Report age, source and uncertainty
-- [ ] No exact hidden stats
-- [ ] Auto-pause on reports needing a decision
+- [x] Prioritised Court issues
+- [x] Adviser interpretation and disagreement, shown per adviser
+- [x] Belief-based Map
+- [x] Report age, source and uncertainty
+- [x] No exact hidden stats
+- [x] Auto-pause on reports needing a decision
 
-Done when: H-01 passes (plan §C4): at least 4 of 5 testers explain their decisions and consequences from the information shown.
+Done when: H-01 passes (plan §C4): at least 4 of 5 testers explain their decisions and consequences from the information shown. (Built, Phase 5; H-01 not yet run.)
 
 ## P0.07 Personal presence — Phase 5, Core
-- [ ] Ravenport, Greybridge and Northwatch travel
-- [ ] Local characters and direct observations
-- [ ] Capital delegation while absent (who governs, with what authority)
-- [ ] Reports physically follow Anna while she travels
-- [ ] Personal danger (systemic, signalled before lethal)
+- [x] Ravenport, Greybridge and Northwatch travel
+- [x] Local characters and direct observations
+- [x] Capital delegation while absent (who governs, with what authority)
+- [x] Reports physically follow Anna while she travels
+- [x] Personal danger (systemic, signalled before lethal)
 
-Done when: Anna can leave Ravenport, decisions at court continue within delegated authority, and she learns of them by report.
+Done when: Anna can leave Ravenport, decisions at court continue within delegated authority, and she learns of them by report. (Built and tested, Phase 5.)
+- [ ] Adviser quality differs by design (sound / narrow / biased), so G-12 and H-02 have something to measure (D-015 option 3)
+- [ ] Steward reads the books to the council when at court (D-015 option 2)
+- [ ] Saves while a decision is open (today a save needs the decision answered first)
 
 ## P0.08 Character network and Houses — Phases 4 and 14, Core (basic) / Full
 - [x] Tier A/B/C with promotion and demotion
