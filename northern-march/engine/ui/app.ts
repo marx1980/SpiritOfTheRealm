@@ -100,7 +100,7 @@ function pauseText(v: View): string {
 function adviceRows(v: View, lines: AdviceLine[]) {
   return lines.map((l) => {
     const r = v.advice.find((x) => x.id === l.id), a = r ? adviceAction(v, r) : null;
-    return `<div class="row"><span class="who">${esc(l.adviser)}${l.area ? ` <small class="area">(${esc(l.area)})</small>` : ""}</span><span>${esc(l.plan)} <span class="${l.fresh ? "" : "old"}">(${esc(l.heard)})</span></span>
+    return `<div class="row"><span class="who">${esc(l.adviser)}${l.area ? ` <small class="area">(${esc(l.area)})</small>` : ""}</span><span>${esc(l.plan)}. <em class="${l.fresh ? "" : "old"}">(${esc(l.heard)})</em></span>
       ${a && st.paused ? `<button data-act='${esc(JSON.stringify(a))}'>Do it</button>` : ""}
       <span class="why">${l.supports.length ? `Supports: ${esc(l.supports.join(", "))}. ` : ""}${l.concerns.length ? `Concerns: ${esc(l.concerns.join(", "))}.` : ""}</span></div>`;
   }).join("");
@@ -232,14 +232,15 @@ function render() {
   const why = adv ? [
     ...(adv.reasons.some((x) => x.weight > 0) ? [`Supports: ${adv.reasons.filter((x) => x.weight > 0).slice(0, 3).map((x) => reasonWords(x.textKey)).join(", ")}`] : []),
     ...(adv.reasons.some((x) => x.weight < 0) ? [`Concerns: ${adv.reasons.filter((x) => x.weight < 0).slice(0, 3).map((x) => reasonWords(x.textKey)).join(", ")}`] : []),
-  ].join(". ") : "";
+  ].map((x) => x + ".").join(" ") : "";
   const doIt = adv && adviceAction(v, adv) && st.paused ? `<button data-act='${esc(JSON.stringify(adviceAction(v, adv)))}'>Do it</button>` : "";
   document.getElementById("app")!.innerHTML = `
   <div class="top"><h1>Northern March</h1>
     <div class="meta"><span>Day ${Math.floor(v.now / DAY) + 1} / ${__H01__.days}</span><span>${"at" in pos ? esc(name(v, pos.at)) : "on the road to " + esc(name(v, pos.transit.dest))}</span></div>
     <div class="grow"></div>
+    ${cont}
+    <button id="restart">Restart</button>
     <button id="settings-tab" aria-pressed="${st.tab === "settings"}">${st.tab === "settings" ? "Back" : "Settings"}</button>
-    <button id="restart">Restart</button>${cont}
   </div>
   <div class="status-row" aria-label="Realm status">${coinStatus(v)}</div>
   ${st.tab === "settings" ? settingsTab() : `
