@@ -204,6 +204,7 @@ export class Sim {
     const inputs: InputRecord[] = this.log.filter((e) => e.type === "PlayerInput").map((e) => ({
       decision: e.payload.decision as number, tick: e.tick, action: e.payload.action as InputRecord["action"], target: (e.payload.target as string | null) ?? null,
       ...(e.payload.order ? { order: e.payload.order as InputRecord["order"] } : {}), ...(e.payload.followed ? { followed: e.payload.followed as string } : {}),
+      ...(e.payload.mission ? { mission: e.payload.mission as InputRecord["mission"] } : {}), ...(e.payload.raid ? { raid: e.payload.raid as string } : {}),
     }));
     const rngStates: SaveFile["rngStates"] = {};
     for (const [n, r] of [...this.streams].sort(([a], [b]) => (a < b ? -1 : 1))) rngStates[n] = { state: r.getState(), draws: r.draws };

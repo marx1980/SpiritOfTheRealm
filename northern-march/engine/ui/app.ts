@@ -41,7 +41,7 @@ type Sim = ReturnType<typeof createSim>;
 const st = {
   sim: null as unknown as Sim, log: [] as PlayerAction[][], shownPause: null as string | null, seed: __H01__.seed, paused: null as null | string, over: false, letter: null as number | null, advice: null as number | null, tab: "game" as "game" | "settings",
   queue: [] as PlayerAction[], autoPause: new Set<string>(REASONS), selected: "northwatch",
-  draft: { recipient: "", action: "p:repair", objective: "northwatch", discretion: "bounded" } as { recipient: string; action: string; objective: string; discretion: string },
+  draft: { recipient: "", action: "p:repair", objective: "northwatch", discretion: "bounded", mission: "defend" } as { recipient: string; action: string; objective: string; discretion: string; mission: string },
   error: "", observer: location.hash === "#observer", answered: 0, openLetter: null as number | null,
 };
 
@@ -121,21 +121,11 @@ function adviceAction(v: View, r: Recommendation): PlayerAction | null {
   if (a.kind === "advise_levy") return { action: "levy", followed: r.author };
   return null;
 }
-/** The captain to give an order to: one believed at the fort if there is one, else any captain the player knows of. */
-function captainFor(v: View, fort: string | undefined): string | undefined {
-  const captains = [...new Set(Object.values(v.beliefs).filter((b) => b.predicate === "character.troops").map((b) => b.subject.id))].sort();
-  const at = (id: string) => beliefsAbout(v, id, "character.location")[0]?.believedValue;
-  return captains.find((id) => at(id) === fort) ?? captains[0];
-}
-/** Choices for advice to attack raiders: each is an order to the captain. */
-function sortieOptions(v: View, r: Recommendation): { label: string; action: PlayerAction }[] {
-  const a = JSON.parse(r.plan.id) as { kind: string; target?: string };
-  if (a.kind !== "advise_sortie" || !a.target) return [];
-  const fort = fortNear(v, a.target), who = captainFor(v, fort);
-  if (!who || !fort) return [];
-  const order = (intent: OrderDraft["intent"], place: string): PlayerAction => ({ action: "order", followed: r.author,
-    order: { recipient: who, intent, objective: { kind: "location", id: place }, discretion: "bounded", reportingPolicy: { onReceipt: true, onCompletion: true, onFailure: true } } });
-  return [{ label: "Defend", action: order("hold", fort) }, { label: "Patrol", action: order("investigate", a.target) }, { label: "Attack", action: order("advance", a.target) }];
+/** The raiders' site a captain would patrol or attack from this fort: the strongest believed raid that fort answers. */
+function raidNear(v: View, fort: string): string | undefined {
+  const raids = v.world.places.filter((p) => fortNear(v, p.id) === fort)
+    .map((p) => ({ id: p.id, b: beliefsAbout(v, p.id, "threat.intensity")[0] })).filter((x) => x.b && (x.b.believedValue as number) > 0);
+  return raids.sort((a, b) => (b.b!.believedValue as number) - (a.b!.believedValue as number))[0]?.id;
 }
 const actionText = (v: View, a: PlayerAction) =>
   a.action === "order" ? `Order ${name(v, a.order!.recipient)}: ${a.order!.intent} ${name(v, a.order!.objective.id)}`
@@ -235,6 +225,7 @@ function side(v: View) {
   const draft = isPlayer ? null : toDraft();
   const problems: string[] = isPlayer ? (
       (pAct === "repair" || pAct === "advance") && !fortId ? ["choose a fort under Where"]
+      : pAct === "advance" && st.draft.mission !== "defend" && !raidNear(v, fortId!) ? ["no raiders known to be answered from this fort"]
       : pAct === "travel" && !travel.includes(st.draft.objective) ? ["choose a place to travel to under Where"] : [])
     : draft ? validateDraft(v, draft) : ["no recipient"];
   // A repair is only offered if Anna can pay for it (from what she believes about the walls and her coins).
@@ -248,6 +239,7 @@ function side(v: View) {
       <label for="o-to">To</label><select id="o-to">${known.map((k) => opt(k, name(v, k), st.draft.recipient)).join("")}</select>
       <label for="o-action">Action</label><select id="o-action">${ACTIONS.map(([k, l]) => opt(k, l, st.draft.action)).join("")}</select>
       <label for="o-obj">Where</label><select id="o-obj">${places.map((x) => opt(x.id, x.name, st.draft.objective)).join("")}${known.map((k) => opt("@" + k, name(v, k), st.draft.objective)).join("")}</select>
+      ${pAct === "advance" ? `<label for="o-mission">Mission</label><select id="o-mission">${[["defend", "Defend the fort"], ["patrol", "Patrol the raiders"], ["attack", "Attack the raiders"]].map(([k, l]) => opt(k, l, st.draft.mission)).join("")}</select>` : ""}
       ${isPlayer ? "" : `<label for="o-disc">Freedom</label><select id="o-disc">${[["strict", "Exactly as told"], ["bounded", "Some freedom"], ["delegated", "Full freedom"]].map(([k, l]) => opt(k, l, st.draft.discretion)).join("")}</select>`}
       ${costLine}
       <span></span><button id="o-add" ${p && !problems.length ? "" : "disabled"}>Add</button>
@@ -344,11 +336,8 @@ function render() {
     ...(adv.reasons.some((x) => x.weight < 0) ? [`Concerns: ${adv.reasons.filter((x) => x.weight < 0).slice(0, 3).map((x) => reasonWords(x.textKey)).join(", ")}`] : []),
   ].map((x) => x + ".").join(" ") : "";
   const advAct = adv ? adviceAction(v, adv) : null;
-  const sortie = adv ? sortieOptions(v, adv) : [];
   const isQueued = (a: PlayerAction) => st.queue.some((q) => JSON.stringify(q) === JSON.stringify(a));
-  const button = (a: PlayerAction, label: string) => `<button data-act='${esc(JSON.stringify(a))}' class="${isQueued(a) ? "primary" : ""}" aria-pressed="${isQueued(a)}">${label}</button>`;
-  const doIt = sortie.length && st.paused ? sortie.map((o) => button(o.action, o.label)).join("")
-    : advAct && (isQueued(advAct) || affordable(v, advAct)) && st.paused ? button(advAct, "Do it") : "";
+  const doIt = advAct && (isQueued(advAct) || affordable(v, advAct)) && st.paused ? `<button data-act='${esc(JSON.stringify(advAct))}' class="${isQueued(advAct) ? "primary" : ""}" aria-pressed="${isQueued(advAct)}">Do it</button>` : "";
   const pauseKey = `${st.paused}:${st.letter}:${st.advice}`;
   const newPause = st.paused !== null && pauseKey !== st.shownPause;
   st.shownPause = st.paused !== null ? pauseKey : null;
@@ -363,7 +352,7 @@ function render() {
   <div class="status-row" aria-label="Realm status">${coinStatus(v)}</div>
   ${st.tab === "settings" ? settingsTab() : `
   <div class="pause ${cls}"><span class="what">${esc(pauseText(v))}</span>${why ? `<span class="why-line">${esc(why)}</span>` : ""}${doIt}
-    <span class="queue">${st.queue.map((a, i) => ({ a, i })).filter(({ a }) => !sortie.some((o) => JSON.stringify(o.action) === JSON.stringify(a)) && !(advAct && JSON.stringify(a) === JSON.stringify(advAct))).map(({ a, i }) => `<span class="chip">${esc(actionText(v, a))} <button data-unq="${i}" aria-label="Remove">×</button></span>`).join("")}</span>
+    <span class="queue">${st.queue.map((a, i) => ({ a, i })).filter(({ a }) => !(advAct && JSON.stringify(a) === JSON.stringify(advAct))).map(({ a, i }) => `<span class="chip">${esc(actionText(v, a))} <button data-unq="${i}" aria-label="Remove">×</button></span>`).join("")}</span>
     ${st.error ? `<span class="err">${esc(st.error)}</span>` : ""}</div>
   <div class="grid">${court(v)}${map(v)}${side(v)}</div>
   ${st.observer ? observer() : ""}`}`;
@@ -393,6 +382,7 @@ document.addEventListener("click", (e) => {
     if (st.draft.action.startsWith("p:")) {
       if (pa === "levy") return queue({ action: "levy" });
       if (pa === "travel") return queue({ action: "travel", target: st.draft.objective });
+      if (pa === "advance" && st.draft.mission !== "defend") { const raid = raidNear(st.sim.viewOf("player"), st.draft.objective); return queue({ action: "advance", target: st.draft.objective, mission: st.draft.mission as "patrol" | "attack", raid }); }
       return queue({ action: pa as "repair" | "advance", target: st.draft.objective });
     }
     const d = toDraft(); if (d) queue({ action: "order", order: d }); return;
@@ -403,7 +393,7 @@ document.addEventListener("change", (e) => {
   const t = e.target as HTMLInputElement | HTMLSelectElement;
   if (t.id === "observer-toggle") { st.observer = (t as HTMLInputElement).checked; return render(); }
   if (t.dataset.pause) { (t as HTMLInputElement).checked ? st.autoPause.add(t.dataset.pause) : st.autoPause.delete(t.dataset.pause); return; }
-  const k = ({ "o-to": "recipient", "o-action": "action", "o-obj": "objective", "o-disc": "discretion" } as Record<string, keyof typeof st.draft>)[t.id];
+  const k = ({ "o-to": "recipient", "o-action": "action", "o-obj": "objective", "o-disc": "discretion", "o-mission": "mission" } as Record<string, keyof typeof st.draft>)[t.id];
   if (t.id === "o-obj" && content.byId.location.get(t.value)?.fortification) st.selected = t.value;
   if (k) { st.draft[k] = t.value; render(); }
 });

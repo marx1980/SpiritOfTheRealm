@@ -109,7 +109,11 @@ function process(ctx: Ctx, orderId: number, receivedId: number) {
     if (ctx.s.treasuryMilli[sc.ruler] < costMilli) return finish(ctx, orderId, "abandoned", ex.id, "funds");
     // execution quality: a skilled engineer works faster and lands closer to the target
     const eng = skill(ctx, who, "engineering");
-    const durationTicks = Math.max(DAY, Math.floor((sc.player.repairDays * DAY * (1500 - eng)) / 1000));
+    // captains' companies at the fort work alongside the garrison: the work goes faster in proportion to the men
+    const garrison = Math.max(1, ctx.s.fortifications[where].garrison);
+    const helpers = Object.entries(ctx.s.positions).filter(([, p]) => "at" in p && p.at === where).reduce((n, [id]) => n + (ctx.s.troops[id] ?? 0), 0);
+    const base = Math.floor((sc.player.repairDays * DAY * (1500 - eng)) / 1000);
+    const durationTicks = Math.max(DAY, Math.floor((base * garrison) / (garrison + helpers)));
     const r = ctx.keyed(`orders:repair:${orderId}`);
     const spread = (1000 - eng) * 10;
     // a full repair can fall short of its target by at most 5 points, so the walls are never worse than "sound"

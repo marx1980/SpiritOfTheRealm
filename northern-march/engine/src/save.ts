@@ -7,7 +7,7 @@ import type { SystemId } from "./events.ts";
 export const SAVE_SCHEMA_VERSION = 1;
 
 import type { OrderDraft } from "./view.ts";
-export interface InputRecord { decision: number; tick: number; action: "repair" | "levy" | "advance" | "travel" | "order"; target: string | null; order?: OrderDraft; followed?: string }
+export interface InputRecord { decision: number; tick: number; action: "repair" | "levy" | "advance" | "travel" | "order"; target: string | null; order?: OrderDraft; followed?: string; mission?: "defend" | "patrol" | "attack"; raid?: string }
 export interface SaveFile {
   schemaVersion: number; contentVersion: string; contentHash: string;
   seed: number; policy: PolicyId; params: SimParams; ablate: SystemId[];

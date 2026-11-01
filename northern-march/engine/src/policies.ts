@@ -4,7 +4,8 @@ import { beliefsAbout, type OrderDraft, type View } from "./view.ts";
 
 
 export type PolicyId = "passive" | "delegating" | "aggressive" | "random-valid" | "follow-best-adviser" | "follow-worst-adviser" | "external" | "replay" | `follow:${string}`;
-export interface PlayerAction { action: "repair" | "levy" | "advance" | "travel" | "order"; target?: string; order?: OrderDraft; decision?: number; followed?: string }
+/** `mission` (for sending a captain): defend the fort (default), or patrol / attack the raiders at `raid`. */
+export interface PlayerAction { action: "repair" | "levy" | "advance" | "travel" | "order"; target?: string; order?: OrderDraft; decision?: number; followed?: string; mission?: "defend" | "patrol" | "attack"; raid?: string }
 export type PolicyFn = (v: View, rng: () => Rng) => PlayerAction[];
 
 const DAY = 86400;

@@ -31,7 +31,8 @@ export function makePlayer(decide: (ctx: Ctx, cause: number | null, reason: stri
         const why: number | null = cause ?? deliveredEventId ?? null;
         for (const a of decide(ctx, why, reason ?? "report")) {
           const input = ctx.emit("PlayerInput", why ? [why] : [], [chr(ruler)], { player: ruler, action: a.action, target: a.target ?? null, decision: a.decision!,
-            ...(a.order ? { order: a.order } : {}), ...(a.followed ? { followed: a.followed } : {}) });
+            ...(a.order ? { order: a.order } : {}), ...(a.followed ? { followed: a.followed } : {}),
+            ...(a.mission ? { mission: a.mission } : {}), ...(a.raid ? { raid: a.raid } : {}) });
           if (a.action === "travel") { travel(ctx, ruler, a.target!, "rider", false, input.id); continue; }
           if (a.action === "order") {
             const d = a.order!;
@@ -41,6 +42,11 @@ export function makePlayer(decide: (ctx: Ctx, cause: number | null, reason: stri
           }
           const to = recipientFor(ctx, a);
           if (!to) continue;
+          if (a.action === "advance" && a.mission && a.mission !== "defend" && a.raid) {
+            // patrol: go and look at the raiders; attack: advance on them
+            issue(ctx, ruler, to, a.mission === "patrol" ? "investigate" : "advance", loc(a.raid), input.id);
+            continue;
+          }
           issue(ctx, ruler, to, a.action, a.action === "levy" ? chr(ruler) : loc(a.target!), input.id);
         }
       },
