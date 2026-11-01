@@ -13,8 +13,10 @@ test("every policy is deterministic", () => {
 
 test("policies are behaviourally distinct on at least 10% of seeds (C3)", () => {
   const seeds = Array.from({ length: 40 }, (_, i) => i + 1);
+  // each (policy, seed) simulation runs once; pairs are compared from the stored hashes
+  const hashes = Object.fromEntries(ACTIVE.map((p) => [p, seeds.map((seed) => hashLog(run({ seed, policy: p }).log))]));
   for (let i = 0; i < ACTIVE.length; i++) for (let j = i + 1; j < ACTIVE.length; j++) {
-    const differ = seeds.filter((seed) => hashLog(run({ seed, policy: ACTIVE[i] }).log) !== hashLog(run({ seed, policy: ACTIVE[j] }).log)).length;
+    const differ = seeds.filter((_, k) => hashes[ACTIVE[i]][k] !== hashes[ACTIVE[j]][k]).length;
     assert.ok(differ >= 4, `${ACTIVE[i]} vs ${ACTIVE[j]}: ${differ}/40`);
   }
 });
