@@ -252,7 +252,7 @@ function think(ctx: Ctx, agent: string, cause: number, layer: "strategic" | "ope
 /** Advice is worked out at the end of the day, after every letter of that day has arrived, so it takes them all in. */
 function advise(ctx: Ctx, agent: string, cause: number) {
   const day = Math.floor(ctx.tick / DAY);
-  if (ctx.s.advisePending[agent] === day) return; // already due today
+  if (ctx.s.advisePending[agent] === day) return; // already due or given today
   ctx.emit("AdviceScheduled", [cause], [chr(agent)], { agent, day });
   ctx.at(day * DAY + DAY - 1, "agents:advise", { agent, cause });
 }
@@ -399,7 +399,8 @@ export const agents: System = {
       think(ctx, agent, w.id, layer, "triggers");
     },
     "agents:advise": (ctx, { agent, cause }) => {
-      ctx.emit("AdviceSettled", [cause], [chr(agent)], { agent });
+      // marks today's advice as given, so nothing scheduled while it is worked out re-triggers it
+      ctx.emit("AdviceSettled", [cause], [chr(agent)], { agent, day: Math.floor(ctx.tick / DAY) });
       const pos = ctx.s.positions[agent], rp = ctx.s.positions[ctx.content.scenario.ruler];
       // advice is only given while the adviser is with the ruler
       if ("at" in pos && "at" in rp && pos.at === rp.at) adviseNow(ctx, agent, cause);
