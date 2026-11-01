@@ -10,12 +10,28 @@ import { INTENTS, type Recommendation } from "../src/schemas.ts";
 import type { PlayerAction } from "../src/policies.ts";
 
 declare const __RAW__: RawContent;
-declare const __H01__: { seed: number; days: number; prelude: number; scripts: RawContent["scenario"]["scripts"] };
+declare const __H01__: { seed: number; days: number; scripts: RawContent["scenario"]["scripts"] };
 const DAY = 86400;
 const raw = structuredClone(__RAW__);
-// scripted events are counted from the start of play; the sim also runs a silent prelude before it
-const PRE = __H01__.prelude * 86400;
-raw.scenario.scripts = __H01__.scripts.map((s) => ({ ...s, day: s.day + __H01__.prelude }));
+// Play starts on the day the first letter arrives, so that letter is always a live decision on Day 1.
+// Everything before that (sending the first letters) runs silently. Scripted events count from the start of play.
+const LIMIT = 240 * DAY;
+function firstLetterDay(): number {
+  const noScripts = deriveContent({ ...raw, scenario: { ...raw.scenario, scripts: [] } });
+  const sim = createSim({ content: noScripts, seed: __H01__.seed, policy: "external" });
+  for (let guard = 0; guard < 5000; guard++) {
+    const r = sim.next(LIMIT);
+    if (!r.paused) break;
+    if (r.reason === "report") {
+      const v = sim.viewOf("player");
+      return Math.floor(Math.min(...v.reports.map((x) => x.deliveredAt)) / DAY);
+    }
+    sim.answer([]);
+  }
+  return 0;
+}
+const PRE = firstLetterDay() * DAY;
+raw.scenario.scripts = __H01__.scripts.map((s) => ({ ...s, day: s.day + PRE / DAY }));
 const content = deriveContent(raw);
 const END = PRE + __H01__.days * DAY;
 const REASONS = ["report", "advice", "danger", "arrival"] as const;
@@ -49,7 +65,7 @@ function answer(actions: PlayerAction[]) {
 function start(seed: number, restore = true) {
   st.sim = createSim({ content, seed, policy: "external" });
   st.seed = seed; st.queue = []; st.error = ""; st.over = false; st.log = [];
-  // the prelude (before play): letters and events happen with no decisions for the player
+  // the silent prelude, up to the first day of play
   for (let guard = 0; guard < 5000; guard++) { const r = st.sim.next(PRE); if (!r.paused) break; st.sim.answer([]); }
   if (!restore) clearLog(seed);
   const saved = restore ? loadLog(seed) : [];
