@@ -4,7 +4,7 @@ import { deriveContent, type RawContent } from "../src/content.ts";
 import { createSim } from "../src/engine.ts";
 import { adviceSettled, buildCourt, type AdviceLine } from "../src/presentation/court.ts";
 import { buildMap } from "../src/presentation/map.ts";
-import { letterSentences, letterGist, planWords, reasonWords } from "../src/presentation/phrasing.ts";
+import { certainty, letterSentences, letterGist, planWords, reasonWords, sourceOf } from "../src/presentation/phrasing.ts";
 import { beliefsAbout, validateDraft, type OrderDraft, type View } from "../src/view.ts";
 import { INTENTS, type Recommendation } from "../src/schemas.ts";
 import type { PlayerAction } from "../src/policies.ts";
@@ -42,7 +42,7 @@ const st = {
   sim: null as unknown as Sim, log: [] as PlayerAction[][], shownPause: null as string | null, seed: __H01__.seed, paused: null as null | string, over: false, letter: null as number | null, advice: null as number | null, tab: "game" as "game" | "settings",
   batch: [] as number[], queue: [] as PlayerAction[], autoPause: new Set<string>(REASONS), selected: "northwatch",
   draft: { recipient: "", action: "p:repair", objective: "northwatch", discretion: "bounded", mission: "defend" } as { recipient: string; action: string; objective: string; discretion: string; mission: string },
-  error: "", observer: location.hash === "#observer", answered: 0, openLetter: null as number | null,
+  error: "", observer: location.hash === "#observer", answered: 0, openLetter: null as number | null, openIssue: null as string | null,
 };
 
 const esc = (s: unknown) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -65,7 +65,7 @@ function answer(actions: PlayerAction[]) {
 function start(seed: number, restore = true) {
   st.sim = createSim({ content, seed, policy: "external", params: { dayEnd: true } });
   st.seed = seed; st.queue = []; st.error = ""; st.over = false; st.log = [];
-  st.batch = []; st.letter = null; st.advice = null; st.openLetter = null; st.paused = null; st.shownPause = null; st.tab = "game"; st.answered = 0;
+  st.batch = []; st.openIssue = null; st.letter = null; st.advice = null; st.openLetter = null; st.paused = null; st.shownPause = null; st.tab = "game"; st.answered = 0;
   // the silent prelude, up to the first day of play
   for (let guard = 0; guard < 5000; guard++) { const r = st.sim.next(PRE); if (!r.paused) break; st.sim.answer([]); }
   if (!restore) clearLog(seed);
@@ -166,7 +166,8 @@ function choices(v: View): { action: PlayerAction; text: string; by: string[] }[
   for (const r of latestAdvice(v)) {
     const act = adviceAction(v, r);
     if (!act) continue;
-    const key = JSON.stringify(act);
+    const { followed: _f, ...same } = act; // the same action recommended by several advisers is one choice
+    const key = JSON.stringify(same);
     if (!out.has(key)) out.set(key, { action: act, text: actionText(v, act), by: [] });
     out.get(key)!.by.push(name(v, r.author));
   }
@@ -238,10 +239,20 @@ function adviceRows(v: View, lines: AdviceLine[]) {
   }).join("");
 }
 
+/** Everything known about one order Anna gave: who, what, when, and each report of how it stands. */
+function orderDetails(v: View, id: string): string {
+  const o = v.self.orders.find((x) => String(x.orderId) === id);
+  if (!o) return "";
+  const verb: Record<string, string> = { repair: "Repair", advance: "Send to", levy: "Raise a levy", travel: "Travel to", investigate: "Investigate" };
+  const hist = beliefsAbout(v, id, "order.status").sort((a, b) => b.observedAt - a.observedAt)
+    .map((b) => `<div>${tone(String(b.believedValue))} · ${esc(sourceOf(v, b))} · ${esc(dayAgo(v, b.observedAt))} · ${esc(certainty[b.effectiveBand])}</div>`).filter((x, i, a) => a.indexOf(x) === i).join("");
+  return `<div class="ev order-detail"><div><span class="k">To:</span> ${esc(name(v, o.recipient))}</div><div><span class="k">Order:</span> ${esc(verb[o.action] ?? o.action)}${o.action === "levy" ? "" : " " + esc(name(v, o.target))}</div>
+    <div><span class="k">Given:</span> day ${Math.floor((o.tick - PRE) / DAY) + 1}</div><div><span class="k">Reports:</span></div>${hist || "<div>none yet</div>"}</div>`;
+}
 function court(v: View) {
   const c = buildCourt(v);
-  const issues = c.issues.map((i) => `<div class="card issue ${i.priority >= 45 ? "p-hi" : i.priority >= 25 ? "p-mid" : ""}">
-    <div class="t">${esc(i.title)}</div>
+  const issues = c.issues.map((i) => `<div class="card issue ${i.priority >= 45 ? "p-hi" : i.priority >= 25 ? "p-mid" : ""}"${i.key.startsWith("order:") ? ` data-issue="${esc(i.key)}" role="button" tabindex="0"` : ""}>
+    <div class="t">${tone(i.title)}</div>${st.openIssue === i.key ? orderDetails(v, i.key.slice(6)) : ""}
     <div class="ev">${i.evidence.map((e) => `<span><b>${esc(e.text)}</b> · ${esc(e.source)} · ${esc(e.age)} · ${esc(e.certainty)}</span>`).join("")}</div>
     ${i.advice.length ? `<div class="adv">${adviceRows(v, i.advice)}</div>` : ""}</div>`).join("");
   const general = c.advice.length ? `<div class="card"><h2>Council</h2><div class="adv">${adviceRows(v, c.advice)}</div></div>` : "";
@@ -433,10 +444,11 @@ function render() {
 
 document.addEventListener("click", (e) => {
   const t = e.target as HTMLElement;
-  const el = t.closest("[data-act],[data-toggle],[data-mission],[data-place],[data-q],[data-unq],[data-letter],[data-close-letter],[data-use-levy],#go,#restart,#settings-tab,#o-add,#copy-log") as HTMLElement | null;
+  const el = t.closest("[data-act],[data-toggle],[data-mission],[data-place],[data-q],[data-unq],[data-letter],[data-issue],[data-close-letter],[data-use-levy],#go,#restart,#settings-tab,#o-add,#copy-log") as HTMLElement | null;
   if (!el) return;
   if (el.dataset.useLevy !== undefined) { st.draft.action = "p:levy"; return render(); }
   if (el.dataset.letter) { const id = Number(el.dataset.letter); st.openLetter = st.openLetter === id ? null : id; return render(); }
+  if (el.dataset.issue) { st.openIssue = st.openIssue === el.dataset.issue ? null : el.dataset.issue; return render(); }
   if (el.dataset.closeLetter !== undefined) { st.openLetter = null; return render(); }
   if (el.dataset.toggle) {
     const a = JSON.parse(el.dataset.toggle) as PlayerAction, i = st.queue.findIndex((q) => matches(q, a));

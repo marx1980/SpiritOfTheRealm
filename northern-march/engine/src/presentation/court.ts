@@ -35,16 +35,22 @@ export function settledCheck(v: View): (r: { plan: { id: string } }) => boolean 
   const captains = new Set(Object.values(v.beliefs).filter((b) => b.predicate === "character.troops").map((b) => b.subject.id));
   const captainBelievedAt = (place: string) => Object.values(v.beliefs).some((b) => b.predicate === "character.location" && captains.has(b.subject.id) && b.believedValue === place);
   const learnedSince = (place: string, t: number) => Object.values(v.beliefs).some((b) => b.subject.id === place && b.observedAt > t);
+  // an order sent for a mission (investigate or advance on a site) also covers the fort nearest that site
+  const covers = (o: { action: string; target: string }, want: { action: string; target: string }) =>
+    (o.action === want.action && o.target === want.target) || (want.action === "advance" && (o.action === "advance" || o.action === "investigate") && nearestFort(v, o.target) === want.target);
+  // an order to send a captain, once reported done, stands until she gives him another order: his own letters
+  // are about where he is, not about where the company she sent is
+  const captainStillThere = (o: { recipient: string; tick: number }, _place: string) => !v.self.orders.some((x) => x.recipient === o.recipient && x.tick > o.tick);
   const superseded = (r: { plan: { id: string } }) => {
     const want = orderOf(JSON.parse(r.plan.id) as { kind: string; target?: string });
     if (!want) return false;
-    if (inProgress.some((o) => o.action === want.action && o.target === want.target)) return true;
+    if (inProgress.some((o) => covers(o, want))) return true;
     const a = JSON.parse(r.plan.id) as { kind: string; target?: string };
     // an attack on raiders is set aside while any order is under way for that place or its fort
     if (a.kind === "advise_sortie" && a.target && inProgress.some((o) => o.target === a.target || o.target === want.target)) return true;
     // a captain (one with a company) is already believed to be at the place: sending one there is settled
     if (a.kind === "advise_send_captain" && captainBelievedAt(want.target)) return true;
-    return doneOrders.some((o) => o.action === want.action && o.target === want.target && !learnedSince(want.target, o.doneAt));
+    return doneOrders.some((o) => covers(o, want) && (want.action === "advance" ? captainStillThere(o, want.target) : !learnedSince(want.target, o.doneAt)));
   };
   return superseded;
 }
