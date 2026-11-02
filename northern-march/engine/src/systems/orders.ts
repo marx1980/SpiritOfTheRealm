@@ -105,7 +105,7 @@ function assault(ctx: Ctx, who: string, fort: string, cause: number) {
     if (site && th) ctx.emit("ThreatEnded", [res.id], [loc(site)], { site, endedBy: "assault" });
     // word that the fort is ours again reaches those whose post it is, and the captain sees its state
     for (const c of ctx.content.characters.filter((x) => (x.location === fort || x.id === who) && ctx.s.tiers[x.id] !== "C"))
-      learn(ctx, c.id, { subject: loc(fort), predicate: "fortification.holder", value: "ours", observedAt: ctx.tick, band: "certain" }, { kind: "observation", eventId: res.id, source: who }, [res.id]);
+      learn(ctx, c.id, { subject: loc(fort), predicate: "fortification.holder", value: "ours", observedAt: ctx.tick, band: "certain" }, c.id === who ? { kind: "observation", eventId: res.id, source: who } : { kind: "scenario", eventId: res.id, source: who }, [res.id]);
     observe(ctx, who, loc(fort), "fortification.condition", res.id);
   } else {
     const home = ctx.content.byId.character.get(who)!.location;

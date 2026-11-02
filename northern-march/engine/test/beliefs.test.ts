@@ -77,7 +77,8 @@ test("belief caps evict the least relevant propositions, and every eviction is l
   const sim = run({ seed: 3, content: c, policy: "passive" }, 120);
   const ev = sim.log.filter((e) => e.type === "BeliefEvicted");
   assert.ok(ev.length > 0);
-  for (const [holder, store] of Object.entries(sim.unsafeWorldForDebug().beliefs)) assert.ok(Object.keys(store).length <= 6, holder);
+  const w = sim.unsafeWorldForDebug(), caps = c.scenario.knowledge.beliefCaps as Record<string, number>;
+  for (const [holder, store] of Object.entries(w.beliefs)) assert.ok(Object.keys(store).length <= caps[w.tiers[holder]], holder);
 });
 
 test("eviction plan removes the lowest (band x recency x relevance) first, ties by id", () => {
