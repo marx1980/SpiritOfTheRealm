@@ -89,7 +89,7 @@
         "target": "eastmarch"
       }
     ],
-    "startPermillePerDay": 6,
+    "startPermillePerDay": 10,
     "intensityPermille": [
       300,
       1000

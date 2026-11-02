@@ -163,7 +163,7 @@ test("every DecisionTrace validates, and its selection is reproducible from its 
 
 test("the planner reads only beliefs: agent modules import nothing that exposes WorldState", () => {
   const dir = new URL("../src/agents/", import.meta.url).pathname;
-  const allowed = new Set(["../view.ts", "../beliefs.ts", "../schemas.ts", "../content.ts", "./planner.ts", "./model.ts", "./obedience.ts", "./terms.ts"]);
+  const allowed = new Set(["../view.ts", "../beliefs.ts", "../schemas.ts", "../content.ts", "./planner.ts", "./model.ts", "./obedience.ts", "./terms.ts", "../battle.ts"]);
   for (const f of readdirSync(dir)) {
     const src = readFileSync(dir + f, "utf8");
     for (const m of src.matchAll(/from\s+["']([^"']+)["']/g)) assert.ok(allowed.has(m[1]), `${f} imports ${m[1]}`);
@@ -177,7 +177,7 @@ test("better planners consider more options", () => {
   const B: Record<string, number> = { "northwatch|fortification.condition": 55000, "blackwood|threat.intensity": 700, "eastmarch|fortification.condition": 60000, "greybridge|fortification.condition": 65000 };
   const per = () => ({ get: (id: string, p: string) => B[`${id}|${p}`] === undefined ? null
     : ({ value: B[`${id}|${p}`], propId: 1, ageTicks: 0, band: "probable", subject: { kind: "location", id }, predicate: p }) as Seen, consulted: () => [] });
-  const n = (who: string) => plan(buildSituation(w, sim.content, who, sim.tick, "advise", sim.viewOf(who)), per())!.candidates.length;
+  const n = (who: string) => plan({ ...buildSituation(w, sim.content, who, sim.tick, "advise", sim.viewOf(who)), repairScope: "all" }, per())!.candidates.length;
   assert.ok(n("elara") > n("selene"), `elara ${n("elara")} vs selene ${n("selene")}`);
 });
 

@@ -51,7 +51,7 @@ export function generate(sit: Situation, per: Perceiver): ActionRef[] {
     if (sit.captains.length) for (const f of threatened(sit, per)) if (!lost.includes(f)) add(act("advise_send_captain", f));
     if (sit.captains.length) for (const f of threatened(sit, per)) for (const s of sit.forts.find((x) => x.id === f)!.sites)
       if (((per.get(s, "threat.intensity")?.value as number) ?? 0) > 0 && !lost.includes(f)) add(act("advise_sortie", s));
-    return out.slice(0, 10); // an adviser weighs every option that is open to them; they differ in how they judge them
+    return out.slice(0, candidateCap(sit) + 4); // better planners weigh more of the options open to them
   }
   const fortsHere = sit.at ? sit.forts.find((f) => f.id === sit.at) : undefined;
   if (sit.role === "castellan") {
