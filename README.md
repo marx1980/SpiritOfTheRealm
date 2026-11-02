@@ -1,7 +1,7 @@
 # Project
 
 ## Purpose
-• [Briefly describe what this project does.]
+• [Spirit Of The Realm - development repository] 
 
 ## Current Status
 See PLAN. md for the current implementation plan and next task.
