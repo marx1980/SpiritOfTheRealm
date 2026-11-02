@@ -2,7 +2,7 @@
 // The observer panel (Shift+O or #observer) shows hidden truth for H-01 observers only.
 import { deriveContent, type RawContent } from "../src/content.ts";
 import { createSim } from "../src/engine.ts";
-import { adviceSettled, buildCourt, type AdviceLine } from "../src/presentation/court.ts";
+import { adviceSettled, buildCourt, latestAdviceOf, type AdviceLine } from "../src/presentation/court.ts";
 import { buildMap } from "../src/presentation/map.ts";
 import { mapSvg } from "./maparts.ts";
 import { captainSentTo, planOf, certainty, letterSentences, letterGist, planWords, reasonWords, sourceOf } from "../src/presentation/phrasing.ts";
@@ -164,13 +164,17 @@ const matches = (q: PlayerAction, a: PlayerAction) => a.action === "advance" ? q
 const listNames = (xs: string[]) => xs.length <= 1 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
 /** Each adviser's latest advice that is not yet settled, as the action it means (parallel choices). */
 function latestAdvice(v: View): Recommendation[] {
-  const latest = new Map<string, Recommendation>();
-  for (const r of v.advice) { const cur = latest.get(r.author); if (!cur || cur.computedAt < r.computedAt) latest.set(r.author, r); }
-  return [...latest.values()].filter((r) => !adviceSettled(v, r.id));
+  return latestAdviceOf(v).filter((r) => !adviceSettled(v, r.id));
 }
-function choices(v: View): { action: PlayerAction; text: string; by: string[] }[] {
-  const out = new Map<string, { action: PlayerAction; text: string; by: string[] }>();
+type Choice = { action: PlayerAction; text: string; by: string[]; wait?: boolean };
+function choices(v: View): Choice[] {
+  const out = new Map<string, Choice>();
   for (const r of latestAdvice(v)) {
+    if (planOf(v, r.plan.id).kind === "advise_wait") {
+      if (!out.has("wait")) out.set("wait", { action: { action: "wait" } as unknown as PlayerAction, text: "Wait for more news", by: [], wait: true });
+      out.get("wait")!.by.push(name(v, r.author));
+      continue;
+    }
     const act = adviceAction(v, r);
     if (!act) continue;
     const { followed: _f, ...same } = act; // the same action recommended by several advisers is one choice
@@ -196,12 +200,8 @@ function missionBlock(v: View, fort: string, q: PlayerAction): string {
 function choicesBlock(v: View): string {
   const cs = choices(v);
   if (!cs.length) return "";
-  // councillors who advise waiting are heard too: every adviser's word is on the page
-  const latest = new Map<string, Recommendation>();
-  for (const r of v.advice) { const cur = latest.get(r.author); if (!cur || cur.computedAt < r.computedAt) latest.set(r.author, r); }
-  const waits = [...latest.values()].filter((r) => planOf(v, r.plan.id).kind === "advise_wait")
-    .map((r) => `<div class="wait-row"><span class="who">${esc(name(v, r.author))}${v.world.areas[r.author] ? ` <small class="area">(${esc(areaShort(v.world.areas[r.author]))})</small>` : ""}</span> ${esc(planWords(v, r.plan.id))}</div>`).join("");
-  return `<div class="choices">${waits}${cs.map((c) => {
+  return `<div class="choices">${cs.map((c) => {
+    if (c.wait) return `<label class="check"><input type="checkbox" disabled> ${esc(c.text)} (recommended by ${esc(listNames(c.by))})</label>`;
     const q = st.queue.find((x) => matches(x, c.action));
     const rec = c.by.length ? ` (recommended by ${esc(listNames(c.by))})` : "";
     const cost = c.action.action === "repair" ? repairCostKnown(v, c.action.target!) : undefined, coins = coinsKnown(v);
@@ -275,8 +275,8 @@ function orderDetails(v: View, id: string): string {
 function court(v: View) {
   const c = buildCourt(v);
   // advice already put to her in the decision box above is not listed again; nor is news a letter on top of the page has just given
-  const boxed = st.paused ? choices(v).map((x) => x.action) : [];
-  const inBox = (l: AdviceLine) => { const r = v.advice.find((x) => x.id === l.id), act = r ? adviceAction(v, r) : null; return !!act && boxed.some((q) => matches(q, act)); };
+  const boxChoices = st.paused ? choices(v) : [], boxed = boxChoices.filter((x) => !x.wait).map((x) => x.action), boxHasWait = boxChoices.some((x) => x.wait);
+  const inBox = (l: AdviceLine) => { const r = v.advice.find((x) => x.id === l.id); if (r && planOf(v, r.plan.id).kind === "advise_wait") return boxHasWait; const act = r ? adviceAction(v, r) : null; return !!act && boxed.some((q) => matches(q, act)); };
   const shown = c.issues.map((i) => ({ i, advice: i.advice.filter((l) => !inBox(l)) }))
     .filter(({ i, advice }) => !(st.batch.length && /^(walls|raiders):/.test(i.key) && !advice.length && i.evidence[0]?.age === "today"));
   const issues = shown.map(({ i, advice }) => `<div class="card issue ${i.priority >= 45 ? "p-hi" : i.priority >= 25 ? "p-mid" : ""}"${i.key.startsWith("order:") ? ` data-issue="${esc(i.key)}" role="button" tabindex="0"` : ""}>

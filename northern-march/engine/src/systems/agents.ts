@@ -264,20 +264,42 @@ function adviseNow(ctx: Ctx, agent: string, cause: number) {
   const sit = buildSituation(ctx.s, c, agent, ctx.tick, "advise", view);
   const res = plan(sit, per);
   if (!res) return;
-  const d = ctx.emit("DecisionMade", [cause], [chr(agent), chr(c.scenario.ruler)], { trace: traceOf(sit, per, res, cause, "strategic", "advise"), score: res.score, idle: true });
-  const sel = res.candidates.find((x) => actionKey(x.action) === actionKey(res.selected))!;
-  const rec: Recommendation = {
-    id: d.id, author: agent, question: "what_would_you_do", plan: { kind: "plan", id: actionKey(res.selected) },
-    reasons: [...sel.contributions].sort((a, b) => Math.abs(b.weight) - Math.abs(a.weight) || (a.textKey < b.textKey ? -1 : 1)) as Reason[],
-    uncertainties: per.consulted().filter((b) => b.band === "uncertain" || b.band === "doubtful").map((b) => ({ belief: { kind: "belief", id: String(b.propId) }, why: `band:${b.band}` })),
-    alternatives: res.candidates.filter((x) => x !== sel).slice(0, 2).map((x) => ({ kind: "plan", id: actionKey(x.action) })),
-    contingencies: [], basedOnBeliefs: per.consulted().map((b) => ({ kind: "belief", id: String(b.propId) })), computedAt: ctx.tick,
+  const fortOf = (a: { target?: string }) => !a.target ? undefined : sit.forts.find((f) => f.id === a.target || f.sites.includes(a.target!))?.id;
+  // The adviser's word on the whole situation, then a word on each key issue it does not touch: raiders at a fort (defence)
+  // and walls in bad shape (works). The best of the adviser's own options on that issue, whatever it is.
+  const cat = (a: { kind: string }) => (a.kind === "advise_repair" ? "works" : a.kind === "advise_wait" || a.kind === "advise_levy" ? "other" : "defence");
+  const groupOf = (a: { kind: string; target?: string }) => `${fortOf(a) ?? ""}:${cat(a)}`;
+  const mainGroup = groupOf(res.selected);
+  const extras: typeof res.candidates = [];
+  for (const f of sit.forts) {
+    const needs = [
+      ...(f.sites.some((x) => ((per.get(x, "threat.intensity")?.value as number) ?? 0) > 0) ? [`${f.id}:defence`] : []),
+      ...((((per.get(f.id, "fortification.condition")?.value as number) ?? 100000) < 70000) ? [`${f.id}:works`] : []),
+    ];
+    for (const g of needs) {
+      if (g === mainGroup) continue;
+      const best = res.candidates.filter((x) => groupOf(x.action) === g).sort((x, y) => y.score - x.score)[0];
+      if (best && (res.selected.kind !== "advise_wait" || best.score >= res.score)) extras.push(best); // one who says wait says only that
+    }
+  }
+  const speak = (selected: typeof res.selected, tag: string) => {
+    const d = ctx.emit("DecisionMade", [cause], [chr(agent), chr(c.scenario.ruler)], { trace: traceOf(sit, per, { ...res, selected }, cause, "strategic", "advise"), score: res.score, idle: true, ...(tag ? { also: tag } : {}) });
+    const sel = res.candidates.find((x) => actionKey(x.action) === actionKey(selected))!;
+    const rec: Recommendation = {
+      id: d.id, author: agent, question: "what_would_you_do", plan: { kind: "plan", id: actionKey(selected) },
+      reasons: [...sel.contributions].sort((a, b) => Math.abs(b.weight) - Math.abs(a.weight) || (a.textKey < b.textKey ? -1 : 1)) as Reason[],
+      uncertainties: per.consulted().filter((b) => b.band === "uncertain" || b.band === "doubtful").map((b) => ({ belief: { kind: "belief", id: String(b.propId) }, why: `band:${b.band}` })),
+      alternatives: res.candidates.filter((x) => x !== sel).slice(0, 2).map((x) => ({ kind: "plan", id: actionKey(x.action) })),
+      contingencies: [], basedOnBeliefs: per.consulted().map((b) => ({ kind: "belief", id: String(b.propId) })), computedAt: ctx.tick,
+    };
+    const problems = validateRecommendation(rec);
+    if (problems.length) throw new Error(`invalid recommendation: ${problems.join("; ")}`);
+    const audience = present(ctx.s, (ctx.s.positions[agent] as { at: string }).at).filter((x) => x !== agent);
+    const made = ctx.emit("RecommendationMade", [d.id], [chr(agent), chr(c.scenario.ruler)], { recommendation: rec, audience });
+    if (audience.includes(c.scenario.ruler)) ctx.at(ctx.tick, "player:decide", { cause: made.id, reason: "advice" });
   };
-  const problems = validateRecommendation(rec);
-  if (problems.length) throw new Error(`invalid recommendation: ${problems.join("; ")}`);
-  const audience = present(ctx.s, (ctx.s.positions[agent] as { at: string }).at).filter((x) => x !== agent);
-  const made = ctx.emit("RecommendationMade", [d.id], [chr(agent), chr(c.scenario.ruler)], { recommendation: rec, audience });
-  if (audience.includes(c.scenario.ruler)) ctx.at(ctx.tick, "player:decide", { cause: made.id, reason: "advice" });
+  speak(res.selected, "");
+  for (const x of extras.slice(0, 3)) speak(x.action, "extra");
 }
 
 /** Regency (adopted decision 3): with the ruler away, the regent acts on her own advice within delegated authority and

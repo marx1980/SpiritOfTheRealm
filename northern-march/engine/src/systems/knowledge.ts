@@ -88,14 +88,14 @@ export function observe(ctx: Ctx, observer: string, subject: SubjectRef, predica
     const storm = ctx.s.lastStorm[subject.id];
     quality = Math.max(0, skill(ctx, observer, CAPABILITY_FOR[predicate]) - (storm !== undefined && ctx.tick - storm < 86400 ? k.stormPenaltyPermille : 0));
     const maxErr = (1000 - quality) * k.maxErrorMilliPerMissingPermille;
-    const r = ctx.keyed(`knowledge:observe:${observer}:${ctx.tick}:${subject.id}:${predicate}`);
+    const r = ctx.keyed(`knowledge:observe:${observer}:${Math.floor(ctx.tick / 86400)}:${subject.id}:${predicate}`);
     value = Math.max(0, Math.min(100000, truth + r.int(-maxErr, maxErr)));
   } else if (predicate === "threat.intensity") {
     // estimating raiders' strength from what they did: errors shrink with intelligence skill
     const truth = ctx.s.threats[subject.id]?.intensityPermille ?? 0;
     quality = skill(ctx, observer, "intelligence");
     const maxErr = Math.floor((1000 - quality) / 2);
-    const r = ctx.keyed(`knowledge:observe:${observer}:${ctx.tick}:${subject.id}:${predicate}`);
+    const r = ctx.keyed(`knowledge:observe:${observer}:${Math.floor(ctx.tick / 86400)}:${subject.id}:${predicate}`);
     value = truth === 0 ? 0 : Math.max(50, Math.min(1000, truth + r.int(-maxErr, maxErr)));
   } else if (predicate === "treasury.balance") {
     const truth = ctx.s.treasuryMilli[subject.id] ?? 0;
@@ -104,7 +104,7 @@ export function observe(ctx: Ctx, observer: string, subject: SubjectRef, predica
     quality = exact ? 1000 : skill(ctx, observer, "administration");
     // other readers: coins are reported within ±10% of the true value, however skilled; skill sets how often they are right
     const maxErr = exact ? 0 : Math.min((1000 - quality) * 20, Math.floor(Math.abs(truth) / 10));
-    const r = ctx.keyed(`knowledge:observe:${observer}:${ctx.tick}:${subject.id}:${predicate}`);
+    const r = ctx.keyed(`knowledge:observe:${observer}:${Math.floor(ctx.tick / 86400)}:${subject.id}:${predicate}`);
     value = truth + r.int(-maxErr, maxErr);
   } else if (predicate === "fortification.garrison") {
     // men in the fort (captains' companies are not counted here); exact when the observer is at that place
@@ -112,7 +112,7 @@ export function observe(ctx: Ctx, observer: string, subject: SubjectRef, predica
     const here = ctx.s.positions[observer];
     quality = "at" in here && here.at === subject.id ? 1000 : skill(ctx, observer, CAPABILITY_FOR[predicate]);
     const maxErr = Math.floor((1000 - quality) / 50);
-    const r = ctx.keyed(`knowledge:observe:${observer}:${ctx.tick}:${subject.id}:${predicate}`);
+    const r = ctx.keyed(`knowledge:observe:${observer}:${Math.floor(ctx.tick / 86400)}:${subject.id}:${predicate}`);
     value = Math.max(0, truth + r.int(-maxErr, maxErr));
   } else if (predicate === "character.troops") {
     // a captain's company; exact when the observer is with the captain
@@ -120,7 +120,7 @@ export function observe(ctx: Ctx, observer: string, subject: SubjectRef, predica
     const here = ctx.s.positions[observer], there = ctx.s.positions[subject.id];
     quality = "at" in here && "at" in there && here.at === there.at ? 1000 : skill(ctx, observer, CAPABILITY_FOR[predicate]);
     const maxErr = Math.floor((1000 - quality) / 50);
-    const r = ctx.keyed(`knowledge:observe:${observer}:${ctx.tick}:${subject.id}:${predicate}`);
+    const r = ctx.keyed(`knowledge:observe:${observer}:${Math.floor(ctx.tick / 86400)}:${subject.id}:${predicate}`);
     value = Math.max(0, truth + r.int(-maxErr, maxErr));
   } else if (predicate === "character.location") {
     const pos = ctx.s.positions[subject.id];

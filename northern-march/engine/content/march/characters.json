@@ -116,7 +116,7 @@
         "kind": "role",
         "objective": "preserve_treasury",
         "priorityPermille": 800,
-        "reserveMilli": 60000
+        "reserveMilli": 50000
       },
       {
         "id": "crown_standing",

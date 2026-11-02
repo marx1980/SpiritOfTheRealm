@@ -75,11 +75,15 @@ export function adviceSettled(v: View, id: number): boolean {
 }
 
 /** Advice about one place (each adviser's standing advice on it), or, with no place, each adviser's latest advice. */
-function adviceLines(v: View, target?: string): AdviceLine[] {
+/** Each adviser's latest word: everything they said on their latest day of advising (one piece per place with trouble). */
+export function latestAdviceOf(v: View) {
   const latest = new Map<string, number>();
-  for (const r of v.advice) if (!latest.has(r.author) || v.advice.find((x) => x.id === latest.get(r.author))!.computedAt < r.computedAt) latest.set(r.author, r.id);
+  for (const r of v.advice) if (!latest.has(r.author) || latest.get(r.author)! < r.computedAt) latest.set(r.author, r.computedAt);
+  return v.advice.filter((r) => latest.get(r.author) === r.computedAt);
+}
+function adviceLines(v: View, target?: string): AdviceLine[] {
   const superseded = settledCheck(v);
-  return v.advice.filter((r) => (target ? (r.plan.id.includes(`"${target}"`) || planOf(v, r.plan.id).target === target) : latest.get(r.author) === r.id) && !superseded(r)).map((r) => ({
+  return latestAdviceOf(v).filter((r) => (target ? (r.plan.id.includes(`"${target}"`) || planOf(v, r.plan.id).target === target) : true) && !superseded(r)).map((r) => ({
     id: r.id, adviser: nameOf(v, r.author), area: SHORT_AREA[v.world.areas[r.author] ?? ""] ?? v.world.areas[r.author] ?? "", plan: planWords(v, r.plan.id),
     supports: r.reasons.filter((x) => x.weight > 0).slice(0, 3).map((x) => reasonWords(x.textKey)),
     concerns: r.reasons.filter((x) => x.weight < 0).slice(0, 3).map((x) => reasonWords(x.textKey)),
