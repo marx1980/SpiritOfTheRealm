@@ -104,6 +104,22 @@
     "materialDelta": 1
   },
   {
+    "id": "captain.heading",
+    "subjectKind": "character",
+    "halfLifeTicks": 864000,
+    "domain": "military",
+    "wakeSignificance": 1,
+    "materialDelta": 1
+  },
+  {
+    "id": "captain.refilled",
+    "subjectKind": "character",
+    "halfLifeTicks": 864000,
+    "domain": "military",
+    "wakeSignificance": 2,
+    "materialDelta": 1
+  },
+  {
     "id": "battle.result",
     "subjectKind": "location",
     "halfLifeTicks": 864000,

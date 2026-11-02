@@ -79,7 +79,23 @@ export const economy: System = {
         const pos = ctx.s.positions[c.id], gap = c.troops! - (ctx.s.troops[c.id] ?? 0);
         return gap > 0 && "at" in pos && pos.at === c.location ? [[c.id, Math.min(gap, Math.max(1, Math.floor((c.troops! * 20) / 1000)))]] : [];
       });
-      if (back.length) ctx.emit("CompanyRecovered", [], back.map(([c]) => chr(c)), { changes: back });
+      if (back.length) {
+        const ev = ctx.emit("CompanyRecovered", [], back.map(([c]) => chr(c)), { changes: back });
+        // Back at full strength at home while the fort he left is still in trouble: he asks whether to go back and attack or defend.
+        for (const [who] of back) {
+          const ch = ctx.content.byId.character.get(who)!;
+          if ((ctx.s.troops[who] ?? 0) < ch.troops! || !ch.reportsTo) continue;
+          const trouble = ctx.content.scenario.threat.sites.filter((x) => x.target !== ch.location && ctx.s.fortifications[x.target]
+            && (((best(ctx, who, x.site, "threat.intensity")?.believedValue as number) ?? 0) > 0 || best(ctx, who, x.target, "fortification.holder")?.believedValue === "raiders"))[0];
+          const heard = trouble && best(ctx, who, who, "captain.heading");
+          if (!trouble || !heard) continue; // only after a fight that sent him home
+          learn(ctx, who, { subject: chr(who), predicate: "captain.refilled", value: trouble.target, observedAt: ctx.tick, band: "certain" }, { kind: "observation", eventId: ev.id, source: who }, [ev.id]);
+          observe(ctx, who, chr(who), "character.troops", ev.id);
+          const claims = [best(ctx, who, who, "captain.refilled"), best(ctx, who, who, "character.troops"), best(ctx, who, trouble.site, "threat.intensity")]
+            .filter((x): x is NonNullable<typeof x> => !!x).map(({ band, ...rest }) => ({ ...rest, reliabilityBand: band as "certain" }));
+          ctx.at(ctx.tick, "messenger:compose", { author: who, recipient: ch.reportsTo, claims, cause: ev.id, purpose: `refilled:${trouble.target}` });
+        }
+      }
       ctx.extraDraws("economy");
       ctx.at(ctx.tick + DAY, "economy:day", {});
     },

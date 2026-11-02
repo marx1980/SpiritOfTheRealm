@@ -440,3 +440,4 @@ Marko, after seeing "fallen" at day 150 with no earlier word: a fort must fall a
 - **UI.** A fall letter and the fallen issue get a red border. Recall is an order; stay is a greyed option like waiting.
 - Bug fixed: advice scheduled in the last tick of a day tried to schedule in the past (crashed G-12 tune v6).
 - Engine changed again, so every running gate was restarted: G-01 v14 (Node and Bun), tune v7, G-12 sealed block 93000, regression v7.
+- (2 Nov, later) A captain beaten at a fallen fort tells his lord he is going home to refill; once his company is full and the fort is still in trouble he asks whether to return to attack or defend. Gates restarted again: G-01 v16, block 95000 (94000 discarded).

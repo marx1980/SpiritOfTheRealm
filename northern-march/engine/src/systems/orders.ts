@@ -109,7 +109,10 @@ function assault(ctx: Ctx, who: string, fort: string, cause: number) {
     observe(ctx, who, loc(fort), "fortification.condition", res.id);
   } else {
     const home = ctx.content.byId.character.get(who)!.location;
-    travel(ctx, who, home === fort ? (Object.keys(ctx.s.fortifications).filter((f) => f !== fort).sort()[0] ?? home) : home, "army", false, res.id);
+    const dest = home === fort ? (Object.keys(ctx.s.fortifications).filter((f) => f !== fort).sort()[0] ?? home) : home;
+    travel(ctx, who, dest, "army", false, res.id);
+    learn(ctx, who, { subject: loc(fort), predicate: "fortification.holder", value: "raiders", observedAt: ctx.tick, band: "certain" }, { kind: "observation", eventId: res.id, source: who }, [res.id]);
+    learn(ctx, who, { subject: chr(who), predicate: "captain.heading", value: dest, observedAt: ctx.tick, band: "certain" }, { kind: "observation", eventId: res.id, source: who }, [res.id]);
   }
   if (success && site) learn(ctx, who, { subject: loc(site), predicate: "threat.intensity", value: 0, observedAt: ctx.tick, band: "certain" }, { kind: "observation", eventId: res.id, source: who }, [res.id]);
   const superior = ctx.content.byId.character.get(who)?.reportsTo;

@@ -396,7 +396,9 @@ export function battleClaims(ctx: Ctx, who: string, from: string, site: string, 
   const at = ctx.s.positions[who];
   if (ch?.troops && ch.location !== from && (ctx.s.troops[who] ?? 0) < ch.troops && ctx.s.fortifications[from] && "at" in at && at.at === from)
     learn(ctx, who, { subject: chr(who), predicate: "captain.query", value: from, observedAt: ctx.tick, band: "certain" }, { kind: "observation", eventId: cause, source: who }, [cause]);
-  return [best(ctx, who, who, "captain.query"), best(ctx, who, site, "battle.result"), best(ctx, who, site, "fortification.holder"), best(ctx, who, from, "fortification.garrison"), best(ctx, who, who, "character.troops"), best(ctx, who, site, "threat.intensity")]
+  // word that the fort is lost is not told again by the captain; and a fort the raiders hold has no garrison to count
+  const holder = best(ctx, who, site, "fortification.holder"), lost = holder?.believedValue === "raiders";
+  return [best(ctx, who, who, "captain.query"), best(ctx, who, who, "captain.heading"), best(ctx, who, site, "battle.result"), lost ? null : holder, lost ? null : best(ctx, who, from, "fortification.garrison"), best(ctx, who, who, "character.troops"), best(ctx, who, site, "threat.intensity")]
     .filter((x): x is NonNullable<typeof x> => !!x).map(({ band, ...rest }) => ({ ...rest, reliabilityBand: band as "certain" }));
 }
 
