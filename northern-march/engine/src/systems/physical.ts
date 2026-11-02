@@ -47,6 +47,11 @@ function witness(ctx: Ctx, where: string, kind: string, cause: number) {
     learn(ctx, who, { subject: loc(where), predicate: "fortification.incident", value: kind, observedAt: ctx.tick, band: "certain" }, { kind: "observation", eventId: cause, source: who }, [cause]);
 }
 
+/** Captains with men who are not in their home town (on the road or elsewhere). */
+export function awayCaptains(ctx: Ctx): string[] {
+  return ctx.content.characters.filter((c) => c.troops && (ctx.s.troops[c.id] ?? 0) > 0).filter((c) => { const p = ctx.s.positions[c.id]; return !("at" in p && p.at === c.location); }).map((c) => c.id).sort();
+}
+
 /** The raiders break in: the fort is lost, those inside get word out (the castellan writes at once) and then fall back. */
 function fall(ctx: Ctx, fort: string, site: string, cause: number) {
   const ev = ctx.emit("FortFell", [cause], [loc(fort), loc(site)], { fort, site });
@@ -66,7 +71,9 @@ export const economy: System = {
         const amountMilli = h.dailyIncomeMilli + r.int(-h.jitterMilli, h.jitterMilli);
         ctx.emit("TreasuryCollected", [], [loc(h.location)], { holder: sc.ruler, location: h.location, amountMilli }, "economy");
       }
-      const up = ctx.emit("UpkeepPaid", [], [chr(sc.ruler)], { holder: sc.ruler, amountMilli: sc.economy.dailyUpkeepMilli });
+      // a captain with a company who is away from his home town is a cost to the crown
+      const away = awayCaptains(ctx).length;
+      const up = ctx.emit("UpkeepPaid", [], [chr(sc.ruler)], { holder: sc.ruler, amountMilli: sc.economy.dailyUpkeepMilli + away * sc.economy.captainAwayMilli, awayCaptains: away });
       observeTreasury(ctx, up.id);
       // Garrisons refill by 2% of their establishment (at least one man) a day, up to that establishment.
       const gains = Object.keys(ctx.s.fortifications).sort(cmp).flatMap((f): [string, number][] => {
@@ -172,12 +179,18 @@ export const threat: System = {
         const roll = r.int(0, 999), intensityPermille = r.int(t.intensityPermille[0], t.intensityPermille[1]), days = r.int(t.durationDays[0], t.durationDays[1]);
         if (active && ctx.s.fallen[target]) continue; // the raiders hold the fort: they stay until driven out, and there is nothing left to batter
         if (!active) {
-          if (roll >= t.startPermillePerDay) continue;
+          // raiders are bolder when the crown's captain is away from the fort that answers them
+          const away = awayCaptains(ctx).length > 0 && !presentAt(ctx, target).some((x) => (ctx.s.troops[x] ?? 0) > 0);
+          if (roll >= t.startPermillePerDay * (away ? t.awayStartMultiplier : 1)) continue;
           const untilTick = ctx.tick + DAY * days;
           ctx.emit("ThreatBegan", [], [loc(site), loc(target)], { site, target, intensityPermille, untilTick }, "threat");
         } else if (ctx.tick >= active.untilTick) {
           ctx.emit("ThreatEnded", [active.eventId], [loc(site)], { site });
         } else {
+          // a band nobody has dealt with grows bolder
+          const days = Math.floor((ctx.tick - active.since) / DAY);
+          if (days > 0 && days % t.growthEveryDays === 0 && active.intensityPermille < 1000)
+            ctx.emit("ThreatGrew", [active.eventId], [loc(site)], { site, intensityPermille: Math.min(1000, active.intensityPermille + t.growthPermille) });
           const before = ctx.s.fortifications[target].conditionMilli;
           const men = defence(ctx, target);
           const damageMilli = Math.floor((t.raidDamageMilliAtFullIntensity * active.intensityPermille) / (1000 + men * ctx.content.scenario.battle.raidMitigationPerManPermille));

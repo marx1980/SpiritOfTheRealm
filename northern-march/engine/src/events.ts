@@ -46,6 +46,7 @@ export const EVENT_TYPES: Readonly<Record<string, EventTypeDef>> = Object.freeze
   ThreatBegan: T("threat", "military", 3, true),
   RaidDamage: T("threat", "military", 2),
   ThreatEnded: T("threat", "military", 2),
+  ThreatGrew: T("threat", "military", 2),
   FortFell: T("threat", "military", 3),
   FortAssaulted: T("battle", "military", 3),
   FortRetaken: T("battle", "military", 3),

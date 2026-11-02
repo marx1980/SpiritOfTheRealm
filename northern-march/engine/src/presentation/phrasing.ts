@@ -35,7 +35,7 @@ const REASON: Record<string, string> = {
   "reason.hold_post": "staying at his post", "reason.win_renown": "his reputation", "reason.preserve_forces": "keeping the men alive",
   "reason.preserve_treasury": "the money in the treasury", "reason.sound_works": "keeping the works in good repair", "reason.house_standing": "his family's standing",
   "reason.risk": "the danger involved", "reason.risk_averse": "the danger involved", "reason.own_skill": "his own skill", "reason.trusts": "trust in the people involved",
-  "reason.asked_for_help": "a request for help", "reason.as_ordered": "his orders", "reason.against_orders": "his orders", "reason.cost": "what it costs", "reason.duty": "duty",
+  "reason.asked_for_help": "a request for help", "reason.as_ordered": "his orders", "reason.against_orders": "his orders", "reason.cost": "what it costs", "reason.fort_lost": "the fort that has been lost", "reason.duty": "duty",
 };
 export const reasonWords = (key: string) => REASON[key] ?? key.replace(/^reason\./, "").replace(/_/g, " ");
 
@@ -76,6 +76,8 @@ export function planWords(v: View, planId: string): string {
   switch (a.kind) {
     case "advise_wait": return "Wait for more news";
     case "advise_repair": return `Repair ${t}`;
+    case "advise_repair_rush": return `Repair ${t} quickly, paying extra, with the captain's men`;
+    case "advise_repair_labour": return `Repair ${t} with the captain's men only (no cost, slower)`;
     case "advise_send_captain": return a.target && fallenAt(v, a.target) ? `Send the captain to ${t} to retake it` : `Send the captain to ${t}`;
     case "advise_recall": return `${askerName(v)} returns to ${t} to refill his company`;
     case "advise_stay": return `${askerName(v)} stays at ${t} to rebuild the walls and defend`;

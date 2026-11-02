@@ -8,6 +8,7 @@ import { buildMap } from "../src/presentation/map.ts";
 import { sha256 } from "../src/canonical.ts";
 import { createHash } from "node:crypto";
 import { CONTENT, run, variant } from "./helpers.ts";
+import { battleLoss } from "../src/battle.ts";
 
 const threat = (day = 3, intensity = 800, days = 60) => variant((r) => {
   r.scenario.scripts = [{ day, kind: "threat", site: "blackwood", intensityPermille: intensity, durationDays: days }];
@@ -322,4 +323,53 @@ test("a fort the raiders break into falls, the ruler is told, and the captain ca
     else assert.ok(sim.log.some((e) => e.type === "FortAssaulted"));
   }
   assert.ok(told > 0 && retaken > 0 && asked > 0, `told ${told}, retaken ${retaken}, asked ${asked}`);
+});
+
+test("raiders grow if ignored, a larger enemy costs more men, and a captain away from home costs the crown", () => {
+  const content = threat(3, 400, 60);
+  const grew = [1, 2, 3, 4, 5, 6, 7, 8].some((seed) => { const s = createSim({ content, seed, policy: "passive" }); s.runDays(60); return s.log.some((e) => e.type === "ThreatGrew"); });
+  assert.ok(grew, "an unanswered band grows");
+  // losses follow the enemy: the same company loses more against a big host than a small band
+  const b = CONTENT.scenario.battle;
+  assert.ok(battleLoss(b, 200, 400, false) > battleLoss(b, 200, 100, false));
+  assert.ok(battleLoss(b, 200, 400, true) > battleLoss(b, 200, 100, true));
+  // Caron on the road costs 2k a day more
+  const s2 = createSim({ content: variant((r) => { r.scenario.messenger.lossPermillePerDay = 0; }), seed: 5, policy: "external", params: { dayEnd: true } });
+  let sent = false, away = 0;
+  for (let i = 0; i < 400 && s2.tick < 12 * DAY; i++) {
+    const p = s2.next(12 * DAY); if (!p.paused) break;
+    if (!sent) { s2.answer([{ action: "advance", target: "northwatch" }]); sent = true; } else s2.answer([]);
+  }
+  for (const e of s2.log) if (e.type === "UpkeepPaid" && (e.payload.awayCaptains as number) > 0) { away++; assert.equal(e.payload.amountMilli, CONTENT.scenario.economy.dailyUpkeepMilli + CONTENT.scenario.economy.captainAwayMilli); }
+  assert.ok(away > 0, "upkeep rises while he is away");
+});
+
+test("repair modes: labour is free and stops at worn, rush costs double, and both need a company at the fort", () => {
+  const run1 = (mode: "standard" | "rush" | "labour", withCaptain: boolean) => {
+    const content = variant((r) => {
+      r.scenario.messenger.lossPermillePerDay = 0; r.scenario.interception = [];
+      r.scenario.weather.fireDailyPermille = 0; r.scenario.weather.quakeDailyPermille = 0; r.scenario.treasuryMilli = 400000;
+      r.locations.find((l) => l.id === "northwatch")!.fortification!.conditionMilli = 40000;
+    });
+    const sim = createSim({ content, seed: 7, policy: "external", params: { dayEnd: true } });
+    let step = 0;
+    for (let i = 0; i < 600 && sim.tick < 40 * DAY; i++) {
+      const p = sim.next(40 * DAY); if (!p.paused) break;
+      const arrived = sim.log.some((e) => e.type === "Arrived" && e.payload.who === "caron" && e.payload.at === "northwatch");
+      if (step === 0 && withCaptain) { sim.answer([{ action: "advance", target: "northwatch" }]); step = 1; continue; }
+      if (step === (withCaptain ? 1 : 0) && (arrived || !withCaptain) && beliefsAbout(p.view!, "northwatch", "fortification.condition").length) { sim.answer([{ action: "repair", target: "northwatch", ...(mode === "standard" ? {} : { repairMode: mode }) }]); step = 9; continue; }
+      sim.answer([]);
+    }
+    return sim;
+  };
+  const std = run1("standard", true).log.find((e) => e.type === "RepairStarted");
+  const rush = run1("rush", true).log.find((e) => e.type === "RepairStarted");
+  const lab = run1("labour", true).log.find((e) => e.type === "RepairStarted");
+  assert.ok(std && rush && lab, "all three start");
+  assert.equal(lab!.payload.costMilli, 0);
+  assert.equal(lab!.payload.restoreToMilli, 70000);
+  assert.ok((rush!.payload.costMilli as number) > (std!.payload.costMilli as number) * 1.9);
+  assert.ok((rush!.payload.durationTicks as number) < (std!.payload.durationTicks as number));
+  assert.ok((lab!.payload.durationTicks as number) > (std!.payload.durationTicks as number));
+  assert.ok(!run1("labour", false).log.some((e) => e.type === "RepairStarted"), "no company, no labour");
 });

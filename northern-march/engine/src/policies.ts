@@ -6,7 +6,7 @@ import { captainSentTo, planOf } from "./presentation/phrasing.ts";
 
 export type PolicyId = "passive" | "delegating" | "aggressive" | "random-valid" | "follow-best-adviser" | "follow-worst-adviser" | "external" | "replay" | `follow:${string}`;
 /** `mission` (for sending a captain): defend the fort (default), or scout / attack the raiders at `raid`. */
-export interface PlayerAction { action: "repair" | "levy" | "advance" | "travel" | "order"; target?: string; order?: OrderDraft; decision?: number; followed?: string; mission?: "defend" | "scout" | "attack"; raid?: string }
+export interface PlayerAction { action: "repair" | "levy" | "advance" | "travel" | "order"; target?: string; order?: OrderDraft; decision?: number; followed?: string; mission?: "defend" | "scout" | "attack"; raid?: string; repairMode?: "standard" | "rush" | "labour" }
 export type PolicyFn = (v: View, rng: () => Rng) => PlayerAction[];
 
 const DAY = 86400;
@@ -42,7 +42,7 @@ export function followAdviser(adviser: string): PolicyFn {
     const out: PlayerAction[] = [];
     for (const rec of v.advice.filter((r) => r.author === adviser)) {
       const a = planOf(v, rec.plan.id);
-      const map: Record<string, PlayerAction["action"]> = { advise_repair: "repair", advise_send_captain: "advance", advise_retake: "advance", advise_levy: "levy" };
+      const map: Record<string, PlayerAction["action"]> = { advise_repair: "repair", advise_repair_rush: "repair", advise_repair_labour: "repair", advise_send_captain: "advance", advise_retake: "advance", advise_recall: "advance", advise_levy: "levy" };
       let action = map[a.kind], target = a.target;
 let mission: PlayerAction["mission"], raid: string | undefined;
       if (a.kind === "advise_sortie") { // send the captain to the fort nearest the raiders; once he is there, attack
@@ -51,7 +51,7 @@ let mission: PlayerAction["mission"], raid: string | undefined;
       }
       if (!action || recently(v, action, action === "levy" ? null : target ?? null, 10)) continue;
       if (out.some((x) => x.action === action && x.target === target)) continue;
-      out.push({ action, ...(target ? { target } : {}), ...(mission ? { mission, raid } : {}), followed: adviser });
+      out.push({ action, ...(target ? { target } : {}), ...(mission ? { mission, raid } : {}), ...(a.kind === "advise_repair_rush" ? { repairMode: "rush" as const } : a.kind === "advise_repair_labour" ? { repairMode: "labour" as const } : {}), followed: adviser });
     }
     return out;
   };

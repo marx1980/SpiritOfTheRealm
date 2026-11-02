@@ -18,7 +18,7 @@ export function settledCheck(v: View): (r: { plan: { id: string } }) => boolean 
   const orderOf = (a: { kind: string; target?: string }): { action: string; target: string } | undefined => {
     if (a.kind === "advise_levy") return { action: "levy", target: v.self.id };
     if (!a.target) return undefined;
-    if (a.kind === "advise_repair") return { action: "repair", target: a.target };
+    if (a.kind === "advise_repair" || a.kind === "advise_repair_rush" || a.kind === "advise_repair_labour") return { action: "repair", target: a.target };
     if (a.kind === "advise_recall") return { action: "advance", target: a.target };
     if (a.kind === "advise_send_captain" || a.kind === "advise_retake") return { action: "advance", target: a.target };
     if (a.kind === "advise_sortie") { const f = nearestFort(v, a.target); return f ? { action: "advance", target: f } : undefined; }

@@ -25,7 +25,7 @@ export interface WorldState {
   history: Record<string, HistoryEntry[]>;
   agents: Record<string, AgentState>;
   recommendations: Record<string, Recommendation>;
-  heard: Record<string, Record<string, Recommendation>>; // advice each listener heard in person, latest per adviser and target
+  heard: Record<string, Record<string, Recommendation>>; // advice each listener heard in person, latest per adviser and plan
   campaign: { ended: { tick: number; ending: string; where: string } | null; lastDanger: number };
   lastRaid: Record<string, number>;
   lastRepairStart: Record<string, number>;
@@ -33,7 +33,7 @@ export interface WorldState {
   sortieOpen: Record<string, number>; // commander -> tick of the sortie still being fought
   lastStorm: Record<string, number>;
   fallen: Record<string, true>; // forts held by the raiders
-  threats: Record<string, { intensityPermille: number; untilTick: number; eventId: number }>;
+  threats: Record<string, { intensityPermille: number; untilTick: number; eventId: number; since: number }>;
   routesClosed: Record<string, true>;
   positions: Record<string, Position>;
   departures: Record<string, Record<string, { to: string | null; tick: number }>>;
@@ -49,7 +49,7 @@ export interface WorldState {
   advisePending: Record<string, number>; // adviser -> day their advice is due or was given (given at the end of that day)
   ordersInForce: Record<string, number[]>;
   issued: Record<string, IssuedRecord[]>;
-  repairs: Record<string, { startedAt: number; orderId: number; work: number; done: number; lastT: number; men: number; gen: number; restoredMilli: number; startedEventId: number; engineer: string }>;
+  repairs: Record<string, { mode: string; startedAt: number; orderId: number; work: number; done: number; lastT: number; men: number; gen: number; restoredMilli: number; startedEventId: number; engineer: string }>;
 }
 
 export const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
@@ -109,7 +109,8 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
     s.lastStorm[p.location] = e.tick;
     const f = s.fortifications[p.location]; if (f) { f.conditionMilli = clampCond(f.conditionMilli - p.damageMilli); f.lastChangeEvent = e.id; }
   },
-  ThreatBegan: (s, p, e) => { s.threats[p.site] = { intensityPermille: p.intensityPermille, untilTick: p.untilTick, eventId: e.id }; },
+  ThreatBegan: (s, p, e) => { s.threats[p.site] = { intensityPermille: p.intensityPermille, untilTick: p.untilTick, eventId: e.id, since: e.tick }; },
+  ThreatGrew: (s, p) => { if (s.threats[p.site]) s.threats[p.site].intensityPermille = p.intensityPermille; },
   RaidDamage: (s, p, e) => { const f = s.fortifications[p.location]; f.conditionMilli = clampCond(f.conditionMilli - p.damageMilli); f.lastChangeEvent = e.id; s.lastRaid[p.location] = e.tick; },
   ThreatScripted: noop,
   ThreatEnded: (s, p) => { delete s.threats[p.site]; },
@@ -176,7 +177,7 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   OrderCompleted: endOrder("completed"),
   OrderSuperseded: endOrder("superseded"),
   OrderAbandoned: endOrder("abandoned"),
-  RepairStarted: (s, p, e) => { s.repairs[p.location] = { startedAt: p.startedAt, orderId: p.orderId, work: p.work, done: 0, lastT: e.tick, men: p.men, gen: 0, restoredMilli: p.restoredMilli, startedEventId: e.id, engineer: p.engineer }; s.treasuryMilli[p.payer] -= p.costMilli; s.lastRepairStart[p.location] = e.tick; },
+  RepairStarted: (s, p, e) => { s.repairs[p.location] = { mode: p.mode ?? "standard", startedAt: p.startedAt, orderId: p.orderId, work: p.work, done: 0, lastT: e.tick, men: p.men, gen: 0, restoredMilli: p.restoredMilli, startedEventId: e.id, engineer: p.engineer }; s.treasuryMilli[p.payer] -= p.costMilli; s.lastRepairStart[p.location] = e.tick; },
   DayEndScheduled: (s, p) => { s.dayEndDay = p.day; },
   AdviceScheduled: (s, p) => { s.advisePending[p.agent] = p.day; },
   AdviceSettled: (s, p) => { s.advisePending[p.agent] = p.day; },
@@ -186,8 +187,7 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   PlayerInput: noop,
   RecommendationMade: (s, p) => {
     s.recommendations[p.recommendation.author] = p.recommendation;
-    const t = (JSON.parse(p.recommendation.plan.id) as { target?: string }).target ?? "*";
-    for (const who of p.audience ?? []) (s.heard[who] ??= {})[`${p.recommendation.author}|${t}`] = p.recommendation;
+    for (const who of p.audience ?? []) (s.heard[who] ??= {})[`${p.recommendation.author}|${p.recommendation.plan.id}`] = p.recommendation;
   },
   DangerSignalled: (s, p, e) => { s.campaign.lastDanger = e.tick; },
   CampaignEnded: (s, p, e) => { s.campaign.ended = { tick: e.tick, ending: p.ending, where: p.where }; },

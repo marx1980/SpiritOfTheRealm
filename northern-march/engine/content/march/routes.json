@@ -199,5 +199,19 @@
     "to": "bellmoor",
     "km": 10,
     "terrain": "track"
+  },
+  {
+    "id": "thornfield-stonewood",
+    "from": "thornfield",
+    "to": "stonewood",
+    "km": 15,
+    "terrain": "forest"
+  },
+  {
+    "id": "bellmoor-stonewood",
+    "from": "bellmoor",
+    "to": "stonewood",
+    "km": 12,
+    "terrain": "forest"
   }
 ]

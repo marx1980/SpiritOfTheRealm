@@ -19,6 +19,9 @@ export interface FortInfo { id: string; garrison: number; sites: string[]; storm
 export interface CaptainInfo { id: string; troops: number; seat: string }
 
 export interface Situation {
+  repairScope?: "all" | "endangered" | "critical"; // which damaged walls this adviser presses to repair
+  /** A steady pseudo-random number in -1000..1000 for this adviser, today, and a question (for errors of judgement). */
+  noise?: (key: string) => number;
   adviceKinds?: string[]; // the kinds of advice this adviser gives (all, if absent)
   now: number;
   agent: string;
@@ -50,7 +53,8 @@ export interface Situation {
   mode: Mode;
   order?: StructuredOrder;               // in "obey" mode
   p: { agents: AgentParams; battle: BattleParams; raidBaseMilli: number; restoreToMilli: number; repairCostPerMilli: number;
-       repairDays: number; levyMilli: number; breachMilli: number; partialRestoreToMilli: number; decayMilliPerDay: number; retakeMilli: number };
+       repairDays: number; levyMilli: number; breachMilli: number; partialRestoreToMilli: number; decayMilliPerDay: number; retakeMilli: number; captainAwayMilli: number; rushCostPermille: number;
+       labourWorkPermille: number; labourToMilli: number; companyWorkPermille: number };
 }
 
 export interface Candidate { action: ActionRef; score: number; contributions: Reason[]; serves?: boolean; obey?: boolean }

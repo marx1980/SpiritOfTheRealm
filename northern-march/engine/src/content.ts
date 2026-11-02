@@ -25,7 +25,7 @@ export interface Relationship { to: string; kind: string; value: number }
 export interface ObjectiveDef { id: string; kind: "role" | "personal" | "political" | "situational"; objective: ObjectiveKind; priorityPermille: number; target?: string; reserveMilli?: number }
 export interface Character { id: string; name: string; role: string; location: string; tier: (typeof TIERS)[number]; traits: string[]; reportsTo?: string;
   capabilities: Record<string, number>; relationships: Relationship[]; house: string; objectives: ObjectiveDef[]; troops?: number;
-  household?: string; occupation?: string; adviceKinds?: string[] }
+  household?: string; occupation?: string; adviceKinds?: string[]; repairScope?: "all" | "endangered" | "critical" }
 export type Script =
   | { day: number; kind: "travel"; who: string; to: string; mode: Mode; secret?: boolean }
   | { day: number; kind: "order"; from: string; to: string; intent: string; objective: SubjectRefC; supersedesPrevious?: boolean; discretion?: "strict" | "bounded" | "delegated" }
@@ -41,7 +41,7 @@ export interface AgentParams {
   demoteAfterDays: number; recommendationTrustMin: number;
 }
 export interface BattleParams {
-  sortie: { skillBasePermille: number; intensityFactorPermille: number; lossOnSuccessPermille: number; lossOnFailurePermille: number; hours: number };
+  sortie: { skillBasePermille: number; intensityFactorPermille: number; lossOnSuccessPermille: number; lossOnFailurePermille: number; hours: number; raiderMenAtFull: number; ambushPermilleAtFull: number; ambushFactorPermille: number };
   raidMitigationPerManPermille: number;
 }
 export interface Scenario {
@@ -49,14 +49,14 @@ export interface Scenario {
   movement: { speedsKmPerDay: Record<Mode, Record<string, number>>; crossingDelayTicks: Record<string, number> };
   knowledge: { beliefCaps: Record<(typeof TIERS)[number], number>; bands: { certain: number; probable: number; uncertain: number };
     stormPenaltyPermille: number; maxErrorMilliPerMissingPermille: number; lowTrustBelow: number };
-  economy: { holdings: { location: string; dailyIncomeMilli: number; jitterMilli: number }[]; dailyUpkeepMilli: number };
+  economy: { holdings: { location: string; dailyIncomeMilli: number; jitterMilli: number }[]; dailyUpkeepMilli: number; captainAwayMilli: number };
   weather: { decayMilliPerDay: number; stormDamageMilli: [number, number]; fireDailyPermille: number; fireDamageMilli: [number, number]; quakeDailyPermille: number; quakeDamageMilli: [number, number] };
   threat: { sites: { site: string; target: string }[]; startPermillePerDay: number; intensityPermille: [number, number];
-    durationDays: [number, number]; raidDamageMilliAtFullIntensity: number; retakeConditionMilli: number; retakeGarrisonPermille: number };
+    durationDays: [number, number]; raidDamageMilliAtFullIntensity: number; retakeConditionMilli: number; retakeGarrisonPermille: number; growthPermille: number; growthEveryDays: number; awayStartMultiplier: number };
   messenger: { reportEveryDays: number; alarmBelowMilli: number; legJitterPermille: [number, number]; lossPermillePerDay: number;
     redirectLimit: number; understateMilli: number };
   interception: { location: string; by: string; permille: number }[];
-  player: { repairCostMilliPerMilli: number; repairRestoreToMilli: number; repairDays: number; levyMilli: number };
+  player: { repairCostMilliPerMilli: number; repairRestoreToMilli: number; repairDays: number; levyMilli: number; repairRushCostPermille: number; repairLabourWorkPermille: number; repairLabourToMilli: number; repairCompanyWorkPermille: number };
   scripts: Script[];
   endStates: { fortificationBreachedBelowMilli: number };
   agents: AgentParams;

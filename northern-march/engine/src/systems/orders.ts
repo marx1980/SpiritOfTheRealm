@@ -11,8 +11,9 @@ import type { Ctx, System } from "./types.ts";
 import { DAY, chr, loc } from "./types.ts";
 import { best, learn, observe, observeTreasury, skill } from "./knowledge.ts";
 import { battleClaims, buildSituation, capability, defenceAt, execute, isIdle, perceiverFromView, promote, traceOf } from "./agents.ts";
+import { battleLoss, raiderMen } from "../battle.ts";
 import { travel } from "./movement.ts";
-import { menAt, resyncRepair, scheduleRepairEnd } from "./repairs.ts";
+import { companyAt, menAt, resyncRepair, scheduleRepairEnd } from "./repairs.ts";
 
 const oref = (id: number) => ({ kind: "order" as const, id: String(id) });
 
@@ -97,7 +98,7 @@ function assault(ctx: Ctx, who: string, fort: string, cause: number) {
   const p = th ? Math.floor((1000 * S) / Math.max(1, S + I)) : 1000;
   const success = ctx.keyed(`battle:assault:${cause}`).int(0, 999) < p;
   const res = ctx.emit("FortAssaulted", [cause], [chr(who), loc(fort)], { commander: who, fort, site, success, pPermille: p, men });
-  const lost = Math.floor((men * (success ? sp.lossOnSuccessPermille : sp.lossOnFailurePermille)) / 1000);
+  const lost = battleLoss(sc.battle, men, th ? raiderMen(sc.battle, th.intensityPermille) : 0, success);
   if (lost) ctx.emit("LossesTaken", [res.id], [loc(fort)], { location: fort, garrisonLost: 0, troopsLost: { [who]: lost }, cause: "assault" });
   learn(ctx, who, { subject: loc(fort), predicate: "battle.result", value: success ? "won" : "lost", observedAt: ctx.tick, band: "certain" }, { kind: "observation", eventId: res.id, source: who }, [res.id]);
   if (success) {
@@ -157,27 +158,29 @@ function process(ctx: Ctx, orderId: number, receivedId: number) {
   if (a.kind === "repair_works" || a.kind === "partial_repair") {
     const where = a.target!;
     const cond = ctx.s.fortifications[where]?.conditionMilli;
-    const to = a.kind === "repair_works" ? sc.player.repairRestoreToMilli : sc.agents.values.goodConditionMilli;
+    const mode = (o.constraints.find((c) => c.kind === "repairMode")?.textKey ?? "standard") as "standard" | "rush" | "labour";
+    const to = mode === "labour" ? Math.min(sc.player.repairLabourToMilli, sc.player.repairRestoreToMilli) : a.kind === "repair_works" ? sc.player.repairRestoreToMilli : sc.agents.values.goodConditionMilli;
     if (cond === undefined) return finish(ctx, orderId, "abandoned", ex.id, "noFortification");
     if (ctx.s.fallen[where]) return finish(ctx, orderId, "abandoned", ex.id, "fallen");
     if (ctx.s.repairs[where]) return finish(ctx, orderId, "abandoned", ex.id, "inProgress");
     if (to - cond <= 0) return finish(ctx, orderId, "abandoned", ex.id, "notNeeded");
-    const costMilli = (to - cond) * sc.player.repairCostMilliPerMilli;
+    if (mode !== "standard" && companyAt(ctx, where) <= 0) return finish(ctx, orderId, "abandoned", ex.id, "noCompany");
+    const costMilli = mode === "labour" ? 0 : Math.floor(((to - cond) * sc.player.repairCostMilliPerMilli * (mode === "rush" ? sc.player.repairRushCostPermille : 1000)) / 1000);
     if (ctx.s.treasuryMilli[sc.ruler] < costMilli) return finish(ctx, orderId, "abandoned", ex.id, "funds");
     // execution quality: a skilled engineer works faster and lands closer to the target
     const eng = skill(ctx, who, "engineering");
     // the job is measured as the garrison's days of work; captains' companies at the fort add men and speed it up
     const garrison = Math.max(1, ctx.s.fortifications[where].garrison);
     const base = Math.floor((sc.player.repairDays * DAY * (1500 - eng)) / 1000);
-    const work = base * garrison;
-    const men = Math.max(1, menAt(ctx, where));
+    const work = Math.floor((base * garrison * (mode === "labour" ? sc.player.repairLabourWorkPermille : 1000)) / 1000);
+    const men = Math.max(1, menAt(ctx, where, mode));
     const durationTicks = Math.ceil(work / men);
     const r = ctx.keyed(`orders:repair:${orderId}`);
     const spread = (1000 - eng) * 10;
     // a full repair can fall short of its target by at most 5 points, so the walls are never worse than "sound"
     const jitter = a.kind === "repair_works" ? r.int(-Math.min(spread, 5000), 0) : r.int(-spread, Math.floor(spread / 4));
     const restoredMilli = Math.max(0, to - cond + jitter);
-    const st = ctx.emit("RepairStarted", [ex.id], [loc(where), oref(orderId)], { location: where, payer: sc.ruler, costMilli, startedAt: ctx.tick, orderId, durationTicks, restoreToMilli: to,
+    const st = ctx.emit("RepairStarted", [ex.id], [loc(where), oref(orderId)], { location: where, mode, payer: sc.ruler, costMilli, startedAt: ctx.tick, orderId, durationTicks, restoreToMilli: to,
       work, men, restoredMilli, engineer: who });
     observeTreasury(ctx, st.id);
     scheduleRepairEnd(ctx, where);

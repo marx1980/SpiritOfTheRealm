@@ -83,7 +83,8 @@
         "objective": "crown_standing",
         "priorityPermille": 400
       }
-    ]
+    ],
+    "repairScope": "endangered"
   },
   {
     "id": "oren",
@@ -124,7 +125,8 @@
         "objective": "crown_standing",
         "priorityPermille": 300
       }
-    ]
+    ],
+    "repairScope": "critical"
   },
   {
     "id": "selene",
@@ -161,10 +163,15 @@
     ],
     "adviceKinds": [
       "advise_repair",
+      "advise_repair_rush",
+      "advise_repair_labour",
       "advise_send_captain",
       "advise_levy",
-      "advise_wait"
-    ]
+      "advise_wait",
+      "advise_stay",
+      "advise_recall"
+    ],
+    "repairScope": "all"
   },
   {
     "id": "caron",

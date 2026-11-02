@@ -25,7 +25,11 @@ Whether a player can explain every decision from what the screen shows. It is no
 | C3 | Repairs ordered without enough coins | The order is abandoned; Anna learns it only by letter |
 | C4 | Anna travels to a fort | Letters go to the council first; the regent may act |
 | C5 | Anna stays in a failing fort when the second wave comes (day 55+) | A danger warning, then possible death or capture |
-| C6 | Following Oren | He mostly says wait or levy; walls fall from raids and storms while the treasury looks healthy |
+| C6 | Following Oren | He keeps Caron's time short (a captain away from home costs 2k a day), prefers free labour and sending Caron home to refill, and waits or levies; walls fall from raids and storms while the treasury looks healthy |
+| C7 | A fort falls (a red-bordered letter) | The raiders hold it until a captain retakes it; no repair is possible meanwhile |
+| C8 | After a battle Caron asks whether to go home and refill or stay | Elara and Selene say stay, Oren says go home; later, once he is full again, he asks whether to return |
+| C9 | A repair with the captain at the fort | Three modes: standard, rush (double coin, quicker) and labour (free, slower, stops at worn) |
+| C10 | A second band at Stonewood threatens Eastmarch Keep; attacking raiders can meet a second band | The captain cannot cover both forts; a sortie can go badly |
 
 Each tester should meet at least three.
 

@@ -274,5 +274,17 @@
       840,
       800
     ]
+  },
+  {
+    "id": "stonewood",
+    "name": "Stonewood",
+    "province": "eastmarch",
+    "kind": "forest",
+    "terrain": "forest",
+    "exposurePermille": 0,
+    "pos": [
+      800,
+      720
+    ]
   }
 ]

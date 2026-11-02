@@ -38,11 +38,20 @@ export function generate(sit: Situation, per: Perceiver): ActionRef[] {
     const tre = per.get(sit.ruler, "treasury.balance"), w = worn(sit, per);
     const need = w.reduce((n, f) => n + Math.max(0, sit.p.restoreToMilli - (picture(sit, per, f).cond ?? 0)) * sit.p.repairCostPerMilli, 0);
     if (tre && ((tre.value as number) < sit.p.levyMilli || (tre.value as number) < need)) add(act("advise_levy"));
-    for (const f of w) if (!lost.includes(f)) add(act("advise_repair", f));
+    // Which damaged walls this adviser presses for: all of them (works), those that could be in danger (war), or only the near-breached (purse).
+    const scope = sit.repairScope ?? "all", threat = threatened(sit, per);
+    const wanted = (f: string) => scope === "all" || (scope === "endangered"
+      ? threat.includes(f) || !!per.get(f, "fortification.incident") || !!per.get(f, "fortification.holder")
+      : (picture(sit, per, f).cond ?? 1e9) < sit.p.breachMilli + 25000);
+    const captainAt = (f: string) => sit.captains.some((c) => (per.get(c.id, "captain.query")?.value ?? per.get(c.id, "captain.refilled")?.value ?? per.get(c.id, "character.location")?.value ?? c.seat) === f);
+    for (const f of w) if (!lost.includes(f) && wanted(f)) {
+      add(act("advise_repair", f));
+      if (captainAt(f)) { add(act("advise_repair_rush", f)); add(act("advise_repair_labour", f)); } // the captain's men can help
+    }
     if (sit.captains.length) for (const f of threatened(sit, per)) if (!lost.includes(f)) add(act("advise_send_captain", f));
     if (sit.captains.length) for (const f of threatened(sit, per)) for (const s of sit.forts.find((x) => x.id === f)!.sites)
       if (((per.get(s, "threat.intensity")?.value as number) ?? 0) > 0 && !lost.includes(f)) add(act("advise_sortie", s));
-    return out.slice(0, candidateCap(sit));
+    return out.slice(0, 10); // an adviser weighs every option that is open to them; they differ in how they judge them
   }
   const fortsHere = sit.at ? sit.forts.find((f) => f.id === sit.at) : undefined;
   if (sit.role === "castellan") {
@@ -110,6 +119,8 @@ export function score(sit: Situation, per: Perceiver, a: ActionRef): Candidate {
     const w = -Math.floor((fail * 10000 * (1000 - appetite)) / (1000 * 500));
     c.push(R("trait", dominantTrait(sit.traits, "riskPermille"), w, w < 0 ? "reason.risk_averse" : "reason.risk"));
   }
+  // a fort the raiders hold: waiting loses it, whatever the purse says
+  if (a.kind === "advise_wait" && sit.captains.length && lostForts(sit, per).length) c.push(R("belief", lostForts(sit, per)[0], -Math.floor(v.breachPenaltyMilli / 2), "reason.fort_lost"));
   if (a.kind === "sortie" || a.kind === "advise_sortie" || a.kind === "advise_retake") c.push(R("capability", "military", Math.floor(((sit.cap.military ?? 0) - 500) * 4), "reason.own_skill"));
   // relationships
   if (e.helps) c.push(R("relationship", e.helps, Math.floor((2000 * sit.trust(e.helps)) / 1000), "reason.trusts"));

@@ -42,7 +42,7 @@ type Sim = ReturnType<typeof createSim>;
 const st = {
   sim: null as unknown as Sim, log: [] as PlayerAction[][], shownPause: null as string | null, seed: __H01__.seed, paused: null as null | string, over: false, letter: null as number | null, advice: null as number | null, tab: "game" as "game" | "settings",
   batch: [] as number[], queue: [] as PlayerAction[], autoPause: new Set<string>(REASONS), selected: "northwatch",
-  draft: { recipient: "", action: "p:repair", objective: "northwatch", discretion: "bounded", mission: "defend" } as { recipient: string; action: string; objective: string; discretion: string; mission: string },
+  draft: { recipient: "", action: "p:repair", objective: "northwatch", discretion: "bounded", mission: "defend", repairMode: "standard" } as { recipient: string; action: string; objective: string; discretion: string; mission: string; repairMode: string },
   error: "", observer: location.hash === "#observer", answered: 0, openLetter: null as number | null, openIssue: null as string | null,
 };
 
@@ -135,6 +135,7 @@ function fortNear(v: View, site: string) {
 function adviceAction(v: View, r: Recommendation): PlayerAction | null {
   const a = planOf(v, r.plan.id);
   if (a.kind === "advise_repair") return { action: "repair", target: a.target, followed: r.author };
+  if (a.kind === "advise_repair_rush" || a.kind === "advise_repair_labour") return { action: "repair", target: a.target, repairMode: a.kind === "advise_repair_rush" ? "rush" : "labour", followed: r.author };
   if (a.kind === "advise_recall" || a.kind === "advise_send_captain" || a.kind === "advise_retake") return { action: "advance", target: a.target, followed: r.author };
   if (a.kind === "advise_sortie") { const f = fortNear(v, a.target!); return !f ? null : captainSentTo(v, f) ? { action: "advance", target: f, mission: "attack", raid: a.target, followed: r.author } : { action: "advance", target: f, followed: r.author }; }
   if (a.kind === "advise_levy") return { action: "levy", followed: r.author };
@@ -149,7 +150,7 @@ function raidNear(v: View, fort: string): string | undefined {
 const actionText = (v: View, a: PlayerAction) =>
   a.action === "order" ? `Order ${name(v, a.order!.recipient)}: ${a.order!.intent} ${name(v, a.order!.objective.id)}`
   : a.action === "levy" ? "Raise a levy" : a.action === "travel" ? `Travel to ${name(v, a.target!)}`
-  : a.action === "repair" ? `Repair ${name(v, a.target!)}`
+  : a.action === "repair" ? `Repair ${name(v, a.target!)}${a.repairMode === "rush" ? " quickly, paying extra, with the captain's men" : a.repairMode === "labour" ? " with the captain's men only (no cost, slower)" : ""}`
   : a.mission === "attack" && a.raid ? `Attack the raiders at ${name(v, a.raid)}` : a.mission === "scout" && a.raid ? `Scout the raiders at ${name(v, a.raid)}` : (fallenAt(v, a.target!) ? `Retake ${name(v, a.target!)}` : `Send the captain to ${name(v, a.target!)}`);
 const queue = (a: PlayerAction) => {
   if (!st.paused) return;
@@ -211,7 +212,7 @@ function choicesBlock(v: View): string {
     if (c.wait) return `<label class="check"><input type="checkbox" disabled> ${esc(c.text)} (recommended by ${esc(listNames(c.by))})</label>`;
     const q = st.queue.find((x) => matches(x, c.action));
     const rec = c.by.length ? ` (recommended by ${esc(listNames(c.by))})` : "";
-    const cost = c.action.action === "repair" ? repairCostKnown(v, c.action.target!) : undefined, coins = coinsKnown(v);
+    const cost = c.action.action === "repair" ? repairCostKnown(v, c.action.target!, c.action.repairMode) : undefined, coins = coinsKnown(v);
     const short = cost !== undefined && coins !== undefined && cost > coins;
     const costNote = cost === undefined ? "" : ` <span class="cost-inline">costs about ${kCoins(cost)}${coins === undefined ? "" : `; you have ${kCoins(coins)}`}</span>${short ? ` <span class="low">Not enough coins. <button data-use-levy>Raise a levy (about ${kCoins(content.scenario.player.levyMilli)})</button></span>` : ""}`;
     return `<label class="check"><input type="checkbox" data-toggle='${esc(JSON.stringify(c.action))}' ${q ? "checked" : ""} ${short ? "disabled" : ""}> ${esc(c.text)}${rec}${costNote}</label>${q && c.action.action === "advance" ? missionBlock(v, c.action.target!, q) : ""}`;
@@ -340,15 +341,16 @@ function side(v: View) {
     : draft ? validateDraft(v, draft) : ["no recipient"];
   // A repair is only offered if Anna can pay for it (from what she believes about the walls and her coins).
   const isRepair = st.draft.action === "p:repair" || st.draft.action === "o:repair";
-  const repairCost = isRepair && fortId ? repairCostKnown(v, fortId) : undefined;
+  const repairCost = isRepair && fortId ? repairCostKnown(v, fortId, st.draft.action === "p:repair" ? st.draft.repairMode : "standard") : undefined;
   const coins = coinsKnown(v);
   if (repairCost !== undefined && coins !== undefined && repairCost > coins) problems.push(`not enough coins: the repair costs about ${kCoins(repairCost)} and you have about ${kCoins(coins)}`);
-  const costLine = repairCost === undefined ? "" : `<span></span><span class="cost">Repair costs about ${kCoins(repairCost)}${coins === undefined ? "" : `; you have about ${kCoins(coins)}`}${repairCost > (coins ?? Infinity) ? ` <button data-use-levy>Raise a levy instead (about ${kCoins(content.scenario.player.levyMilli)})</button>` : ""}</span>`;
+  const costLine = repairCost === undefined ? "" : `<span></span><span class="cost">${st.draft.action === "p:repair" && st.draft.repairMode === "labour" ? "Repair costs no coin" : `Repair costs about ${kCoins(repairCost)}`}${coins === undefined ? "" : `; you have about ${kCoins(coins)}`}${repairCost > (coins ?? Infinity) ? ` <button data-use-levy>Raise a levy instead (about ${kCoins(content.scenario.player.levyMilli)})</button>` : ""}</span>`;
   const act = `<div class="card"><h2>Act</h2>
     <div class="form">
       <label for="o-to">To</label><select id="o-to">${known.map((k) => opt(k, name(v, k), st.draft.recipient)).join("")}</select>
       <label for="o-action">Action</label><select id="o-action">${ACTIONS.map(([k, l]) => opt(k, l, st.draft.action)).join("")}</select>
       <label for="o-obj">${aboutPeople ? "Who" : "Where"}</label><select id="o-obj">${aboutPeople ? known.map((k) => opt("@" + k, name(v, k), st.draft.objective)).join("") : places.map((x) => opt(x.id, x.name, st.draft.objective)).join("")}</select>
+      ${pAct === "repair" && isPlayer ? `<label for="o-rmode">Repair</label><select id="o-rmode">${["standard", "rush", "labour"].map((k) => opt(k, MODE_TEXT[k], st.draft.repairMode)).join("")}</select>` : ""}
       ${pAct === "advance" ? `<label for="o-mission">Mission</label><select id="o-mission">${[["defend", "Defend the fort"], ["scout", "Scout the raiders"], ["attack", "Attack the raiders"]].map(([k, l]) => opt(k, l, st.draft.mission)).join("")}</select>` : ""}
       ${isPlayer ? "" : `<label for="o-disc">Freedom</label><select id="o-disc">${[["strict", "Exactly as told"], ["bounded", "Some freedom"], ["delegated", "Full freedom"]].map(([k, l]) => opt(k, l, st.draft.discretion)).join("")}</select>`}
       ${costLine}
@@ -397,18 +399,20 @@ function coinsKnown(v: View): number | undefined {
   return b ? (b.believedValue as number) : undefined;
 }
 /** What a repair of a fort would cost, from what Anna believes about its walls. */
-function repairCostKnown(v: View, place: string): number | undefined {
-  const b = beliefsAbout(v, place, "fortification.condition").sort((x, y) => y.observedAt - x.observedAt)[0];
-  return b ? Math.max(0, content.scenario.player.repairRestoreToMilli - (b.believedValue as number)) * content.scenario.player.repairCostMilliPerMilli : undefined;
+function repairCostKnown(v: View, place: string, mode = "standard"): number | undefined {
+  const b = beliefsAbout(v, place, "fortification.condition").sort((x, y) => y.observedAt - x.observedAt)[0], p = content.scenario.player;
+  if (!b || mode === "labour") return b ? 0 : undefined; // the captain's men do it: no coin
+  return Math.floor((Math.max(0, p.repairRestoreToMilli - (b.believedValue as number)) * p.repairCostMilliPerMilli * (mode === "rush" ? p.repairRushCostPermille : 1000)) / 1000);
 }
+const MODE_TEXT: Record<string, string> = { standard: "Standard: the garrison, paid materials", rush: "Rush: pay extra, the captain's men help", labour: "Labour only: the captain's men, no cost, slower" };
 const kCoins = (n: number) => `${Math.round(n / 1000)}k`;
 /** Background income (holdings) minus upkeep, per day: a rough estimate Anna can see. */
-const netDailyMilli = content.scenario.economy.holdings.reduce((a, h) => a + h.dailyIncomeMilli, 0) - content.scenario.economy.dailyUpkeepMilli;
+const baseNetMilli = content.scenario.economy.holdings.reduce((a, h) => a + h.dailyIncomeMilli, 0) - content.scenario.economy.dailyUpkeepMilli;
 const LOW_COINS = 30000;
 /** A repair is only possible if Anna can pay for it, as far as she knows. Other actions are always possible. */
 function affordable(v: View, a: PlayerAction): boolean {
   if (a.action !== "repair") return true;
-  const c = repairCostKnown(v, a.target!), k = coinsKnown(v);
+  const c = repairCostKnown(v, a.target!, a.repairMode), k = coinsKnown(v);
   return c === undefined || k === undefined || c <= k;
 }
 
@@ -417,6 +421,9 @@ function coinStatus(v: View): string {
   const b = bs.sort((x, y) => y.observedAt - x.observedAt)[0];
   if (!b) return `<span class="stat"><span class="emo" aria-hidden="true">🪙</span> Coins: unknown</span>`;
   const n = b.believedValue as number;
+  // a captain believed to be away from his home town costs the crown a daily sum
+  const away = content.characters.filter((c) => c.troops && (() => { const l = beliefsAbout(v, c.id, "character.location")[0]; return !!l && l.believedValue !== c.location; })()).length;
+  const netDailyMilli = baseNetMilli - away * content.scenario.economy.captainAwayMilli;
   const net = `${netDailyMilli >= 0 ? "+" : "−"}${kCoins(Math.abs(netDailyMilli))} a day`;
   const low = n < LOW_COINS ? ` <span class="low">Low. <button data-use-levy>Raise a levy (about ${kCoins(content.scenario.player.levyMilli)})</button></span>` : "";
   return `<span class="stat${b.effectiveBand === "stale" ? " old" : ""}"><span class="emo" aria-hidden="true">🪙</span> Coins: ${kCoins(n)}</span>
@@ -506,7 +513,7 @@ document.addEventListener("click", (e) => {
       if (pa === "levy") return queue({ action: "levy" });
       if (pa === "travel") return queue({ action: "travel", target: st.draft.objective });
       if (pa === "advance" && st.draft.mission !== "defend") { const raid = raidNear(st.sim.viewOf("player"), st.draft.objective); return queue({ action: "advance", target: st.draft.objective, mission: st.draft.mission as "scout" | "attack", raid }); }
-      return queue({ action: pa as "repair" | "advance", target: st.draft.objective });
+      return queue({ action: pa as "repair" | "advance", target: st.draft.objective, ...(pa === "repair" && st.draft.repairMode !== "standard" ? { repairMode: st.draft.repairMode as "rush" | "labour" } : {}) });
     }
     const d = toDraft(); if (d) queue({ action: "order", order: d }); return;
   }
@@ -516,7 +523,7 @@ document.addEventListener("change", (e) => {
   const t = e.target as HTMLInputElement | HTMLSelectElement;
   if (t.id === "observer-toggle") { st.observer = (t as HTMLInputElement).checked; return render(); }
   if (t.dataset.pause) { (t as HTMLInputElement).checked ? st.autoPause.add(t.dataset.pause) : st.autoPause.delete(t.dataset.pause); return; }
-  const k = ({ "o-to": "recipient", "o-action": "action", "o-obj": "objective", "o-disc": "discretion", "o-mission": "mission" } as Record<string, keyof typeof st.draft>)[t.id];
+  const k = ({ "o-to": "recipient", "o-action": "action", "o-obj": "objective", "o-disc": "discretion", "o-mission": "mission", "o-rmode": "repairMode" } as Record<string, keyof typeof st.draft>)[t.id];
   if (t.id === "o-obj" && content.byId.location.get(t.value)?.fortification) st.selected = t.value;
   if (k) {
     st.draft[k] = t.value;

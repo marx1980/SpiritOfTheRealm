@@ -64,7 +64,8 @@
         "jitterMilli": 1000
       }
     ],
-    "dailyUpkeepMilli": 25000
+    "dailyUpkeepMilli": 25000,
+    "captainAwayMilli": 2000
   },
   "weather": {
     "decayMilliPerDay": 0,
@@ -82,6 +83,10 @@
       {
         "site": "blackwood",
         "target": "northwatch"
+      },
+      {
+        "site": "stonewood",
+        "target": "eastmarch"
       }
     ],
     "startPermillePerDay": 6,
@@ -95,7 +100,10 @@
     ],
     "raidDamageMilliAtFullIntensity": 2000,
     "retakeConditionMilli": 40000,
-    "retakeGarrisonPermille": 250
+    "retakeGarrisonPermille": 250,
+    "growthPermille": 100,
+    "growthEveryDays": 10,
+    "awayStartMultiplier": 2
   },
   "messenger": {
     "reportEveryDays": 10,
@@ -124,7 +132,11 @@
     "repairCostMilliPerMilli": 1,
     "repairRestoreToMilli": 90000,
     "repairDays": 5,
-    "levyMilli": 40000
+    "levyMilli": 40000,
+    "repairRushCostPermille": 2000,
+    "repairLabourWorkPermille": 3500,
+    "repairLabourToMilli": 70000,
+    "repairCompanyWorkPermille": 200
   },
   "scripts": [],
   "endStates": {
@@ -180,7 +192,10 @@
       "intensityFactorPermille": 400,
       "lossOnSuccessPermille": 30,
       "lossOnFailurePermille": 150,
-      "hours": 12
+      "hours": 12,
+      "raiderMenAtFull": 400,
+      "ambushPermilleAtFull": 300,
+      "ambushFactorPermille": 1800
     },
     "raidMitigationPerManPermille": 8
   },

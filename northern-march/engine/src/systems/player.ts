@@ -33,7 +33,7 @@ export function makePlayer(decide: (ctx: Ctx, cause: number | null, reason: stri
         for (const a of decide(ctx, why, reason ?? "report")) {
           const input = ctx.emit("PlayerInput", why ? [why] : [], [chr(ruler)], { player: ruler, action: a.action, target: a.target ?? null, decision: a.decision!,
             ...(a.order ? { order: a.order } : {}), ...(a.followed ? { followed: a.followed } : {}),
-            ...(a.mission ? { mission: a.mission } : {}), ...(a.raid ? { raid: a.raid } : {}) });
+            ...(a.mission ? { mission: a.mission } : {}), ...(a.raid ? { raid: a.raid } : {}), ...(a.repairMode ? { repairMode: a.repairMode } : {}) });
           if (a.action === "travel") { travel(ctx, ruler, a.target!, "rider", false, input.id); continue; }
           if (a.action === "order") {
             const d = a.order!;
@@ -48,7 +48,8 @@ export function makePlayer(decide: (ctx: Ctx, cause: number | null, reason: stri
             issue(ctx, ruler, to, a.mission === "scout" ? "investigate" : "attack", loc(a.raid), input.id);
             continue;
           }
-          issue(ctx, ruler, to, a.action, a.action === "levy" ? chr(ruler) : loc(a.target!), input.id);
+          issue(ctx, ruler, to, a.action, a.action === "levy" ? chr(ruler) : loc(a.target!), input.id, false,
+            a.action === "repair" && a.repairMode && a.repairMode !== "standard" ? { constraints: [{ kind: "repairMode", textKey: a.repairMode }] } : {});
         }
       },
     },

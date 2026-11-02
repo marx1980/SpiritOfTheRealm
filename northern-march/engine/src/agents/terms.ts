@@ -1,6 +1,7 @@
 // What an agent expects an action to do, as the agent perceives it (ARCHITECTURE §20.6). Integer milli units.
 import type { ActionRef, Perceiver, Situation } from "./model.ts";
 import { DAY } from "./model.ts";
+import { battleLoss, raiderMen } from "../battle.ts";
 
 export interface FortPicture { id: string; cond: number | null; intensity: number; defence: number; sites: string[] }
 
@@ -25,6 +26,16 @@ export function sortieP(sit: Situation, men: number, skill: number, intensity: n
   const I = Math.floor((intensity * sit.p.battle.sortie.intensityFactorPermille) / 1000);
   return Math.floor((1000 * S) / Math.max(1, S + I));
 }
+
+/** An adviser's own estimate of the odds: off by an amount that shrinks with their military skill (up to +-30 points for the unskilled). */
+export function judged(sit: Situation, key: string, p: number, skill: number): number {
+  if (!sit.noise) return p;
+  const err = Math.floor((sit.noise(key) * 300 * Math.max(0, 1000 - skill)) / (1000 * 1000));
+  return Math.max(50, Math.min(950, p + err));
+}
+/** Crown money a captain's company costs while away from home, for a number of days. */
+const awayCost = (sit: Situation, days: number) => Math.floor(sit.p.captainAwayMilli * Math.max(0, days));
+const daysOf = (ticks: number) => Math.ceil(ticks / DAY);
 
 export interface Expectation {
   loss: Record<string, number>;     // expected damage per fort over the horizon
@@ -127,14 +138,17 @@ export function expect(sit: Situation, per: Perceiver, a: ActionRef): Expectatio
         // marching on a fort the raiders hold is an assault: win and the walls are ours again, lose and the captain's men pay for it
         const delay = sit.travel(sit.rulerSeat, c.seat, "rider") + sit.travel(c.seat, T!, "army");
         const skill = c.id === sit.agent ? (sit.cap.military ?? 0) : 600;
-        e.successP = sortieP(sit, c.troops, skill, pics[T!].intensity);
-        const s = e.successP, sp = sit.p.battle.sortie;
+        const foe = raiderMen(sit.p.battle, pics[T!].intensity);
+        e.successP = judged(sit, `odds:${T}`, sortieP(sit, c.troops, skill, pics[T!].intensity), sit.cap.military ?? 0);
+        const s = e.successP;
         restore[T!] = repairGain(T!, sit.p.retakeMilli, delay, s);
-        e.menLost = Math.floor((c.troops * (s * sp.lossOnSuccessPermille + (1000 - s) * sp.lossOnFailurePermille)) / 1_000_000);
+        e.menLost = Math.floor((s * battleLoss(sit.p.battle, c.troops, foe, true) + (1000 - s) * battleLoss(sit.p.battle, c.troops, foe, false)) / 1000);
+        e.costMilli = awayCost(sit, daysOf(delay) + 10);
         if (c.id === sit.agent) { e.leavesPost = true; e.renownPermille = s; }
       } else if (c) {
         const delay = sit.travel(sit.rulerSeat, c.seat, "rider") + sit.travel(c.seat, T!, "army");
         reinforce(T!, c.troops, delay, 800);
+        e.costMilli = awayCost(sit, daysOf(delay) + 10);
         if (c.id === sit.agent) { e.leavesPost = true; e.renownPermille = 300; }
       }
       break;
@@ -147,14 +161,25 @@ export function expect(sit: Situation, per: Perceiver, a: ActionRef): Expectatio
       if (c) {
         const men = p.defence + c.troops;
         const skill = c.id === sit.agent ? (sit.cap.military ?? 0) : 600;
-        e.successP = sortieP(sit, men, skill, intensity);
-        const s = e.successP, sp = sit.p.battle.sortie;
+        e.successP = judged(sit, `odds:${T}`, sortieP(sit, men, skill, intensity), sit.cap.military ?? 0);
+        const s = e.successP, foe = raiderMen(sit.p.battle, intensity);
         const delay = sit.travel(sit.rulerSeat, c.seat, "rider") + sit.travel(c.seat, fort, "army");
+        e.costMilli = awayCost(sit, daysOf(delay) + 5);
         loss[fort] = lossOver(sit, p.intensity, p.defence, Math.min(H, delay)) +
           Math.floor((s * lossOver(sit, intensity, men, DAY) + (1000 - s) * lossOver(sit, p.intensity, Math.floor((men * 700) / 1000), H - delay - DAY)) / 1000);
-        e.menLost = Math.floor((men * (s * sp.lossOnSuccessPermille + (1000 - s) * sp.lossOnFailurePermille)) / 1_000_000);
+        e.menLost = Math.floor((s * battleLoss(sit.p.battle, men, foe, true) + (1000 - s) * battleLoss(sit.p.battle, men, foe, false)) / 1000);
         if (c.id === sit.agent) { e.leavesPost = true; e.renownPermille = s; }
       }
+      break;
+    }
+    case "advise_repair_rush": case "advise_repair_labour": { // the captain's men help: quicker and dearer (rush), or free but slow (labour)
+      const c = sit.captains[0], f = sit.forts.find((x) => x.id === T)!;
+      const rush = a.kind === "advise_repair_rush";
+      const crew = c ? Math.floor((c.troops * sit.p.companyWorkPermille) / 1000) : 0;
+      const days = rush ? (sit.p.repairDays * f.garrison) / Math.max(1, f.garrison + crew) : (sit.p.repairDays * sit.p.labourWorkPermille * f.garrison) / (1000 * Math.max(1, f.garrison + crew));
+      const to = rush ? sit.p.restoreToMilli : Math.min(sit.p.labourToMilli, sit.p.restoreToMilli);
+      restore[T!] = repairGain(T!, to, sit.travel(sit.rulerSeat, T!, "rider") + Math.ceil(days * DAY), 900);
+      e.costMilli = (rush ? Math.floor((repairCost(T!, to) * sit.p.rushCostPermille) / 1000) : 0) + awayCost(sit, Math.ceil(days));
       break;
     }
     case "advise_recall": { // he goes home: the company refills, the fort he leaves has fewer defenders
@@ -172,7 +197,9 @@ export function expect(sit: Situation, per: Perceiver, a: ActionRef): Expectatio
       const c = sit.captains[0], have = (c && (per.get(c.id, "character.troops")?.value as number)) || 0;
       if (c && pics[T!]) {
         reinforce(T!, have, 0, 1000);
-        restore[T!] = repairGain(T!, sit.p.partialRestoreToMilli, sit.p.repairDays * DAY, 600);
+        // his men can help rebuild (labour), but it takes an order and time
+        restore[T!] = repairGain(T!, Math.min(sit.p.labourToMilli, sit.p.restoreToMilli), Math.ceil((sit.p.repairDays * sit.p.labourWorkPermille) / 1000) * DAY, 600);
+        e.costMilli = awayCost(sit, 14);
       }
       break;
     }

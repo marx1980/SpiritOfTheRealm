@@ -14,6 +14,7 @@ import { actionKey } from "../agents/model.ts";
 import { chooseFocus, plan, type PlanResult } from "../agents/planner.ts";
 import type { Ctx, System } from "./types.ts";
 import { DAY, HOUR, chr, loc, sorted } from "./types.ts";
+import { battleLoss, raiderMen } from "../battle.ts";
 import { best, learn, observe, seedKnowledge } from "./knowledge.ts";
 import { travel } from "./movement.ts";
 
@@ -95,7 +96,8 @@ export function buildSituation(s: Readonly<WorldState>, c: Content, agent: strin
   for (const d of Object.keys(ch.capabilities)) caps[d] = capability(s, c, agent, d);
   const seatOf = (id: string) => (beliefsAbout(view, id, "character.seat")[0]?.believedValue as string | undefined) ?? c.byId.character.get(id)!.location;
   return {
-    adviceKinds: ch.adviceKinds,
+    adviceKinds: ch.adviceKinds, repairScope: ch.repairScope,
+    noise: (key) => { let h = 2166136261; for (const x of `${agent}|${Math.floor(now / DAY)}|${key}`) { h ^= x.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return (h % 2001) - 1000; },
     now, agent, role: ch.role, house: ch.house, tier: s.tiers[agent], leaderCandidates: leaderCandidates(s, c, agent),
     post: ch.location, at, superior: ch.reportsTo, ruler: ruler.id, rulerSeat: seatOf(ruler.id),
     traits: ch.traits.map((t) => c.byId.trait.get(t)!), cap: caps, objectives: ch.objectives, focus: st?.focus ?? null,
@@ -119,7 +121,9 @@ export function buildSituation(s: Readonly<WorldState>, c: Content, agent: strin
     p: { agents: c.scenario.agents, battle: c.scenario.battle, raidBaseMilli: c.scenario.threat.raidDamageMilliAtFullIntensity,
       restoreToMilli: c.scenario.player.repairRestoreToMilli, repairCostPerMilli: c.scenario.player.repairCostMilliPerMilli,
       repairDays: c.scenario.player.repairDays, levyMilli: c.scenario.player.levyMilli, breachMilli: c.scenario.endStates.fortificationBreachedBelowMilli,
-      partialRestoreToMilli: c.scenario.agents.values.goodConditionMilli, decayMilliPerDay: c.scenario.weather.decayMilliPerDay, retakeMilli: c.scenario.threat.retakeConditionMilli },
+      partialRestoreToMilli: c.scenario.agents.values.goodConditionMilli, decayMilliPerDay: c.scenario.weather.decayMilliPerDay, retakeMilli: c.scenario.threat.retakeConditionMilli, captainAwayMilli: c.scenario.economy.captainAwayMilli,
+      rushCostPermille: c.scenario.player.repairRushCostPermille, labourWorkPermille: c.scenario.player.repairLabourWorkPermille, labourToMilli: c.scenario.player.repairLabourToMilli,
+      companyWorkPermille: c.scenario.player.repairCompanyWorkPermille },
   };
 }
 
@@ -264,10 +268,17 @@ function adviseNow(ctx: Ctx, agent: string, cause: number) {
   const sit = buildSituation(ctx.s, c, agent, ctx.tick, "advise", view);
   const res = plan(sit, per);
   if (!res) return;
+  // An adviser who would send the captain home does not also rely on his men for the works.
+  const sendsHome = res.candidates.filter((x) => x.action.kind === "advise_recall" || x.action.kind === "advise_stay").sort((x, y) => y.score - x.score)[0]?.action.kind === "advise_recall";
+  const usesMen = (k: string) => k === "advise_repair_rush" || k === "advise_repair_labour";
+  if (sendsHome) {
+    res.candidates = res.candidates.filter((x) => !usesMen(x.action.kind));
+    if (usesMen(res.selected.kind)) { res.selected = res.candidates[0].action; res.score = res.candidates[0].score; }
+  }
   const fortOf = (a: { target?: string }) => !a.target ? undefined : sit.forts.find((f) => f.id === a.target || f.sites.includes(a.target!))?.id;
   // The adviser's word on the whole situation, then a word on each key issue it does not touch: raiders at a fort (defence)
   // and walls in bad shape (works). The best of the adviser's own options on that issue, whatever it is.
-  const cat = (a: { kind: string }) => (a.kind === "advise_repair" ? "works" : a.kind === "advise_wait" || a.kind === "advise_levy" ? "other" : "defence");
+  const cat = (a: { kind: string }) => (a.kind.startsWith("advise_repair") ? "works" : a.kind === "advise_wait" || a.kind === "advise_levy" ? "other" : "defence");
   const groupOf = (a: { kind: string; target?: string }) => a.kind === "advise_recall" || a.kind === "advise_stay" ? "query" : `${fortOf(a) ?? ""}:${cat(a)}`;
   const mainGroup = groupOf(res.selected);
   const extras: typeof res.candidates = [];
@@ -464,14 +475,16 @@ export const agents: System = {
       const threat = ctx.s.threats[site];
       const men = defenceAt(ctx.s, from) ?? 0;
       const skill = capability(ctx.s, ctx.content, commander, "military");
-      const S = Math.floor((men * (sp.skillBasePermille + skill)) / 1000), I = threat ? Math.floor((threat.intensityPermille * sp.intensityFactorPermille) / 1000) : 0;
-      const p = threat ? Math.floor((1000 * S) / Math.max(1, S + I)) : 1000;
       const r = ctx.keyed(`battle:sortie:${launchedEventId}`);
+      // going after raiders in their own ground can meet a second band: the fight is then against a larger force
+      const ambushed = !!threat && r.int(0, 999) < Math.floor((threat.intensityPermille * sp.ambushPermilleAtFull) / 1000);
+      const enemy = threat ? Math.floor((raiderMen(ctx.content.scenario.battle, threat.intensityPermille) * (ambushed ? sp.ambushFactorPermille : 1000)) / 1000) : 0;
+      const S = Math.floor((men * (sp.skillBasePermille + skill)) / 1000), I = threat ? Math.floor((Math.floor((threat.intensityPermille * sp.intensityFactorPermille) / 1000) * (ambushed ? sp.ambushFactorPermille : 1000)) / 1000) : 0;
+      const p = threat ? Math.floor((1000 * S) / Math.max(1, S + I)) : 1000;
       const success = threat ? r.int(0, 999) < p : false;
-      const res = ctx.emit("SortieResolved", [launchedEventId], [chr(commander), loc(site)], { commander, site, from, found: !!threat, success, pPermille: p, men });
+      const res = ctx.emit("SortieResolved", [launchedEventId], [chr(commander), loc(site)], { commander, site, from, found: !!threat, success, pPermille: p, men, ambushed, enemy });
       if (threat) {
-        const rate = success ? sp.lossOnSuccessPermille : sp.lossOnFailurePermille;
-        const lost = Math.floor((men * rate) / 1000);
+        const lost = battleLoss(ctx.content.scenario.battle, men, enemy, success);
         const troopsLost: Record<string, number> = {};
         let left = lost;
         for (const who of present(ctx.s, from)) {
