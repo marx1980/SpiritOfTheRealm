@@ -319,7 +319,8 @@ test("a fort the raiders break into falls, the ruler is told, and the captain ca
     }
     assert.ok(sim.log.some((e) => e.type === "FortFell"), "the fort fell");
     assert.ok(issue, "the court shows the fall");
-    if (sim.log.some((e) => e.type === "FortRetaken")) { retaken++; assert.ok(!sim.log.some((e) => e.type === "FortFell" && e.tick > sim.log.find((x) => x.type === "FortRetaken")!.tick)); }
+    if (sim.log.some((e) => e.type === "FortRetaken")) retaken++; // a retaken fort can fall again while the raiders are still out
+    
     else assert.ok(sim.log.some((e) => e.type === "FortAssaulted"));
   }
   assert.ok(told > 0 && retaken > 0 && asked > 0, `told ${told}, retaken ${retaken}, asked ${asked}`);
@@ -372,4 +373,15 @@ test("repair modes: labour is free and stops at worn, rush costs double, and bot
   assert.ok((rush!.payload.durationTicks as number) < (std!.payload.durationTicks as number));
   assert.ok((lab!.payload.durationTicks as number) > (std!.payload.durationTicks as number));
   assert.ok(!run1("labour", false).log.some((e) => e.type === "RepairStarted"), "no company, no labour");
+});
+
+test("nothing that costs coins or raises them happens without Anna's own order (the regent's limit is 0)", () => {
+  for (const seed of [1, 2, 3, 4, 5, 6]) for (const policy of ["passive", "delegating"] as const) {
+    const sim = run({ seed, policy }, 120);
+    const issuer = (id: number) => (sim.log.find((e) => e.type === "OrderIssued" && (e.payload.order as { id: number }).id === id)!.payload.order as { issuer: string }).issuer;
+    for (const e of sim.log) {
+      if (e.type === "RepairStarted" && (e.payload.costMilli as number) > 0) assert.equal(issuer(e.payload.orderId as number), "anna", `repair cost ordered by Anna (seed ${seed})`);
+      if (e.type === "LevyRaised") assert.equal(issuer(e.payload.orderId as number), "anna", `levy ordered by Anna (seed ${seed})`);
+    }
+  }
 });

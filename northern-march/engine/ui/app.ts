@@ -40,7 +40,7 @@ const REASON_LABEL: Record<string, string> = { report: "Letters", advice: "Advic
 
 type Sim = ReturnType<typeof createSim>;
 const st = {
-  sim: null as unknown as Sim, log: [] as PlayerAction[][], shownPause: null as string | null, seed: __H01__.seed, paused: null as null | string, over: false, letter: null as number | null, advice: null as number | null, tab: "game" as "game" | "settings",
+  sim: null as unknown as Sim, log: [] as PlayerAction[][], shownPause: null as string | null, advSeen: {} as Record<string, number>, windfall: null as null | { day: number; milli: number }, advDay: -1, seed: __H01__.seed, paused: null as null | string, over: false, letter: null as number | null, advice: null as number | null, tab: "game" as "game" | "settings",
   batch: [] as number[], queue: [] as PlayerAction[], autoPause: new Set<string>(REASONS), selected: "northwatch",
   draft: { recipient: "", action: "p:repair", objective: "northwatch", discretion: "bounded", mission: "defend", repairMode: "standard" } as { recipient: string; action: string; objective: string; discretion: string; mission: string; repairMode: string },
   error: "", observer: location.hash === "#observer", answered: 0, openLetter: null as number | null, openIssue: null as string | null,
@@ -59,6 +59,7 @@ function clearLog(seed: number) { try { localStorage.removeItem(LOG_KEY(seed)); 
 
 /** Give the engine one answer and remember it. */
 function answer(actions: PlayerAction[]) {
+  if (actions.some((a) => a.action === "levy")) st.windfall = { day: Math.floor(st.sim.viewOf("player").now / DAY), milli: content.scenario.player.levyMilli };
   st.sim.answer(actions);
   st.log.push(actions); saveLog();
 }
@@ -66,9 +67,14 @@ function answer(actions: PlayerAction[]) {
 /** What a decision point means to the page: pass it silently, gather its letter into the day's batch, or stop and show it. */
 function triage(r: ReturnType<Sim["next"]>, batch: number[], batchDay: number): "pass" | "gather" | "show" {
   if (r.reason === "advice" && r.view) {
-    const a = r.view.advice.find((x) => x.id === r.adviceId);
-    if (a && (JSON.parse(a.plan.id) as { kind: string }).kind === "advise_wait") return "pass"; // advice to wait asks for no decision
-    if (r.adviceId !== undefined && adviceSettled(r.view, r.adviceId)) return "pass"; // advice already carried out is not put again
+    // Advice stops the day only once: when there is an open choice not put to the player in the last ten days, and nothing else was put today.
+    const day = Math.floor(r.view.now / DAY);
+    const open = latestAdviceOf(r.view).filter((x) => !adviceSettled(r.view!, x.id) && (JSON.parse(x.plan.id) as { kind: string }).kind !== "advise_wait");
+    const fresh = open.filter((x) => !(x.plan.id in st.advSeen) || day - st.advSeen[x.plan.id] >= 10);
+    if (!st.autoPause.has("advice") || !fresh.length || st.advDay === day) return "pass";
+    for (const x of open) st.advSeen[x.plan.id] = day;
+    st.advDay = day;
+    return "show";
   }
   if (r.reason === "report" && r.letterId !== undefined && st.autoPause.has("report")) {
     const day = Math.floor(st.sim.viewOf("player").now / DAY);
@@ -79,7 +85,7 @@ function triage(r: ReturnType<Sim["next"]>, batch: number[], batchDay: number): 
 function start(seed: number, restore = true) {
   st.sim = createSim({ content, seed, policy: "external", params: { dayEnd: true } });
   st.seed = seed; st.queue = []; st.error = ""; st.over = false; st.log = [];
-  st.batch = []; st.openIssue = null; st.letter = null; st.advice = null; st.openLetter = null; st.paused = null; st.shownPause = null; st.tab = "game"; st.answered = 0;
+  st.batch = []; st.openIssue = null; st.letter = null; st.advice = null; st.openLetter = null; st.paused = null; st.shownPause = null; st.advSeen = {}; st.advDay = -1; st.windfall = null; st.tab = "game"; st.answered = 0;
   // the silent prelude, up to the first day of play
   for (let guard = 0; guard < 5000; guard++) { const r = st.sim.next(PRE); if (!r.paused) break; st.sim.answer([]); }
   if (!restore) clearLog(seed);
@@ -91,6 +97,7 @@ function start(seed: number, restore = true) {
       if (!r.paused) break;
       const t = triage(r, tail, tailDay);
       if (t === "gather") { tail.push(r.letterId!); tailDay = Math.floor(st.sim.viewOf("player").now / DAY); } else if (t === "show") { tail = []; tailDay = -1; }
+      if (acts.some((a) => a.action === "levy")) st.windfall = { day: Math.floor(st.sim.viewOf("player").now / DAY), milli: content.scenario.player.levyMilli };
       st.sim.answer(acts); st.log.push(acts);
     }
   } catch {
@@ -426,8 +433,9 @@ function coinStatus(v: View): string {
   const netDailyMilli = baseNetMilli - away * content.scenario.economy.captainAwayMilli;
   const net = `${netDailyMilli >= 0 ? "+" : "−"}${kCoins(Math.abs(netDailyMilli))} a day`;
   const low = n < LOW_COINS ? ` <span class="low">Low. <button data-use-levy>Raise a levy (about ${kCoins(content.scenario.player.levyMilli)})</button></span>` : "";
+  const wf = st.windfall && Math.floor(v.now / DAY) - st.windfall.day <= 3 ? ` <span class="stat-net ok">+${kCoins(st.windfall.milli)} raised, day ${st.windfall.day - Math.floor(PRE / DAY) + 1}</span>` : "";
   return `<span class="stat${b.effectiveBand === "stale" ? " old" : ""}"><span class="emo" aria-hidden="true">🪙</span> Coins: ${kCoins(n)}</span>
-    <span class="stat-net ${netDailyMilli >= 0 ? "ok" : "bad"}">${net}</span> <em class="stat-age">(${ageTone(dayAgo(v, b.observedAt))})</em>${low}`;
+    <span class="stat-net ${netDailyMilli >= 0 ? "ok" : "bad"}">${net}</span> <em class="stat-age">(${ageTone(dayAgo(v, b.observedAt))})</em>${wf}${low}`;
 }
 
 /** Settings tab: what pauses the game, and the observer panel for H-01 observers. */

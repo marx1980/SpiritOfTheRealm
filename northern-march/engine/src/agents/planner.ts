@@ -28,7 +28,6 @@ export function generate(sit: Situation, per: Perceiver): ActionRef[] {
     const lost = lostForts(sit, per);
     // A fort the raiders hold: the way to win it back is to send the captain; money for the men and the works is the other thing a ruler can do.
     if (sit.captains.length) for (const f of lost) { add(act("advise_retake", f)); add(act("advise_send_captain", f)); }
-    if (lost.length) add(act("advise_levy"));
     // A captain who has asked whether to go home and refill his company or stay where he is: the two answers.
     for (const c of sit.captains) {
       const q = per.get(c.id, "captain.query"), here = q ? String(q.value) : "";
@@ -37,7 +36,8 @@ export function generate(sit: Situation, per: Perceiver): ActionRef[] {
     // Money first when it cannot cover the repairs the adviser believes are needed (a repair without funds is abandoned).
     const tre = per.get(sit.ruler, "treasury.balance"), w = worn(sit, per);
     const need = w.reduce((n, f) => n + Math.max(0, sit.p.restoreToMilli - (picture(sit, per, f).cond ?? 0)) * sit.p.repairCostPerMilli, 0);
-    if (tre && ((tre.value as number) < sit.p.levyMilli || (tre.value as number) < need)) add(act("advise_levy"));
+    const retakeNeed = lost.length ? sit.p.retakeMilli : 0;
+    if (tre && ((tre.value as number) < sit.p.levyMilli || (tre.value as number) < need + retakeNeed + sit.p.levyMilli)) add(act("advise_levy"));
     // Which damaged walls this adviser presses for: all of them (works), those that could be in danger (war), or only the near-breached (purse).
     const scope = sit.repairScope ?? "all", threat = threatened(sit, per);
     const wanted = (f: string) => scope === "all" || (scope === "endangered"

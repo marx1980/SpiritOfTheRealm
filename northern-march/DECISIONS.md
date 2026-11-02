@@ -453,3 +453,9 @@ Marko agreed all of this on 2 Nov. Engine changed, so every gate was restarted (
 - **Advisers.** Elara presses repair only for forts that are or could be in danger; Selene for any damaged wall; Oren only near breach. Advisers weigh every option open to them (no candidate cap) and judge battle odds with an error that shrinks with military skill (up to 30 points; Elara 800, Selene and Oren 200). Waiting is penalised while a fort is lost and a captain exists. Oren sends Caron home to refill (a captain away costs money); Selene and Elara keep him there to rebuild and defend.
 - Advice is now kept per adviser and plan (it was per adviser and target, so a second piece of advice on the same fort replaced the first).
 - Caron's letter after a lost assault says he is going home to refill; once full, with the fort still in trouble, he asks whether to return to attack or defend.
+
+## D-019 (2 Nov): advice prompts, levy advice, windfall and spend approval
+- Levy advice is offered only when the adviser believes the treasury cannot cover the repairs, a retake and a levy; a full treasury gets none.
+- The page stops the day for advice at most once, only for an open choice not shown in the last 10 days; waiting and carried-out advice pass silently.
+- A levy shows as a windfall line in the coin bar for three days. Every coin-costing or coin-raising event traces to Anna's own order (test); the regent's limit stays 0. A real unrest cost for levies arrives with Phase 6.
+- Engine change (planner): G-01 v18, tune v11, sealed block 97000, regression v11.
