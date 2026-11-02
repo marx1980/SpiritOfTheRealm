@@ -295,3 +295,31 @@ test("by default the regent spends nothing: every repair is the ruler's to appro
   const sim = run({ seed: 2, content: variant((r) => { r.scenario.scripts = [{ day: 1, kind: "travel", who: "anna", to: "greybridge", mode: "rider" }, { day: 3, kind: "threat", site: "blackwood", intensityPermille: 700, durationDays: 60 }]; }), policy: "passive" }, 40);
   assert.equal(sim.log.filter((e) => e.type === "OrderIssued" && (e.payload.order as { issuer: string }).issuer === "elara").length, 0);
 });
+
+test("a fort the raiders break into falls, the ruler is told, and the captain can retake it", () => {
+  const content = variant((r) => {
+    r.scenario.scripts = [{ day: 3, kind: "threat", site: "blackwood", intensityPermille: 1000, durationDays: 90 }];
+    r.scenario.messenger.lossPermillePerDay = 0; r.scenario.interception = [];
+    r.locations.find((l) => l.id === "northwatch")!.fortification!.conditionMilli = 38000;
+  });
+  let retaken = 0, told = 0, asked = 0;
+  for (const seed of [4, 6, 7, 8]) {
+    const sim = createSim({ content, seed, policy: "external", params: { dayEnd: true } });
+    let ordered = false, issue = false;
+    for (let i = 0; i < 3000 && sim.tick < 40 * DAY; i++) {
+      const p = sim.next(40 * DAY); if (!p.paused) break;
+      const v = p.view!;
+      if (beliefsAbout(v, "northwatch", "fortification.holder").some((b) => b.believedValue === "raiders")) {
+        told++; issue ||= buildCourt(v).issues.some((x) => x.key === "fallen:northwatch");
+        if (!ordered) { sim.answer([{ action: "advance", target: "northwatch" }]); ordered = true; continue; }
+      }
+      if (v.advice.some((a) => JSON.parse(a.plan.id).kind === "advise_stay")) asked++;
+      sim.answer([]);
+    }
+    assert.ok(sim.log.some((e) => e.type === "FortFell"), "the fort fell");
+    assert.ok(issue, "the court shows the fall");
+    if (sim.log.some((e) => e.type === "FortRetaken")) { retaken++; assert.ok(!sim.log.some((e) => e.type === "FortFell" && e.tick > sim.log.find((x) => x.type === "FortRetaken")!.tick)); }
+    else assert.ok(sim.log.some((e) => e.type === "FortAssaulted"));
+  }
+  assert.ok(told > 0 && retaken > 0 && asked > 0, `told ${told}, retaken ${retaken}, asked ${asked}`);
+});

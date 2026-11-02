@@ -50,7 +50,7 @@ export interface Situation {
   mode: Mode;
   order?: StructuredOrder;               // in "obey" mode
   p: { agents: AgentParams; battle: BattleParams; raidBaseMilli: number; restoreToMilli: number; repairCostPerMilli: number;
-       repairDays: number; levyMilli: number; breachMilli: number; partialRestoreToMilli: number; decayMilliPerDay: number };
+       repairDays: number; levyMilli: number; breachMilli: number; partialRestoreToMilli: number; decayMilliPerDay: number; retakeMilli: number };
 }
 
 export interface Candidate { action: ActionRef; score: number; contributions: Reason[]; serves?: boolean; obey?: boolean }

@@ -1,0 +1,17 @@
+file:///home/claude/spiritoftherealm/northern-march/engine/src/scheduler.ts:26
+    if (tick < this.now) throw new Error(`cannot schedule in the past (${tick} < ${this.now})`);
+                               ^
+
+Error: cannot schedule in the past (2159998 < 2159999)
+    at Scheduler.push (file:///home/claude/spiritoftherealm/northern-march/engine/src/scheduler.ts:26:32)
+    at Object.at (file:///home/claude/spiritoftherealm/northern-march/engine/src/engine.ts:290:108)
+    at advise (file:///home/claude/spiritoftherealm/northern-march/engine/src/systems/agents.ts:258:7)
+    at think (file:///home/claude/spiritoftherealm/northern-march/engine/src/systems/agents.ts:246:118)
+    at agents:wake (file:///home/claude/spiritoftherealm/northern-march/engine/src/systems/agents.ts:430:7)
+    at Sim.runItem (file:///home/claude/spiritoftherealm/northern-march/engine/src/engine.ts:121:5)
+    at Sim.runUntil (file:///home/claude/spiritoftherealm/northern-march/engine/src/engine.ts:112:12)
+    at Sim.runDays (file:///home/claude/spiritoftherealm/northern-march/engine/src/engine.ts:174:10)
+    at arm (file:///home/claude/spiritoftherealm/northern-march/engine/tools/phase5_g12.ts:21:9)
+    at file:///home/claude/spiritoftherealm/northern-march/engine/tools/phase5_g12.ts:35:42
+
+Node.js v22.23.4

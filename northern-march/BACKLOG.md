@@ -3,7 +3,7 @@
 Things agreed but not built, with the decision that set them. Newest first.
 
 ## From the Phase 5 playtest rounds (Nov 2026)
-- **A fort falling** (Marko, 2 Nov): today "fallen" only means walls below the breach line at the end; there is no fall event, no letter, no advice to retake. Needs a fall event, news reaching the ruler, and retake advice.
+- **Troop levy and levy advice** (Marko, 2 Nov): advisers never suggest levying men or taxes beyond the coin levy when money is short. A real troop levy (cost 1.5 times a garrison man) is not built; advisers suggest the coin levy only when the treasury is low or a fort has fallen.
 - **More incidents:** magic and other rarer disasters (fires and earthquakes exist since 2 Nov).
 - **Sealed block 91000** was run on a superseded engine and its result discarded; do not reuse it for a gate.
 - **Wall expansions** (Marko, 1 Nov): extra works beyond keeping walls sound. Not designed.

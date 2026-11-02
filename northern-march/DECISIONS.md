@@ -426,3 +426,17 @@ Same pattern for the other cross-system gates (Phase 14 crisis diversity).
 ## D-006 Prototype code is throwaway
 
 `phase0/proto.py` uses floats and daily steps, deliberately violating the plan's engine rules (A2). Do not build on it. Keep: the findings above, the funnel diagnostic idea (`diag.py`), and the threat-on/off lift measurement.
+
+
+---
+
+## D-017 Forts can fall and be retaken; captains ask what to do after a battle (2 Nov 2026)
+
+Marko, after seeing "fallen" at day 150 with no earlier word: a fort must fall as an event the ruler hears about.
+- **Fall.** A raid that leaves a fort below the breach line (30,000) and does not end the campaign (Anna not inside) emits `FortFell`: the garrison scatters to 0, the raiders stay until driven out, the fort is not repaired or refilled while held. The castellan writes at once (claim `fortification.holder` = raiders), then he and those with him fall back to the nearest fort still held.
+- **Retake.** A captain with men who marches into a fallen fort assaults it (same odds formula as a sortie). Win: `FortRetaken` (walls 40,000, garrison 25% of establishment), raiders end, the captain reports it. Lose: his men pay the sortie loss rate and he falls back.
+- **Advisers.** New advice `advise_retake` (Selene uses `advise_send_captain`, which on a fallen fort means the same march); a fort believed fallen also prompts `advise_levy`. No repair advice for a fallen fort.
+- **Captain's question.** After a fight away from home with his company below strength, the captain asks whether to return home and refill or stay and help rebuild and defend (`captain.query`). Advisers answer with `advise_recall` or `advise_stay`; every adviser speaks on it.
+- **UI.** A fall letter and the fallen issue get a red border. Recall is an order; stay is a greyed option like waiting.
+- Bug fixed: advice scheduled in the last tick of a day tried to schedule in the past (crashed G-12 tune v6).
+- Engine changed again, so every running gate was restarted: G-01 v14 (Node and Bun), tune v7, G-12 sealed block 93000, regression v7.

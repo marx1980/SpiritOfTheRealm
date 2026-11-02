@@ -121,9 +121,18 @@ export function expect(sit: Situation, per: Perceiver, a: ActionRef): Expectatio
       e.costMilli = repairCost(T!, sit.p.restoreToMilli);
       break;
     }
-    case "advise_send_captain": {
+    case "advise_retake": case "advise_send_captain": {
       const c = sit.captains[0];
-      if (c) {
+      if (c && per.get(T!, "fortification.holder")?.value === "raiders") {
+        // marching on a fort the raiders hold is an assault: win and the walls are ours again, lose and the captain's men pay for it
+        const delay = sit.travel(sit.rulerSeat, c.seat, "rider") + sit.travel(c.seat, T!, "army");
+        const skill = c.id === sit.agent ? (sit.cap.military ?? 0) : 600;
+        e.successP = sortieP(sit, c.troops, skill, pics[T!].intensity);
+        const s = e.successP, sp = sit.p.battle.sortie;
+        restore[T!] = repairGain(T!, sit.p.retakeMilli, delay, s);
+        e.menLost = Math.floor((c.troops * (s * sp.lossOnSuccessPermille + (1000 - s) * sp.lossOnFailurePermille)) / 1_000_000);
+        if (c.id === sit.agent) { e.leavesPost = true; e.renownPermille = s; }
+      } else if (c) {
         const delay = sit.travel(sit.rulerSeat, c.seat, "rider") + sit.travel(c.seat, T!, "army");
         reinforce(T!, c.troops, delay, 800);
         if (c.id === sit.agent) { e.leavesPost = true; e.renownPermille = 300; }
@@ -145,6 +154,25 @@ export function expect(sit: Situation, per: Perceiver, a: ActionRef): Expectatio
           Math.floor((s * lossOver(sit, intensity, men, DAY) + (1000 - s) * lossOver(sit, p.intensity, Math.floor((men * 700) / 1000), H - delay - DAY)) / 1000);
         e.menLost = Math.floor((men * (s * sp.lossOnSuccessPermille + (1000 - s) * sp.lossOnFailurePermille)) / 1_000_000);
         if (c.id === sit.agent) { e.leavesPost = true; e.renownPermille = s; }
+      }
+      break;
+    }
+    case "advise_recall": { // he goes home: the company refills, the fort he leaves has fewer defenders
+      const c = sit.captains[0], q = c ? per.get(c.id, "captain.query") : null, here = q ? String(q.value) : "";
+      const have = (c && (per.get(c.id, "character.troops")?.value as number)) || 0;
+      if (c && pics[here]) {
+        const p = pics[here];
+        loss[here] = lossOver(sit, p.intensity, Math.max(0, p.defence - have), H) + weather(sit.forts.find((x) => x.id === here)!);
+        e.menLost = -Math.max(0, c.troops - have);
+        e.helps = c.id;
+      }
+      break;
+    }
+    case "advise_stay": { // he stays: his men defend and help rebuild, and the company stays below strength
+      const c = sit.captains[0], have = (c && (per.get(c.id, "character.troops")?.value as number)) || 0;
+      if (c && pics[T!]) {
+        reinforce(T!, have, 0, 1000);
+        restore[T!] = repairGain(T!, sit.p.partialRestoreToMilli, sit.p.repairDays * DAY, 600);
       }
       break;
     }

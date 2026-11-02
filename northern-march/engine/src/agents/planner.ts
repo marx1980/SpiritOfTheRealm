@@ -15,6 +15,8 @@ export function candidateCap(sit: Situation, domain = "military") {
 
 const threatened = (sit: Situation, per: Perceiver) => sit.forts.filter((f) => picture(sit, per, f.id).intensity > 0).map((f) => f.id);
 const worn = (sit: Situation, per: Perceiver) => sit.forts.filter((f) => { const c = picture(sit, per, f.id).cond; return c !== null && c < sit.p.agents.values.goodConditionMilli; }).map((f) => f.id);
+/** Forts the agent believes the raiders hold. */
+export const lostForts = (sit: Situation, per: Perceiver) => sit.forts.filter((f) => per.get(f.id, "fortification.holder")?.value === "raiders").map((f) => f.id);
 const requested = (sit: Situation, per: Perceiver) => sit.forts.filter((f) => per.get(f.id, "request.reinforce")).map((f) => f.id);
 
 /** Candidate templates, in order of how obvious they are; a weaker planner stops earlier. */
@@ -23,19 +25,28 @@ export function generate(sit: Situation, per: Perceiver): ActionRef[] {
   const add = (a: ActionRef) => { if (sit.mode === "advise" && sit.adviceKinds && !sit.adviceKinds.includes(a.kind)) return; if (!out.some((x) => actionKey(x) === actionKey(a))) out.push(a); };
   if (sit.mode === "advise") {
     add(act("advise_wait"));
+    const lost = lostForts(sit, per);
+    // A fort the raiders hold: the way to win it back is to send the captain; money for the men and the works is the other thing a ruler can do.
+    if (sit.captains.length) for (const f of lost) { add(act("advise_retake", f)); add(act("advise_send_captain", f)); }
+    if (lost.length) add(act("advise_levy"));
+    // A captain who has asked whether to go home and refill his company or stay where he is: the two answers.
+    for (const c of sit.captains) {
+      const q = per.get(c.id, "captain.query"), here = q ? String(q.value) : "";
+      if (q && here && here !== c.seat && !lost.includes(here)) { add(act("advise_recall", c.seat)); add(act("advise_stay", here)); }
+    }
     // Money first when it cannot cover the repairs the adviser believes are needed (a repair without funds is abandoned).
     const tre = per.get(sit.ruler, "treasury.balance"), w = worn(sit, per);
     const need = w.reduce((n, f) => n + Math.max(0, sit.p.restoreToMilli - (picture(sit, per, f).cond ?? 0)) * sit.p.repairCostPerMilli, 0);
     if (tre && ((tre.value as number) < sit.p.levyMilli || (tre.value as number) < need)) add(act("advise_levy"));
-    for (const f of w) add(act("advise_repair", f));
-    if (sit.captains.length) for (const f of threatened(sit, per)) add(act("advise_send_captain", f));
+    for (const f of w) if (!lost.includes(f)) add(act("advise_repair", f));
+    if (sit.captains.length) for (const f of threatened(sit, per)) if (!lost.includes(f)) add(act("advise_send_captain", f));
     if (sit.captains.length) for (const f of threatened(sit, per)) for (const s of sit.forts.find((x) => x.id === f)!.sites)
-      if (((per.get(s, "threat.intensity")?.value as number) ?? 0) > 0) add(act("advise_sortie", s));
+      if (((per.get(s, "threat.intensity")?.value as number) ?? 0) > 0 && !lost.includes(f)) add(act("advise_sortie", s));
     return out.slice(0, candidateCap(sit));
   }
   const fortsHere = sit.at ? sit.forts.find((f) => f.id === sit.at) : undefined;
   if (sit.role === "castellan") {
-    if (sit.at !== sit.post) { add(act("return_to_post")); add(act("hold")); }
+    if (sit.at !== sit.post) { if (!lostForts(sit, per).includes(sit.post)) add(act("return_to_post")); add(act("hold")); }
     else {
       add(act("hold"));
       const p = picture(sit, per, sit.post);
@@ -99,7 +110,7 @@ export function score(sit: Situation, per: Perceiver, a: ActionRef): Candidate {
     const w = -Math.floor((fail * 10000 * (1000 - appetite)) / (1000 * 500));
     c.push(R("trait", dominantTrait(sit.traits, "riskPermille"), w, w < 0 ? "reason.risk_averse" : "reason.risk"));
   }
-  if (a.kind === "sortie" || a.kind === "advise_sortie") c.push(R("capability", "military", Math.floor(((sit.cap.military ?? 0) - 500) * 4), "reason.own_skill"));
+  if (a.kind === "sortie" || a.kind === "advise_sortie" || a.kind === "advise_retake") c.push(R("capability", "military", Math.floor(((sit.cap.military ?? 0) - 500) * 4), "reason.own_skill"));
   // relationships
   if (e.helps) c.push(R("relationship", e.helps, Math.floor((2000 * sit.trust(e.helps)) / 1000), "reason.trusts"));
   if (a.kind === "march_to") {
@@ -136,7 +147,7 @@ export interface PlanResult { candidates: Candidate[]; selected: ActionRef; kept
 export function feasible(sit: Situation, per: Perceiver, a: ActionRef): boolean {
   switch (a.kind) {
     case "march_to": case "send_detachment": return sit.at !== a.target && sit.troops > 0;
-    case "return_to_post": return sit.at !== sit.post;
+    case "return_to_post": return sit.at !== sit.post && !lostForts(sit, per).includes(sit.post);
     case "sortie": return sit.at !== null && (sit.defenceHere ?? 0) > 0 && ((per.get(a.target!, "threat.intensity")?.value as number) ?? 0) > 0;
     case "request_repair": return !!sit.superior && sit.at === sit.post;
     case "request_reinforcement": return sit.at === sit.post && sit.captains.some((c) => c.id === a.target);

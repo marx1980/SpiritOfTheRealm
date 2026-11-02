@@ -119,7 +119,7 @@ export function buildSituation(s: Readonly<WorldState>, c: Content, agent: strin
     p: { agents: c.scenario.agents, battle: c.scenario.battle, raidBaseMilli: c.scenario.threat.raidDamageMilliAtFullIntensity,
       restoreToMilli: c.scenario.player.repairRestoreToMilli, repairCostPerMilli: c.scenario.player.repairCostMilliPerMilli,
       repairDays: c.scenario.player.repairDays, levyMilli: c.scenario.player.levyMilli, breachMilli: c.scenario.endStates.fortificationBreachedBelowMilli,
-      partialRestoreToMilli: c.scenario.agents.values.goodConditionMilli, decayMilliPerDay: c.scenario.weather.decayMilliPerDay },
+      partialRestoreToMilli: c.scenario.agents.values.goodConditionMilli, decayMilliPerDay: c.scenario.weather.decayMilliPerDay, retakeMilli: c.scenario.threat.retakeConditionMilli },
   };
 }
 
@@ -255,7 +255,7 @@ function advise(ctx: Ctx, agent: string, cause: number) {
   const day = Math.floor(ctx.tick / DAY);
   if (ctx.s.advisePending[agent] === day) return; // already due or given today
   ctx.emit("AdviceScheduled", [cause], [chr(agent)], { agent, day });
-  ctx.at(day * DAY + DAY - 2, "agents:advise", { agent, cause });
+  ctx.at(Math.max(ctx.tick, day * DAY + DAY - 2), "agents:advise", { agent, cause });
 }
 
 function adviseNow(ctx: Ctx, agent: string, cause: number) {
@@ -268,9 +268,15 @@ function adviseNow(ctx: Ctx, agent: string, cause: number) {
   // The adviser's word on the whole situation, then a word on each key issue it does not touch: raiders at a fort (defence)
   // and walls in bad shape (works). The best of the adviser's own options on that issue, whatever it is.
   const cat = (a: { kind: string }) => (a.kind === "advise_repair" ? "works" : a.kind === "advise_wait" || a.kind === "advise_levy" ? "other" : "defence");
-  const groupOf = (a: { kind: string; target?: string }) => `${fortOf(a) ?? ""}:${cat(a)}`;
+  const groupOf = (a: { kind: string; target?: string }) => a.kind === "advise_recall" || a.kind === "advise_stay" ? "query" : `${fortOf(a) ?? ""}:${cat(a)}`;
   const mainGroup = groupOf(res.selected);
   const extras: typeof res.candidates = [];
+  // a captain's question (go home and refill, or stay): every adviser answers it
+  const asked = sit.captains.some((x) => per.get(x.id, "captain.query"));
+  if (asked && mainGroup !== "query") {
+    const best = res.candidates.filter((x) => groupOf(x.action) === "query").sort((x, y) => y.score - x.score)[0];
+    if (best) extras.push(best);
+  }
   for (const f of sit.forts) {
     const needs = [
       ...(f.sites.some((x) => ((per.get(x, "threat.intensity")?.value as number) ?? 0) > 0) ? [`${f.id}:defence`] : []),
@@ -314,7 +320,7 @@ function regency(ctx: Ctx, agent: string, cause: number) {
   const recent = (ctx.s.issued[agent] ?? []).some((r) => r.target === a.target && ctx.tick - r.tick < 20 * DAY);
   const cond = a.target ? (per.get(a.target, "fortification.condition")?.value as number | undefined) : undefined;
   const cost = a.kind === "advise_repair" && cond !== undefined ? Math.max(0, c.scenario.player.repairRestoreToMilli - cond) * c.scenario.player.repairCostMilliPerMilli : 0;
-  const within = (a.kind === "advise_repair" && cost <= rg.maxRepairCostMilli) || (a.kind === "advise_levy" && rg.mayLevy) || (a.kind === "advise_send_captain" && rg.maySendCaptain);
+  const within = (a.kind === "advise_repair" && cost <= rg.maxRepairCostMilli) || (a.kind === "advise_levy" && rg.mayLevy) || ((a.kind === "advise_send_captain" || a.kind === "advise_retake") && rg.maySendCaptain);
   const d = ctx.emit("DecisionMade", [cause], [chr(agent), chr(ruler)], {
     trace: { ...traceOf(sit, per, res, cause, "strategic", "regency") }, score: res.score, idle: true, authority: within ? "within" : "reserved", recent });
   if (recent) return;
@@ -385,7 +391,12 @@ export function execute(ctx: Ctx, agent: string, a: ActionRef, decisionId: numbe
 export function battleClaims(ctx: Ctx, who: string, from: string, site: string, cause: number) {
   observe(ctx, who, loc(from), "fortification.garrison", cause);
   if ((ctx.s.troops[who] ?? 0) > 0) observe(ctx, who, chr(who), "character.troops", cause);
-  return [best(ctx, who, site, "battle.result"), best(ctx, who, from, "fortification.garrison"), best(ctx, who, who, "character.troops"), best(ctx, who, site, "threat.intensity")]
+  // a captain away from home with his company below strength asks whether to go home and refill it or stay and help the fort
+  const ch = ctx.content.byId.character.get(who);
+  const at = ctx.s.positions[who];
+  if (ch?.troops && ch.location !== from && (ctx.s.troops[who] ?? 0) < ch.troops && ctx.s.fortifications[from] && "at" in at && at.at === from)
+    learn(ctx, who, { subject: chr(who), predicate: "captain.query", value: from, observedAt: ctx.tick, band: "certain" }, { kind: "observation", eventId: cause, source: who }, [cause]);
+  return [best(ctx, who, who, "captain.query"), best(ctx, who, site, "battle.result"), best(ctx, who, site, "fortification.holder"), best(ctx, who, from, "fortification.garrison"), best(ctx, who, who, "character.troops"), best(ctx, who, site, "threat.intensity")]
     .filter((x): x is NonNullable<typeof x> => !!x).map(({ band, ...rest }) => ({ ...rest, reliabilityBand: band as "certain" }));
 }
 

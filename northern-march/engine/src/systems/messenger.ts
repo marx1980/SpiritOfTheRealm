@@ -186,7 +186,7 @@ function inspectAndReport(ctx: Ctx, author: string, cause: number) {
   const recent = (b: { observedAt: number } | undefined | null) => !!b && ctx.tick - b.observedAt <= ctx.content.scenario.messenger.reportEveryDays * DAY;
   const beliefs = [best(ctx, author, ch.location, "fortification.condition"), best(ctx, author, ch.location, "fortification.garrison"), ...companies.map((id) => best(ctx, author, id, "character.troops")),
     ...ctx.content.scenario.threat.sites.filter((x) => x.target === ch.location).map((x) => best(ctx, author, x.site, "threat.intensity")),
-    ...[best(ctx, author, ch.location, "fortification.incident")].filter((b) => recent(b)),
+    ...[best(ctx, author, ch.location, "fortification.incident"), best(ctx, author, ch.location, "fortification.holder")].filter((b) => recent(b)),
     // a fight since the last routine letter is told, so that a change in men is explained
     ...ctx.content.scenario.threat.sites.filter((x) => x.target === ch.location).map((x) => best(ctx, author, x.site, "battle.result"))
       .filter((b) => b && ctx.tick - b.observedAt <= ctx.content.scenario.messenger.reportEveryDays * DAY)].filter((x) => !!x);

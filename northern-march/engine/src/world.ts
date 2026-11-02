@@ -32,6 +32,7 @@ export interface WorldState {
   lastArrival: Record<string, Record<string, number>>;
   sortieOpen: Record<string, number>; // commander -> tick of the sortie still being fought
   lastStorm: Record<string, number>;
+  fallen: Record<string, true>; // forts held by the raiders
   threats: Record<string, { intensityPermille: number; untilTick: number; eventId: number }>;
   routesClosed: Record<string, true>;
   positions: Record<string, Position>;
@@ -67,7 +68,7 @@ export function initialState(c: Content): WorldState {
     if (ch.id !== c.scenario.ruler && ch.tier !== "C") agents[ch.id] = newAgent();
   }
   return {
-    treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, tiers, history: {}, agents, recommendations: {}, heard: {}, campaign: { ended: null, lastDanger: -1 }, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, sortieOpen: {}, lastStorm: {}, threats: {}, routesClosed: {},
+    treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, tiers, history: {}, agents, recommendations: {}, heard: {}, campaign: { ended: null, lastDanger: -1 }, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, sortieOpen: {}, lastStorm: {}, fallen: {}, threats: {}, routesClosed: {},
     positions, departures: {}, beliefs: {}, nextPropId: 1, reports: {}, nextReportId: 1, messengers: {}, nextMessengerId: 1,
     orders: {}, nextOrderId: 1, advisePending: {}, dayEndDay: -1, ordersInForce: {}, issued: {}, repairs: {},
   };
@@ -112,6 +113,10 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   RaidDamage: (s, p, e) => { const f = s.fortifications[p.location]; f.conditionMilli = clampCond(f.conditionMilli - p.damageMilli); f.lastChangeEvent = e.id; s.lastRaid[p.location] = e.tick; },
   ThreatScripted: noop,
   ThreatEnded: (s, p) => { delete s.threats[p.site]; },
+  // the raiders take the fort: its men scatter and nothing is repaired or recovered while they hold it
+  FortFell: (s, p) => { s.fallen[p.fort] = true; s.fortifications[p.fort].garrison = 0; },
+  FortAssaulted: noop,
+  FortRetaken: (s, p) => { delete s.fallen[p.fort]; const f = s.fortifications[p.fort]; f.conditionMilli = Math.max(f.conditionMilli, p.conditionMilli); f.garrison = p.garrison; },
 
   TravelScripted: noop,
   Departed: (s, p, e) => {

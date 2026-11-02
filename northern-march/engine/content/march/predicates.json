@@ -88,6 +88,22 @@
     "materialDelta": 1
   },
   {
+    "id": "fortification.holder",
+    "subjectKind": "location",
+    "halfLifeTicks": 0,
+    "domain": "military",
+    "wakeSignificance": 3,
+    "materialDelta": 1
+  },
+  {
+    "id": "captain.query",
+    "subjectKind": "character",
+    "halfLifeTicks": 864000,
+    "domain": "military",
+    "wakeSignificance": 2,
+    "materialDelta": 1
+  },
+  {
     "id": "battle.result",
     "subjectKind": "location",
     "halfLifeTicks": 864000,

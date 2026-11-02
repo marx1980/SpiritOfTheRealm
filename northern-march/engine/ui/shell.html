@@ -36,6 +36,8 @@ select { border: 1px solid var(--line); background: var(--panel); border-radius:
 .mission { display: flex; flex-wrap: wrap; gap: 6px; padding-left: 26px; }
 .mission button { font-size: 13px; } .stat-net { font-size: 12px; color: var(--mute); } .low { color: var(--bad); font-size: 13px; } .low button, .cost button { font-size: 12px; padding: 2px 8px; }
 .bad.big { font-weight: 700; }
+.batch-letter.alarm, .letter.alarm { border: 3px solid var(--bad); border-radius: 6px; padding: 8px 10px; background: color-mix(in srgb, var(--bad) 8%, transparent); }
+.card.fallen { border: 3px solid var(--bad); }
 .ok { color: var(--ok); } .bad { color: var(--bad); } .warn { color: var(--warn); }
 .issue[data-issue] { cursor: pointer; } .order-detail .k { color: var(--mute); }
 .map .hit { fill: transparent; cursor: pointer; } .map text { pointer-events: none; } .detail h2 small { font-size: 12px; }

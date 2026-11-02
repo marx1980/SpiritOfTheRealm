@@ -2,7 +2,7 @@
 // separately. Built from the player's view only (A7).
 import { beliefsAbout, type View } from "../view.ts";
 import { dayOf, pct } from "./format.ts";
-import { ago, certainty, nameOf, nearestFort, planOf, planWords, raiderWords, reasonWords, sourceOf, wallWords } from "./phrasing.ts";
+import { ago, certainty, fallenAt, nameOf, nearestFort, planOf, planWords, raiderWords, reasonWords, sourceOf, wallWords } from "./phrasing.ts";
 
 export interface Evidence { text: string; age: string; source: string; certainty: string }
 /** Short area labels for the council list. */
@@ -19,7 +19,8 @@ export function settledCheck(v: View): (r: { plan: { id: string } }) => boolean 
     if (a.kind === "advise_levy") return { action: "levy", target: v.self.id };
     if (!a.target) return undefined;
     if (a.kind === "advise_repair") return { action: "repair", target: a.target };
-    if (a.kind === "advise_send_captain") return { action: "advance", target: a.target };
+    if (a.kind === "advise_recall") return { action: "advance", target: a.target };
+    if (a.kind === "advise_send_captain" || a.kind === "advise_retake") return { action: "advance", target: a.target };
     if (a.kind === "advise_sortie") { const f = nearestFort(v, a.target); return f ? { action: "advance", target: f } : undefined; }
     return undefined;
   };
@@ -50,6 +51,7 @@ export function settledCheck(v: View): (r: { plan: { id: string } }) => boolean 
     const want = orderOf(planOf(v, r.plan.id));
     if (!want) return false;
     const plan = planOf(v, r.plan.id);
+    if (plan.kind === "advise_retake" && plan.target && !fallenAt(v, plan.target)) return true; // it is ours again
     if (plan.kind === "advise_sortie" && plan.target) {
       // attack advice: set aside while a captain is on his way to the fort or already sent against that site; a captain who has
       // arrived (or was sent to scout) is exactly when the advice to attack makes sense
@@ -95,6 +97,12 @@ export function buildCourt(v: View): Court {
   const issues: Issue[] = [];
   const forts = v.world.places.filter((p) => p.fortified);
   for (const f of forts) {
+    if (fallenAt(v, f.id)) {
+      issues.push({ key: `fallen:${f.id}`, title: `${f.name}: fallen to the raiders`, priority: 100,
+        evidence: beliefsAbout(v, f.id, "fortification.holder").slice(0, 2).map((x) => ({ text: x.believedValue === "raiders" ? "Held by the raiders" : "Ours", age: ago(v.now, x.observedAt), source: sourceOf(v, x), certainty: certainty[x.effectiveBand] })),
+        advice: adviceLines(v, f.id), place: f.id });
+      continue;
+    }
     const b = beliefsAbout(v, f.id, "fortification.condition")[0];
     if (!b) continue;
     const cond = b.believedValue as number;

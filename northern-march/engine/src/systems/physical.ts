@@ -4,6 +4,7 @@ import type { Ctx, System } from "./types.ts";
 import { DAY, HOUR, chr, loc, sorted } from "./types.ts";
 import { cmp } from "../world.ts";
 import { best, learn, observe, observeTreasury } from "./knowledge.ts";
+import { travel } from "./movement.ts";
 
 const presentAt = (ctx: Ctx, where: string) => sorted(Object.entries(ctx.s.positions).filter(([, p]) => "at" in p && p.at === where).map(([id]) => id), (x) => x);
 export function defence(ctx: Ctx, where: string) {
@@ -46,6 +47,15 @@ function witness(ctx: Ctx, where: string, kind: string, cause: number) {
     learn(ctx, who, { subject: loc(where), predicate: "fortification.incident", value: kind, observedAt: ctx.tick, band: "certain" }, { kind: "observation", eventId: cause, source: who }, [cause]);
 }
 
+/** The raiders break in: the fort is lost, those inside get word out (the castellan writes at once) and then fall back. */
+function fall(ctx: Ctx, fort: string, site: string, cause: number) {
+  const ev = ctx.emit("FortFell", [cause], [loc(fort), loc(site)], { fort, site });
+  for (const who of presentAt(ctx, fort).filter((x) => ctx.s.tiers[x] !== "C"))
+    learn(ctx, who, { subject: loc(fort), predicate: "fortification.holder", value: "raiders", observedAt: ctx.tick, band: "certain" }, { kind: "observation", eventId: ev.id, source: who }, [ev.id]);
+  ctx.at(ctx.tick, "messenger:urgent", { location: fort, cause: ev.id });
+  ctx.at(ctx.tick + HOUR, "threat:flee", { fort, cause: ev.id });
+}
+
 export const economy: System = {
   id: "economy",
   start: (ctx) => ctx.at(DAY, "economy:day", {}),
@@ -61,7 +71,7 @@ export const economy: System = {
       // Garrisons refill by 2% of their establishment (at least one man) a day, up to that establishment.
       const gains = Object.keys(ctx.s.fortifications).sort(cmp).flatMap((f): [string, number][] => {
         const fo = ctx.s.fortifications[f], gap = fo.establishment - fo.garrison;
-        return gap > 0 ? [[f, Math.min(gap, Math.max(1, Math.floor((fo.establishment * 20) / 1000)))]] : [];
+        return gap > 0 && !ctx.s.fallen[f] ? [[f, Math.min(gap, Math.max(1, Math.floor((fo.establishment * 20) / 1000)))]] : [];
       });
       if (gains.length) ctx.emit("GarrisonRecovered", [], gains.map(([f]) => loc(f)), { changes: gains });
       // A captain's company refills by 2% of its establishment a day, only while he is in his home town.
@@ -129,6 +139,14 @@ export const threat: System = {
       const sc = ctx.emit("ThreatScripted", [], [loc(s.site)], { site: s.site, intensityPermille: s.intensityPermille, durationDays: s.durationDays });
       ctx.emit("ThreatBegan", [sc.id], [loc(s.site), loc(target)], { site: s.site, target, intensityPermille: s.intensityPermille, untilTick: ctx.tick + s.durationDays * DAY });
     },
+    // those left at a fallen fort fall back to the nearest fort still held
+    "threat:flee": (ctx, { fort, cause }) => {
+      const ruler = ctx.content.scenario.ruler;
+      const refuge = Object.keys(ctx.s.fortifications).filter((f) => f !== fort && !ctx.s.fallen[f]).sort(cmp)
+        .map((f) => ({ f, ticks: ctx.map.path(fort, f, "rider", (r) => ctx.isOpen(r))?.ticks ?? Infinity })).sort((a, b) => a.ticks - b.ticks)[0];
+      if (!refuge || refuge.ticks === Infinity) return;
+      for (const who of presentAt(ctx, fort).filter((x) => x !== ruler)) travel(ctx, who, refuge.f, (ctx.s.troops[who] ?? 0) > 0 ? "army" : "rider", false, cause);
+    },
     "threat:day": (ctx) => {
       const t = ctx.content.scenario.threat, r = ctx.rng("threat");
       for (const { site, target } of sorted(t.sites, (x) => x.site)) {
@@ -136,6 +154,7 @@ export const threat: System = {
         // A fixed draw schedule (three draws per site per day, used or not), so this stream stays aligned day by day
         // whatever other systems do to the world (G-02).
         const roll = r.int(0, 999), intensityPermille = r.int(t.intensityPermille[0], t.intensityPermille[1]), days = r.int(t.durationDays[0], t.durationDays[1]);
+        if (active && ctx.s.fallen[target]) continue; // the raiders hold the fort: they stay until driven out, and there is nothing left to batter
         if (!active) {
           if (roll >= t.startPermillePerDay) continue;
           const untilTick = ctx.tick + DAY * days;
@@ -154,6 +173,7 @@ export const threat: System = {
           }
           maybeAlarm(ctx, target, before, e.id);
           if (presence(ctx, target, e.id)) return; // the campaign has ended
+          if (ctx.s.fortifications[target].conditionMilli < ctx.content.scenario.endStates.fortificationBreachedBelowMilli) fall(ctx, target, site, e.id);
         }
       }
       // Days without raids are evidence too: those at the target who still believe in a threat notice the quiet.

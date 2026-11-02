@@ -52,6 +52,14 @@ export function captainSentTo(v: View, fort: string): boolean {
   return v.self.orders.some((o) => (o.action === "advance" || o.action === "investigate") && done.has(String(o.orderId)) && (o.target === fort || nearestFort(v, o.target) === fort)
     && !v.self.orders.some((x) => x.recipient === o.recipient && x.tick > o.tick));
 }
+const seatOf = (v: View, who: string) => { const b = beliefsAbout(v, who, "character.seat")[0]; return b ? nameOf(v, String(b.believedValue)) : "my post"; };
+/** The captain whose question is pending. */
+const askerName = (v: View) => { const b = Object.values(v.beliefs).filter((x) => x.predicate === "captain.query").sort((a, c) => c.observedAt - a.observedAt)[0]; return b ? nameOf(v, b.subject.id) : "The captain"; };
+/** Whether the viewer believes the raiders hold this fort (the latest word on it says so). */
+export function fallenAt(v: View, fort: string): boolean {
+  const h = beliefsAbout(v, fort, "fortification.holder").sort((a, b) => b.observedAt - a.observedAt)[0];
+  return !!h && h.believedValue === "raiders";
+}
 /** An adviser's plan as it stands now: advice to send the captain to a fort he has already reached, while raiders are
  *  believed near it, is advice to attack those raiders. */
 export function planOf(v: View, planId: string): { kind: string; target?: string } {
@@ -68,7 +76,10 @@ export function planWords(v: View, planId: string): string {
   switch (a.kind) {
     case "advise_wait": return "Wait for more news";
     case "advise_repair": return `Repair ${t}`;
-    case "advise_send_captain": return `Send the captain to ${t}`;
+    case "advise_send_captain": return a.target && fallenAt(v, a.target) ? `Send the captain to ${t} to retake it` : `Send the captain to ${t}`;
+    case "advise_recall": return `${askerName(v)} returns to ${t} to refill his company`;
+    case "advise_stay": return `${askerName(v)} stays at ${t} to rebuild the walls and defend`;
+    case "advise_retake": return `Retake ${t} with the captain`;
     // the captain is sent to the nearest fort, from which the attack is made (the wording matches what Do it does)
     case "advise_sortie": { const f = nearestFort(v, a.target!); return f && !captainSentTo(v, f) ? `Send the captain to ${nameOf(v, f)} to attack the raiders at ${t}` : `Attack the raiders at ${t}`; }
     case "advise_levy": return "Raise a levy";
@@ -105,6 +116,8 @@ function letterParts(v: View, r: LetterLike): { rank: number; text: string }[] {
           if (here) fort.push(`the walls are ${wallWords(val as number)}${why}`); else out.push({ rank: 1, text: `The walls at ${s} are ${wallWords(val as number)}${why}.` }); }
         break;
       case "fortification.incident": break; // told with the walls
+      case "captain.query": out.push({ rank: 3, text: `Shall I return to ${seatOf(v, r.author)} to refill my company, or stay at ${nameOf(v, String(val))} to help rebuild the walls and defend?` }); break;
+      case "fortification.holder": out.push({ rank: -2, text: val === "raiders" ? `${s} has fallen to the raiders!` : `${s} is ours again.` }); break;
       case "battle.result": out.push({ rank: 0, text: val === "nobody" ? `We found no raiders at ${s}.` : `We fought the raiders at ${s} and ${val === "won" ? "won" : "were beaten"}.` }); break;
       case "threat.intensity":
         // a fight and the raiders' present strength are one story: do not tell it twice
@@ -149,4 +162,6 @@ export function letterGist(v: View, r: LetterLike): string {
   if (!parts.length) return "Nothing new in this letter.";
   return [...parts].sort((a, b) => a.rank - b.rank)[0].text;
 }
+/** A letter that brings word of a fort lost to the raiders. */
+export function lettersFall(r: LetterLike): boolean { return r.claims.some((c) => c.predicate === "fortification.holder" && c.believedValue === "raiders"); }
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

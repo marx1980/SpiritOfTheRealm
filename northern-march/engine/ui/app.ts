@@ -5,7 +5,7 @@ import { createSim } from "../src/engine.ts";
 import { adviceSettled, buildCourt, latestAdviceOf, type AdviceLine } from "../src/presentation/court.ts";
 import { buildMap } from "../src/presentation/map.ts";
 import { mapSvg } from "./maparts.ts";
-import { captainSentTo, planOf, certainty, letterSentences, letterGist, planWords, reasonWords, sourceOf } from "../src/presentation/phrasing.ts";
+import { captainSentTo, fallenAt, lettersFall, planOf, certainty, letterSentences, letterGist, planWords, reasonWords, sourceOf } from "../src/presentation/phrasing.ts";
 import { beliefsAbout, validateDraft, type OrderDraft, type View } from "../src/view.ts";
 import { INTENTS, type Recommendation } from "../src/schemas.ts";
 import type { PlayerAction } from "../src/policies.ts";
@@ -135,7 +135,7 @@ function fortNear(v: View, site: string) {
 function adviceAction(v: View, r: Recommendation): PlayerAction | null {
   const a = planOf(v, r.plan.id);
   if (a.kind === "advise_repair") return { action: "repair", target: a.target, followed: r.author };
-  if (a.kind === "advise_send_captain") return { action: "advance", target: a.target, followed: r.author };
+  if (a.kind === "advise_recall" || a.kind === "advise_send_captain" || a.kind === "advise_retake") return { action: "advance", target: a.target, followed: r.author };
   if (a.kind === "advise_sortie") { const f = fortNear(v, a.target!); return !f ? null : captainSentTo(v, f) ? { action: "advance", target: f, mission: "attack", raid: a.target, followed: r.author } : { action: "advance", target: f, followed: r.author }; }
   if (a.kind === "advise_levy") return { action: "levy", followed: r.author };
   return null;
@@ -150,7 +150,7 @@ const actionText = (v: View, a: PlayerAction) =>
   a.action === "order" ? `Order ${name(v, a.order!.recipient)}: ${a.order!.intent} ${name(v, a.order!.objective.id)}`
   : a.action === "levy" ? "Raise a levy" : a.action === "travel" ? `Travel to ${name(v, a.target!)}`
   : a.action === "repair" ? `Repair ${name(v, a.target!)}`
-  : a.mission === "attack" && a.raid ? `Attack the raiders at ${name(v, a.raid)}` : a.mission === "scout" && a.raid ? `Scout the raiders at ${name(v, a.raid)}` : `Send the captain to ${name(v, a.target!)}`;
+  : a.mission === "attack" && a.raid ? `Attack the raiders at ${name(v, a.raid)}` : a.mission === "scout" && a.raid ? `Scout the raiders at ${name(v, a.raid)}` : (fallenAt(v, a.target!) ? `Retake ${name(v, a.target!)}` : `Send the captain to ${name(v, a.target!)}`);
 const queue = (a: PlayerAction) => {
   if (!st.paused) return;
   // the same action from two advisers (e.g. raiders and captain both mean "send the captain to Northwatch") is queued once
@@ -175,6 +175,12 @@ function choices(v: View): Choice[] {
       out.get("wait")!.by.push(name(v, r.author));
       continue;
     }
+    if (planOf(v, r.plan.id).kind === "advise_stay") { // staying needs no order: shown like waiting
+      const k = `stay:${planOf(v, r.plan.id).target}`;
+      if (!out.has(k)) out.set(k, { action: { action: "wait" } as unknown as PlayerAction, text: planWords(v, r.plan.id), by: [], wait: true });
+      out.get(k)!.by.push(name(v, r.author));
+      continue;
+    }
     const act = adviceAction(v, r);
     if (!act) continue;
     const { followed: _f, ...same } = act; // the same action recommended by several advisers is one choice
@@ -190,6 +196,7 @@ function attackersOf(v: View, raid: string): string[] {
 }
 /** Once a send is checked: defend the fort (default), or attack or scout the raiders it answers. */
 function missionBlock(v: View, fort: string, q: PlayerAction): string {
+  if (fallenAt(v, fort)) return ""; // a fort the raiders hold is simply assaulted
   const raid = raidNear(v, fort);
   const opts: { mission: string; label: string; by: string[] }[] = [{ mission: "defend", label: `Defend ${name(v, fort)}`, by: [] }];
   if (raid) opts.push({ mission: "attack", label: `Attack the raiders at ${name(v, raid)}`, by: attackersOf(v, raid) }, { mission: "scout", label: `Scout the raiders at ${name(v, raid)}`, by: [] });
@@ -218,7 +225,7 @@ function batchBlock(v: View): string {
   const keys = (l: (typeof all)[number]) => new Set(l.claims.map((c) => `${c.predicate}|${c.subject.id}|${JSON.stringify(c.believedValue)}`));
   const ls = all.filter((l, i) => !all.some((m, j) => j !== i && m.author === l.author && (() => { const a = keys(l), b = keys(m); return [...a].every((k) => b.has(k)) && (b.size > a.size || j < i); })()));
   const written = (l: (typeof all)[number]) => { const d = Math.floor(v.now / DAY) - Math.floor(l.composedAt / DAY); return d > 0 && Math.floor(l.deliveredAt / DAY) - Math.floor(l.composedAt / DAY) > 0 && all.length > 1 ? ` (written ${d === 1 ? "yesterday" : d + " days ago"})` : ""; };
-  return ls.length ? `<div class="batch">${ls.map((l) => `<div class="batch-letter"><span class="what">${tone(`Letter from ${name(v, l.author)}${written(l)}: ${letterSentences(v, l).join(" ")}`)}</span></div>`).join("")}</div>` : "";
+  return ls.length ? `<div class="batch">${ls.map((l) => `<div class="batch-letter${lettersFall(l) ? " alarm" : ""}"><span class="what">${tone(`Letter from ${name(v, l.author)}${written(l)}: ${letterSentences(v, l).join(" ")}`)}</span></div>`).join("")}</div>` : "";
 }
 
 const areaShort = (a: string) => ({ Military: "MIL", Administration: "ADM", Construction: "CON", Intelligence: "INT" } as Record<string, string>)[a] ?? a.toUpperCase();
@@ -229,6 +236,7 @@ const tone = (t: string) => esc(t)
   .replace(/\b(\d+) days ago\b/g, (m, n) => (Number(n) >= 7 ? `<span class="bad">${m}</span>` : Number(n) >= 3 ? `<span class="warn">${m}</span>` : m))
   .replace(/\b(completed|succeeded|won|held|repaired|sound|no raiders)\b/gi, '<span class="ok">$1</span>')
   .replace(/\b(abandoned|failed|lost|breached|captured|refused|beaten|not enough coins|dead|fallen|a strong band)\b/gi, '<span class="bad">$1</span>')
+  .replace(/\b(has fallen to the raiders)\b/gi, '<span class="bad big">$1</span>')
   .replace(/\b(a large host)\b/gi, '<span class="bad big">$1</span>')
   .replace(/\b(a small band)\b/gi, '<span class="warn">$1</span>')
   .replace(/(?<!no )\b(raiders)\b/gi, '<span class="bad">$1</span>')
@@ -276,10 +284,10 @@ function court(v: View) {
   const c = buildCourt(v);
   // advice already put to her in the decision box above is not listed again; nor is news a letter on top of the page has just given
   const boxChoices = st.paused ? choices(v) : [], boxed = boxChoices.filter((x) => !x.wait).map((x) => x.action), boxHasWait = boxChoices.some((x) => x.wait);
-  const inBox = (l: AdviceLine) => { const r = v.advice.find((x) => x.id === l.id); if (r && planOf(v, r.plan.id).kind === "advise_wait") return boxHasWait; const act = r ? adviceAction(v, r) : null; return !!act && boxed.some((q) => matches(q, act)); };
+  const inBox = (l: AdviceLine) => { const r = v.advice.find((x) => x.id === l.id); if (r && ["advise_wait", "advise_stay"].includes(planOf(v, r.plan.id).kind)) return boxHasWait; const act = r ? adviceAction(v, r) : null; return !!act && boxed.some((q) => matches(q, act)); };
   const shown = c.issues.map((i) => ({ i, advice: i.advice.filter((l) => !inBox(l)) }))
     .filter(({ i, advice }) => !(st.batch.length && /^(walls|raiders):/.test(i.key) && !advice.length && i.evidence[0]?.age === "today"));
-  const issues = shown.map(({ i, advice }) => `<div class="card issue ${i.priority >= 45 ? "p-hi" : i.priority >= 25 ? "p-mid" : ""}"${i.key.startsWith("order:") ? ` data-issue="${esc(i.key)}" role="button" tabindex="0"` : ""}>
+  const issues = shown.map(({ i, advice }) => `<div class="card issue ${i.key.startsWith("fallen:") ? "fallen " : ""}${i.priority >= 45 ? "p-hi" : i.priority >= 25 ? "p-mid" : ""}"${i.key.startsWith("order:") ? ` data-issue="${esc(i.key)}" role="button" tabindex="0"` : ""}>
     <div class="t">${tone(i.title)}</div>${st.openIssue === i.key ? orderDetails(v, i.key.slice(6)) : ""}
     <div class="ev">${i.evidence.map((e) => `<span><b>${esc(e.text)}</b> · ${esc(e.source)} · ${ageTone(e.age)} · ${esc(e.certainty)}</span>`).join("")}</div>
     ${advice.length ? `<div class="adv">${adviceRows(v, advice)}</div>` : ""}</div>`).join("");
@@ -352,7 +360,7 @@ function side(v: View) {
     const isOpen = r.reportId === st.openLetter;
     const body = isOpen ? `<div class="lr-body"><span class="speaker">${esc(name(v, r.author))}:</span> ${tone(letterSentences(v, r).join(" "))}</div>` : `<div class="c">${tone(letterGist(v, r))}</div>`;
     const tags = isOpen ? `<span class="tags"><span class="tag arrived">arrived ${ageTone(dayAgo(v, r.deliveredAt))}</span><span class="tag written">written ${ageTone(dayAgo(v, r.composedAt))}</span></span>` : `<span class="when">written ${ageTone(dayAgo(v, r.composedAt))}</span>`;
-    return `<div class="letter${isOpen ? " open" : ""}" data-letter="${r.reportId}" role="button" tabindex="0"><div class="h"><b>${esc(name(v, r.author))}</b>${tags}</div>${body}</div>`;
+    return `<div class="letter${isOpen ? " open" : ""}${lettersFall(r) ? " alarm" : ""}" data-letter="${r.reportId}" role="button" tabindex="0"><div class="h"><b>${esc(name(v, r.author))}</b>${tags}</div>${body}</div>`;
   }).join("") || `<div class="c">None</div>`}</div></div>`;
   const orders = v.self.orders.length ? `<div class="card"><h2>Orders given</h2><div class="letters">${[...v.self.orders].reverse().slice(0, 20).map((o) => {
     const b = v.beliefs[Object.keys(v.beliefs).find((k) => v.beliefs[k].predicate === "order.status" && v.beliefs[k].subject.id === String(o.orderId)) ?? ""];

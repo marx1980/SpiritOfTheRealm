@@ -52,7 +52,7 @@ export interface Scenario {
   economy: { holdings: { location: string; dailyIncomeMilli: number; jitterMilli: number }[]; dailyUpkeepMilli: number };
   weather: { decayMilliPerDay: number; stormDamageMilli: [number, number]; fireDailyPermille: number; fireDamageMilli: [number, number]; quakeDailyPermille: number; quakeDamageMilli: [number, number] };
   threat: { sites: { site: string; target: string }[]; startPermillePerDay: number; intensityPermille: [number, number];
-    durationDays: [number, number]; raidDamageMilliAtFullIntensity: number };
+    durationDays: [number, number]; raidDamageMilliAtFullIntensity: number; retakeConditionMilli: number; retakeGarrisonPermille: number };
   messenger: { reportEveryDays: number; alarmBelowMilli: number; legJitterPermille: [number, number]; lossPermillePerDay: number;
     redirectLimit: number; understateMilli: number };
   interception: { location: string; by: string; permille: number }[];

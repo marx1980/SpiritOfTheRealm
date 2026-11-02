@@ -10,7 +10,7 @@ import { plan } from "../agents/planner.ts";
 import type { Ctx, System } from "./types.ts";
 import { DAY, chr, loc } from "./types.ts";
 import { best, learn, observe, observeTreasury, skill } from "./knowledge.ts";
-import { battleClaims, buildSituation, defenceAt, execute, isIdle, perceiverFromView, promote, traceOf } from "./agents.ts";
+import { battleClaims, buildSituation, capability, defenceAt, execute, isIdle, perceiverFromView, promote, traceOf } from "./agents.ts";
 import { travel } from "./movement.ts";
 import { menAt, resyncRepair, scheduleRepairEnd } from "./repairs.ts";
 
@@ -88,6 +88,34 @@ function launchAttack(ctx: Ctx, orderId: number, cause: number) {
   execute(ctx, who, act("sortie", o.objective.id), cause);
 }
 
+/** A captain who marches into a fort the raiders hold must fight for it. Win and it is ours again (ruined, with a few men); lose and he falls back. */
+function assault(ctx: Ctx, who: string, fort: string, cause: number) {
+  const sc = ctx.content.scenario, sp = sc.battle.sortie;
+  const site = sc.threat.sites.find((x) => x.target === fort)?.site, th = site ? ctx.s.threats[site] : undefined;
+  const men = ctx.s.troops[who] ?? 0;
+  const S = Math.floor((men * (sp.skillBasePermille + capability(ctx.s, ctx.content, who, "military"))) / 1000), I = th ? Math.floor((th.intensityPermille * sp.intensityFactorPermille) / 1000) : 0;
+  const p = th ? Math.floor((1000 * S) / Math.max(1, S + I)) : 1000;
+  const success = ctx.keyed(`battle:assault:${cause}`).int(0, 999) < p;
+  const res = ctx.emit("FortAssaulted", [cause], [chr(who), loc(fort)], { commander: who, fort, site, success, pPermille: p, men });
+  const lost = Math.floor((men * (success ? sp.lossOnSuccessPermille : sp.lossOnFailurePermille)) / 1000);
+  if (lost) ctx.emit("LossesTaken", [res.id], [loc(fort)], { location: fort, garrisonLost: 0, troopsLost: { [who]: lost }, cause: "assault" });
+  learn(ctx, who, { subject: loc(fort), predicate: "battle.result", value: success ? "won" : "lost", observedAt: ctx.tick, band: "certain" }, { kind: "observation", eventId: res.id, source: who }, [res.id]);
+  if (success) {
+    ctx.emit("FortRetaken", [res.id], [loc(fort), chr(who)], { fort, by: who, conditionMilli: sc.threat.retakeConditionMilli, garrison: Math.floor((ctx.s.fortifications[fort].establishment * sc.threat.retakeGarrisonPermille) / 1000) });
+    if (site && th) ctx.emit("ThreatEnded", [res.id], [loc(site)], { site, endedBy: "assault" });
+    // word that the fort is ours again reaches those whose post it is, and the captain sees its state
+    for (const c of ctx.content.characters.filter((x) => (x.location === fort || x.id === who) && ctx.s.tiers[x.id] !== "C"))
+      learn(ctx, c.id, { subject: loc(fort), predicate: "fortification.holder", value: "ours", observedAt: ctx.tick, band: "certain" }, { kind: "observation", eventId: res.id, source: who }, [res.id]);
+    observe(ctx, who, loc(fort), "fortification.condition", res.id);
+  } else {
+    const home = ctx.content.byId.character.get(who)!.location;
+    travel(ctx, who, home === fort ? (Object.keys(ctx.s.fortifications).filter((f) => f !== fort).sort()[0] ?? home) : home, "army", false, res.id);
+  }
+  if (success && site) learn(ctx, who, { subject: loc(site), predicate: "threat.intensity", value: 0, observedAt: ctx.tick, band: "certain" }, { kind: "observation", eventId: res.id, source: who }, [res.id]);
+  const superior = ctx.content.byId.character.get(who)?.reportsTo;
+  if (superior) ctx.at(ctx.tick, "messenger:compose", { author: who, recipient: superior, claims: [...battleClaims(ctx, who, fort, fort, res.id), ...(success && site ? [best(ctx, who, site, "threat.intensity")].filter((x): x is NonNullable<typeof x> => !!x).map(({ band, ...rest }) => ({ ...rest, reliabilityBand: band as "certain" })) : [])], cause: res.id, purpose: `battle:${fort}` });
+}
+
 function process(ctx: Ctx, orderId: number, receivedId: number) {
   const o = ctx.s.orders[String(orderId)].order;
   const who = o.recipient;
@@ -128,6 +156,7 @@ function process(ctx: Ctx, orderId: number, receivedId: number) {
     const cond = ctx.s.fortifications[where]?.conditionMilli;
     const to = a.kind === "repair_works" ? sc.player.repairRestoreToMilli : sc.agents.values.goodConditionMilli;
     if (cond === undefined) return finish(ctx, orderId, "abandoned", ex.id, "noFortification");
+    if (ctx.s.fallen[where]) return finish(ctx, orderId, "abandoned", ex.id, "fallen");
     if (ctx.s.repairs[where]) return finish(ctx, orderId, "abandoned", ex.id, "inProgress");
     if (to - cond <= 0) return finish(ctx, orderId, "abandoned", ex.id, "notNeeded");
     const costMilli = (to - cond) * sc.player.repairCostMilliPerMilli;
@@ -250,6 +279,7 @@ export const orders: System = {
       finish(ctx, orderId, "completed", rc.id);
     },
     "orders:arrived": (ctx, { who, at, arrivedEventId }) => {
+      if (ctx.s.fallen[at] && (ctx.s.troops[who] ?? 0) > 0) assault(ctx, who, at, arrivedEventId);
       for (const id of [...(ctx.s.ordersInForce[who] ?? [])]) {
         const o = ctx.s.orders[String(id)];
         if (o.status === "executing" && o.order.intent === "attack" && fortAnswering(ctx, o.order.objective.id) === at) { launchAttack(ctx, id, arrivedEventId); continue; }

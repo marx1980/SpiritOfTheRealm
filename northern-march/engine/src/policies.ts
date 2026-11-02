@@ -42,7 +42,7 @@ export function followAdviser(adviser: string): PolicyFn {
     const out: PlayerAction[] = [];
     for (const rec of v.advice.filter((r) => r.author === adviser)) {
       const a = planOf(v, rec.plan.id);
-      const map: Record<string, PlayerAction["action"]> = { advise_repair: "repair", advise_send_captain: "advance", advise_levy: "levy" };
+      const map: Record<string, PlayerAction["action"]> = { advise_repair: "repair", advise_send_captain: "advance", advise_retake: "advance", advise_levy: "levy" };
       let action = map[a.kind], target = a.target;
 let mission: PlayerAction["mission"], raid: string | undefined;
       if (a.kind === "advise_sortie") { // send the captain to the fort nearest the raiders; once he is there, attack
