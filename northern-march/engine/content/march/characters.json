@@ -158,6 +158,12 @@
         "objective": "sound_works",
         "priorityPermille": 700
       }
+    ],
+    "adviceKinds": [
+      "advise_repair",
+      "advise_send_captain",
+      "advise_levy",
+      "advise_wait"
     ]
   },
   {

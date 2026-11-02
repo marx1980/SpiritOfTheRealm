@@ -1,6 +1,6 @@
 {
   "ruler": "anna",
-  "treasuryMilli": 120000,
+  "treasuryMilli": 60000,
   "movement": {
     "speedsKmPerDay": {
       "rider": {
@@ -64,10 +64,14 @@
         "jitterMilli": 1000
       }
     ],
-    "dailyUpkeepMilli": 21000
+    "dailyUpkeepMilli": 25000
   },
   "weather": {
     "decayMilliPerDay": 0,
+    "fireDailyPermille": 3,
+    "fireDamageMilli": [8000, 30000],
+    "quakeDailyPermille": 1,
+    "quakeDamageMilli": [15000, 45000],
     "stormDamageMilli": [
       5000,
       25000

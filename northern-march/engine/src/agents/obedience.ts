@@ -35,7 +35,7 @@ export function adaptations(o: StructuredOrder): ActionRef[] {
   switch (o.intent) {
     case "repair": return [act("partial_repair", o.objective.id)];
     case "levy": return [act("half_levy")];
-    case "advance": return [act("send_detachment", o.objective.id)];
+    case "advance": return []; // a captain marches with his company, or does not: his men never become the garrison
     case "investigate": return o.discretion === "delegated" ? [] : [act("delegate_investigation", o.objective.id)];
     default: return [];
   }

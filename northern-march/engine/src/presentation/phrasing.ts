@@ -93,6 +93,7 @@ function letterParts(v: View, r: LetterLike): { rank: number; text: string }[] {
   const home = r.claims.find((c) => c.predicate === "character.location" && c.subject.id === r.author)?.believedValue as string | undefined;
   const fort: string[] = [];
   const fought = new Map(r.claims.filter((c) => c.predicate === "battle.result").map((c) => [c.subject.id, String(c.believedValue)]));
+  const incident = new Map(r.claims.filter((c) => c.predicate === "fortification.incident").map((c) => [c.subject.id, ({ storm: "a storm", fire: "a fire", earthquake: "an earthquake" } as Record<string, string>)[String(c.believedValue)] ?? String(c.believedValue)]));
   const fighting = [...fought.values()].some((x) => x !== "nobody");
   for (const c of r.claims) {
     const s = nameOf(v, c.subject.id), val = c.believedValue, me = c.subject.id === r.author, prev = earlier(v, r, c);
@@ -100,8 +101,10 @@ function letterParts(v: View, r: LetterLike): { rank: number; text: string }[] {
     switch (c.predicate) {
       case "fortification.condition":
         if (prev !== undefined && wallWords(prev as number) === wallWords(val as number)) break; // unchanged
-        if (here) fort.push(`the walls are ${wallWords(val as number)}`); else out.push({ rank: 1, text: `The walls at ${s} are ${wallWords(val as number)}.` });
+        { const why = incident.has(c.subject.id) && (prev === undefined || (val as number) < (prev as number)) ? ` after ${incident.get(c.subject.id)}` : "";
+          if (here) fort.push(`the walls are ${wallWords(val as number)}${why}`); else out.push({ rank: 1, text: `The walls at ${s} are ${wallWords(val as number)}${why}.` }); }
         break;
+      case "fortification.incident": break; // told with the walls
       case "battle.result": out.push({ rank: 0, text: val === "nobody" ? `We found no raiders at ${s}.` : `We fought the raiders at ${s} and ${val === "won" ? "won" : "were beaten"}.` }); break;
       case "threat.intensity":
         // a fight and the raiders' present strength are one story: do not tell it twice
@@ -109,12 +112,12 @@ function letterParts(v: View, r: LetterLike): { rank: number; text: string }[] {
         out.push({ rank: 2, text: `${cap(raiderWords(val as number))} at ${s}.` }); break;
       case "fortification.garrison":
         if (prev === val) break;
-        { const t = prev === undefined ? `${here ? "the fort has" : `the fort at ${s} has`} ${val} men` : `${here ? "the fort now has" : `the fort at ${s} now has`} ${val} men${fighting && (val as number) < (prev as number) ? ", after the fighting" : ""}`;
+        { const t = prev === undefined ? `${here ? "the fort has" : `the fort at ${s} has`} ${val} men` : `${here ? "the fort now has" : `the fort at ${s} now has`} ${val} men${(val as number) < (prev as number) ? (fighting ? ", after the fighting" : "") : ", as the garrison recovers"}`;
           if (here) fort.push(t); else out.push({ rank: 1, text: cap(t) + "." }); }
         break;
       case "character.troops":
         if (prev === val) break;
-        out.push({ rank: 1, text: me ? (prev === undefined ? `I have ${val} men with me.` : `I now have ${val} men with me${fighting && (val as number) < (prev as number) ? ", after the fighting" : ""}.`)
+        out.push({ rank: 1, text: me ? (prev === undefined ? `I have ${val} men with me.` : `I now have ${val} men with me${(val as number) < (prev as number) ? (fighting ? ", after the fighting" : "") : ", as my men return"}.`)
           : (prev === undefined ? `${s} has ${val} men with them.` : `${s} now has ${val} men with them.`) });
         break;
       // people speak of themselves in the first person

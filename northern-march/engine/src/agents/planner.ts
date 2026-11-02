@@ -20,7 +20,7 @@ const requested = (sit: Situation, per: Perceiver) => sit.forts.filter((f) => pe
 /** Candidate templates, in order of how obvious they are; a weaker planner stops earlier. */
 export function generate(sit: Situation, per: Perceiver): ActionRef[] {
   const out: ActionRef[] = [];
-  const add = (a: ActionRef) => { if (!out.some((x) => actionKey(x) === actionKey(a))) out.push(a); };
+  const add = (a: ActionRef) => { if (sit.mode === "advise" && sit.adviceKinds && !sit.adviceKinds.includes(a.kind)) return; if (!out.some((x) => actionKey(x) === actionKey(a))) out.push(a); };
   if (sit.mode === "advise") {
     add(act("advise_wait"));
     // Money first when it cannot cover the repairs the adviser believes are needed (a repair without funds is abandoned).

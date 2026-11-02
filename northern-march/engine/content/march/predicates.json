@@ -80,6 +80,14 @@
     "materialDelta": 1
   },
   {
+    "id": "fortification.incident",
+    "subjectKind": "location",
+    "halfLifeTicks": 864000,
+    "domain": "military",
+    "wakeSignificance": 1,
+    "materialDelta": 1
+  },
+  {
     "id": "battle.result",
     "subjectKind": "location",
     "halfLifeTicks": 864000,

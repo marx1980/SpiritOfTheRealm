@@ -25,7 +25,7 @@ export interface Relationship { to: string; kind: string; value: number }
 export interface ObjectiveDef { id: string; kind: "role" | "personal" | "political" | "situational"; objective: ObjectiveKind; priorityPermille: number; target?: string; reserveMilli?: number }
 export interface Character { id: string; name: string; role: string; location: string; tier: (typeof TIERS)[number]; traits: string[]; reportsTo?: string;
   capabilities: Record<string, number>; relationships: Relationship[]; house: string; objectives: ObjectiveDef[]; troops?: number;
-  household?: string; occupation?: string }
+  household?: string; occupation?: string; adviceKinds?: string[] }
 export type Script =
   | { day: number; kind: "travel"; who: string; to: string; mode: Mode; secret?: boolean }
   | { day: number; kind: "order"; from: string; to: string; intent: string; objective: SubjectRefC; supersedesPrevious?: boolean; discretion?: "strict" | "bounded" | "delegated" }
@@ -50,7 +50,7 @@ export interface Scenario {
   knowledge: { beliefCaps: Record<(typeof TIERS)[number], number>; bands: { certain: number; probable: number; uncertain: number };
     stormPenaltyPermille: number; maxErrorMilliPerMissingPermille: number; lowTrustBelow: number };
   economy: { holdings: { location: string; dailyIncomeMilli: number; jitterMilli: number }[]; dailyUpkeepMilli: number };
-  weather: { decayMilliPerDay: number; stormDamageMilli: [number, number]; };
+  weather: { decayMilliPerDay: number; stormDamageMilli: [number, number]; fireDailyPermille: number; fireDamageMilli: [number, number]; quakeDailyPermille: number; quakeDamageMilli: [number, number] };
   threat: { sites: { site: string; target: string }[]; startPermillePerDay: number; intensityPermille: [number, number];
     durationDays: [number, number]; raidDamageMilliAtFullIntensity: number };
   messenger: { reportEveryDays: number; alarmBelowMilli: number; legJitterPermille: [number, number]; lossPermillePerDay: number;

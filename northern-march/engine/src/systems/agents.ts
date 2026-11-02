@@ -95,6 +95,7 @@ export function buildSituation(s: Readonly<WorldState>, c: Content, agent: strin
   for (const d of Object.keys(ch.capabilities)) caps[d] = capability(s, c, agent, d);
   const seatOf = (id: string) => (beliefsAbout(view, id, "character.seat")[0]?.believedValue as string | undefined) ?? c.byId.character.get(id)!.location;
   return {
+    adviceKinds: ch.adviceKinds,
     now, agent, role: ch.role, house: ch.house, tier: s.tiers[agent], leaderCandidates: leaderCandidates(s, c, agent),
     post: ch.location, at, superior: ch.reportsTo, ruler: ruler.id, rulerSeat: seatOf(ruler.id),
     traits: ch.traits.map((t) => c.byId.trait.get(t)!), cap: caps, objectives: ch.objectives, focus: st?.focus ?? null,

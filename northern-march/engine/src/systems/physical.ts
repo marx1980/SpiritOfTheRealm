@@ -3,7 +3,7 @@
 import type { Ctx, System } from "./types.ts";
 import { DAY, HOUR, chr, loc, sorted } from "./types.ts";
 import { cmp } from "../world.ts";
-import { best, observe, observeTreasury } from "./knowledge.ts";
+import { best, learn, observe, observeTreasury } from "./knowledge.ts";
 
 const presentAt = (ctx: Ctx, where: string) => sorted(Object.entries(ctx.s.positions).filter(([, p]) => "at" in p && p.at === where).map(([id]) => id), (x) => x);
 export function defence(ctx: Ctx, where: string) {
@@ -37,6 +37,13 @@ function presence(ctx: Ctx, fort: string, raid: number): boolean {
     ctx.at(ctx.tick, "player:decide", { cause: w.id, reason: "danger" });
   }
   return false;
+}
+
+/** Those at the fort when something befalls it know what it was. */
+function witness(ctx: Ctx, where: string, kind: string, cause: number) {
+  if (!ctx.s.fortifications[where]) return; // only forts are written about
+  for (const who of presentAt(ctx, where).filter((x) => ctx.s.tiers[x] !== "C"))
+    learn(ctx, who, { subject: loc(where), predicate: "fortification.incident", value: kind, observedAt: ctx.tick, band: "certain" }, { kind: "observation", eventId: cause, source: who }, [cause]);
 }
 
 export const economy: System = {
@@ -85,8 +92,22 @@ export const weather: System = {
         if (l.exposurePermille <= 0 || !r.chancePermille(l.exposurePermille)) continue;
         const damageMilli = r.int(sc.weather.stormDamageMilli[0], sc.weather.stormDamageMilli[1]);
         const before = ctx.s.fortifications[l.id]?.conditionMilli ?? 0;
-        const e = ctx.emit("Storm", [], [loc(l.id)], { location: l.id, damageMilli }, "weather");
+        const e = ctx.emit("Storm", [], [loc(l.id)], { location: l.id, damageMilli, kind: "storm" }, "weather");
         maybeAlarm(ctx, l.id, before, e.id);
+        witness(ctx, l.id, "storm", e.id);
+      }
+      // rarer incidents at the forts: fires and earthquakes (own keyed draws, so the weather stream stays aligned)
+      for (const f of forts) {
+        const k = ctx.keyed(`weather:incident:${ctx.tick}:${f}`);
+        const fire = k.chancePermille(sc.weather.fireDailyPermille), fireDmg = k.int(sc.weather.fireDamageMilli[0], sc.weather.fireDamageMilli[1]);
+        const quake = k.chancePermille(sc.weather.quakeDailyPermille), quakeDmg = k.int(sc.weather.quakeDamageMilli[0], sc.weather.quakeDamageMilli[1]);
+        for (const [kind, hit, damageMilli] of [["fire", fire, fireDmg], ["earthquake", quake, quakeDmg]] as const) {
+          if (!hit) continue;
+          const before = ctx.s.fortifications[f].conditionMilli;
+          const e = ctx.emit("Storm", [], [loc(f)], { location: f, damageMilli, kind }, "weather");
+          maybeAlarm(ctx, f, before, e.id);
+          witness(ctx, f, kind, e.id);
+        }
       }
       ctx.extraDraws("weather");
       ctx.at(ctx.tick + DAY, "weather:day", {});

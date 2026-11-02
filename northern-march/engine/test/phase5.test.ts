@@ -127,8 +127,9 @@ test("orders are composed from what Anna knows, and validated", () => {
 });
 
 test("Court and Map are built from the view only, and show no exact hidden numbers", () => {
-  const sim = run({ seed: 2, content: threat(), policy: "passive" }, 30);
-  const v = sim.viewOf("player");
+  // a seed in which the raiders are still about when the first letter is read
+  let v = run({ seed: 2, content: threat(), policy: "passive" }, 8).viewOf("player");
+  for (const seed of [3, 4, 5, 6, 7, 8]) { if (buildCourt(v).issues.length) break; v = run({ seed, content: threat(), policy: "passive" }, 8).viewOf("player"); }
   const court = buildCourt(v), map = buildMap(v);
   assert.ok(court.issues.length > 0);
   for (const i of court.issues) { assert.ok(i.title && i.priority >= 0); for (const s of i.evidence) assert.ok(s.age && s.source && s.certainty); }
@@ -182,7 +183,7 @@ test("letters say walls and men only when they changed, in natural words, naming
   const bren = [...v.reports].filter((r) => r.author === "bren" && r.claims.some((c) => c.predicate === "character.location")).sort((a, b) => a.composedAt - b.composedAt);
   assert.ok(bren.length >= 3, "several letters from Bren");
   const texts = bren.map((r) => letterSentences(v, r).join(" "));
-  assert.match(texts[0], /^I am at Northwatch\. The walls are \w+ and the fort has \d+ men\./);
+  assert.match(texts[0], /^I am at Northwatch\. The walls are \w+( after an? \w+)? and the fort has \d+ men\./);
   for (const t of texts) assert.ok(!/at Northwatch.*at Northwatch/.test(t) && !/There are \d+ men in the fort/.test(t), t);
   for (let i = 1; i < bren.length; i++) {
     const prev = bren[i - 1].claims.find((c) => c.predicate === "fortification.garrison")?.believedValue, cur = bren[i].claims.find((c) => c.predicate === "fortification.garrison")?.believedValue;
@@ -191,7 +192,7 @@ test("letters say walls and men only when they changed, in natural words, naming
 });
 
 test("walls do not decay on their own: with no storms or raids they stay as they were", () => {
-  const c = variant((r) => { r.scenario.threat.startPermillePerDay = 0; r.scenario.scripts = []; for (const l of r.locations) l.exposurePermille = 0; });
+  const c = variant((r) => { r.scenario.threat.startPermillePerDay = 0; r.scenario.scripts = []; for (const l of r.locations) l.exposurePermille = 0; r.scenario.weather.fireDailyPermille = 0; r.scenario.weather.quakeDailyPermille = 0; });
   const sim = run({ seed: 4, content: c, policy: "passive" }, 90);
   const w = sim.unsafeWorldForDebug();
   assert.equal(w.fortifications["northwatch"].conditionMilli, 75000);

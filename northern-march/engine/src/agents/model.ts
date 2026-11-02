@@ -19,6 +19,7 @@ export interface FortInfo { id: string; garrison: number; sites: string[]; storm
 export interface CaptainInfo { id: string; troops: number; seat: string }
 
 export interface Situation {
+  adviceKinds?: string[]; // the kinds of advice this adviser gives (all, if absent)
   now: number;
   agent: string;
   role: string;
