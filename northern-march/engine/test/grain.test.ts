@@ -163,9 +163,9 @@ test("grain stage 3: a convoy can be lost or seized, and the grain is accounted 
 });
 
 test("grain stage 3: an order with nothing to take is abandoned with a reason, not silently dropped", () => {
-  const sim = ordered(2, { ...REQ, target: "northwatch", to: "greyfen" }, 5, 40, quiet((r) => { r.scenario.grain.places.find((p: any) => p.location === "northwatch").store = 100; }));
+  const sim = ordered(2, { ...REQ, target: "northwatch", to: "greyfen" }, 5, 40, quiet((r) => { r.scenario.grain.places.find((p: any) => p.location === "northwatch").store = 100; r.scenario.grain.official.cover = 0; /* no official to send his own */ }));
   const o = sim.log.find((e) => e.type === "OrderAbandoned" && (e.payload as any).reason);
-  assert.ok(o, "abandoned with a reason"); assert.ok(!sim.log.some((e) => e.type === "GrainShipped" && e.payload.orderId !== 0), "the ordered shipment never left (an official may send his own)");
+  assert.ok(o, "abandoned with a reason"); assert.ok(!sim.log.some((e) => e.type === "GrainShipped" && e.payload.orderId !== 0), "the ordered shipment never left");
 });
 
 import { readCrisis, OUTCOMES } from "../src/crisis.ts";
