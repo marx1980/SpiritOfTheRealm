@@ -1,0 +1,21 @@
+l8-confirm-upkeep: scenario.economy.dailyUpkeepMilli, validation seeds 5000+30
+ 20000 adviser-dependent      objective 96.7%  levies 0.2  objective with 6+ levies 0%
+ 20000 community-protector    objective 76.7%  levies 0  objective with 6+ levies 0%
+ 20000 delegating-strategist  objective 66.7%  levies 0  objective with 6+ levies 0%
+ 20000 passive                objective 3.3%  levies 0  objective with 6+ levies 0%
+ 22500 adviser-dependent      objective 90%  levies 2.7  objective with 6+ levies 10%
+ 22500 community-protector    objective 83.3%  levies 0  objective with 6+ levies 0%
+ 22500 delegating-strategist  objective 80%  levies 0  objective with 6+ levies 0%
+ 22500 passive                objective 3.3%  levies 0  objective with 6+ levies 0%
+ 25000 adviser-dependent      objective 90%  levies 24.9  objective with 6+ levies 86.7%
+ 25000 community-protector    objective 40%  levies 0.9  objective with 6+ levies 0%
+ 25000 delegating-strategist  objective 53.3%  levies 0  objective with 6+ levies 0%
+ 25000 passive                objective 3.3%  levies 0  objective with 6+ levies 0%
+ 27500 adviser-dependent      objective 83.3%  levies 47.3  objective with 6+ levies 83.3%
+ 27500 community-protector    objective 6.7%  levies 3  objective with 6+ levies 0%
+ 27500 delegating-strategist  objective 13.3%  levies 0  objective with 6+ levies 0%
+ 27500 passive                objective 3.3%  levies 0  objective with 6+ levies 0%
+ 30000 adviser-dependent      objective 93.3%  levies 66.8  objective with 6+ levies 93.3%
+ 30000 community-protector    objective 3.3%  levies 3.1  objective with 6+ levies 0%
+ 30000 delegating-strategist  objective 10%  levies 0  objective with 6+ levies 0%
+ 30000 passive                objective 3.3%  levies 0  objective with 6+ levies 0%

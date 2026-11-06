@@ -1,0 +1,38 @@
+{
+ "schemaVersion": 1,
+ "runSetId": "l8-confirm-upkeep-g3",
+ "mode": "paired",
+ "partition": "validation",
+ "commit": "l8",
+ "engineHash": "9bdfacbad157",
+ "contentVersion": "march-0.7",
+ "contentHash": "3beefb3f5052d070efe23ff6f934297f14475d21322ffb40a58fedaa91d81404",
+ "scenario": "march",
+ "days": 150,
+ "seeds": {
+  "first": 5000,
+  "count": 30
+ },
+ "personas": [
+  "adviser-dependent",
+  "community-protector",
+  "delegating-strategist",
+  "passive"
+ ],
+ "params": {
+  "contentPatch": [
+   {
+    "path": "scenario.economy.dailyUpkeepMilli",
+    "value": 25000
+   }
+  ]
+ },
+ "budgets": {
+  "maxGames": 120,
+  "workers": 2,
+  "wallMs": 10800000,
+  "artifactBytes": 419430400,
+  "llmCalls": 0
+ },
+ "manifestHash": "68ba64e636106260"
+}

@@ -56,12 +56,12 @@ export function neighbours(g: Genome): { genome: Genome; param: number; from: nu
 export interface Evaluated { genome: Genome; values: number[]; changed: number; sums: Summary[]; dir: string }
 export interface SearchOptions { id: string; firstSeed: number; seeds: number; days: number; budget: number; rngSeed: number; outDir: string }
 
-async function evaluate(o: SearchOptions, k: number, genome: Genome, base: Genome): Promise<Evaluated> {
+async function evaluate(o: SearchOptions, k: number, genome: Genome, base: Genome, partition: "dev" | "validation" = "dev"): Promise<Evaluated> {
   const patch = patchOf(genome, base);
-  assertAllowed(patch); assertSeeds(o.firstSeed, o.seeds, "dev");
+  assertAllowed(patch); assertSeeds(o.firstSeed, o.seeds, partition);
   const dir = `${o.outDir}/g${k}`;
   const lab = labContent(CONTENT_DIR);
-  const m: PlaytestRunManifest = { schemaVersion: PLAYTEST_SCHEMA_VERSION, runSetId: `${o.id}-g${k}`, mode: "paired", partition: "dev", commit: "l8", engineHash: engineHash(),
+  const m: PlaytestRunManifest = { schemaVersion: PLAYTEST_SCHEMA_VERSION, runSetId: `${o.id}-g${k}`, mode: "paired", partition, commit: "l8", engineHash: engineHash(),
     contentVersion: lab.version, contentHash: lab.hash, scenario: "march", days: o.days, seeds: { first: o.firstSeed, count: o.seeds }, personas: SEARCH_PERSONAS,
     params: { contentPatch: patch }, budgets: { maxGames: o.seeds * SEARCH_PERSONAS.length, workers: 2, wallMs: 3 * 3600_000, artifactBytes: 400 << 20, llmCalls: 0 } };
   const r = await runLab(m, { outDir: dir });
@@ -139,5 +139,28 @@ export async function search(o: SearchOptions) {
     budget: o.budget, genomesEvaluated: seen.size, gridSize: gridSize(), cellsFilled: archive.size, cells: CELLS, base: valuesOf(base), allowlist: ALLOWLIST,
     archive: Object.fromEntries([...archive.entries()].sort()), exploits, cliffs: cliffs.slice(0, 50), cliffCount: cliffs.length, verdict, applied: false, engineHash: engineHash() };
   writeFileSync(`${o.outDir}/search.json`, JSON.stringify(out, null, 1));
+  return out;
+}
+
+/** Confirmation sweep on validation seeds: one parameter walks its whole grid, the others stay at the baseline. Output is evidence for review; nothing is applied. */
+export async function sweep(o: SearchOptions & { param: string }) {
+  mkdirSync(o.outDir, { recursive: true });
+  const raw = readContentDir(CONTENT_DIR) as unknown as Record<string, unknown>;
+  const base: Genome = ALLOWLIST.map((a, i) => GRID[i].indexOf(a.path.split(".").reduce<any>((x, k) => x[k], raw)));
+  const pi = ALLOWLIST.findIndex((a) => a.path === o.param);
+  if (pi < 0) throw new Error(`${o.param} is not on the edit allowlist`);
+  const rows: { value: number; persona: Persona; games: number; objectiveMet: number; levies: number; heavyLevyObjective: number }[] = [];
+  let k = 0;
+  for (let idx = 0; idx < GRID[pi].length; idx++) {
+    const g = [...base]; g[pi] = idx;
+    const e = await evaluate(o, ++k, g, base, "validation");
+    for (const p of SEARCH_PERSONAS) {
+      const xs = e.sums.filter((x) => x.persona === p);
+      rows.push({ value: GRID[pi][idx], persona: p, games: xs.length, objectiveMet: Math.round(1000 * mean(xs.map((x) => (x.objectiveMet ? 1 : 0)))) / 10,
+        levies: Math.round(10 * mean(xs.map((x) => x.levies))) / 10, heavyLevyObjective: Math.round(1000 * mean(xs.map((x) => (x.objectiveMet && x.levies >= 6 ? 1 : 0)))) / 10 });
+    }
+  }
+  const out = { schemaVersion: PLAYTEST_SCHEMA_VERSION, id: o.id, mode: "sweep", partition: "validation", param: o.param, baseValue: GRID[pi][base[pi]], firstSeed: o.firstSeed, seeds: o.seeds, days: o.days, personas: SEARCH_PERSONAS, rows, applied: false, engineHash: engineHash() };
+  writeFileSync(`${o.outDir}/sweep.json`, JSON.stringify(out, null, 1));
   return out;
 }

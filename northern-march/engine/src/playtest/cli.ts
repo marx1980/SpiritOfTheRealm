@@ -100,6 +100,13 @@ const cmds: Record<string, () => Promise<void> | void> = {
     for (const x of r.exploits) console.log(`exploit ${x.cell}: ${x.games} games, e.g. ${JSON.stringify(x.examples[0])}`);
     for (const c of r.cliffs.slice(0, 10)) console.log(`cliff ${c.param} ${c.from} -> ${c.to} for ${c.persona}: objective ${c.objectiveFrom}% -> ${c.objectiveTo}% (${c.seeds} seeds)`);
   },
+  sweep: async () => {
+    const { sweep } = await import("./search.ts");
+    const id = flag("id", "l8-sweep-" + commit())!;
+    const r = await sweep({ id, param: flag("param", "scenario.economy.dailyUpkeepMilli")!, firstSeed: Number(flag("first", "5000")), seeds: Number(flag("seeds", "30")), days: Number(flag("days", "150")), budget: 0, rngSeed: 0, outDir: flag("out", `${ENGINE}results/playtest/${id}`)! });
+    console.log(`${id}: ${r.param}, validation seeds ${r.firstSeed}+${r.seeds}`);
+    for (const x of r.rows) console.log(`${String(x.value).padStart(6)} ${x.persona.padEnd(22)} objective ${x.objectiveMet}%  levies ${x.levies}  objective with 6+ levies ${x.heavyLevyObjective}%`);
+  },
   query: () => {
     const [dir, what, x] = args, sums = readSummaries(dir);
     const rows = what === "failures" ? sums.filter((s) => s.failures.length) : what === "persona" ? sums.filter((s) => s.persona === x) : what === "game" ? sums.filter((s) => s.i === Number(x)) : what === "new" ? sums.filter((s) => s.newFailures) : [];

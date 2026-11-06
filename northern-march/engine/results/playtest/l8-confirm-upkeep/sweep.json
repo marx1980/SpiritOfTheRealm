@@ -1,0 +1,181 @@
+{
+ "schemaVersion": 1,
+ "id": "l8-confirm-upkeep",
+ "mode": "sweep",
+ "partition": "validation",
+ "param": "scenario.economy.dailyUpkeepMilli",
+ "baseValue": 22500,
+ "firstSeed": 5000,
+ "seeds": 30,
+ "days": 150,
+ "personas": [
+  "adviser-dependent",
+  "community-protector",
+  "delegating-strategist",
+  "passive"
+ ],
+ "rows": [
+  {
+   "value": 20000,
+   "persona": "adviser-dependent",
+   "games": 30,
+   "objectiveMet": 96.7,
+   "levies": 0.2,
+   "heavyLevyObjective": 0
+  },
+  {
+   "value": 20000,
+   "persona": "community-protector",
+   "games": 30,
+   "objectiveMet": 76.7,
+   "levies": 0,
+   "heavyLevyObjective": 0
+  },
+  {
+   "value": 20000,
+   "persona": "delegating-strategist",
+   "games": 30,
+   "objectiveMet": 66.7,
+   "levies": 0,
+   "heavyLevyObjective": 0
+  },
+  {
+   "value": 20000,
+   "persona": "passive",
+   "games": 30,
+   "objectiveMet": 3.3,
+   "levies": 0,
+   "heavyLevyObjective": 0
+  },
+  {
+   "value": 22500,
+   "persona": "adviser-dependent",
+   "games": 30,
+   "objectiveMet": 90,
+   "levies": 2.7,
+   "heavyLevyObjective": 10
+  },
+  {
+   "value": 22500,
+   "persona": "community-protector",
+   "games": 30,
+   "objectiveMet": 83.3,
+   "levies": 0,
+   "heavyLevyObjective": 0
+  },
+  {
+   "value": 22500,
+   "persona": "delegating-strategist",
+   "games": 30,
+   "objectiveMet": 80,
+   "levies": 0,
+   "heavyLevyObjective": 0
+  },
+  {
+   "value": 22500,
+   "persona": "passive",
+   "games": 30,
+   "objectiveMet": 3.3,
+   "levies": 0,
+   "heavyLevyObjective": 0
+  },
+  {
+   "value": 25000,
+   "persona": "adviser-dependent",
+   "games": 30,
+   "objectiveMet": 90,
+   "levies": 24.9,
+   "heavyLevyObjective": 86.7
+  },
+  {
+   "value": 25000,
+   "persona": "community-protector",
+   "games": 30,
+   "objectiveMet": 40,
+   "levies": 0.9,
+   "heavyLevyObjective": 0
+  },
+  {
+   "value": 25000,
+   "persona": "delegating-strategist",
+   "games": 30,
+   "objectiveMet": 53.3,
+   "levies": 0,
+   "heavyLevyObjective": 0
+  },
+  {
+   "value": 25000,
+   "persona": "passive",
+   "games": 30,
+   "objectiveMet": 3.3,
+   "levies": 0,
+   "heavyLevyObjective": 0
+  },
+  {
+   "value": 27500,
+   "persona": "adviser-dependent",
+   "games": 30,
+   "objectiveMet": 83.3,
+   "levies": 47.3,
+   "heavyLevyObjective": 83.3
+  },
+  {
+   "value": 27500,
+   "persona": "community-protector",
+   "games": 30,
+   "objectiveMet": 6.7,
+   "levies": 3,
+   "heavyLevyObjective": 0
+  },
+  {
+   "value": 27500,
+   "persona": "delegating-strategist",
+   "games": 30,
+   "objectiveMet": 13.3,
+   "levies": 0,
+   "heavyLevyObjective": 0
+  },
+  {
+   "value": 27500,
+   "persona": "passive",
+   "games": 30,
+   "objectiveMet": 3.3,
+   "levies": 0,
+   "heavyLevyObjective": 0
+  },
+  {
+   "value": 30000,
+   "persona": "adviser-dependent",
+   "games": 30,
+   "objectiveMet": 93.3,
+   "levies": 66.8,
+   "heavyLevyObjective": 93.3
+  },
+  {
+   "value": 30000,
+   "persona": "community-protector",
+   "games": 30,
+   "objectiveMet": 3.3,
+   "levies": 3.1,
+   "heavyLevyObjective": 0
+  },
+  {
+   "value": 30000,
+   "persona": "delegating-strategist",
+   "games": 30,
+   "objectiveMet": 10,
+   "levies": 0,
+   "heavyLevyObjective": 0
+  },
+  {
+   "value": 30000,
+   "persona": "passive",
+   "games": 30,
+   "objectiveMet": 3.3,
+   "levies": 0,
+   "heavyLevyObjective": 0
+  }
+ ],
+ "applied": false,
+ "engineHash": "9bdfacbad157"
+}
