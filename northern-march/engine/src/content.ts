@@ -44,6 +44,14 @@ export interface BattleParams {
   sortie: { skillBasePermille: number; intensityFactorPermille: number; lossOnSuccessPermille: number; lossOnFailurePermille: number; hours: number; raiderMenAtFull: number; ambushPermilleAtFull: number; ambushFactorPermille: number };
   raidMitigationPerManPermille: number;
 }
+export interface GrainPlace { location: string; store: number; production: number; need: number; cap: number }
+/** Phase 7A grain: whole sacks, whole days. Raid damage at a place cuts its harvest for a while (the shortage is caused by the raids). */
+export interface GrainParams {
+  places: GrainPlace[];
+  harvestHitPermille: number; harvestHitDays: number;
+  /** Days of cover at which a place moves to the next scarcity band: plenty, adequate, tight, short (below that: famine). */
+  bandDays: [number, number, number, number];
+}
 export interface Scenario {
   ruler: string; treasuryMilli: number;
   movement: { speedsKmPerDay: Record<Mode, Record<string, number>>; crossingDelayTicks: Record<string, number> };
@@ -57,6 +65,7 @@ export interface Scenario {
     redirectLimit: number; understateMilli: number };
   interception: { location: string; by: string; permille: number }[];
   player: { repairCostMilliPerMilli: number; repairRestoreToMilli: number; repairDays: number; levyMilli: number; repairRushCostPermille: number; repairLabourWorkPermille: number; repairLabourToMilli: number; repairCompanyWorkPermille: number };
+  grain?: GrainParams;
   scripts: Script[];
   endStates: { fortificationBreachedBelowMilli: number };
   agents: AgentParams;
@@ -175,6 +184,12 @@ export function validateContent(raw: RawContent): { errors: ContentError[] } {
   for (const l of raw.locations) if (l.fortification && !(l.fortification.garrison >= 0)) err("RANGE", `location ${l.id} garrison`);
   need(chars, sc.ruler, "character", "scenario.ruler");
   for (const h of sc.economy.holdings) need(locs, h.location, "location", "economy holding");
+  for (const g of sc.grain?.places ?? []) {
+    need(locs, g.location, "location", "grain place");
+    for (const k of ["store", "production", "need", "cap"] as const) if (!Number.isInteger(g[k]) || g[k] < 0) err("RANGE", `grain ${g.location} ${k}`);
+    if (g.store > g.cap) err("RANGE", `grain ${g.location} store above cap`);
+  }
+  if (sc.grain && !(sc.grain.harvestHitPermille >= 0 && sc.grain.harvestHitPermille <= 1000)) err("RANGE", "grain harvestHitPermille");
   for (const s of sc.threat.sites) { need(locs, s.site, "location", "threat site"); need(locs, s.target, "location", "threat target"); }
   for (const i of sc.interception) { need(locs, i.location, "location", "interception"); need(chars, i.by, "character", "interception"); }
   need(chars, sc.regency.regent, "character", "regency.regent"); need(locs, sc.regency.seat, "location", "regency.seat");

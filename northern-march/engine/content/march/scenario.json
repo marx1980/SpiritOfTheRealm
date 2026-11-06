@@ -70,9 +70,15 @@
   "weather": {
     "decayMilliPerDay": 0,
     "fireDailyPermille": 3,
-    "fireDamageMilli": [8000, 30000],
+    "fireDamageMilli": [
+      8000,
+      30000
+    ],
     "quakeDailyPermille": 1,
-    "quakeDamageMilli": [15000, 45000],
+    "quakeDamageMilli": [
+      15000,
+      45000
+    ],
     "stormDamageMilli": [
       5000,
       25000
@@ -220,6 +226,46 @@
       "northwatch",
       "greybridge",
       "eastmarch"
+    ]
+  },
+  "grain": {
+    "places": [
+      {
+        "location": "coldmere",
+        "store": 200,
+        "production": 18,
+        "need": 15,
+        "cap": 400
+      },
+      {
+        "location": "eastmarch",
+        "store": 400,
+        "production": 40,
+        "need": 35,
+        "cap": 700
+      },
+      {
+        "location": "greyfen",
+        "store": 500,
+        "production": 55,
+        "need": 30,
+        "cap": 900
+      },
+      {
+        "location": "northwatch",
+        "store": 600,
+        "production": 40,
+        "need": 40,
+        "cap": 800
+      }
+    ],
+    "harvestHitPermille": 350,
+    "harvestHitDays": 20,
+    "bandDays": [
+      30,
+      14,
+      7,
+      3
     ]
   }
 }

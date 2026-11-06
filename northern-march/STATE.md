@@ -14,6 +14,8 @@ L8 (D-024): first adversarial search run, findings for review only. Levy-spam ex
 
 Gate status after the KI-01 fix and the upkeep change (content march-0.7): G-12 and G-13 PASS on sealed block 110000 (D-023). The regression batch (phase1 gates) and the pre-fix results remain pre-fix evidence.
 
+**Phase 7A in progress (D-025), stage 1 of 5 built (content march-0.8).** Grain core: `scenario.grain`, `src/systems/grain.ts`, events GrainDay / HarvestDamaged / ScarcityChanged, exact conservation, harvest cut by raids (so the shortage exists only in the ON arm), scarcity bands. `test/grain.test.ts` (7). Not yet built: Anna's grain picture, requisition/purchase/convoys/consultation, the Grain Crisis fixture and Varos, the outcome classifier, the gates. Gates and lab baseline are NOT re-run on march-0.8.
+
 Phase 6 (6A) added (DECISIONS D-021):
 - `src/systems/communities.ts` and `content/march/communities.json` (content march-0.6): Northwatch (no named leader), Greyfen (Mara; the crown promised to consult before a levy), Eastmarch (Varos), Coldmere (Wenna; the Blackwood settlement).
 - Cohorts, material condition, sparse memory, specific grievances (unprotected, levy, broken promise, misconduct) with crown blame, source trust, competing narratives from people with access (Varos: the crown is to blame; Bren and Anna: the raiders or the soldiers are).

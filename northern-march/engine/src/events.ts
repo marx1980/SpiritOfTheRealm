@@ -4,7 +4,7 @@
 export const EVENT_SCHEMA_VERSION = 3; // v3 (Phase 3): agents, DecisionTrace, obedience payloads; v2 (Phase 2): B2/B5 payloads
 
 export type Domain = "military" | "economic" | "political" | "social" | "environment" | "magic" | "info";
-export type SystemId = "core" | "economy" | "weather" | "threat" | "movement" | "knowledge" | "messenger" | "orders" | "player" | "advice" | "agents" | "battle" | "communities";
+export type SystemId = "core" | "economy" | "weather" | "threat" | "movement" | "knowledge" | "messenger" | "orders" | "player" | "advice" | "agents" | "battle" | "communities" | "grain";
 export const ABLATABLE: readonly SystemId[] = ["economy", "weather", "threat", "messenger", "communities"];
 
 export interface SubjectRef {
@@ -104,6 +104,10 @@ export const EVENT_TYPES: Readonly<Record<string, EventTypeDef>> = Object.freeze
   ReliefDelivered: T("communities", "social", 2),
   PetitionMade: T("communities", "political", 2),
   CommunityStanceChanged: T("communities", "political", 3),
+  // grain (Phase 7A)
+  GrainDay: T("grain", "economic", 1, true), // the daily tally: a clock-driven step
+  HarvestDamaged: T("grain", "economic", 2), // raids cut a place's harvest
+  ScarcityChanged: T("grain", "economic", 2),
   // player and advice
   PlayerInput: T("player", "political", 3, true),
   DangerSignalled: T("core", "military", 3), // the ruler is warned before danger can be lethal

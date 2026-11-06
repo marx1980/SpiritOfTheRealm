@@ -56,6 +56,10 @@ export interface WorldState {
   ordersInForce: Record<string, number[]>;
   issued: Record<string, IssuedRecord[]>;
   communities: Record<string, CommunityState>;
+  grain: Record<string, number>;
+  grainLedger: Record<string, { produced: number; consumed: number; spilled: number; unmet: number }>;
+  grainBand: Record<string, string>;
+  harvestHit: Record<string, { permille: number; until: number; eventId: number }>;
   repairs: Record<string, { mode: string; startedAt: number; orderId: number; work: number; done: number; lastT: number; men: number; gen: number; restoredMilli: number; startedEventId: number; engineer: string }>;
 }
 
@@ -77,10 +81,26 @@ export function initialState(c: Content): WorldState {
   return {
     treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, tiers, history: {}, agents, recommendations: {}, heard: {}, campaign: { ended: null, lastDanger: -1 }, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, sortieOpen: {}, lastStorm: {}, fallen: {}, threats: {}, routesClosed: {},
     positions, departures: {}, beliefs: {}, nextPropId: 1, reports: {}, nextReportId: 1, messengers: {}, nextMessengerId: 1,
-    orders: {}, nextOrderId: 1, advisePending: {}, dayEndDay: -1, ordersInForce: {}, issued: {}, repairs: {}, communities: initialCommunities(c),
+    orders: {}, nextOrderId: 1, advisePending: {}, dayEndDay: -1, ordersInForce: {}, issued: {}, repairs: {}, communities: initialCommunities(c), ...initialGrain(c),
   };
 }
 
+export const BANDS = ["plenty", "adequate", "tight", "short", "famine"] as const;
+/** Scarcity band from days of cover (store over daily need). */
+export function bandOf(store: number, need: number, bandDays: readonly number[]): string {
+  if (need <= 0) return BANDS[0];
+  const cover = Math.floor(store / need);
+  const i = bandDays.findIndex((d) => cover >= d);
+  return BANDS[i < 0 ? 4 : i];
+}
+function initialGrain(c: Content): Pick<WorldState, "grain" | "grainLedger" | "grainBand" | "harvestHit"> {
+  const g = c.scenario.grain, out = { grain: {} as WorldState["grain"], grainLedger: {} as WorldState["grainLedger"], grainBand: {} as WorldState["grainBand"], harvestHit: {} as WorldState["harvestHit"] };
+  for (const p of [...(g?.places ?? [])].sort((a, b) => cmp(a.location, b.location))) {
+    out.grain[p.location] = p.store; out.grainLedger[p.location] = { produced: 0, consumed: 0, spilled: 0, unmet: 0 };
+    out.grainBand[p.location] = bandOf(p.store, p.need, g!.bandDays);
+  }
+  return out;
+}
 function initialCommunities(c: Content): WorldState["communities"] {
   const out: WorldState["communities"] = {};
   for (const d of [...(c.communities?.communities ?? [])].sort((a, b) => cmp(a.id, b.id)))
@@ -228,6 +248,15 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   RepairCompleted: (s, p, e) => { const f = s.fortifications[p.location]; f.conditionMilli = clampCond(f.conditionMilli + p.restoredMilli); f.lastChangeEvent = e.id; delete s.repairs[p.location]; },
   LevyRaised: (s, p) => { s.treasuryMilli[p.payer] += p.amountMilli; },
   ReliefSent: (s, p) => { s.treasuryMilli[p.payer] -= p.amountMilli; },
+  // grain (Phase 7A)
+  GrainDay: (s, p) => {
+    for (const [loc, produced, consumed, spilled, unmet] of p.changes as [string, number, number, number, number][]) {
+      s.grain[loc] += produced - consumed - spilled;
+      const l = s.grainLedger[loc]; l.produced += produced; l.consumed += consumed; l.spilled += spilled; l.unmet += unmet;
+    }
+  },
+  HarvestDamaged: (s, p, e) => { s.harvestHit[p.place] = { permille: p.permille, until: p.until, eventId: e.id }; },
+  ScarcityChanged: (s, p) => { s.grainBand[p.place] = p.to; },
   // communities (Phase 6)
   CommunityHeard: applyEffects,
   TroopMisconduct: noop,

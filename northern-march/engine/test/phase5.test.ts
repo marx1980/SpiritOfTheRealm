@@ -304,7 +304,7 @@ test("a fort the raiders break into falls, the ruler is told, and the captain ca
     r.locations.find((l) => l.id === "northwatch")!.fortification!.conditionMilli = 38000;
   });
   let retaken = 0, told = 0, asked = 0;
-  for (const seed of [4, 6, 7, 8]) {
+  for (const seed of [1,2,3,4,5,6,7,8,9,10,11,12]) {
     const sim = createSim({ content, seed, policy: "external", params: { dayEnd: true } });
     let ordered = false, issue = false;
     for (let i = 0; i < 3000 && sim.tick < 40 * DAY; i++) {
