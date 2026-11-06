@@ -334,7 +334,6 @@ function courting(ctx: Ctx) {
       continue;
     }
     if (pos.at !== home) continue;
-    if (ctx.s.communities[home] && inputsOf(ctx, home).G >= pr.ladder.gMin) continue; // his own people come first
     const goal = defs(ctx).filter((d) => d.id !== home && d.id !== pos.at).map((d) => ({ d, x: inputsOf(ctx, d.id), h: hoursBetween(ctx, home, d.id) }))
       .filter(({ x, h, d }) => h !== null && h <= n.courtHours && x.G >= pr.ladder.gMin && x.N >= pr.ladder.nMin && x.T && ctx.s.communities[d.id].lastTriggerEvent)
       .sort((a, b) => b.x.G - a.x.G || cmp(a.d.id, b.d.id))[0];

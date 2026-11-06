@@ -181,7 +181,7 @@ test("second grievance (not grain): a company quartered away from home misbehave
 });
 
 test("Varos says nothing to the crown of a following that has declared for him", () => {
-  const c = variant((r) => { quiet(r); levyOn([3, 8, 13, 18, 23])(r); r.communities.params.ladder.support = 150; r.communities.params.ladder.refuse = 120; r.communities.params.ladder.withhold = 90; });
+  const c = variant((r) => { quiet(r); levyOn([3, 8, 13, 18, 23])(r); r.communities.params.ladder.support = 150; r.communities.params.ladder.refuse = 120; r.communities.params.ladder.withhold = 90; r.communities.params.narrative.courtHours = 0; /* he stays among his own */ });
   const sim = createSim({ content: c, seed: 4, policy: "passive" });
   sim.runDays(30);
   const declared = sim.log.filter((e) => e.type === "CommunityStanceChanged" && e.payload.to === "support" && e.payload.supports === "varos" && e.payload.community === "eastmarch");

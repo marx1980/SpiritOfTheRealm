@@ -271,7 +271,7 @@
       "sacks": 150,
       "reserveDays": 7,
       "consultDays": 3,
-      "grievance": 140,
+      "grievance": 260,
       "consultedPermille": 300,
       "material": 25,
       "trustConsulted": 30,
