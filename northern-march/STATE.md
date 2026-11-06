@@ -8,7 +8,7 @@ Updated: 6 Nov 2026, Phase 6 (6A) built; Agent Playtest Lab L0-L7 built (Opus 5.
 **Agent Playtest Lab (D-022, `engine/src/playtest/`, operator guide `docs/playtest/README.md`).** L0 baseline, L1 strict contracts (Zod, playtest layer only), L2 one affordance module for page and agents with import barriers and leak tests, L3 runner and exact replay, L4 ten personas and worker batches with resume, L5 analysis, known issues, shrinker and regression cases, L6 paired evaluator, sealed packages and dashboard with causal explorer, L7 milestones, durable outbox, retries and fake provider. Real email waits for Marko's secrets and approval; L8/L9 not started (separate approvals). Quick run: `results/playtest/quick-demo/` (100 games). 1,100-game unattended run: `results/playtest/full-140054b/` (running).
 Finds: save replay dropped mission/raid/repair mode (fixed); KI-01 attack orders skipped interpretation and obedience (fixed 6 Nov, approved; D-023); bridge offered unaffordable advice (fixed).
 
-L9 (D-023): proposal only, `results/playtest/l9-001/proposal.json`. It lowers the crown's daily upkeep from 25,000 to 22,500 and cuts adviser-dependent levies from about 25 to about 3 a game on validation seeds. Not applied; waits for Marko.
+L9 (D-023): proposal only, `results/playtest/l9-001/proposal.json`. It lowers the crown's daily upkeep from 25,000 to 22,500 and cuts adviser-dependent levies from about 25 to about 3 a game on validation seeds. Marko approved it on 6 Nov; applied as content march-0.7, pending the G-12 and G-13 re-runs on sealed block 110000.
 
 Gate status after the KI-01 fix: G-12, G-13 and the regression batch are pre-fix, and need re-runs on a fresh sealed block.
 

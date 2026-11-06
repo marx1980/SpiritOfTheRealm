@@ -64,7 +64,7 @@
         "jitterMilli": 1000
       }
     ],
-    "dailyUpkeepMilli": 25000,
+    "dailyUpkeepMilli": 22500,
     "captainAwayMilli": 2000
   },
   "weather": {
