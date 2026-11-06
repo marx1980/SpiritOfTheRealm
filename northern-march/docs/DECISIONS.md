@@ -9,3 +9,6 @@ Reading: only lever 3 brings aggressive inside 5–40%, but it drives passive to
 
 #### D-026 addendum 4 — option 3 (60-day levy + higher Greyfen supportAt), TUNE seeds 1–60, ON arm
 passive / delegating / aggressive-with-60-day-levy: supportAt 470: 10% / 21.7% / 43.3% (FAIL); 500: 5% / 18.3% / 36.7% (AMBER, CI 25–50); 540: 1.7% / 10% / 23.3% (PASS, CI 13–33). Not adopted yet; no content changed, no band moved.
+
+#### D-026 addendum 5 — chosen by Marko: Greyfen supportAt 480; aggressive levies every 60 days
+TUNE seeds 1–60, ON arm: passive 8.3% (AMBER), delegating 23.3% (PASS), aggressive 38.3% (AMBER, CI 27–52). No band moved. Pending: full suite, KI-01 hash re-record, then sealed-block gate run.
