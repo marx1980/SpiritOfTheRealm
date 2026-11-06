@@ -30,7 +30,7 @@
   "inputs": 282,
   "actions": 282
  },
- "logHash": "b37ce98a22d2ce3fb8ecc3d5ead0e721476993f3c15b54afde795e1c39b1b678",
+ "logHash": "6388e75cb242b2ca2d62c1316370ac41c07d849cfac9c8c5326071308efc495c",
  "fixedIn": "6 Nov 2026 (KI-01, D-022)",
  "expect": "passes"
 }
