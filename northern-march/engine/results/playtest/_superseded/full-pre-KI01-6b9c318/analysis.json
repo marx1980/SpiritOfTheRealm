@@ -1,0 +1,812 @@
+{
+ "games": 178,
+ "personas": {
+  "passive": {
+   "games": 18,
+   "objectiveMet": 11.1,
+   "objectiveCi": [
+    3.1,
+    32.8
+   ],
+   "killedOrCaptured": 0,
+   "fortsFallen": 0.78,
+   "levies": 0,
+   "reliefs": 0,
+   "repairs": 0,
+   "sends": 0,
+   "petitions": 2.5,
+   "actingDecisions": 0,
+   "invalid": 0,
+   "citeShare": null,
+   "failedGames": 0,
+   "newFailureGames": 0,
+   "supportForVaros": 16.7,
+   "msPerGame": 1986,
+   "stances": {
+    "northwatch": {
+     "cooperate": 16,
+     "petition": 2
+    },
+    "greyfen": {
+     "cooperate": 14,
+     "petition": 4
+    },
+    "eastmarch": {
+     "cooperate": 11,
+     "support": 3,
+     "refuse": 1,
+     "delay": 2,
+     "petition": 1
+    },
+    "coldmere": {
+     "cooperate": 12,
+     "withhold": 1,
+     "delay": 3,
+     "refuse": 1,
+     "petition": 1
+    }
+   }
+  },
+  "random-valid": {
+   "games": 18,
+   "objectiveMet": 44.4,
+   "objectiveCi": [
+    24.6,
+    66.3
+   ],
+   "killedOrCaptured": 5.6,
+   "fortsFallen": 1.06,
+   "levies": 32.06,
+   "reliefs": 12.33,
+   "repairs": 26.5,
+   "sends": 122.28,
+   "petitions": 14.44,
+   "actingDecisions": 268.28,
+   "invalid": 0,
+   "citeShare": 0,
+   "failedGames": 15,
+   "newFailureGames": 0,
+   "supportForVaros": 100,
+   "msPerGame": 4613,
+   "stances": {
+    "northwatch": {
+     "cooperate": 18
+    },
+    "greyfen": {
+     "refuse": 18
+    },
+    "eastmarch": {
+     "support": 18
+    },
+    "coldmere": {
+     "support": 18
+    }
+   }
+  },
+  "cautious-administrator": {
+   "games": 18,
+   "objectiveMet": 72.2,
+   "objectiveCi": [
+    49.1,
+    87.5
+   ],
+   "killedOrCaptured": 0,
+   "fortsFallen": 0.22,
+   "levies": 0.5,
+   "reliefs": 0,
+   "repairs": 2.06,
+   "sends": 0.89,
+   "petitions": 2.22,
+   "actingDecisions": 3.44,
+   "invalid": 0,
+   "citeShare": 85.5,
+   "failedGames": 0,
+   "newFailureGames": 0,
+   "supportForVaros": 16.7,
+   "msPerGame": 1959,
+   "stances": {
+    "northwatch": {
+     "cooperate": 18
+    },
+    "greyfen": {
+     "cooperate": 15,
+     "refuse": 2,
+     "withhold": 1
+    },
+    "eastmarch": {
+     "cooperate": 10,
+     "support": 3,
+     "refuse": 1,
+     "petition": 3,
+     "withhold": 1
+    },
+    "coldmere": {
+     "cooperate": 13,
+     "withhold": 1,
+     "petition": 3,
+     "delay": 1
+    }
+   }
+  },
+  "impulsive-war-ruler": {
+   "games": 18,
+   "objectiveMet": 61.1,
+   "objectiveCi": [
+    38.6,
+    79.7
+   ],
+   "killedOrCaptured": 0,
+   "fortsFallen": 0.33,
+   "levies": 3.83,
+   "reliefs": 0,
+   "repairs": 8.22,
+   "sends": 3.89,
+   "petitions": 6.72,
+   "actingDecisions": 14.89,
+   "invalid": 0,
+   "citeShare": 76.1,
+   "failedGames": 7,
+   "newFailureGames": 0,
+   "supportForVaros": 44.4,
+   "msPerGame": 2496,
+   "stances": {
+    "northwatch": {
+     "cooperate": 17,
+     "petition": 1
+    },
+    "greyfen": {
+     "cooperate": 6,
+     "refuse": 10,
+     "petition": 1,
+     "withhold": 1
+    },
+    "eastmarch": {
+     "cooperate": 6,
+     "withhold": 1,
+     "support": 8,
+     "petition": 1,
+     "refuse": 1,
+     "delay": 1
+    },
+    "coldmere": {
+     "cooperate": 4,
+     "withhold": 2,
+     "support": 7,
+     "delay": 3,
+     "petition": 2
+    }
+   }
+  },
+  "adviser-dependent": {
+   "games": 18,
+   "objectiveMet": 94.4,
+   "objectiveCi": [
+    74.2,
+    99
+   ],
+   "killedOrCaptured": 0,
+   "fortsFallen": 0.06,
+   "levies": 20.28,
+   "reliefs": 0,
+   "repairs": 4.83,
+   "sends": 3.44,
+   "petitions": 12.5,
+   "actingDecisions": 26.22,
+   "invalid": 0,
+   "citeShare": 23.1,
+   "failedGames": 2,
+   "newFailureGames": 0,
+   "supportForVaros": 88.9,
+   "msPerGame": 2937,
+   "stances": {
+    "northwatch": {
+     "cooperate": 18
+    },
+    "greyfen": {
+     "cooperate": 2,
+     "refuse": 16
+    },
+    "eastmarch": {
+     "cooperate": 2,
+     "support": 16
+    },
+    "coldmere": {
+     "cooperate": 2,
+     "support": 16
+    }
+   }
+  },
+  "community-protector": {
+   "games": 18,
+   "objectiveMet": 66.7,
+   "objectiveCi": [
+    43.7,
+    83.7
+   ],
+   "killedOrCaptured": 0,
+   "fortsFallen": 0.33,
+   "levies": 0.5,
+   "reliefs": 3.72,
+   "repairs": 1.94,
+   "sends": 0,
+   "petitions": 3.72,
+   "actingDecisions": 6.17,
+   "invalid": 0,
+   "citeShare": 91.9,
+   "failedGames": 0,
+   "newFailureGames": 0,
+   "supportForVaros": 16.7,
+   "msPerGame": 2049,
+   "stances": {
+    "northwatch": {
+     "cooperate": 14,
+     "petition": 4
+    },
+    "greyfen": {
+     "cooperate": 10,
+     "refuse": 5,
+     "petition": 3
+    },
+    "eastmarch": {
+     "cooperate": 9,
+     "withhold": 2,
+     "petition": 3,
+     "support": 3,
+     "delay": 1
+    },
+    "coldmere": {
+     "cooperate": 7,
+     "petition": 3,
+     "delay": 6,
+     "withhold": 2
+    }
+   }
+  },
+  "literal-novice": {
+   "games": 18,
+   "objectiveMet": 94.4,
+   "objectiveCi": [
+    74.2,
+    99
+   ],
+   "killedOrCaptured": 0,
+   "fortsFallen": 0.06,
+   "levies": 0,
+   "reliefs": 1.33,
+   "repairs": 4.28,
+   "sends": 3.06,
+   "petitions": 0.56,
+   "actingDecisions": 8.67,
+   "invalid": 0,
+   "citeShare": 100,
+   "failedGames": 0,
+   "newFailureGames": 0,
+   "supportForVaros": 0,
+   "msPerGame": 1715,
+   "stances": {
+    "northwatch": {
+     "cooperate": 18
+    },
+    "greyfen": {
+     "cooperate": 18
+    },
+    "eastmarch": {
+     "cooperate": 13,
+     "petition": 5
+    },
+    "coldmere": {
+     "cooperate": 15,
+     "petition": 2,
+     "delay": 1
+    }
+   }
+  },
+  "miscalibrated-ruler": {
+   "games": 18,
+   "objectiveMet": 55.6,
+   "objectiveCi": [
+    33.7,
+    75.4
+   ],
+   "killedOrCaptured": 0,
+   "fortsFallen": 0.39,
+   "levies": 6.56,
+   "reliefs": 0,
+   "repairs": 2.56,
+   "sends": 1.39,
+   "petitions": 13.39,
+   "actingDecisions": 10.5,
+   "invalid": 0,
+   "citeShare": 37.6,
+   "failedGames": 0,
+   "newFailureGames": 0,
+   "supportForVaros": 83.3,
+   "msPerGame": 2894,
+   "stances": {
+    "northwatch": {
+     "cooperate": 17,
+     "petition": 1
+    },
+    "greyfen": {
+     "refuse": 18
+    },
+    "eastmarch": {
+     "support": 14,
+     "withhold": 3,
+     "refuse": 1
+    },
+    "coldmere": {
+     "support": 13,
+     "delay": 1,
+     "refuse": 3,
+     "withhold": 1
+    }
+   }
+  },
+  "delegating-strategist": {
+   "games": 17,
+   "objectiveMet": 70.6,
+   "objectiveCi": [
+    46.9,
+    86.7
+   ],
+   "killedOrCaptured": 0,
+   "fortsFallen": 0.12,
+   "levies": 0,
+   "reliefs": 0,
+   "repairs": 1.94,
+   "sends": 1.47,
+   "petitions": 1.41,
+   "actingDecisions": 3.35,
+   "invalid": 0,
+   "citeShare": 100,
+   "failedGames": 0,
+   "newFailureGames": 0,
+   "supportForVaros": 11.8,
+   "msPerGame": 1817,
+   "stances": {
+    "northwatch": {
+     "cooperate": 16,
+     "petition": 1
+    },
+    "greyfen": {
+     "cooperate": 17
+    },
+    "eastmarch": {
+     "cooperate": 9,
+     "support": 2,
+     "delay": 2,
+     "petition": 2,
+     "withhold": 2
+    },
+    "coldmere": {
+     "cooperate": 11,
+     "petition": 6
+    }
+   }
+  },
+  "adversarial-probe": {
+   "games": 17,
+   "objectiveMet": 94.1,
+   "objectiveCi": [
+    73,
+    99
+   ],
+   "killedOrCaptured": 0,
+   "fortsFallen": 0.12,
+   "levies": 138.88,
+   "reliefs": 46.06,
+   "repairs": 121.06,
+   "sends": 51,
+   "petitions": 15,
+   "actingDecisions": 411,
+   "invalid": 42.29,
+   "citeShare": 0,
+   "failedGames": 8,
+   "newFailureGames": 0,
+   "supportForVaros": 100,
+   "msPerGame": 10748,
+   "stances": {
+    "northwatch": {
+     "cooperate": 17
+    },
+    "greyfen": {
+     "refuse": 17
+    },
+    "eastmarch": {
+     "support": 17
+    },
+    "coldmere": {
+     "support": 17
+    }
+   }
+  }
+ },
+ "pairs": [
+  {
+   "a": "passive",
+   "b": "random-valid",
+   "differ": 100,
+   "seeds": 18
+  },
+  {
+   "a": "passive",
+   "b": "cautious-administrator",
+   "differ": 100,
+   "seeds": 18
+  },
+  {
+   "a": "passive",
+   "b": "impulsive-war-ruler",
+   "differ": 100,
+   "seeds": 18
+  },
+  {
+   "a": "passive",
+   "b": "adviser-dependent",
+   "differ": 100,
+   "seeds": 18
+  },
+  {
+   "a": "passive",
+   "b": "community-protector",
+   "differ": 94.4,
+   "seeds": 18
+  },
+  {
+   "a": "passive",
+   "b": "literal-novice",
+   "differ": 100,
+   "seeds": 18
+  },
+  {
+   "a": "passive",
+   "b": "miscalibrated-ruler",
+   "differ": 100,
+   "seeds": 18
+  },
+  {
+   "a": "passive",
+   "b": "delegating-strategist",
+   "differ": 100,
+   "seeds": 17
+  },
+  {
+   "a": "passive",
+   "b": "adversarial-probe",
+   "differ": 100,
+   "seeds": 17
+  },
+  {
+   "a": "random-valid",
+   "b": "cautious-administrator",
+   "differ": 100,
+   "seeds": 18
+  },
+  {
+   "a": "random-valid",
+   "b": "impulsive-war-ruler",
+   "differ": 100,
+   "seeds": 18
+  },
+  {
+   "a": "random-valid",
+   "b": "adviser-dependent",
+   "differ": 100,
+   "seeds": 18
+  },
+  {
+   "a": "random-valid",
+   "b": "community-protector",
+   "differ": 100,
+   "seeds": 18
+  },
+  {
+   "a": "random-valid",
+   "b": "literal-novice",
+   "differ": 100,
+   "seeds": 18
+  },
+  {
+   "a": "random-valid",
+   "b": "miscalibrated-ruler",
+   "differ": 100,
+   "seeds": 18
+  },
+  {
+   "a": "random-valid",
+   "b": "delegating-strategist",
+   "differ": 100,
+   "seeds": 17
+  },
+  {
+   "a": "random-valid",
+   "b": "adversarial-probe",
+   "differ": 100,
+   "seeds": 17
+  },
+  {
+   "a": "cautious-administrator",
+   "b": "impulsive-war-ruler",
+   "differ": 100,
+   "seeds": 18
+  },
+  {
+   "a": "cautious-administrator",
+   "b": "adviser-dependent",
+   "differ": 100,
+   "seeds": 18
+  },
+  {
+   "a": "cautious-administrator",
+   "b": "community-protector",
+   "differ": 94.4,
+   "seeds": 18
+  },
+  {
+   "a": "cautious-administrator",
+   "b": "literal-novice",
+   "differ": 100,
+   "seeds": 18
+  },
+  {
+   "a": "cautious-administrator",
+   "b": "miscalibrated-ruler",
+   "differ": 100,
+   "seeds": 18
+  },
+  {
+   "a": "cautious-administrator",
+   "b": "delegating-strategist",
+   "differ": 82.4,
+   "seeds": 17
+  },
+  {
+   "a": "cautious-administrator",
+   "b": "adversarial-probe",
+   "differ": 100,
+   "seeds": 17
+  },
+  {
+   "a": "impulsive-war-ruler",
+   "b": "adviser-dependent",
+   "differ": 100,
+   "seeds": 18
+  },
+  {
+   "a": "impulsive-war-ruler",
+   "b": "community-protector",
+   "differ": 100,
+   "seeds": 18
+  },
+  {
+   "a": "impulsive-war-ruler",
+   "b": "literal-novice",
+   "differ": 100,
+   "seeds": 18
+  },
+  {
+   "a": "impulsive-war-ruler",
+   "b": "miscalibrated-ruler",
+   "differ": 100,
+   "seeds": 18
+  },
+  {
+   "a": "impulsive-war-ruler",
+   "b": "delegating-strategist",
+   "differ": 100,
+   "seeds": 17
+  },
+  {
+   "a": "impulsive-war-ruler",
+   "b": "adversarial-probe",
+   "differ": 100,
+   "seeds": 17
+  },
+  {
+   "a": "adviser-dependent",
+   "b": "community-protector",
+   "differ": 100,
+   "seeds": 18
+  },
+  {
+   "a": "adviser-dependent",
+   "b": "literal-novice",
+   "differ": 100,
+   "seeds": 18
+  },
+  {
+   "a": "adviser-dependent",
+   "b": "miscalibrated-ruler",
+   "differ": 100,
+   "seeds": 18
+  },
+  {
+   "a": "adviser-dependent",
+   "b": "delegating-strategist",
+   "differ": 100,
+   "seeds": 17
+  },
+  {
+   "a": "adviser-dependent",
+   "b": "adversarial-probe",
+   "differ": 100,
+   "seeds": 17
+  },
+  {
+   "a": "community-protector",
+   "b": "literal-novice",
+   "differ": 100,
+   "seeds": 18
+  },
+  {
+   "a": "community-protector",
+   "b": "miscalibrated-ruler",
+   "differ": 100,
+   "seeds": 18
+  },
+  {
+   "a": "community-protector",
+   "b": "delegating-strategist",
+   "differ": 94.1,
+   "seeds": 17
+  },
+  {
+   "a": "community-protector",
+   "b": "adversarial-probe",
+   "differ": 100,
+   "seeds": 17
+  },
+  {
+   "a": "literal-novice",
+   "b": "miscalibrated-ruler",
+   "differ": 100,
+   "seeds": 18
+  },
+  {
+   "a": "literal-novice",
+   "b": "delegating-strategist",
+   "differ": 100,
+   "seeds": 17
+  },
+  {
+   "a": "literal-novice",
+   "b": "adversarial-probe",
+   "differ": 100,
+   "seeds": 17
+  },
+  {
+   "a": "miscalibrated-ruler",
+   "b": "delegating-strategist",
+   "differ": 100,
+   "seeds": 17
+  },
+  {
+   "a": "miscalibrated-ruler",
+   "b": "adversarial-probe",
+   "differ": 100,
+   "seeds": 17
+  },
+  {
+   "a": "delegating-strategist",
+   "b": "adversarial-probe",
+   "differ": 100,
+   "seeds": 17
+  }
+ ],
+ "failureClasses": [
+  {
+   "class": "known:KI-01",
+   "failures": 54,
+   "games": 32,
+   "firstGame": 1,
+   "firstRef": "game 1 (seed 1, random-valid)"
+  }
+ ],
+ "panels": [
+  {
+   "id": "integrity",
+   "title": "Integrity (invariants, replay, lifecycles)",
+   "state": "REVIEW",
+   "detail": "only known issues: known:KI-01 in 32 games",
+   "evidence": [
+    "game 1 (seed 1, random-valid)"
+   ]
+  },
+  {
+   "id": "boundary",
+   "title": "Boundary (validation chain)",
+   "state": "PASS",
+   "detail": "probe: 42.29 malformed answers per game, all rejected, no crash",
+   "evidence": []
+  },
+  {
+   "id": "distinct",
+   "title": "Persona distinctness (C0.5: logs differ on ≥10% of seeds)",
+   "state": "PASS",
+   "detail": "all 45 pairs differ on ≥10% of seeds",
+   "evidence": []
+  },
+  {
+   "id": "h01proxy",
+   "title": "H-01 proxy (a): acting decisions citing shown evidence (automated, not a human result)",
+   "state": "REVIEW",
+   "detail": "random-valid 0%, cautious-administrator 85.5%, impulsive-war-ruler 76.1%, adviser-dependent 23.1%, community-protector 91.9%, literal-novice 100%, miscalibrated-ruler 37.6%, delegating-strategist 100%, adversarial-probe 0%",
+   "evidence": []
+  },
+  {
+   "id": "g11",
+   "title": "G-11 (information ecology)",
+   "state": "NOT EVALUATED",
+   "detail": "G-11 is a sealed phase gate; this lab does not re-run it (open since D-013)",
+   "evidence": []
+  },
+  {
+   "id": "performance",
+   "title": "Performance (wall time per game)",
+   "state": "PASS",
+   "detail": "3288 ms per game on this machine",
+   "evidence": []
+  },
+  {
+   "id": "coverage",
+   "title": "Coverage",
+   "state": "INSUFFICIENT EVIDENCE",
+   "detail": "178 of 1100 games",
+   "evidence": []
+  }
+ ],
+ "findings": [
+  {
+   "id": "F-known:KI-01",
+   "certainty": "established",
+   "text": "known:KI-01 occurs in 32 games",
+   "evidence": [
+    "game 1 (seed 1, random-valid)"
+   ]
+  },
+  {
+   "id": "F-spread",
+   "certainty": "tentative",
+   "text": "Objective met: adviser-dependent 94.4% vs passive 11.1% (spread 83.3 points)",
+   "evidence": [
+    "adviser-dependent",
+    "passive"
+   ]
+  },
+  {
+   "id": "F-levy",
+   "certainty": "tentative",
+   "text": "adviser-dependent raises 20.28 levies a game; 88.9% of its games end with a community declaring for Varos.",
+   "evidence": [
+    "adviser-dependent"
+   ],
+   "investigate": "communities.params.grievance.levy"
+  },
+  {
+   "id": "F-relief",
+   "certainty": "tentative",
+   "text": "community-protector sends 3.72 reliefs a game; Varos gains a following in 16.7% of its games (passive: 16.7%).",
+   "evidence": [
+    "community-protector",
+    "passive"
+   ],
+   "investigate": "communities.params.reliefMilli"
+  },
+  {
+   "id": "F-slowest",
+   "certainty": "established",
+   "text": "Slowest game 21749 ms",
+   "evidence": [
+    "game 89 (seed 9, adversarial-probe)"
+   ]
+  }
+ ],
+ "known": [
+  {
+   "id": "KI-01",
+   "title": "Attack orders skip interpretation and obedience: the captain cannot refuse or adapt an attack (orders.ts startAttack, since 1 Nov)",
+   "decision": "Marko: route attack orders through interpretation and obedience like every other order?"
+  }
+ ]
+}

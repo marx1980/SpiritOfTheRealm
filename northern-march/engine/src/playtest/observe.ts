@@ -79,7 +79,7 @@ export function buildObservation(v: View, rules: ObservationRules, at: { index: 
   const obs: PlayerObservation = {
     schemaVersion: PLAYTEST_SCHEMA_VERSION, id: `obs:${at.index}`, decisionIndex: at.index, day: Math.floor(v.now / DAY), pause: (["report", "advice", "danger", "arrival", "dayend", "checkpoint"].includes(at.pause) ? at.pause : "report") as PlayerObservation["pause"],
     objective: { text: `Stay alive and free; keep ${rules.objectiveForts.map((f) => nameOf(v, f)).join(", ")} above the breach`, forts: [...rules.objectiveForts] },
-    anna: { at: "at" in pos ? pos.at : null, travellingTo: "at" in pos ? null : pos.transit.dest, coinsMilli: coinsKnown(v, rules) ?? null, coinsAgeDays: coins ? daysAgo(v.now, coins.observedAt) : null },
+    ruler: { at: "at" in pos ? pos.at : null, travellingTo: "at" in pos ? null : pos.transit.dest, coinsMilli: coinsKnown(v, rules) ?? null, coinsAgeDays: coins ? daysAgo(v.now, coins.observedAt) : null },
     letters, advice, issues, places, evidence: evidence.slice(0, 300), affordances: affs.slice(0, 80),
   };
   return { obs, actions, hash: createHash("sha256").update(JSON.stringify(obs)).digest("hex").slice(0, 16) };

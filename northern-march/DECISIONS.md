@@ -12,7 +12,7 @@ Newest first. Numbers come from `phase0/results/` (files named in each entry). A
 
 **Built (L0-L7, fake delivery).** `engine/src/playtest/` (contract, observe, agentkit, agents/personas, runner, lab, worker, analysis, shrink, paired, dashboard, reporting, known, cli), `test/playtest.test.ts`, `test/regression/`, `.github/workflows/playtest.yml` (manual; email only with the approval variable and secrets). Baseline: `results/lab_L0_baseline.json`.
 
-**Finds.** (1) Save replay dropped mission, raid and repair mode (fixed, commit 6713031, test in saveload.test.ts). (2) KI-01: attack orders skip interpretation and obedience (BACKLOG; decision for Marko). (3) The bridge offered advice Anna could not pay for, which the page disables (fixed before the 1,000-game run).
+**Finds.** (1) Save replay dropped mission, raid and repair mode (fixed, commit 6713031, test in saveload.test.ts). (2) KI-01: attack orders skipped interpretation and obedience (fixed 6 Nov, approved by Marko; see D-023). (3) The bridge offered advice Anna could not pay for, which the page disables (fixed before the 1,000-game run).
 
 ---
 
@@ -491,3 +491,13 @@ Marko agreed all of this on 2 Nov. Engine changed, so every gate was restarted (
 - The page stops the day for advice at most once, only for an open choice not shown in the last 10 days; waiting and carried-out advice pass silently.
 - A levy shows as a windfall line in the coin bar for three days. Every coin-costing or coin-raising event traces to Anna's own order (test); the regent's limit stays 0. A real unrest cost for levies arrives with Phase 6.
 - Engine change (planner): G-01 v18, tune v11, sealed block 97000, regression v11.
+
+## D-023 KI-01 fix approved; L9 controlled improvement run (6 Nov)
+- Marko approved the KI-01 fix: attack orders go through interpretation, obedience and the local plan. The engine changed, so G-12, G-13 and the regression batch must be re-run on a fresh sealed block before they count (no block claimed yet).
+- The pre-fix G-13 aggressive run and the pre-fix regression batch are evidence for the old engine only.
+- L9 (`npm run playtest:improve`, bounded allowlist of three economy numbers, target: adviser-dependent levies per game, guards on objective, Varos following, invariants, rejected decisions, performance, and at most two changed parameters). Dev seeds 1-30, validation seeds 5000-5029, 150 days, four personas. Output: `results/playtest/l9-001/proposal.json`, `applied: false`.
+- Result: `dailyUpkeepMilli` 25,000 to 22,500 passes dev and validation. Adviser-dependent levies per game: 24.9 to 3.0 on validation (paired 95% interval -25.2 to -18.7). Objective met on validation: community-protector 40% to 80%, delegating-strategist 53% to 80%, adviser-dependent 90% to 87%, passive 3% to 3%. No invariant failures, no rejected decisions from non-adversarial personas.
+- Caveats: the response is steep. On dev, 27,500 raised levies to 46 a game and broke the objective guards, so the value sits near a threshold. The search added `captainAwayMilli` 2,500 as a second change for a negligible gain (1.57 against 1.93 levies); the single change is the simpler proposal. The search ran on 30 seeds per partition, and this is not a gate result.
+- Decision for Marko: accept, reject or ask for a finer sweep. Any adoption changes the calibration hash, so G-12 and G-13 must be re-run on a new sealed block (the operator must choose it).
+- Lab fix (no behaviour change): the engine's own src no longer uses content names (test A5). Identifiers `anna` became `ruler` and `varos` became `rival`, and the test caught it because the lab's text had the names. `PlayerAction` and `Recommendation` now reach the presentation layer through `view.ts` (test view static check).
+- `results/phase6_g12_100000.txt` was a zero-line file that a terminated run left behind; it is removed from the working tree, and no verdict exists for block 100000.

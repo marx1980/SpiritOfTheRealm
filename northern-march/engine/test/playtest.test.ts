@@ -45,9 +45,9 @@ test("L1: the decision chain rejects unknown fields, coercion, duplicates, wrong
     [{ ...ok, choose: [o.affordances[0].id, act.id] }, "allowlist"], [{ ...ok, choose: 1 }, "schema"], [null, "schema"],
   ];
   for (const [raw, step] of cases) { const r = checkDecision(raw, o); assert.equal(r.ok, false); if (!r.ok) assert.equal(r.step, step, JSON.stringify(raw).slice(0, 80)); }
-  const pricey = { ...o, anna: { ...o.anna, coinsMilli: 1 }, affordances: o.affordances.map((a) => (a.id === act.id ? { ...a, costMilli: 5 } : a)) };
+  const pricey = { ...o, ruler: { ...o.ruler, coinsMilli: 1 }, affordances: o.affordances.map((a) => (a.id === act.id ? { ...a, costMilli: 5 } : a)) };
   const r = checkDecision(ok, pricey); assert.ok(!r.ok && r.step === "allowlist");
-  const debt = { ...o, anna: { ...o.anna, coinsMilli: -500 } };
+  const debt = { ...o, ruler: { ...o.ruler, coinsMilli: -500 } };
   assert.ok(checkDecision({ ...ok, choose: [] }, debt).ok, "waiting is always possible, even in debt");
 });
 
@@ -160,8 +160,9 @@ test("L5: every permanent regression case still replays to its recorded outcome"
     const c = JSON.parse(readFileSync(dir + f, "utf8"));
     const sim = playInputs(content, c.seed, c.days, c.inputs, c.params);
     assert.equal(hashLog(sim.log), c.logHash, `${f}: same log as when it was shrunk`);
-    // a known issue still reproduces until it is fixed; when it is fixed this assertion tells you to retire the case
-    if (c.knownIssue) assert.ok(holds(sim, c.predicate), `${f}: ${c.knownIssue} no longer reproduces: fixed? retire the case and the KNOWN entry`);
+    // "fails": a known issue still reproduces. "passes": a fixed issue must not come back (permanent guard).
+    if (c.expect === "passes") assert.ok(!holds(sim, c.predicate), `${f}: ${c.title} has come back`);
+    else assert.ok(holds(sim, c.predicate), `${f}: ${c.knownIssue} no longer reproduces: fixed? set expect to passes`);
   }
   assert.ok(PERSONAS.length === 10);
 });

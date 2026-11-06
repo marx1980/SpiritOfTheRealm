@@ -85,6 +85,13 @@ const cmds: Record<string, () => Promise<void> | void> = {
     writeFileSync(`${ENGINE}test/regression/${id}.json`, JSON.stringify(c, null, 1));
     console.log(`${id}: ${c.original.days} days / ${c.original.inputs} orders / ${c.original.actions} actions -> ${c.days} days / ${c.inputs.length} orders / ${c.inputs.reduce((a, x) => a + x.actions.length, 0)} actions (${c.shrinkSteps} replays)`);
   },
+  improve: async () => {
+    const { improve } = await import("./improve.ts");
+    const id = flag("id", "l9-" + commit())!;
+    const r = await improve({ id, devSeeds: Number(flag("dev-seeds", "30")), valSeeds: Number(flag("val-seeds", "30")), days: Number(flag("days", "150")), maxCandidates: Number(flag("max", "6")), outDir: flag("out", `${ENGINE}results/playtest/${id}`)! });
+    console.log(`${id}: ${r.candidates} candidates tried. ${r.verdict}`);
+    if (r.proposal) console.log(JSON.stringify(r.proposal));
+  },
   query: () => {
     const [dir, what, x] = args, sums = readSummaries(dir);
     const rows = what === "failures" ? sums.filter((s) => s.failures.length) : what === "persona" ? sums.filter((s) => s.persona === x) : what === "game" ? sums.filter((s) => s.i === Number(x)) : what === "new" ? sums.filter((s) => s.newFailures) : [];

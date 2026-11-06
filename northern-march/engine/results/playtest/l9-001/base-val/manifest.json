@@ -1,0 +1,33 @@
+{
+ "schemaVersion": 1,
+ "runSetId": "l9-001-base-val",
+ "mode": "paired",
+ "partition": "validation",
+ "commit": "l9",
+ "engineHash": "83a31003c44a",
+ "contentVersion": "march-0.6",
+ "contentHash": "7e072a8d47e6cfe48411479aabe939513ec49c0d10475415d5810a286e617aa9",
+ "scenario": "march",
+ "days": 150,
+ "seeds": {
+  "first": 5000,
+  "count": 30
+ },
+ "personas": [
+  "adviser-dependent",
+  "community-protector",
+  "delegating-strategist",
+  "passive"
+ ],
+ "params": {
+  "contentPatch": []
+ },
+ "budgets": {
+  "maxGames": 120,
+  "workers": 2,
+  "wallMs": 10800000,
+  "artifactBytes": 419430400,
+  "llmCalls": 0
+ },
+ "manifestHash": "c8d33e59979e9869"
+}

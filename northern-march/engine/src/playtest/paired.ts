@@ -29,7 +29,7 @@ export function compare(base: Summary[], cand: Summary[]) {
     const r = (k: number) => Math.round(1000 * k) / 10, rate = (xs: Summary[], f: (s: Summary) => boolean) => r(xs.filter(f).length / Math.max(1, xs.length));
     const diverged = on.filter((s, i) => s.logHash !== off[i].logHash).length;
     return { games: on.length, diverged, objectiveMet: { base: rate(off, (s) => s.objectiveMet), cand: rate(on, (s) => s.objectiveMet), diffCi: met.diffCi.map(r) },
-      varosFollowing: { base: rate(off, (s) => Object.values(s.topStance).includes("support")), cand: rate(on, (s) => Object.values(s.topStance).includes("support")), diffCi: sup.diffCi.map(r) },
+      rivalFollowing: { base: rate(off, (s) => Object.values(s.topStance).includes("support")), cand: rate(on, (s) => Object.values(s.topStance).includes("support")), diffCi: sup.diffCi.map(r) },
       newFailures: { base: off.filter((s) => s.newFailures).length, cand: on.filter((s) => s.newFailures).length } };
   };
   return { all: row(() => true), perPersona: Object.fromEntries(personas.map((p) => [p, row((s) => s.persona === p)])) };

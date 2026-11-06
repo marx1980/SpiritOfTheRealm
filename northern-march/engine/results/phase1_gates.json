@@ -1,0 +1,41 @@
+{
+  "G02": {
+    "perSystem": {
+      "economy": {
+        "seeds": 100,
+        "firstDivergenceOwn": 100,
+        "perturbedChanged": 100,
+        "otherDrawnEventsIdentical": 37,
+        "firstForeign": []
+      },
+      "weather": {
+        "seeds": 100,
+        "firstDivergenceOwn": 100,
+        "perturbedChanged": 100,
+        "otherDrawnEventsIdentical": 19,
+        "firstForeign": []
+      },
+      "threat": {
+        "seeds": 100,
+        "firstDivergenceOwn": 100,
+        "perturbedChanged": 100,
+        "otherDrawnEventsIdentical": 38,
+        "firstForeign": []
+      }
+    },
+    "verdict": "PASS"
+  },
+  "batch": {
+    "seedsPerArm": 1000,
+    "days": 240,
+    "wallClockSeconds": 3068.9,
+    "invariantViolations": 0,
+    "firstViolations": [],
+    "breachedOn": 0.677,
+    "breachedOff": 0.329,
+    "meanEvents": 9169,
+    "meanDecisions": 15.968,
+    "staleOrWrongShare": 0.21204909819639278,
+    "meanWallClockPerSimYearMs": 2296
+  }
+}

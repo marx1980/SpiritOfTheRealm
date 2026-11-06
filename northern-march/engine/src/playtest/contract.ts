@@ -34,7 +34,7 @@ const PlaceSchema = z.strictObject({
 export const PlayerObservationSchema = z.strictObject({
   schemaVersion: v1, id: z.string().regex(/^obs:\d+$/), decisionIndex: nat, day: nat, pause: z.enum(PAUSES),
   objective: z.strictObject({ text, forts: z.array(id).max(10) }),
-  anna: z.strictObject({ at: id.nullable(), travellingTo: id.nullable(), coinsMilli: int.nullable(), coinsAgeDays: nat.nullable() }),
+  ruler: z.strictObject({ at: id.nullable(), travellingTo: id.nullable(), coinsMilli: int.nullable(), coinsAgeDays: nat.nullable() }),
   letters: z.array(z.strictObject({ id: nat, from: text, about: text, sentences: z.array(text).max(20), writtenDaysAgo: nat, arrivedDaysAgo: nat, isNew: z.boolean() })).max(60),
   advice: z.array(z.strictObject({ id: nat, adviserId: id, adviser: text, area: text, plan: text, supports: z.array(text).max(10), concerns: z.array(text).max(10), heardDaysAgo: nat, fresh: z.boolean() })).max(20),
   issues: z.array(z.strictObject({ key: z.string().max(80), title: text, priority: int, place: id.optional(), evidenceIds: z.array(z.string().regex(/^e\d+$/)).max(10), adviceIds: z.array(nat).max(10) })).max(40),
@@ -131,8 +131,8 @@ export function checkDecision(raw: unknown, obs: PlayerObservation): Checked<Pla
   const sends = chosen.filter((a) => a.kind === "advance").map((a) => (a as { target: string }).target);
   if (dupes(sends).length) return fail("allowlist", `two missions for the captain at ${dupes(sends)[0]}`);
   if (chosen.filter((a) => a.kind === "levy").length > 1) return fail("allowlist", "one levy at a time");
-  const coins = obs.anna.coinsMilli, spend = chosen.reduce((s, a) => s + (a.costMilli ?? 0), 0);
-  if (coins !== null && spend > 0 && spend > coins) return fail("allowlist", `costs ${spend} together; Anna believes she has ${coins}`);
+  const coins = obs.ruler.coinsMilli, spend = chosen.reduce((s, a) => s + (a.costMilli ?? 0), 0);
+  if (coins !== null && spend > 0 && spend > coins) return fail("allowlist", `costs ${spend} together; the ruler believes she has ${coins}`);
   return { ok: true, value: d };
 }
 

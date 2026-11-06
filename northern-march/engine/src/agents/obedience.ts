@@ -21,6 +21,7 @@ export function understoodAction(o: StructuredOrder): ActionRef {
     case "relief": return act("relief", o.objective.id);
     case "advance": return act("march_to", o.objective.id);
     case "investigate": return act("investigate", o.objective.id);
+    case "attack": return act("sortie", o.objective.id); // KI-01: attacks are interpreted and obeyed like any order
     default: return act("hold");
   }
 }

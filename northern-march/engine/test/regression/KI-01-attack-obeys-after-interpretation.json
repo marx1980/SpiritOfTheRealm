@@ -1,8 +1,8 @@
 {
  "schemaVersion": 1,
- "id": "KI-01-attack-skips-obedience",
- "title": "invariant: order 155: ExecutionStarted after OrderReceived",
- "knownIssue": "KI-01",
+ "id": "KI-01-attack-obeys-after-interpretation",
+ "title": "Attack orders are interpreted and obeyed before execution (fixed 6 Nov)",
+ "knownIssue": null,
  "seed": 9,
  "days": 90,
  "params": {},
@@ -30,5 +30,7 @@
   "inputs": 282,
   "actions": 282
  },
- "logHash": "bd6647ca312e18a7ef535d956b06a102ced79d40b226a5364b82231a052b025a"
+ "logHash": "6ae419176467502919964b8881a915c4dcea0e78efef1fd8ba2fb65b6edebd07",
+ "fixedIn": "6 Nov 2026 (KI-01, D-022)",
+ "expect": "passes"
 }

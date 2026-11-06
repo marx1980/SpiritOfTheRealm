@@ -33,7 +33,7 @@ export function analyse(sums: Summary[], opts: { expected?: number } = {}) {
       fortsFallen: mean(xs.map((s) => s.fortsFallen)), levies: mean(xs.map((s) => s.levies)), reliefs: mean(xs.map((s) => s.reliefs)), repairs: mean(xs.map((s) => s.repairs)), sends: mean(xs.map((s) => s.sends)),
       petitions: mean(xs.map((s) => s.petitions)), actingDecisions: mean(xs.map((s) => s.actingDecisions)), invalid: mean(xs.map((s) => s.invalid)),
       citeShare: acting ? pct(citing, acting) : null, failedGames: xs.filter((s) => s.status !== "ok").length, newFailureGames: xs.filter((s) => s.newFailures > 0).length,
-      supportForVaros: pct(xs.filter((s) => Object.values(s.topStance).includes("support")).length, n), msPerGame: Math.round(mean(xs.map((s) => s.ms))), stances,
+      supportForRival: pct(xs.filter((s) => Object.values(s.topStance).includes("support")).length, n), msPerGame: Math.round(mean(xs.map((s) => s.ms))), stances,
     }];
   }));
   // distinctness: for each pair, the share of seeds where both played and their logs differ
@@ -77,7 +77,7 @@ export function analyse(sums: Summary[], opts: { expected?: number } = {}) {
 export type Analysis = ReturnType<typeof analyse>;
 
 /** Evidence-linked findings, each with its certainty and the games behind it. Deterministic, no model calls. */
-function findings(sums: Summary[], per: Record<string, { games: number; objectiveMet: number; levies: number; supportForVaros: number; citeShare: number | null; reliefs: number }>, classes: { class: string; games: number; firstRef: string }[]): Finding[] {
+function findings(sums: Summary[], per: Record<string, { games: number; objectiveMet: number; levies: number; supportForRival: number; citeShare: number | null; reliefs: number }>, classes: { class: string; games: number; firstRef: string }[]): Finding[] {
   const out: Finding[] = [];
   const cert = (n: number) => (n >= 300 ? "established" : n >= 60 ? "likely" : "tentative") as Finding["certainty"];
   for (const c of classes.filter((x) => x.class.startsWith("known:") || x.class.startsWith("invariant:")))
@@ -87,9 +87,9 @@ function findings(sums: Summary[], per: Record<string, { games: number; objectiv
     const best = ps.sort((a, b) => b[1].objectiveMet - a[1].objectiveMet)[0], worst = ps[ps.length - 1];
     out.push({ id: "F-spread", certainty: cert(Math.min(best[1].games, worst[1].games)), text: `Objective met: ${best[0]} ${best[1].objectiveMet}% vs ${worst[0]} ${worst[1].objectiveMet}% (spread ${Math.round(10 * (best[1].objectiveMet - worst[1].objectiveMet)) / 10} points)`, evidence: [best[0], worst[0]] });
     const lev = ps.filter(([, v]) => v.levies > 0).sort((a, b) => b[1].levies - a[1].levies)[0];
-    if (lev) out.push({ id: "F-levy", certainty: cert(lev[1].games), text: `${lev[0]} raises ${lev[1].levies} levies a game; ${lev[1].supportForVaros}% of its games end with a community declaring for Varos.`, evidence: [lev[0]], investigate: "communities.params.grievance.levy" });
+    if (lev) out.push({ id: "F-levy", certainty: cert(lev[1].games), text: `${lev[0]} raises ${lev[1].levies} levies a game; ${lev[1].supportForRival}% of its games end with a community declaring for the rival.`, evidence: [lev[0]], investigate: "communities.params.grievance.levy" });
     const prot = per["community-protector"];
-    if (prot) out.push({ id: "F-relief", certainty: cert(prot.games), text: `community-protector sends ${prot.reliefs} reliefs a game; Varos gains a following in ${prot.supportForVaros}% of its games (passive: ${per.passive?.supportForVaros ?? "n/a"}%).`, evidence: ["community-protector", "passive"], investigate: "communities.params.reliefMilli" });
+    if (prot) out.push({ id: "F-relief", certainty: cert(prot.games), text: `community-protector sends ${prot.reliefs} reliefs a game; the rival gains a following in ${prot.supportForRival}% of its games (passive: ${per.passive?.supportForRival ?? "n/a"}%).`, evidence: ["community-protector", "passive"], investigate: "communities.params.reliefMilli" });
   }
   const slow = [...sums].sort((a, b) => b.ms - a.ms)[0];
   if (slow) out.push({ id: "F-slowest", certainty: "established", text: `Slowest game ${slow.ms} ms`, evidence: [ref(slow)] });

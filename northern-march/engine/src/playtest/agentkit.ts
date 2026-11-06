@@ -49,7 +49,7 @@ export function raiderScore(words: string): number {
 export const fresh = (e: Evidence | undefined, days: number) => !!e && e.ageDays <= days;
 export const sure = (e: Evidence | undefined) => !!e && (e.certainty === "certain" || e.certainty === "probably");
 /** Coins after paying for the given affordances (null if unknown). */
-export const left = (obs: PlayerObservation, xs: readonly ActionAffordance[]) => obs.anna.coinsMilli === null ? null : obs.anna.coinsMilli - xs.reduce((s, a) => s + (a.costMilli ?? 0), 0);
+export const left = (obs: PlayerObservation, xs: readonly ActionAffordance[]) => obs.ruler.coinsMilli === null ? null : obs.ruler.coinsMilli - xs.reduce((s, a) => s + (a.costMilli ?? 0), 0);
 /** Places the agent believes are walls at risk, worst first, with the evidence behind each. */
 export function wallsAtRisk(obs: PlayerObservation, below: number) {
   return obs.places.filter((p) => p.fortified && p.walls && wallScore(p.walls.words) < below)

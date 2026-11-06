@@ -4,6 +4,9 @@ import { BANDS, effectiveBand, type BeliefProposition, type EffectiveBand } from
 import type { Content } from "./content.ts";
 import { INTENTS, type Constraint, type Contingency, type IntentKind, type Recommendation, type ReportingPolicy, type StructuredOrder } from "./schemas.ts";
 import type { IssuedRecord, Position, WorldState } from "./world.ts";
+import type { PlayerAction } from "./policies.ts";
+// Types the presentation layer needs, re-exported here so presentation imports only this window (test/view.test.ts).
+export type { PlayerAction, Recommendation };
 
 /** Advice heard more than this long ago is no longer shown as standing advice. */
 export const ADVICE_FRESH = 15 * 86400;

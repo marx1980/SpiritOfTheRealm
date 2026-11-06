@@ -6,7 +6,11 @@ Updated: 6 Nov 2026, Phase 6 (6A) built; Agent Playtest Lab L0-L7 built (Opus 5.
 **Engine (`engine/`, TypeScript on Node 22, no build step).** `npm test`: 160 tests passed at the L0 baseline; since then `test/saveload.test.ts` (+1) and `test/playtest.test.ts` (10) pass on their own; full suite re-run pending. `npx tsc -p .` is clean.
 
 **Agent Playtest Lab (D-022, `engine/src/playtest/`, operator guide `docs/playtest/README.md`).** L0 baseline, L1 strict contracts (Zod, playtest layer only), L2 one affordance module for page and agents with import barriers and leak tests, L3 runner and exact replay, L4 ten personas and worker batches with resume, L5 analysis, known issues, shrinker and regression cases, L6 paired evaluator, sealed packages and dashboard with causal explorer, L7 milestones, durable outbox, retries and fake provider. Real email waits for Marko's secrets and approval; L8/L9 not started (separate approvals). Quick run: `results/playtest/quick-demo/` (100 games). 1,100-game unattended run: `results/playtest/full-140054b/` (running).
-Finds: save replay dropped mission/raid/repair mode (fixed); KI-01 attack orders skip interpretation and obedience (BACKLOG, decision needed); bridge offered unaffordable advice (fixed).
+Finds: save replay dropped mission/raid/repair mode (fixed); KI-01 attack orders skipped interpretation and obedience (fixed 6 Nov, approved; D-023); bridge offered unaffordable advice (fixed).
+
+L9 (D-023): proposal only, `results/playtest/l9-001/proposal.json`. It lowers the crown's daily upkeep from 25,000 to 22,500 and cuts adviser-dependent levies from about 25 to about 3 a game on validation seeds. Not applied; waits for Marko.
+
+Gate status after the KI-01 fix: G-12, G-13 and the regression batch are pre-fix, and need re-runs on a fresh sealed block.
 
 Phase 6 (6A) added (DECISIONS D-021):
 - `src/systems/communities.ts` and `content/march/communities.json` (content march-0.6): Northwatch (no named leader), Greyfen (Mara; the crown promised to consult before a levy), Eastmarch (Varos), Coldmere (Wenna; the Blackwood settlement).

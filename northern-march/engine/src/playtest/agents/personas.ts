@@ -33,7 +33,7 @@ const cautious: PlayerAgent = {
     const fort = threat && fortFor(o, threat.place), s = fort && send(o, fort);
     if (s && since(m, `send:${fort}`, o.day) >= 20) { picks.push(s); cites.push(threat!.evidence.id); why.push(`${s.text}: ${threat!.evidence.text}, fresh and from ${threat!.evidence.source}`); mark(m, `send:${fort}`, o.day); }
     const lv = levy(o);
-    if (!picks.length && lv && o.anna.coinsMilli !== null && o.anna.coinsMilli < 20000 && since(m, "levy", o.day) >= 30) { mark(m, "levy", o.day); return decision(o, "cautious-administrator", [lv.id], "Coins are under 20k: a levy before anything else", []); }
+    if (!picks.length && lv && o.ruler.coinsMilli !== null && o.ruler.coinsMilli < 20000 && since(m, "levy", o.day) >= 30) { mark(m, "levy", o.day); return decision(o, "cautious-administrator", [lv.id], "Coins are under 20k: a levy before anything else", []); }
     return picks.length ? decision(o, "cautious-administrator", picks.map((p) => p.id), why.join("; "), cites) : wait(o, "cautious-administrator", "Nothing is bad enough to spend the reserve on");
   },
 };
@@ -54,7 +54,7 @@ const impulsive: PlayerAgent = {
       if (rp && since(m, `repair:${w.place}`, o.day) >= 10 && fits(o, [...picks, rp])) { picks.push(rp); mark(m, `repair:${w.place}`, o.day); why.push(`${rp.text}: ${w.evidence.text}`); cites.push(w.evidence.id); }
     }
     const lv = levy(o);
-    if (lv && (o.anna.coinsMilli ?? 0) < 30000 && since(m, "levy", o.day) >= 15) { picks.push(lv); mark(m, "levy", o.day); why.push("Raise a levy: war needs coin"); }
+    if (lv && (o.ruler.coinsMilli ?? 0) < 30000 && since(m, "levy", o.day) >= 15) { picks.push(lv); mark(m, "levy", o.day); why.push("Raise a levy: war needs coin"); }
     return picks.length ? decision(o, "impulsive-war-ruler", picks.map((p) => p.id), why.join("; "), cites) : wait(o, "impulsive-war-ruler", "No enemy in sight");
   },
 };
@@ -91,7 +91,7 @@ const protector: PlayerAgent = {
     const worst = wallsAtRisk(o, 50)[0], rp = worst && repair(o, worst.place);
     if (rp && since(m, `repair:${worst.place}`, o.day) >= 15 && fits(o, [...picks, rp], 15000)) { picks.push(rp); mark(m, `repair:${worst.place}`, o.day); why.push(`${rp.text}: ${worst.evidence.text}`); cites.push(worst.evidence.id); }
     const lv = levy(o);
-    if (!picks.length && lv && o.anna.coinsMilli !== null && o.anna.coinsMilli < 5000 && since(m, "levy", o.day) >= 45) { mark(m, "levy", o.day); return decision(o, "community-protector", [lv.id], "The treasury is empty; a levy, much as the people will resent it", []); }
+    if (!picks.length && lv && o.ruler.coinsMilli !== null && o.ruler.coinsMilli < 5000 && since(m, "levy", o.day) >= 45) { mark(m, "levy", o.day); return decision(o, "community-protector", [lv.id], "The treasury is empty; a levy, much as the people will resent it", []); }
     return picks.length ? decision(o, "community-protector", picks.map((p) => p.id), why.join("; "), cites) : wait(o, "community-protector", "The people are quiet");
   },
 };
@@ -123,7 +123,7 @@ const miscalibrated: PlayerAgent = {
       if (a && fits(o, [a])) { mark(m, `${al.kind}:${al.place}`, o.day); return decision(o, "miscalibrated-ruler", [a.id], `${a.text}: ${al.evidence.text}, ${al.evidence.source} says so`, [al.evidence.id]); }
     }
     const lv = levy(o);
-    if (lv && (o.anna.coinsMilli ?? 0) < 60000 && since(m, "levy", o.day) >= 20) { mark(m, "levy", o.day); return decision(o, "miscalibrated-ruler", [lv.id], "Coins feel short", []); }
+    if (lv && (o.ruler.coinsMilli ?? 0) < 60000 && since(m, "levy", o.day) >= 20) { mark(m, "levy", o.day); return decision(o, "miscalibrated-ruler", [lv.id], "Coins feel short", []); }
     return wait(o, "miscalibrated-ruler", "All seems well");
   },
 };

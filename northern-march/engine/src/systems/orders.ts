@@ -75,10 +75,10 @@ function fortAnswering(ctx: Ctx, site: string): string | undefined {
   return ctx.content.locations.filter((l) => l.fortification).sort((a, b) => d(a) - d(b) || (a.id < b.id ? -1 : 1))[0]?.id;
 }
 /** An order to attack raiders: the captain goes to the fort that answers the site (if he is not there) and sorties from it with the men there. */
-function startAttack(ctx: Ctx, orderId: number, receivedId: number) {
+function startAttack(ctx: Ctx, orderId: number, causeId: number) {
   const o = ctx.s.orders[String(orderId)].order, who = o.recipient, site = o.objective.id, fort = fortAnswering(ctx, site);
   const subj = [chr(who), oref(orderId)];
-  const ex = ctx.emit("ExecutionStarted", [receivedId], subj, { orderId, action: act("sortie", site) });
+  const ex = ctx.emit("ExecutionStarted", [causeId], subj, { orderId, action: act("sortie", site) });
   const pos = ctx.s.positions[who];
   if (!fort || !("at" in pos)) return finish(ctx, orderId, "abandoned", ex.id, "cannotAttack");
   if (pos.at === fort) return launchAttack(ctx, orderId, ex.id);
@@ -129,7 +129,6 @@ function process(ctx: Ctx, orderId: number, receivedId: number) {
     if ((ctx.s.ordersInForce[who] ?? []).includes(old))
       ctx.emit("OrderSuperseded", [receivedId], [chr(who), oref(old)], { orderId: old, by: orderId, recipient: who });
   if (!ctx.s.agents[who]) return; // no agent behind the recipient (e.g. the ruler herself): the order simply stays in force
-  if (o.intent === "attack") return startAttack(ctx, orderId, receivedId);
 
   const view = buildView(ctx.s, ctx.content, who, ctx.tick), per = perceiverFromView(view);
   const sit = buildSituation(ctx.s, ctx.content, who, ctx.tick, "obey", view, o);
@@ -153,6 +152,7 @@ function process(ctx: Ctx, orderId: number, receivedId: number) {
   // 3. local plan with the recipient's own skill, then execution
   const pl = ctx.emit("LocalPlanFormed", [ob.id], subj, { orderId, steps: [chosen.action], skillPermille: skill(ctx, who, it.domain) });
   if (chosen.action.kind === "delegate_investigation") return delegate(ctx, o, sit.leaderCandidates[0], pl.id);
+  if (o.intent === "attack") return startAttack(ctx, orderId, pl.id); // KI-01: after interpretation, obedience and the local plan
   const ex = ctx.emit("ExecutionStarted", [pl.id], subj, { orderId, action: chosen.action });
   const sc = ctx.content.scenario;
   const a = chosen.action;

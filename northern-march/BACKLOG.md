@@ -3,9 +3,10 @@
 Things agreed but not built, with the decision that set them. Newest first.
 
 ## From the playtest lab (6 Nov 2026, D-022)
-- **KI-01 (decision needed): attack orders skip interpretation and obedience.** `orders.ts startAttack` goes from OrderReceived straight to ExecutionStarted, so a captain cannot refuse or adapt an attack, and the order-lifecycle invariant fails on every attack. Minimal case: `engine/test/regression/KI-01-attack-skips-obedience.json` (seed 9, one attack order on day 86, 90 days). Fix: route attacks through interpretation and obedience like other orders (changes gameplay and possibly G-12).
+- **KI-01 fixed (6 Nov, approved by Marko):** attack orders now go through interpretation, obedience and the local plan like other orders. Regression case `engine/test/regression/KI-01-attack-obeys-after-interpretation.json` asserts the fix. The fix changes what the aggressive persona does, so G-12 and G-13 must be re-run on the new engine (a fresh sealed block is needed).
+- **L9 proposal (D-023, not applied):** lower `scenario.economy.dailyUpkeepMilli` from 25,000 to 22,500. Needs Marko's review, then a re-run of the gates on a fresh sealed block before any change.
 - **Real report email (Prompt 9/10):** needs Marko to set the GitHub secrets and approval variable (`docs/playtest/README.md`), then one approved test.
-- **L8 search and L9 self-improvement:** not started; each needs a separate approval.
+- **L8 search:** not started; needs a separate approval.
 - **Gate regression coverage:** the regression batches use scripted policies that never order an attack, which is why KI-01 went unnoticed; add a lab persona run to the regression set.
 
 ## From Phase 6 (6 Nov 2026)

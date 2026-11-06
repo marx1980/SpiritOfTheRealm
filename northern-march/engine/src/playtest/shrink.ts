@@ -11,7 +11,7 @@ const DAY = 86400;
 export interface TimedInput { tick: number; actions: ActionRecord[] }
 export interface Predicate { kind: "invariant"; match: string }
 export interface RegressionCase {
-  schemaVersion: 1; id: string; title: string; knownIssue: string | null; seed: number; days: number; params: SimParams; inputs: TimedInput[];
+  schemaVersion: 1; id: string; title: string; knownIssue: string | null; /** "fails" while a known issue is open; "passes" once fixed (permanent guard). */ expect: "fails" | "passes"; fixedIn?: string; seed: number; days: number; params: SimParams; inputs: TimedInput[];
   predicate: Predicate; from: string; shrinkSteps: number; original: { days: number; inputs: number; actions: number }; logHash: string;
 }
 
@@ -70,7 +70,7 @@ export function shrink(content: Content, rec: Pick<PlaytestRunRecord, "seed" | "
   while (lo < hi && budget.left > 0) { const mid = Math.floor((lo + hi) / 2); budget.left--; if (test(mid, ins)) hi = mid; else lo = mid + 1; }
   days = hi;
   const sim = playInputs(content, rec.seed, days, ins, o.params);
-  return { schemaVersion: 1, id: o.id, title: o.title, knownIssue: o.knownIssue, seed: rec.seed, days, params: o.params ?? {}, inputs: ins, predicate: p,
+  return { schemaVersion: 1, id: o.id, title: o.title, knownIssue: o.knownIssue, expect: "fails", seed: rec.seed, days, params: o.params ?? {}, inputs: ins, predicate: p,
     from: `game ${rec.tupleIndex} (seed ${rec.seed}, ${rec.persona})`, shrinkSteps: steps,
     original: { days: rec.days, inputs: all.length, actions: all.reduce((a, x) => a + x.actions.length, 0) }, logHash: hashLog(sim.log) };
 }

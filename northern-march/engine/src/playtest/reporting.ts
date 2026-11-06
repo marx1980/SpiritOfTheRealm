@@ -127,8 +127,8 @@ function progressReport(runSetId: string, sums: Summary[], a: Analysis, prev: An
   b += line("Status:") + a.panels.map((p) => line(`  ${p.state.padEnd(22)} ${p.title}: ${p.detail}`)).join("");
   b += "\n" + line("Failures by class:") + (a.failureClasses.map((c) => line(`  ${c.class}: ${c.games} games (first: ${c.firstRef})`)).join("") || line("  none"));
   b += line(`New since last report: ${newClasses.map((c) => c.class).join(", ") || "none"}`);
-  b += "\n" + line("Personas (objective met %, levies, reliefs, Varos gains a following %):");
-  for (const [p, v] of Object.entries(a.personas)) b += line(`  ${p.padEnd(24)} ${String(v.objectiveMet).padStart(5)}%  levies ${v.levies}  reliefs ${v.reliefs}  Varos ${v.supportForVaros}%  cites ${v.citeShare ?? "-"}%`);
+  b += "\n" + line("Personas (objective met %, levies, reliefs, the rival gains a following %):");
+  for (const [p, v] of Object.entries(a.personas)) b += line(`  ${p.padEnd(24)} ${String(v.objectiveMet).padStart(5)}%  levies ${v.levies}  reliefs ${v.reliefs}  the rival ${v.supportForRival}%  cites ${v.citeShare ?? "-"}%`);
   b += "\n" + line("G-11: not evaluated by the lab (sealed phase gate, open since D-013)");
   const top = a.findings[0];
   if (top) b += line(`Top finding (${top.certainty}): ${top.text} [${top.evidence.join("; ")}]`);

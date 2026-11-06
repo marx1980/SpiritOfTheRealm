@@ -1,0 +1,489 @@
+{
+ "schemaVersion": 1,
+ "id": "l9-001",
+ "target": {
+  "persona": "adviser-dependent",
+  "metric": "levies per game",
+  "maxAfter": 5,
+  "baselineNote": "about 20 levies a game in the first dev run"
+ },
+ "guards": {
+  "objectiveDropPoints": 5,
+  "varosRisePoints": 5,
+  "maxChangedParams": 2,
+  "maxPerformanceRatio": 1.25
+ },
+ "allowlist": [
+  {
+   "path": "scenario.player.levyMilli",
+   "min": 30000,
+   "max": 60000,
+   "step": 5000,
+   "why": "what one levy brings in"
+  },
+  {
+   "path": "scenario.economy.dailyUpkeepMilli",
+   "min": 20000,
+   "max": 30000,
+   "step": 2500,
+   "why": "what the crown spends each day"
+  },
+  {
+   "path": "scenario.economy.captainAwayMilli",
+   "min": 1000,
+   "max": 3000,
+   "step": 500,
+   "why": "what an absent captain costs each day"
+  }
+ ],
+ "devSeeds": 30,
+ "valSeeds": 30,
+ "days": 150,
+ "candidates": 6,
+ "verdict": "PROPOSED: passes dev and validation. Needs review before any change; gates (G-12, G-13) must be re-run on a fresh sealed block before adoption.",
+ "proposal": [
+  {
+   "path": "scenario.economy.dailyUpkeepMilli",
+   "value": 22500
+  },
+  {
+   "path": "scenario.economy.captainAwayMilli",
+   "value": 2500
+  }
+ ],
+ "applied": false,
+ "log": [
+  {
+   "step": "baseline",
+   "dev": {
+    "patch": [],
+    "partition": "dev",
+    "games": 120,
+    "levies": {
+     "adviser-dependent": 21,
+     "community-protector": 0.5333333333333333,
+     "delegating-strategist": 0,
+     "passive": 0
+    },
+    "objectiveMet": {
+     "adviser-dependent": 93.33333333333333,
+     "community-protector": 70,
+     "delegating-strategist": 66.66666666666667,
+     "passive": 13.333333333333334
+    },
+    "varos": {
+     "adviser-dependent": 90,
+     "community-protector": 26.666666666666668,
+     "delegating-strategist": 6.666666666666667,
+     "passive": 16.666666666666668
+    },
+    "newFailures": 0,
+    "invalidNonAdv": 0,
+    "msPerGame": 2022.8666666666666,
+    "dir": "/home/claude/spiritoftherealm/northern-march/engine/results/playtest/l9-001/base-dev"
+   }
+  },
+  {
+   "step": "candidate 1",
+   "patch": [
+    {
+     "path": "scenario.player.levyMilli",
+     "value": 35000
+    }
+   ],
+   "dev": {
+    "patch": [
+     {
+      "path": "scenario.player.levyMilli",
+      "value": 35000
+     }
+    ],
+    "partition": "dev",
+    "games": 120,
+    "levies": {
+     "adviser-dependent": 23.8,
+     "community-protector": 0.6,
+     "delegating-strategist": 0,
+     "passive": 0
+    },
+    "objectiveMet": {
+     "adviser-dependent": 100,
+     "community-protector": 70,
+     "delegating-strategist": 66.66666666666667,
+     "passive": 13.333333333333334
+    },
+    "varos": {
+     "adviser-dependent": 83.33333333333333,
+     "community-protector": 33.333333333333336,
+     "delegating-strategist": 6.666666666666667,
+     "passive": 13.333333333333334
+    },
+    "newFailures": 0,
+    "invalidNonAdv": 0,
+    "msPerGame": 2163.9416666666666,
+    "dir": "/home/claude/spiritoftherealm/northern-march/engine/results/playtest/l9-001/c1-dev"
+   },
+   "judged": {
+    "ok": false,
+    "reasons": [
+     "target: levies per game 23.8 is not below 21",
+     "target: only -2.8 fewer, under half the way to 5",
+     "guard: Varos following for community-protector rose 6.7 points"
+    ],
+    "target": {
+     "before": 21,
+     "after": 23.8
+    }
+   }
+  },
+  {
+   "step": "candidate 2",
+   "patch": [
+    {
+     "path": "scenario.player.levyMilli",
+     "value": 45000
+    }
+   ],
+   "dev": {
+    "patch": [
+     {
+      "path": "scenario.player.levyMilli",
+      "value": 45000
+     }
+    ],
+    "partition": "dev",
+    "games": 120,
+    "levies": {
+     "adviser-dependent": 18.466666666666665,
+     "community-protector": 0.6333333333333333,
+     "delegating-strategist": 0,
+     "passive": 0
+    },
+    "objectiveMet": {
+     "adviser-dependent": 100,
+     "community-protector": 66.66666666666667,
+     "delegating-strategist": 73.33333333333333,
+     "passive": 13.333333333333334
+    },
+    "varos": {
+     "adviser-dependent": 93.33333333333333,
+     "community-protector": 26.666666666666668,
+     "delegating-strategist": 6.666666666666667,
+     "passive": 13.333333333333334
+    },
+    "newFailures": 0,
+    "invalidNonAdv": 0,
+    "msPerGame": 2005.45,
+    "dir": "/home/claude/spiritoftherealm/northern-march/engine/results/playtest/l9-001/c2-dev"
+   },
+   "judged": {
+    "ok": false,
+    "reasons": [
+     "target: only 2.5 fewer, under half the way to 5"
+    ],
+    "target": {
+     "before": 21,
+     "after": 18.466666666666665
+    }
+   }
+  },
+  {
+   "step": "candidate 3",
+   "patch": [
+    {
+     "path": "scenario.economy.dailyUpkeepMilli",
+     "value": 22500
+    }
+   ],
+   "dev": {
+    "patch": [
+     {
+      "path": "scenario.economy.dailyUpkeepMilli",
+      "value": 22500
+     }
+    ],
+    "partition": "dev",
+    "games": 120,
+    "levies": {
+     "adviser-dependent": 1.9333333333333333,
+     "community-protector": 0,
+     "delegating-strategist": 0,
+     "passive": 0
+    },
+    "objectiveMet": {
+     "adviser-dependent": 96.66666666666667,
+     "community-protector": 86.66666666666667,
+     "delegating-strategist": 86.66666666666667,
+     "passive": 13.333333333333334
+    },
+    "varos": {
+     "adviser-dependent": 13.333333333333334,
+     "community-protector": 13.333333333333334,
+     "delegating-strategist": 3.3333333333333335,
+     "passive": 10
+    },
+    "newFailures": 0,
+    "invalidNonAdv": 0,
+    "msPerGame": 1471.8,
+    "dir": "/home/claude/spiritoftherealm/northern-march/engine/results/playtest/l9-001/c3-dev"
+   },
+   "judged": {
+    "ok": true,
+    "reasons": [],
+    "target": {
+     "before": 21,
+     "after": 1.9333333333333333
+    }
+   }
+  },
+  {
+   "step": "candidate 4",
+   "patch": [
+    {
+     "path": "scenario.economy.dailyUpkeepMilli",
+     "value": 27500
+    }
+   ],
+   "dev": {
+    "patch": [
+     {
+      "path": "scenario.economy.dailyUpkeepMilli",
+      "value": 27500
+     }
+    ],
+    "partition": "dev",
+    "games": 120,
+    "levies": {
+     "adviser-dependent": 46.36666666666667,
+     "community-protector": 3,
+     "delegating-strategist": 0,
+     "passive": 0
+    },
+    "objectiveMet": {
+     "adviser-dependent": 96.66666666666667,
+     "community-protector": 13.333333333333334,
+     "delegating-strategist": 26.666666666666668,
+     "passive": 13.333333333333334
+    },
+    "varos": {
+     "adviser-dependent": 100,
+     "community-protector": 43.333333333333336,
+     "delegating-strategist": 0,
+     "passive": 13.333333333333334
+    },
+    "newFailures": 0,
+    "invalidNonAdv": 0,
+    "msPerGame": 1419.6666666666667,
+    "dir": "/home/claude/spiritoftherealm/northern-march/engine/results/playtest/l9-001/c4-dev"
+   },
+   "judged": {
+    "ok": false,
+    "reasons": [
+     "target: levies per game 46.36666666666667 is not below 21",
+     "target: only -25.4 fewer, under half the way to 5",
+     "guard: Varos following for adviser-dependent rose 10.0 points",
+     "guard: objective met for community-protector fell 56.7 points",
+     "guard: Varos following for community-protector rose 16.7 points",
+     "guard: objective met for delegating-strategist fell 40.0 points"
+    ],
+    "target": {
+     "before": 21,
+     "after": 46.36666666666667
+    }
+   }
+  },
+  {
+   "step": "candidate 5",
+   "patch": [
+    {
+     "path": "scenario.economy.dailyUpkeepMilli",
+     "value": 22500
+    },
+    {
+     "path": "scenario.economy.captainAwayMilli",
+     "value": 1500
+    }
+   ],
+   "dev": {
+    "patch": [
+     {
+      "path": "scenario.economy.dailyUpkeepMilli",
+      "value": 22500
+     },
+     {
+      "path": "scenario.economy.captainAwayMilli",
+      "value": 1500
+     }
+    ],
+    "partition": "dev",
+    "games": 120,
+    "levies": {
+     "adviser-dependent": 1.6,
+     "community-protector": 0,
+     "delegating-strategist": 0,
+     "passive": 0
+    },
+    "objectiveMet": {
+     "adviser-dependent": 93.33333333333333,
+     "community-protector": 86.66666666666667,
+     "delegating-strategist": 76.66666666666667,
+     "passive": 13.333333333333334
+    },
+    "varos": {
+     "adviser-dependent": 13.333333333333334,
+     "community-protector": 16.666666666666668,
+     "delegating-strategist": 3.3333333333333335,
+     "passive": 10
+    },
+    "newFailures": 0,
+    "invalidNonAdv": 0,
+    "msPerGame": 951.775,
+    "dir": "/home/claude/spiritoftherealm/northern-march/engine/results/playtest/l9-001/c5-dev"
+   },
+   "judged": {
+    "ok": true,
+    "reasons": [],
+    "target": {
+     "before": 21,
+     "after": 1.6
+    }
+   }
+  },
+  {
+   "step": "candidate 6",
+   "patch": [
+    {
+     "path": "scenario.economy.dailyUpkeepMilli",
+     "value": 22500
+    },
+    {
+     "path": "scenario.economy.captainAwayMilli",
+     "value": 2500
+    }
+   ],
+   "dev": {
+    "patch": [
+     {
+      "path": "scenario.economy.dailyUpkeepMilli",
+      "value": 22500
+     },
+     {
+      "path": "scenario.economy.captainAwayMilli",
+      "value": 2500
+     }
+    ],
+    "partition": "dev",
+    "games": 120,
+    "levies": {
+     "adviser-dependent": 1.5666666666666667,
+     "community-protector": 0,
+     "delegating-strategist": 0,
+     "passive": 0
+    },
+    "objectiveMet": {
+     "adviser-dependent": 93.33333333333333,
+     "community-protector": 83.33333333333333,
+     "delegating-strategist": 86.66666666666667,
+     "passive": 13.333333333333334
+    },
+    "varos": {
+     "adviser-dependent": 16.666666666666668,
+     "community-protector": 16.666666666666668,
+     "delegating-strategist": 3.3333333333333335,
+     "passive": 10
+    },
+    "newFailures": 0,
+    "invalidNonAdv": 0,
+    "msPerGame": 1075.1916666666666,
+    "dir": "/home/claude/spiritoftherealm/northern-march/engine/results/playtest/l9-001/c6-dev"
+   },
+   "judged": {
+    "ok": true,
+    "reasons": [],
+    "target": {
+     "before": 21,
+     "after": 1.5666666666666667
+    }
+   }
+  }
+ ],
+ "validation": {
+  "base": {
+   "patch": [],
+   "partition": "validation",
+   "games": 120,
+   "levies": {
+    "adviser-dependent": 24.9,
+    "community-protector": 0.8666666666666667,
+    "delegating-strategist": 0,
+    "passive": 0
+   },
+   "objectiveMet": {
+    "adviser-dependent": 90,
+    "community-protector": 40,
+    "delegating-strategist": 53.333333333333336,
+    "passive": 3.3333333333333335
+   },
+   "varos": {
+    "adviser-dependent": 96.66666666666667,
+    "community-protector": 23.333333333333332,
+    "delegating-strategist": 0,
+    "passive": 16.666666666666668
+   },
+   "newFailures": 0,
+   "invalidNonAdv": 0,
+   "msPerGame": 1174.1916666666666,
+   "dir": "/home/claude/spiritoftherealm/northern-march/engine/results/playtest/l9-001/base-val"
+  },
+  "cand": {
+   "patch": [
+    {
+     "path": "scenario.economy.dailyUpkeepMilli",
+     "value": 22500
+    },
+    {
+     "path": "scenario.economy.captainAwayMilli",
+     "value": 2500
+    }
+   ],
+   "partition": "validation",
+   "games": 120,
+   "levies": {
+    "adviser-dependent": 3.033333333333333,
+    "community-protector": 0.03333333333333333,
+    "delegating-strategist": 0,
+    "passive": 0
+   },
+   "objectiveMet": {
+    "adviser-dependent": 86.66666666666667,
+    "community-protector": 80,
+    "delegating-strategist": 80,
+    "passive": 3.3333333333333335
+   },
+   "varos": {
+    "adviser-dependent": 20,
+    "community-protector": 20,
+    "delegating-strategist": 0,
+    "passive": 13.333333333333334
+   },
+   "newFailures": 0,
+   "invalidNonAdv": 0,
+   "msPerGame": 988.6916666666667,
+   "dir": "/home/claude/spiritoftherealm/northern-march/engine/results/playtest/l9-001/cand-val"
+  },
+  "judged": {
+   "ok": true,
+   "reasons": [],
+   "target": {
+    "before": 24.9,
+    "after": 3.033333333333333
+   }
+  },
+  "levyChange": {
+   "diff": -21.866666666666667,
+   "lo": -25.166666666666668,
+   "hi": -18.733333333333334
+  }
+ },
+ "engineHash": "83a31003c44a"
+}

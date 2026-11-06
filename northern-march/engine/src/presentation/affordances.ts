@@ -1,13 +1,11 @@
 // What a decision can be, from the ruler's view only (playtest v4.1 A1). The debug page and the playtest bridge both
 // use this module, so a human and a player agent are offered the same things at the same moment.
 // Inputs: the View and PublicRules (prices and lists anyone in the realm knows). Never Content or WorldState.
-import { beliefsAbout, type View } from "../view.ts";
-import type { PlayerAction } from "../policies.ts";
-import type { Recommendation } from "../schemas.ts";
+import { beliefsAbout, type PlayerAction, type Recommendation, type View } from "../view.ts";
 import { captainSentTo, fallenAt, planOf, planWords } from "./phrasing.ts";
 import { adviceSettled, latestAdviceOf } from "./court.ts";
 
-/** Public rules of the realm: what things cost and where Anna may go. Built from content by the caller. */
+/** Public rules of the realm: what things cost and where the ruler may go. Built from content by the caller. */
 export interface PublicRules {
   ruler: string;
   levyMilli: number;
@@ -34,27 +32,27 @@ export function publicRules(c: {
 
 const name = (v: View, id: string) => v.world.names[id] ?? id;
 
-/** What Anna believes the treasury holds (the newest belief), or undefined. */
+/** What the ruler believes the treasury holds (the newest belief), or undefined. */
 export function coinsKnown(v: View, rules: PublicRules): number | undefined {
   const b = beliefsAbout(v, rules.ruler, "treasury.balance").sort((x, y) => y.observedAt - x.observedAt)[0];
   return b ? (b.believedValue as number) : undefined;
 }
 
-/** What a repair would cost, from what Anna believes about the walls. Labour costs no coin. */
+/** What a repair would cost, from what the ruler believes about the walls. Labour costs no coin. */
 export function repairCostKnown(v: View, rules: PublicRules, place: string, mode = "standard"): number | undefined {
   const b = beliefsAbout(v, place, "fortification.condition").sort((x, y) => y.observedAt - x.observedAt)[0];
   if (!b || mode === "labour") return b ? 0 : undefined;
   return Math.floor((Math.max(0, rules.repairRestoreToMilli - (b.believedValue as number)) * rules.repairCostMilliPerMilli * (mode === "rush" ? rules.repairRushCostPermille : 1000)) / 1000);
 }
 
-/** The known cost of an action, or undefined when Anna does not know it (or it costs nothing). */
+/** The known cost of an action, or undefined when the ruler does not know it (or it costs nothing). */
 export function costKnown(v: View, rules: PublicRules, a: PlayerAction): number | undefined {
   if (a.action === "relief") return rules.reliefMilli;
   if (a.action === "repair") return repairCostKnown(v, rules, a.target!, a.repairMode);
   return undefined;
 }
 
-/** Whether Anna can pay for an action, as far as she knows. Actions with no known cost are always possible. */
+/** Whether the ruler can pay for an action, as far as she knows. Actions with no known cost are always possible. */
 export function affordable(v: View, rules: PublicRules, a: PlayerAction): boolean {
   const c = costKnown(v, rules, a), k = coinsKnown(v, rules);
   return c === undefined || k === undefined || c <= k;
@@ -119,7 +117,7 @@ export function adviceChoices(v: View): AdviceChoice[] {
   return [...out.values()];
 }
 
-/** Every action Anna could take now that the rules allow and she can pay for (as far as she knows), advice or not.
+/** Every action the ruler could take now that the rules allow and she can pay for (as far as she knows), advice or not.
  *  Order of the list is deterministic. Free-form orders to other people are not listed (the composer's "o:" orders). */
 export function playerActions(v: View, rules: PublicRules): PlayerAction[] {
   const out: PlayerAction[] = [];

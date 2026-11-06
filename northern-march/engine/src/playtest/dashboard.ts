@@ -1,5 +1,5 @@
 // L6: static Control Center page for one run set (or a paired comparison): status panels, personas, failures with
-// replay commands, findings, distinctness, and a causal explorer for pinned games (objective chain, what Anna knew,
+// replay commands, findings, distinctness, and a causal explorer for pinned games (objective chain, what the ruler knew,
 // what the acting characters decided). Objective truth appears here only after the run (debug view).
 import { existsSync, readFileSync } from "node:fs";
 import type { SimEvent } from "../events.ts";
@@ -20,7 +20,7 @@ function brief(e: SimEvent): string {
   return pick.slice(0, 4).join(", ");
 }
 
-interface Explored { key: string; label: string; replay: string; objective: string[]; anna: string[]; actors: string[] }
+interface Explored { key: string; label: string; replay: string; objective: string[]; ruler: string[]; actors: string[] }
 function explore(dir: string, sums: Summary[]): Explored[] {
   const pins: Summary[] = [];
   const seen = new Set<string>();
@@ -40,14 +40,14 @@ function explore(dir: string, sums: Summary[]): Explored[] {
     const objective = chain.slice(-24).map((e) => `day ${Math.floor(e.tick / DAY)} · #${e.id} ${e.type}${brief(e) ? ` · ${brief(e)}` : ""}`);
     const v = sim.viewOf("player");
     const letters = v.reports.filter((r) => r.deliveredAt <= target.tick).slice(-8).map((r) => ({ t: r.deliveredAt, line: `day ${Math.floor(r.deliveredAt / DAY)} · letter from ${v.world.names[r.author] ?? r.author} (written day ${Math.floor(r.composedAt / DAY)}): ${letterSentences(v, r).join(" ").slice(0, 220)}` }));
-    const orders = rec.decisions.filter((d) => d.tick <= target.tick && d.actions.length).slice(-8).map((d) => ({ t: d.tick, line: `day ${Math.floor(d.tick / DAY)} · Anna orders: ${d.actions.map((a) => `${a.action} ${a.target ?? ""}${a.mission ? ` (${a.mission})` : ""}`).join("; ")}` }));
-    const anna = [...letters, ...orders].sort((a, b) => a.t - b.t).map((x) => x.line);
+    const orders = rec.decisions.filter((d) => d.tick <= target.tick && d.actions.length).slice(-8).map((d) => ({ t: d.tick, line: `day ${Math.floor(d.tick / DAY)} · the ruler orders: ${d.actions.map((a) => `${a.action} ${a.target ?? ""}${a.mission ? ` (${a.mission})` : ""}`).join("; ")}` }));
+    const ruler = [...letters, ...orders].sort((a, b) => a.t - b.t).map((x) => x.line);
     const actors = chain.filter((e) => e.type === "ObedienceDecided" || e.type === "DecisionMade" || e.type === "OrderInterpreted").slice(-8).map((e) => {
       const p = e.payload as Record<string, any>;
       return e.type === "DecisionMade" ? `day ${Math.floor(e.tick / DAY)} · ${p.trace?.agent ?? "?"} decides: ${p.trace?.selected?.kind ?? "?"} ${p.trace?.selected?.target ?? ""}` : `day ${Math.floor(e.tick / DAY)} · ${e.type}: ${brief(e)}`;
     });
     if (!actors.length) actors.push(`No interpretation or obedience step in this chain${oid !== null ? ` (order ${oid} went straight from received to execution)` : ""}`);
-    return { key: String(s.i), label: `Game ${s.i} · seed ${s.seed} · ${s.persona} · ${target.type}`, replay: `npm run playtest:replay -- ${dir} ${s.i}`, objective, anna: anna.length ? anna : ["No letters or orders before this event"], actors };
+    return { key: String(s.i), label: `Game ${s.i} · seed ${s.seed} · ${s.persona} · ${target.type}`, replay: `npm run playtest:replay -- ${dir} ${s.i}`, objective, ruler: ruler.length ? ruler : ["No letters or orders before this event"], actors };
   });
 }
 
@@ -60,18 +60,18 @@ export function buildDashboard(dir: string, o: { title: string; comparison?: Ret
   const pill = (s: string) => `<span class="pill ${STATE_CLASS[s] ?? "na"}">${esc(s)}</span>`;
   const panels = a.panels.map((p) => `<div class="panel"><div class="ph">${pill(p.state)}<h3>${esc(p.title)}</h3></div><p>${esc(p.detail)}</p>${p.evidence.length ? `<p class="ev">${p.evidence.map(esc).join(" · ")}</p>` : ""}</div>`).join("");
   const num = (x: number | null, suf = "") => (x === null ? "–" : `${x}${suf}`);
-  const personaRows = ps.map(([p, v]) => `<tr><th>${esc(p)}</th><td>${v.games}</td><td>${v.objectiveMet}%<small> ${v.objectiveCi[0]}–${v.objectiveCi[1]}</small></td><td>${v.fortsFallen}</td><td>${v.levies}</td><td>${v.reliefs}</td><td>${v.repairs}</td><td>${v.sends}</td><td>${v.petitions}</td><td>${v.supportForVaros}%</td><td>${num(v.citeShare, "%")}</td><td>${v.invalid}</td><td>${v.msPerGame}</td></tr>`).join("");
+  const personaRows = ps.map(([p, v]) => `<tr><th>${esc(p)}</th><td>${v.games}</td><td>${v.objectiveMet}%<small> ${v.objectiveCi[0]}–${v.objectiveCi[1]}</small></td><td>${v.fortsFallen}</td><td>${v.levies}</td><td>${v.reliefs}</td><td>${v.repairs}</td><td>${v.sends}</td><td>${v.petitions}</td><td>${v.supportForRival}%</td><td>${num(v.citeShare, "%")}</td><td>${v.invalid}</td><td>${v.msPerGame}</td></tr>`).join("");
   const failRows = a.failureClasses.map((c) => `<tr><th>${esc(c.class)}</th><td>${c.games}</td><td>${c.failures}</td><td><code>npm run playtest:replay -- ${esc(dir)} ${c.firstGame}</code></td></tr>`).join("") || `<tr><td colspan="4">None</td></tr>`;
   const known = a.known.map((k) => `<div class="known"><b>${esc(k.id)}</b> ${esc(k.title)}<div class="dec">${esc(k.decision)}</div></div>`).join("");
   const findings = a.findings.map((f) => `<li><span class="cert ${f.certainty}">${esc(f.certainty)}</span> ${esc(f.text)}${f.evidence.length ? ` <small>${f.evidence.map(esc).join(" · ")}</small>` : ""}</li>`).join("");
   const names = [...new Set(a.pairs.flatMap((p) => [p.a, p.b]))];
   const cell = (x: string, y: string) => { if (x === y) return `<td class="self"></td>`; const p = a.pairs.find((q) => (q.a === x && q.b === y) || (q.a === y && q.b === x)); const d = p?.differ ?? 0; return `<td class="hm" style="--d:${d / 100}" title="${esc(x)} / ${esc(y)}: ${d}%">${Math.round(d)}</td>`; };
   const heat = names.length > 1 ? `<div class="scroll"><table class="heat"><tr><th></th>${names.map((n) => `<th class="rot"><span>${esc(n)}</span></th>`).join("")}</tr>${names.map((y) => `<tr><th>${esc(y)}</th>${names.map((x) => cell(x, y)).join("")}</tr>`).join("")}</table></div>` : "";
-  const cmp = o.comparison ? `<section><h2>Candidate vs baseline</h2><p class="mono">${(o.patch ?? []).map((p) => `${esc(p.path)} = ${esc(JSON.stringify(p.value))}`).join("<br>")}</p><div class="scroll"><table><tr><th></th><th>Games</th><th>Diverged</th><th>Objective met</th><th>Δ 95%</th><th>Varos following</th><th>Δ 95%</th><th>New failures</th></tr>${[["All", o.comparison.all], ...Object.entries(o.comparison.perPersona)].map(([k, r]) => { const x = r as typeof o.comparison.all; return `<tr><th>${esc(k)}</th><td>${x.games}</td><td>${x.diverged}</td><td>${x.objectiveMet.base}% → ${x.objectiveMet.cand}%</td><td>${x.objectiveMet.diffCi.join(" … ")}</td><td>${x.varosFollowing.base}% → ${x.varosFollowing.cand}%</td><td>${x.varosFollowing.diffCi.join(" … ")}</td><td>${x.newFailures.base} → ${x.newFailures.cand}</td></tr>`; }).join("")}</table></div></section>` : "";
+  const cmp = o.comparison ? `<section><h2>Candidate vs baseline</h2><p class="mono">${(o.patch ?? []).map((p) => `${esc(p.path)} = ${esc(JSON.stringify(p.value))}`).join("<br>")}</p><div class="scroll"><table><tr><th></th><th>Games</th><th>Diverged</th><th>Objective met</th><th>Δ 95%</th><th>the rival following</th><th>Δ 95%</th><th>New failures</th></tr>${[["All", o.comparison.all], ...Object.entries(o.comparison.perPersona)].map(([k, r]) => { const x = r as typeof o.comparison.all; return `<tr><th>${esc(k)}</th><td>${x.games}</td><td>${x.diverged}</td><td>${x.objectiveMet.base}% → ${x.objectiveMet.cand}%</td><td>${x.objectiveMet.diffCi.join(" … ")}</td><td>${x.rivalFollowing.base}% → ${x.rivalFollowing.cand}%</td><td>${x.rivalFollowing.diffCi.join(" … ")}</td><td>${x.newFailures.base} → ${x.newFailures.cand}</td></tr>`; }).join("")}</table></div></section>` : "";
   const explorer = explored.length ? `<section><h2>Causal explorer</h2><label for="game-pick" class="lab">Game</label> <select id="game-pick">${explored.map((e) => `<option value="${esc(e.key)}">${esc(e.label)}</option>`).join("")}</select>
     ${explored.map((e, i) => `<div class="explore" data-game="${esc(e.key)}"${i ? " hidden" : ""}><p class="mono">${esc(e.replay)}</p><div class="cols">
       <div><h3>Objective chain</h3><ol>${e.objective.map((x) => `<li>${esc(x)}</li>`).join("")}</ol></div>
-      <div><h3>What Anna knew</h3><ol>${e.anna.map((x) => `<li>${esc(x)}</li>`).join("")}</ol></div>
+      <div><h3>What the ruler knew</h3><ol>${e.ruler.map((x) => `<li>${esc(x)}</li>`).join("")}</ol></div>
       <div><h3>Acting characters</h3><ol>${e.actors.map((x) => `<li>${esc(x)}</li>`).join("")}</ol></div></div></div>`).join("")}</section>` : "";
   return `<title>Playtest Lab · ${esc(o.title)}</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -126,7 +126,7 @@ select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 <div class="meta"><span>${a.games}${manifest.budgets ? ` / ${manifest.budgets.maxGames}` : ""} games</span><span>${esc(manifest.days ?? "")} days</span><span>seeds ${esc(manifest.seeds?.first ?? "")}+${esc(manifest.seeds?.count ?? "")}</span><span>${esc(manifest.partition ?? "")}</span><span>commit ${esc(manifest.commit ?? "")}</span><span>engine ${esc(manifest.engineHash ?? "")}</span><span>content ${esc(manifest.contentVersion ?? "")}</span></div></header>
 <section><h2>Status</h2><div class="panels">${panels}</div></section>
 ${cmp}
-<section><h2>Personas · per game</h2><div class="scroll"><table><tr><th></th><th>Games</th><th>Objective met</th><th>Forts fallen</th><th>Levies</th><th>Reliefs</th><th>Repairs</th><th>Sends</th><th>Petitions</th><th>Varos following</th><th>Cites evidence</th><th>Rejected</th><th>ms</th></tr>${personaRows}</table></div></section>
+<section><h2>Personas · per game</h2><div class="scroll"><table><tr><th></th><th>Games</th><th>Objective met</th><th>Forts fallen</th><th>Levies</th><th>Reliefs</th><th>Repairs</th><th>Sends</th><th>Petitions</th><th>the rival following</th><th>Cites evidence</th><th>Rejected</th><th>ms</th></tr>${personaRows}</table></div></section>
 <section><h2>Failures</h2><div class="scroll"><table><tr><th>Class</th><th>Games</th><th>Count</th><th>Replay first</th></tr>${failRows}</table></div></section>
 ${known ? `<section><h2>Known issues</h2>${known}</section>` : ""}
 <section><h2>Findings</h2><ul class="findings">${findings}</ul></section>
