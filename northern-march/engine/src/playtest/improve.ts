@@ -27,7 +27,7 @@ const PERSONAS_SEARCH: Persona[] = ["adviser-dependent", "community-protector", 
 
 export interface Eval { patch: Patch[]; partition: string; games: number; levies: Record<string, number>; objectiveMet: Record<string, number>; rival: Record<string, number>; newFailures: number; invalidNonAdv: number; msPerGame: number; dir: string }
 
-function assertAllowed(patch: Patch[]) {
+export function assertAllowed(patch: Patch[]) {
   for (const p of patch) {
     const a = ALLOWLIST.find((x) => x.path === p.path);
     if (!a) throw new Error(`${p.path} is not on the edit allowlist`);
@@ -35,7 +35,7 @@ function assertAllowed(patch: Patch[]) {
   }
   if (new Set(patch.map((p) => p.path)).size !== patch.length) throw new Error("a parameter appears twice");
 }
-function assertSeeds(first: number, count: number, partition: "dev" | "validation") {
+export function assertSeeds(first: number, count: number, partition: "dev" | "validation") {
   const [lo, hi] = partition === "dev" ? [1, 4999] : [5000, 9999];
   if (first < lo || first + count - 1 > hi) throw new Error(`${partition} seeds are ${lo}..${hi}; sealed or out-of-range seeds are refused`);
 }

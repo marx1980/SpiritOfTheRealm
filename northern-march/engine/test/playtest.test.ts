@@ -166,3 +166,18 @@ test("L5: every permanent regression case still replays to its recorded outcome"
   }
   assert.ok(PERSONAS.length === 10);
 });
+
+test("L8: the grid, behaviour cells and neighbours are as specified", async () => {
+  const s = await import("../src/playtest/search.ts");
+  assert.equal(s.gridSize(), 7 * 5 * 5, "three allowlisted parameters on their grids");
+  assert.equal(s.CELLS, 48);
+  assert.equal(s.levyBin(0), 0); assert.equal(s.levyBin(5), 1); assert.equal(s.levyBin(6), 2); assert.equal(s.levyBin(16), 3);
+  assert.equal(s.reliefBin(9), 1); assert.equal(s.reliefBin(10), 2);
+  assert.equal(s.cellOf({ levies: 20, reliefs: 0, objectiveMet: true, topStance: { a: "support" } }), "L3R0O1V1");
+  assert.ok(s.isExploitCell("L2R0O1V0") && s.isExploitCell("L3R1O1V1"), "objective met with 6 or more levies");
+  assert.ok(!s.isExploitCell("L1R0O1V0") && !s.isExploitCell("L3R0O0V1"), "few levies, or objective not met, is not flagged");
+  const g = s.GRID.map((x) => Math.floor(x.length / 2));
+  assert.equal(s.neighbours(g).length, 6, "an interior genome has two neighbours per parameter");
+  assert.equal(s.neighbours(s.GRID.map((x) => 0)).length, 3, "a corner has one neighbour per parameter");
+  assert.deepEqual(s.patchOf(g, g), [], "the baseline needs no patch");
+});

@@ -1,0 +1,4 @@
+l8-001: 40 genomes of 175 on dev seeds; 18 of 48 cells filled. FINDINGS FOR REVIEW: 2 exploit cell(s), 1 cliff(s). Nothing applied. Confirm on validation seeds before any change.
+exploit L2R0O1V1: 25 games, e.g. {"genome":[2,2,2],"values":[40000,25000,2000],"changed":1,"persona":"adviser-dependent","seed":2,"levies":13,"reliefs":0,"objectiveMet":true}
+exploit L3R0O1V1: 117 games, e.g. {"genome":[2,3,2],"values":[40000,27500,2000],"changed":1,"persona":"adviser-dependent","seed":1,"levies":36,"reliefs":0,"objectiveMet":true}
+cliff scenario.economy.dailyUpkeepMilli 25000 -> 27500 for delegating-strategist: objective 90% -> 40% (10 seeds)

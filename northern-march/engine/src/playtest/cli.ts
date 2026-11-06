@@ -92,6 +92,14 @@ const cmds: Record<string, () => Promise<void> | void> = {
     console.log(`${id}: ${r.candidates} candidates tried. ${r.verdict}`);
     if (r.proposal) console.log(JSON.stringify(r.proposal));
   },
+  search: async () => {
+    const { search } = await import("./search.ts");
+    const id = flag("id", "l8-" + commit())!;
+    const r = await search({ id, firstSeed: Number(flag("first", "1")), seeds: Number(flag("seeds", "10")), days: Number(flag("days", "150")), budget: Number(flag("budget", "40")), rngSeed: Number(flag("rng", "8")), outDir: flag("out", `${ENGINE}results/playtest/${id}`)! });
+    console.log(`${id}: ${r.genomesEvaluated} genomes of ${r.gridSize} on dev seeds; ${r.cellsFilled} of ${r.cells} cells filled. ${r.verdict}`);
+    for (const x of r.exploits) console.log(`exploit ${x.cell}: ${x.games} games, e.g. ${JSON.stringify(x.examples[0])}`);
+    for (const c of r.cliffs.slice(0, 10)) console.log(`cliff ${c.param} ${c.from} -> ${c.to} for ${c.persona}: objective ${c.objectiveFrom}% -> ${c.objectiveTo}% (${c.seeds} seeds)`);
+  },
   query: () => {
     const [dir, what, x] = args, sums = readSummaries(dir);
     const rows = what === "failures" ? sums.filter((s) => s.failures.length) : what === "persona" ? sums.filter((s) => s.persona === x) : what === "game" ? sums.filter((s) => s.i === Number(x)) : what === "new" ? sums.filter((s) => s.newFailures) : [];

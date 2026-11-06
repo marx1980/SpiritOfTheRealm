@@ -10,6 +10,8 @@ Finds: save replay dropped mission/raid/repair mode (fixed); KI-01 attack orders
 
 L9 (D-023): proposal only, `results/playtest/l9-001/proposal.json`. It lowers the crown's daily upkeep from 25,000 to 22,500 and cuts adviser-dependent levies from about 25 to about 3 a game on validation seeds. Marko approved it on 6 Nov; applied as content march-0.7; G-12 and G-13 pass on sealed block 110000.
 
+L8 (D-024): first adversarial search run, findings for review only. Levy-spam exploit appears above upkeep 22,500; a cliff in upkeep between 25,000 and 27,500. Not applied.
+
 Gate status after the KI-01 fix and the upkeep change (content march-0.7): G-12 and G-13 PASS on sealed block 110000 (D-023). The regression batch (phase1 gates) and the pre-fix results remain pre-fix evidence.
 
 Phase 6 (6A) added (DECISIONS D-021):

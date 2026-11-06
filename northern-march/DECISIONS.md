@@ -503,3 +503,11 @@ Marko agreed all of this on 2 Nov. Engine changed, so every gate was restarted (
 - `results/phase6_g12_100000.txt` was a zero-line file that a terminated run left behind; it is removed from the working tree, and no verdict exists for block 100000.
 - **Post-fix lab run (6 Nov, 1,000 games, `full-post-ki01`).** All panels PASS except H-01 proxy (REVIEW, automated) and G-11 (not evaluated here). No invariant failures; 40.8 malformed probe answers a game, all rejected. Phase 1 regression batch on the fixed engine: G-02 PASS, 0 invariant violations in 1,000 seeds. Records not committed (11 MB), per the operator guide.
 
+## D-024 L8 adversarial search: first run (6 Nov, `l8-001`, not applied)
+- Built as asked in the plan (bounded mutation and quality-diversity archive, after approval). Search over the same three economy numbers as L9 (grid of 175 settings). 40 settings evaluated, each on 10 dev seeds across four personas (1,600 games, 150 days). Archive: 18 of 48 behaviour cells filled. Baseline is the current content (upkeep 22,500).
+- Findings for review (not applied; confirm on validation seeds):
+  - Exploit cells: two. Adviser-dependent meets the objective with 13 levies a game (upkeep 25,000) and with 36 levies (upkeep 27,500). Same pattern as playtest round 1. Only settings above 22,500 produced it in this grid.
+  - Cliff: at levy 40,000, upkeep 25,000 to 27,500 drops delegating-strategist's objective from 90% to 40% (10 seeds). The current 22,500 sits below it.
+- Caveats: 10 seeds per setting, dev seeds only, four personas. The cliff is one paired step on a small sample; treat it as a lead. Nothing in this run changes content or gates.
+- A first run had a filter bug (it missed the 6 to 15 levy band), found by reading the archive; fixed, tested, and the search re-run.
+

@@ -19,7 +19,8 @@
     "playtest:query": "node src/playtest/cli.ts query",
     "playtest:investigate": "node src/playtest/cli.ts investigate",
     "playtest:outbox": "node src/playtest/cli.ts outbox",
-    "playtest:improve": "node src/playtest/cli.ts improve"
+    "playtest:improve": "node src/playtest/cli.ts improve",
+    "playtest:search": "node src/playtest/cli.ts search"
   },
   "engines": {
     "node": ">=22.18"
