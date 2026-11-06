@@ -1,0 +1,12 @@
+50/1000 games, 87 s   100/1000 games, 191 s   150/1000 games, 289 s   200/1000 games, 381 s   250/1000 games, 470 s   300/1000 games, 565 s   350/1000 games, 660 s   400/1000 games, 770 s   450/1000 games, 877 s   500/1000 games, 981 s   550/1000 games, 1087 s   600/1000 games, 1184 s   650/1000 games, 1292 s   700/1000 games, 1377 s   750/1000 games, 1496 s   800/1000 games, 1572 s   850/1000 games, 1668 s   900/1000 games, 1781 s   950/1000 games, 1876 s   1000/1000 games, 1973 s   
+milestone 1000: queued true, 0 games written while the report was built
+
+full-post-ki01: 1000 games, complete (1000 games); 1988 s
+  PASS                   Integrity (invariants, replay, lifecycles): 1000 games, no invariant failure
+  PASS                   Boundary (validation chain): probe: 40.83 malformed answers per game, all rejected, no crash
+  PASS                   Persona distinctness (C0.5: logs differ on ≥10% of seeds): all 45 pairs differ on ≥10% of seeds
+  REVIEW                 H-01 proxy (a): acting decisions citing shown evidence (automated, not a human result): random-valid 0%, cautious-administrator 100%, impulsive-war-ruler 98.9%, adviser-dependent 69.9%, community-protector 99.5%, literal-novice 100%, miscalibrated-ruler 92.9%, delegating-strategist 100%, adversarial-probe 0%
+  NOT EVALUATED          G-11 (information ecology): G-11 is a sealed phase gate; this lab does not re-run it (open since D-013)
+  PASS                   Performance (wall time per game): 1969 ms per game on this machine
+  PASS                   Coverage: 1000 of 1000 games
+dashboard: /home/claude/spiritoftherealm/northern-march/engine/results/playtest/full-post-ki01/dashboard.html
