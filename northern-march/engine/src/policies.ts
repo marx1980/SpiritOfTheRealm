@@ -39,11 +39,11 @@ const believedStore = (v: View, place: string) => {
 };
 /** When she believes a place has under TRIGGER_COVER days of grain, ask the richest other store for some; at most once in 30 days. */
 const TRIGGER_COVER = 8;
-const grainRelief = (consult: boolean): PolicyFn => (v) => {
+const grainRelief = (consult: boolean, gapDays = 30): PolicyFn => (v) => {
   const places = v.world.grain?.places ?? [];
   const forts = new Set(v.world.places.filter((p) => p.fortified).map((p) => p.id)); // she worries about the garrisons' bread
   const short = places.filter((p) => forts.has(p.id)).map((p) => ({ id: p.id, k: believedStore(v, p.id) })).filter((x) => x.k && x.k.cover < TRIGGER_COVER).sort((a, b) => a.k!.cover - b.k!.cover || (a.id < b.id ? -1 : 1))[0];
-  if (!short || recently(v, "requisition", null, 30)) return [];
+  if (!short || recently(v, "requisition", null, gapDays)) return [];
   const from = places.filter((p) => p.id !== short.id).map((p) => ({ id: p.id, k: believedStore(v, p.id) })).filter((x) => x.k && x.k.sacks >= 12 * x.k.need)
     .sort((a, b) => b.k!.sacks - a.k!.sacks || (a.id < b.id ? -1 : 1))[0];
   return from ? [{ action: "requisition" as const, target: from.id, to: short.id, consult }] : [];
@@ -91,8 +91,8 @@ export const POLICIES: Record<"passive" | "delegating" | "aggressive" | "random-
   passive: { fn: () => [], note: "never acts" },
   delegating: { fn: (v, rng) => [...repairBelow(60000, 20)(v, rng), ...advanceTo(400, 20)(v, rng), ...grainRelief(true)(v, rng)], note: "repairs below 60%; sends the captain against raiders reported at 400 or more; asks the people whose grain it is first when a store looks low" },
   aggressive: {
-    fn: (v, rng) => [...repairBelow(80000, 10)(v, rng), ...advanceTo(1, 10)(v, rng), ...(recently(v, "levy", null, 30) ? [] : [{ action: "levy" as const }]), ...grainRelief(false)(v, rng)],
-    note: "repairs below 80%, sends the captain against any reported raiders, levies every 30 days, takes grain without asking when a store looks low",
+    fn: (v, rng) => [...repairBelow(80000, 10)(v, rng), ...advanceTo(1, 10)(v, rng), ...(recently(v, "levy", null, 30) ? [] : [{ action: "levy" as const }]), ...grainRelief(false, 60)(v, rng)],
+    note: "repairs below 80%, sends the captain against any reported raiders, levies every 30 days, takes grain without asking when a store looks low, at most once in 60 days",
   },
   "random-valid": {
     fn: (v, rng) => {
