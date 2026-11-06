@@ -8,7 +8,17 @@
     "test": "node --test test/*.test.ts",
     "typecheck": "tsc -p .",
     "validate": "node src/cli.ts validate content/testbed",
-    "g01": "node src/cli.ts g01 --seeds 1..100"
+    "g01": "node src/cli.ts g01 --seeds 1..100",
+    "playtest:quick": "node src/playtest/cli.ts quick",
+    "playtest:full": "node src/playtest/cli.ts full",
+    "playtest:adversarial": "node src/playtest/cli.ts adversarial",
+    "playtest:paired": "node src/playtest/cli.ts paired",
+    "playtest:dashboard": "node src/playtest/cli.ts dashboard",
+    "playtest:replay": "node src/playtest/cli.ts replay",
+    "playtest:shrink": "node src/playtest/cli.ts shrink",
+    "playtest:query": "node src/playtest/cli.ts query",
+    "playtest:investigate": "node src/playtest/cli.ts investigate",
+    "playtest:outbox": "node src/playtest/cli.ts outbox"
   },
   "engines": {
     "node": ">=22.18"
@@ -17,5 +27,8 @@
     "@types/node": "^22.20.5",
     "esbuild": "^0.24.2",
     "typescript": "5.9"
+  },
+  "dependencies": {
+    "zod": "3.25.76"
   }
 }

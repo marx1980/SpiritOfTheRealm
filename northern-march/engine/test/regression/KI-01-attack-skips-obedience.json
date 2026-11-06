@@ -1,0 +1,34 @@
+{
+ "schemaVersion": 1,
+ "id": "KI-01-attack-skips-obedience",
+ "title": "invariant: order 155: ExecutionStarted after OrderReceived",
+ "knownIssue": "KI-01",
+ "seed": 9,
+ "days": 90,
+ "params": {},
+ "inputs": [
+  {
+   "tick": 7430398,
+   "actions": [
+    {
+     "action": "advance",
+     "target": "northwatch",
+     "mission": "attack",
+     "raid": "blackwood"
+    }
+   ]
+  }
+ ],
+ "predicate": {
+  "kind": "invariant",
+  "match": "order \\d+: ExecutionStarted after OrderReceived"
+ },
+ "from": "game 81 (seed 9, random-valid)",
+ "shrinkSteps": 26,
+ "original": {
+  "days": 150,
+  "inputs": 282,
+  "actions": 282
+ },
+ "logHash": "bd6647ca312e18a7ef535d956b06a102ced79d40b226a5364b82231a052b025a"
+}

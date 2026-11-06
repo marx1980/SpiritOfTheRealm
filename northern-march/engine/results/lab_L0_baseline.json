@@ -1,0 +1,32 @@
+{
+ "gate": "L0",
+ "date": "2026-11-06",
+ "commit": "2db5b7b",
+ "node": "v22.23.4",
+ "content": "march-0.6",
+ "contentHash": "7e072a8d47e6cfe48411479aabe939513ec49c0d10475415d5810a286e617aa9",
+ "engineHash": "29ac75a4491a",
+ "tests": {
+  "total": 160,
+  "pass": 160,
+  "fail": 0,
+  "note": "npm test, 10m29s wall on 2 shared cores (gate runs in parallel)"
+ },
+ "typecheck": "clean (tsc -p .)",
+ "gates": {
+  "G-01": "PASS (Phase 6)",
+  "G-02": "PASS (Phase 1); Phase 6 re-run pending",
+  "G-10": "PASS",
+  "G-11": "FAIL, overridden (D-013, D-016)",
+  "G-12": "PASS on earlier blocks; Phase 6 re-run pending",
+  "G-13": "pending",
+  "G-14": "PASS",
+  "H-01/H-02": "overridden to 7A (D-020)"
+ },
+ "runtime": {
+  "passive240DaysSeed51Ms": 1083,
+  "external240DaysSeed51Ms": 1139,
+  "externalPauses": 357,
+  "passiveLogHash": "28ccb22472259ef1608b1b3c406805bbb7ce012b70777379122e07b26caaf47a"
+ }
+}

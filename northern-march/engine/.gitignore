@@ -1,3 +1,5 @@
 node_modules/
 __pycache__/
 *.pyc
+results/playtest/*/records.jsonl
+!results/playtest/quick-demo/records.jsonl

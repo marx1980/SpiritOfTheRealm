@@ -5,6 +5,7 @@ import { createSim } from "../src/engine.ts";
 import { adviceSettled, buildCourt, latestAdviceOf, type AdviceLine } from "../src/presentation/court.ts";
 import { buildMap } from "../src/presentation/map.ts";
 import { mapSvg } from "./maparts.ts";
+import { actionText, adviceAction, adviceChoices, affordable as affordableR, coinsKnown as coinsKnownR, openAdvice, publicRules, raidNear, repairCostKnown as repairCostKnownR, type AdviceChoice } from "../src/presentation/affordances.ts";
 import { captainSentTo, fallenAt, lettersFall, planOf, certainty, letterSentences, letterGist, planWords, reasonWords, sourceOf } from "../src/presentation/phrasing.ts";
 import { beliefsAbout, validateDraft, type OrderDraft, type View } from "../src/view.ts";
 import { INTENTS, type Recommendation } from "../src/schemas.ts";
@@ -133,32 +134,6 @@ function send() {
   advance();
 }
 
-function fortNear(v: View, site: string) {
-  const s = v.world.places.find((p) => p.id === site);
-  if (!s) return undefined;
-  const d = (p: { pos: [number, number] }) => (p.pos[0] - s.pos[0]) ** 2 + (p.pos[1] - s.pos[1]) ** 2;
-  return v.world.places.filter((p) => p.fortified).sort((a, b) => d(a) - d(b))[0]?.id;
-}
-function adviceAction(v: View, r: Recommendation): PlayerAction | null {
-  const a = planOf(v, r.plan.id);
-  if (a.kind === "advise_repair") return { action: "repair", target: a.target, followed: r.author };
-  if (a.kind === "advise_repair_rush" || a.kind === "advise_repair_labour") return { action: "repair", target: a.target, repairMode: a.kind === "advise_repair_rush" ? "rush" : "labour", followed: r.author };
-  if (a.kind === "advise_recall" || a.kind === "advise_send_captain" || a.kind === "advise_retake") return { action: "advance", target: a.target, followed: r.author };
-  if (a.kind === "advise_sortie") { const f = fortNear(v, a.target!); return !f ? null : captainSentTo(v, f) ? { action: "advance", target: f, mission: "attack", raid: a.target, followed: r.author } : { action: "advance", target: f, followed: r.author }; }
-  if (a.kind === "advise_levy") return { action: "levy", followed: r.author };
-  return null;
-}
-/** The raiders' site a captain would scout or attack from this fort: the strongest believed raid that fort answers. */
-function raidNear(v: View, fort: string): string | undefined {
-  const raids = v.world.places.filter((p) => fortNear(v, p.id) === fort)
-    .map((p) => ({ id: p.id, b: beliefsAbout(v, p.id, "threat.intensity")[0] })).filter((x) => x.b && (x.b.believedValue as number) > 0);
-  return raids.sort((a, b) => (b.b!.believedValue as number) - (a.b!.believedValue as number))[0]?.id;
-}
-const actionText = (v: View, a: PlayerAction) =>
-  a.action === "order" ? `Order ${name(v, a.order!.recipient)}: ${a.order!.intent} ${name(v, a.order!.objective.id)}`
-  : a.action === "levy" ? "Raise a levy" : a.action === "relief" ? `Send relief to ${name(v, a.target!)}` : a.action === "travel" ? `Travel to ${name(v, a.target!)}`
-  : a.action === "repair" ? `Repair ${name(v, a.target!)}${a.repairMode === "rush" ? " quickly, paying extra, with the captain's men" : a.repairMode === "labour" ? " with the captain's men only (no cost, slower)" : ""}`
-  : a.mission === "attack" && a.raid ? `Attack the raiders at ${name(v, a.raid)}` : a.mission === "scout" && a.raid ? `Scout the raiders at ${name(v, a.raid)}` : (fallenAt(v, a.target!) ? `Retake ${name(v, a.target!)}` : `Send the captain to ${name(v, a.target!)}`);
 const queue = (a: PlayerAction) => {
   if (!st.paused) return;
   // the same action from two advisers (e.g. raiders and captain both mean "send the captain to Northwatch") is queued once
@@ -170,37 +145,11 @@ const queue = (a: PlayerAction) => {
 /** Two actions are the same action if they send the same captain to the same fort (its mission may differ). */
 const matches = (q: PlayerAction, a: PlayerAction) => a.action === "advance" ? q.action === "advance" && q.target === a.target : JSON.stringify(q) === JSON.stringify(a);
 const listNames = (xs: string[]) => xs.length <= 1 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
-/** Each adviser's latest advice that is not yet settled, as the action it means (parallel choices). */
-function latestAdvice(v: View): Recommendation[] {
-  return latestAdviceOf(v).filter((r) => !adviceSettled(v, r.id));
-}
-type Choice = { action: PlayerAction; text: string; by: string[]; wait?: boolean };
-function choices(v: View): Choice[] {
-  const out = new Map<string, Choice>();
-  for (const r of latestAdvice(v)) {
-    if (planOf(v, r.plan.id).kind === "advise_wait") {
-      if (!out.has("wait")) out.set("wait", { action: { action: "wait" } as unknown as PlayerAction, text: "Wait for more news", by: [], wait: true });
-      out.get("wait")!.by.push(name(v, r.author));
-      continue;
-    }
-    if (planOf(v, r.plan.id).kind === "advise_stay") { // staying needs no order: shown like waiting
-      const k = `stay:${planOf(v, r.plan.id).target}`;
-      if (!out.has(k)) out.set(k, { action: { action: "wait" } as unknown as PlayerAction, text: planWords(v, r.plan.id), by: [], wait: true });
-      out.get(k)!.by.push(name(v, r.author));
-      continue;
-    }
-    const act = adviceAction(v, r);
-    if (!act) continue;
-    const { followed: _f, ...same } = act; // the same action recommended by several advisers is one choice
-    const key = JSON.stringify(same);
-    if (!out.has(key)) out.set(key, { action: act, text: actionText(v, act), by: [] });
-    out.get(key)!.by.push(name(v, r.author));
-  }
-  return [...out.values()];
-}
+type Choice = AdviceChoice;
+const choices = (v: View): Choice[] => adviceChoices(v);
 /** Advisers who want the raiders at a site attacked. */
 function attackersOf(v: View, raid: string): string[] {
-  return latestAdvice(v).filter((r) => { const a = planOf(v, r.plan.id); return a.kind === "advise_sortie" && a.target === raid; }).map((r) => name(v, r.author));
+  return openAdvice(v).filter((r) => { const a = planOf(v, r.plan.id); return a.kind === "advise_sortie" && a.target === raid; }).map((r) => name(v, r.author));
 }
 /** Once a send is checked: defend the fort (default), or attack or scout the raiders it answers. */
 function missionBlock(v: View, fort: string, q: PlayerAction): string {
@@ -401,32 +350,17 @@ function observer() {
     <div class="log">${esc(log)}</div></div>`;
 }
 
-/** Coins as Anna believes them (words, never the true amount). Goods are not in the engine yet (Phase 7). */
-/** What Anna believes the treasury holds (the newest belief), or undefined. */
-function coinsKnown(v: View): number | undefined {
-  const b = beliefsAbout(v, content.scenario.ruler, "treasury.balance").sort((x, y) => y.observedAt - x.observedAt)[0];
-  return b ? (b.believedValue as number) : undefined;
-}
-/** What a repair of a fort would cost, from what Anna believes about its walls. */
-function repairCostKnown(v: View, place: string, mode = "standard"): number | undefined {
-  const b = beliefsAbout(v, place, "fortification.condition").sort((x, y) => y.observedAt - x.observedAt)[0], p = content.scenario.player;
-  if (!b || mode === "labour") return b ? 0 : undefined; // the captain's men do it: no coin
-  return Math.floor((Math.max(0, p.repairRestoreToMilli - (b.believedValue as number)) * p.repairCostMilliPerMilli * (mode === "rush" ? p.repairRushCostPermille : 1000)) / 1000);
-}
+const RULES = publicRules(content);
+const coinsKnown = (v: View) => coinsKnownR(v, RULES);
+const repairCostKnown = (v: View, place: string, mode = "standard") => repairCostKnownR(v, RULES, place, mode);
 const MODE_TEXT: Record<string, string> = { standard: "Standard: the garrison, paid materials", rush: "Rush: pay extra, the captain's men help", labour: "Labour only: the captain's men, no cost, slower" };
 const kCoins = (n: number) => `${Math.round(n / 1000)}k`;
 /** Background income (holdings) minus upkeep, per day: a rough estimate Anna can see. */
 const baseNetMilli = content.scenario.economy.holdings.reduce((a, h) => a + h.dailyIncomeMilli, 0) - content.scenario.economy.dailyUpkeepMilli;
 const LOW_COINS = 30000;
-/** A repair is only possible if Anna can pay for it, as far as she knows. Other actions are always possible. */
-const RELIEF = content.communities.params.reliefMilli;
-const PEOPLE = new Set(content.communities.communities.map((c) => c.id));
-function affordable(v: View, a: PlayerAction): boolean {
-  if (a.action === "relief") { const k = coinsKnown(v); return k === undefined || RELIEF <= k; }
-  if (a.action !== "repair") return true;
-  const c = repairCostKnown(v, a.target!, a.repairMode), k = coinsKnown(v);
-  return c === undefined || k === undefined || c <= k;
-}
+const RELIEF = RULES.reliefMilli;
+const PEOPLE = new Set(RULES.peoplePlaces);
+const affordable = (v: View, a: PlayerAction) => affordableR(v, RULES, a);
 
 function coinStatus(v: View): string {
   const bs = beliefsAbout(v, content.scenario.ruler, "treasury.balance");

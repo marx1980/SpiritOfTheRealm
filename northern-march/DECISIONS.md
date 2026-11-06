@@ -14,7 +14,7 @@ Newest first. Numbers come from `phase0/results/` (files named in each entry). A
 
 **Tests.** `test/communities.test.ts` (D5, I02/T07 levy, I03, G-13, rumour latency, petitions only by letter, relief, income and levy effects, ablation leaves Phase 5 economics unchanged, competing narratives, misconduct, Varos's silence); `test/canonical.test.ts` (C5 registry; T04 gradient; T06 resource shock); invariant in `src/invariants.ts`.
 
-**Gate (pre-registered here before the run).** G-13 on sealed block 60000-60999 under passive, delegating and aggressive: 0 revolts, 0 escalations past delay without the D2 gates. Regression: G-01 (Node and Bun), G-02, invariants on 1,000 seeds x 2 arms. G-12 re-run on sealed block 98000 with communities on (must stay >= 10 points). Results: see STATE.md.
+**Gate (pre-registered here before the run).** G-13 on sealed block 60000-60999 under passive, delegating and aggressive: 0 revolts, 0 escalations past delay without the D2 gates. Regression: G-01 (Node and Bun), G-02, invariants on 1,000 seeds x 2 arms. G-12 re-run with communities on (must stay >= 10 points), first registered on block 98000; the gate tool refused that block before running any seed (blocks must start on a multiple of 10,000), so re-registered on 6 Nov, before running, as sealed block 100000-100999 with the same criteria and the TUNE aliases (best Elara, worst Oren). Results: see STATE.md.
 
 ---
 

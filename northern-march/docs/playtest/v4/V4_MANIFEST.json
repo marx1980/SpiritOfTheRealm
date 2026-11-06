@@ -1,0 +1,48 @@
+{
+  "package": "SpiritOfTheRealm Agent Playtest Laboratory",
+  "version": "4.0",
+  "created": "2026-11-03",
+  "authority": "v4",
+  "files": [
+    {
+      "name": "README_START_HERE_V4.md",
+      "sha256": "4db165deca7479dc932903847e6c59f839e735d6e1d10c0efe2004143438774f",
+      "bytes": 1289
+    },
+    {
+      "name": "V4_MASTER_PLAN.md",
+      "sha256": "feb4179f0bd799092e95639f7a1d76150560f43e81fc1bdac03f5610fe47e0f7",
+      "bytes": 3473
+    },
+    {
+      "name": "V4_API_AND_VALIDATION.md",
+      "sha256": "06c53505077f01f07cfee1aa45d7129ee9b4c401e1d2fe11f60f1140e605b6ff",
+      "bytes": 1639
+    },
+    {
+      "name": "V4_CONTROL_CENTER_AND_REPORTING.md",
+      "sha256": "4aab7d2ba335bc9ff64e8fd5eb6eda3b7ab624fddc61cec8cfe54fc3af33334a",
+      "bytes": 2960
+    },
+    {
+      "name": "V4_IMPLEMENTATION_BACKLOG.md",
+      "sha256": "cc0c987922d9f800f994995a4b18a895267c99dd698be74cb1e7ff04a5d83545",
+      "bytes": 2511
+    },
+    {
+      "name": "V4_COPILOT_PROMPTS.md",
+      "sha256": "9443a9f03d9fbf169e1e3963f9aa11f69e4263a571d11479ce3bb7b170956097",
+      "bytes": 3384
+    },
+    {
+      "name": "V4_ACCEPTANCE_AND_GOVERNANCE.md",
+      "sha256": "2fb9b6dd299b6848074ec491c9f8248070f3633522a682758d33eabd1e4d18c8",
+      "bytes": 2227
+    },
+    {
+      "name": "V4_REVIEW_NOTES.md",
+      "sha256": "fc5c85dc0a86ea2673183154336972a6ac1f70176fc995e1555f79ab72f68aaa",
+      "bytes": 1231
+    }
+  ]
+}
