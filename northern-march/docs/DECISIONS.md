@@ -22,3 +22,8 @@ Suite 190/190 and KI-01 hash re-recorded on march-0.8 (aggressive levy 60 days, 
 - Official cover 3: caution 3.3% passive / 1.7% others; end state 5 / 23.3 / 8.3 / 41.7 (passive/cautious/delegating/aggressive).
 - Harvest hit 500‰ × 35 days: caution ≤3.3%, end states 3.3–60%, misinformation up to 28%. Rejected.
 Convoy loss/seizure variants running. No content committed from these; no band moved; no gate block used.
+
+#### D-026 addendum 8 — convoy loss and a purchase persona (TUNE seeds 1–60, ON arm)
+Convoy loss ×2 / seizure ×2: caution 3.3% (passive, cautious, delegating), 1.7% aggressive; end states 8.3 / 38.3 / 25 / 38.3 (passive/cautious/delegating/aggressive). ×4 / ×3: same caution, end states 8.3 / 36.7 / 28.3 / 40. Saturates; no further gain from harsher convoys.
+Purchase-only cautious persona: caution 0%, misinformation 40% (buying while stocks are healthy). Rejected; persona reverted to "never asks for grain".
+Best reachable caution share by parameter changes is ~3.3%, below the 5% floor. Nothing adopted; content unchanged (march-0.8).
