@@ -1,0 +1,1232 @@
+{
+ "schemaVersion": 1,
+ "id": "l8-001",
+ "mode": "search",
+ "partition": "dev",
+ "firstSeed": 1,
+ "seeds": 10,
+ "days": 150,
+ "personas": [
+  "adviser-dependent",
+  "community-protector",
+  "delegating-strategist",
+  "passive"
+ ],
+ "budget": 40,
+ "genomesEvaluated": 40,
+ "gridSize": 175,
+ "cellsFilled": 18,
+ "cells": 48,
+ "base": [
+  40000,
+  22500,
+  2000
+ ],
+ "allowlist": [
+  {
+   "path": "scenario.player.levyMilli",
+   "min": 30000,
+   "max": 60000,
+   "step": 5000,
+   "why": "what one levy brings in"
+  },
+  {
+   "path": "scenario.economy.dailyUpkeepMilli",
+   "min": 20000,
+   "max": 30000,
+   "step": 2500,
+   "why": "what the crown spends each day"
+  },
+  {
+   "path": "scenario.economy.captainAwayMilli",
+   "min": 1000,
+   "max": 3000,
+   "step": 500,
+   "why": "what an absent captain costs each day"
+  }
+ ],
+ "archive": {
+  "L0R0O0V0": {
+   "games": 389,
+   "examples": [
+    {
+     "genome": [
+      2,
+      1,
+      2
+     ],
+     "values": [
+      40000,
+      22500,
+      2000
+     ],
+     "changed": 0,
+     "persona": "passive",
+     "seed": 2,
+     "levies": 0,
+     "reliefs": 0,
+     "objectiveMet": false
+    },
+    {
+     "genome": [
+      2,
+      1,
+      2
+     ],
+     "values": [
+      40000,
+      22500,
+      2000
+     ],
+     "changed": 0,
+     "persona": "passive",
+     "seed": 3,
+     "levies": 0,
+     "reliefs": 0,
+     "objectiveMet": false
+    },
+    {
+     "genome": [
+      2,
+      1,
+      2
+     ],
+     "values": [
+      40000,
+      22500,
+      2000
+     ],
+     "changed": 0,
+     "persona": "passive",
+     "seed": 4,
+     "levies": 0,
+     "reliefs": 0,
+     "objectiveMet": false
+    }
+   ]
+  },
+  "L0R0O0V1": {
+   "games": 29,
+   "examples": [
+    {
+     "genome": [
+      2,
+      0,
+      2
+     ],
+     "values": [
+      40000,
+      20000,
+      2000
+     ],
+     "changed": 1,
+     "persona": "passive",
+     "seed": 3,
+     "levies": 0,
+     "reliefs": 0,
+     "objectiveMet": false
+    },
+    {
+     "genome": [
+      2,
+      2,
+      2
+     ],
+     "values": [
+      40000,
+      25000,
+      2000
+     ],
+     "changed": 1,
+     "persona": "passive",
+     "seed": 3,
+     "levies": 0,
+     "reliefs": 0,
+     "objectiveMet": false
+    },
+    {
+     "genome": [
+      2,
+      2,
+      2
+     ],
+     "values": [
+      40000,
+      25000,
+      2000
+     ],
+     "changed": 1,
+     "persona": "delegating-strategist",
+     "seed": 7,
+     "levies": 0,
+     "reliefs": 0,
+     "objectiveMet": false
+    }
+   ]
+  },
+  "L0R0O1V0": {
+   "games": 668,
+   "examples": [
+    {
+     "genome": [
+      2,
+      1,
+      2
+     ],
+     "values": [
+      40000,
+      22500,
+      2000
+     ],
+     "changed": 0,
+     "persona": "adviser-dependent",
+     "seed": 1,
+     "levies": 0,
+     "reliefs": 0,
+     "objectiveMet": true
+    },
+    {
+     "genome": [
+      2,
+      1,
+      2
+     ],
+     "values": [
+      40000,
+      22500,
+      2000
+     ],
+     "changed": 0,
+     "persona": "community-protector",
+     "seed": 1,
+     "levies": 0,
+     "reliefs": 0,
+     "objectiveMet": true
+    },
+    {
+     "genome": [
+      2,
+      1,
+      2
+     ],
+     "values": [
+      40000,
+      22500,
+      2000
+     ],
+     "changed": 0,
+     "persona": "delegating-strategist",
+     "seed": 1,
+     "levies": 0,
+     "reliefs": 0,
+     "objectiveMet": true
+    }
+   ]
+  },
+  "L0R0O1V1": {
+   "games": 24,
+   "examples": [
+    {
+     "genome": [
+      2,
+      1,
+      2
+     ],
+     "values": [
+      40000,
+      22500,
+      2000
+     ],
+     "changed": 0,
+     "persona": "delegating-strategist",
+     "seed": 2,
+     "levies": 0,
+     "reliefs": 0,
+     "objectiveMet": true
+    },
+    {
+     "genome": [
+      1,
+      1,
+      2
+     ],
+     "values": [
+      35000,
+      22500,
+      2000
+     ],
+     "changed": 1,
+     "persona": "delegating-strategist",
+     "seed": 2,
+     "levies": 0,
+     "reliefs": 0,
+     "objectiveMet": true
+    },
+    {
+     "genome": [
+      3,
+      1,
+      2
+     ],
+     "values": [
+      45000,
+      22500,
+      2000
+     ],
+     "changed": 1,
+     "persona": "delegating-strategist",
+     "seed": 2,
+     "levies": 0,
+     "reliefs": 0,
+     "objectiveMet": true
+    }
+   ]
+  },
+  "L0R1O0V0": {
+   "games": 3,
+   "examples": [
+    {
+     "genome": [
+      2,
+      2,
+      2
+     ],
+     "values": [
+      40000,
+      25000,
+      2000
+     ],
+     "changed": 1,
+     "persona": "community-protector",
+     "seed": 9,
+     "levies": 0,
+     "reliefs": 9,
+     "objectiveMet": false
+    },
+    {
+     "genome": [
+      1,
+      2,
+      2
+     ],
+     "values": [
+      35000,
+      25000,
+      2000
+     ],
+     "changed": 2,
+     "persona": "community-protector",
+     "seed": 9,
+     "levies": 0,
+     "reliefs": 8,
+     "objectiveMet": false
+    },
+    {
+     "genome": [
+      3,
+      2,
+      2
+     ],
+     "values": [
+      45000,
+      25000,
+      2000
+     ],
+     "changed": 2,
+     "persona": "community-protector",
+     "seed": 9,
+     "levies": 0,
+     "reliefs": 8,
+     "objectiveMet": false
+    }
+   ]
+  },
+  "L0R1O1V0": {
+   "games": 101,
+   "examples": [
+    {
+     "genome": [
+      2,
+      1,
+      2
+     ],
+     "values": [
+      40000,
+      22500,
+      2000
+     ],
+     "changed": 0,
+     "persona": "community-protector",
+     "seed": 2,
+     "levies": 0,
+     "reliefs": 4,
+     "objectiveMet": true
+    },
+    {
+     "genome": [
+      2,
+      1,
+      2
+     ],
+     "values": [
+      40000,
+      22500,
+      2000
+     ],
+     "changed": 0,
+     "persona": "community-protector",
+     "seed": 5,
+     "levies": 0,
+     "reliefs": 1,
+     "objectiveMet": true
+    },
+    {
+     "genome": [
+      2,
+      1,
+      2
+     ],
+     "values": [
+      40000,
+      22500,
+      2000
+     ],
+     "changed": 0,
+     "persona": "community-protector",
+     "seed": 10,
+     "levies": 0,
+     "reliefs": 4,
+     "objectiveMet": true
+    }
+   ]
+  },
+  "L0R1O1V1": {
+   "games": 35,
+   "examples": [
+    {
+     "genome": [
+      2,
+      1,
+      2
+     ],
+     "values": [
+      40000,
+      22500,
+      2000
+     ],
+     "changed": 0,
+     "persona": "community-protector",
+     "seed": 6,
+     "levies": 0,
+     "reliefs": 2,
+     "objectiveMet": true
+    },
+    {
+     "genome": [
+      1,
+      1,
+      2
+     ],
+     "values": [
+      35000,
+      22500,
+      2000
+     ],
+     "changed": 1,
+     "persona": "community-protector",
+     "seed": 6,
+     "levies": 0,
+     "reliefs": 2,
+     "objectiveMet": true
+    },
+    {
+     "genome": [
+      3,
+      1,
+      2
+     ],
+     "values": [
+      45000,
+      22500,
+      2000
+     ],
+     "changed": 1,
+     "persona": "community-protector",
+     "seed": 6,
+     "levies": 0,
+     "reliefs": 2,
+     "objectiveMet": true
+    }
+   ]
+  },
+  "L0R2O0V0": {
+   "games": 35,
+   "examples": [
+    {
+     "genome": [
+      2,
+      1,
+      2
+     ],
+     "values": [
+      40000,
+      22500,
+      2000
+     ],
+     "changed": 0,
+     "persona": "community-protector",
+     "seed": 4,
+     "levies": 0,
+     "reliefs": 10,
+     "objectiveMet": false
+    },
+    {
+     "genome": [
+      1,
+      1,
+      2
+     ],
+     "values": [
+      35000,
+      22500,
+      2000
+     ],
+     "changed": 1,
+     "persona": "community-protector",
+     "seed": 4,
+     "levies": 0,
+     "reliefs": 10,
+     "objectiveMet": false
+    },
+    {
+     "genome": [
+      3,
+      1,
+      2
+     ],
+     "values": [
+      45000,
+      22500,
+      2000
+     ],
+     "changed": 1,
+     "persona": "community-protector",
+     "seed": 4,
+     "levies": 0,
+     "reliefs": 10,
+     "objectiveMet": false
+    }
+   ]
+  },
+  "L0R2O1V0": {
+   "games": 40,
+   "examples": [
+    {
+     "genome": [
+      2,
+      1,
+      2
+     ],
+     "values": [
+      40000,
+      22500,
+      2000
+     ],
+     "changed": 0,
+     "persona": "community-protector",
+     "seed": 7,
+     "levies": 0,
+     "reliefs": 12,
+     "objectiveMet": true
+    },
+    {
+     "genome": [
+      2,
+      1,
+      2
+     ],
+     "values": [
+      40000,
+      22500,
+      2000
+     ],
+     "changed": 0,
+     "persona": "community-protector",
+     "seed": 9,
+     "levies": 0,
+     "reliefs": 11,
+     "objectiveMet": true
+    },
+    {
+     "genome": [
+      1,
+      1,
+      2
+     ],
+     "values": [
+      35000,
+      22500,
+      2000
+     ],
+     "changed": 1,
+     "persona": "community-protector",
+     "seed": 7,
+     "levies": 0,
+     "reliefs": 12,
+     "objectiveMet": true
+    }
+   ]
+  },
+  "L1R0O1V0": {
+   "games": 40,
+   "examples": [
+    {
+     "genome": [
+      2,
+      1,
+      2
+     ],
+     "values": [
+      40000,
+      22500,
+      2000
+     ],
+     "changed": 0,
+     "persona": "adviser-dependent",
+     "seed": 7,
+     "levies": 2,
+     "reliefs": 0,
+     "objectiveMet": true
+    },
+    {
+     "genome": [
+      2,
+      1,
+      2
+     ],
+     "values": [
+      40000,
+      22500,
+      2000
+     ],
+     "changed": 0,
+     "persona": "adviser-dependent",
+     "seed": 10,
+     "levies": 2,
+     "reliefs": 0,
+     "objectiveMet": true
+    },
+    {
+     "genome": [
+      2,
+      1,
+      4
+     ],
+     "values": [
+      40000,
+      22500,
+      3000
+     ],
+     "changed": 1,
+     "persona": "adviser-dependent",
+     "seed": 3,
+     "levies": 4,
+     "reliefs": 0,
+     "objectiveMet": true
+    }
+   ]
+  },
+  "L1R0O1V1": {
+   "games": 4,
+   "examples": [
+    {
+     "genome": [
+      2,
+      1,
+      3
+     ],
+     "values": [
+      40000,
+      22500,
+      2500
+     ],
+     "changed": 1,
+     "persona": "adviser-dependent",
+     "seed": 7,
+     "levies": 2,
+     "reliefs": 0,
+     "objectiveMet": true
+    },
+    {
+     "genome": [
+      4,
+      1,
+      2
+     ],
+     "values": [
+      50000,
+      22500,
+      2000
+     ],
+     "changed": 1,
+     "persona": "adviser-dependent",
+     "seed": 10,
+     "levies": 4,
+     "reliefs": 0,
+     "objectiveMet": true
+    },
+    {
+     "genome": [
+      3,
+      1,
+      3
+     ],
+     "values": [
+      45000,
+      22500,
+      2500
+     ],
+     "changed": 2,
+     "persona": "adviser-dependent",
+     "seed": 7,
+     "levies": 5,
+     "reliefs": 0,
+     "objectiveMet": true
+    }
+   ]
+  },
+  "L1R1O0V0": {
+   "games": 46,
+   "examples": [
+    {
+     "genome": [
+      2,
+      2,
+      2
+     ],
+     "values": [
+      40000,
+      25000,
+      2000
+     ],
+     "changed": 1,
+     "persona": "community-protector",
+     "seed": 3,
+     "levies": 1,
+     "reliefs": 8,
+     "objectiveMet": false
+    },
+    {
+     "genome": [
+      2,
+      3,
+      2
+     ],
+     "values": [
+      40000,
+      27500,
+      2000
+     ],
+     "changed": 1,
+     "persona": "community-protector",
+     "seed": 3,
+     "levies": 3,
+     "reliefs": 2,
+     "objectiveMet": false
+    },
+    {
+     "genome": [
+      2,
+      2,
+      2
+     ],
+     "values": [
+      40000,
+      25000,
+      2000
+     ],
+     "changed": 1,
+     "persona": "community-protector",
+     "seed": 4,
+     "levies": 2,
+     "reliefs": 7,
+     "objectiveMet": false
+    }
+   ]
+  },
+  "L1R1O0V1": {
+   "games": 31,
+   "examples": [
+    {
+     "genome": [
+      2,
+      3,
+      2
+     ],
+     "values": [
+      40000,
+      27500,
+      2000
+     ],
+     "changed": 1,
+     "persona": "community-protector",
+     "seed": 2,
+     "levies": 3,
+     "reliefs": 2,
+     "objectiveMet": false
+    },
+    {
+     "genome": [
+      2,
+      3,
+      2
+     ],
+     "values": [
+      40000,
+      27500,
+      2000
+     ],
+     "changed": 1,
+     "persona": "community-protector",
+     "seed": 4,
+     "levies": 3,
+     "reliefs": 2,
+     "objectiveMet": false
+    },
+    {
+     "genome": [
+      2,
+      3,
+      2
+     ],
+     "values": [
+      40000,
+      27500,
+      2000
+     ],
+     "changed": 1,
+     "persona": "community-protector",
+     "seed": 5,
+     "levies": 3,
+     "reliefs": 2,
+     "objectiveMet": false
+    }
+   ]
+  },
+  "L1R1O1V0": {
+   "games": 8,
+   "examples": [
+    {
+     "genome": [
+      2,
+      3,
+      2
+     ],
+     "values": [
+      40000,
+      27500,
+      2000
+     ],
+     "changed": 1,
+     "persona": "community-protector",
+     "seed": 8,
+     "levies": 3,
+     "reliefs": 1,
+     "objectiveMet": true
+    },
+    {
+     "genome": [
+      3,
+      3,
+      2
+     ],
+     "values": [
+      45000,
+      27500,
+      2000
+     ],
+     "changed": 2,
+     "persona": "community-protector",
+     "seed": 1,
+     "levies": 3,
+     "reliefs": 2,
+     "objectiveMet": true
+    },
+    {
+     "genome": [
+      2,
+      3,
+      3
+     ],
+     "values": [
+      40000,
+      27500,
+      2500
+     ],
+     "changed": 2,
+     "persona": "community-protector",
+     "seed": 8,
+     "levies": 3,
+     "reliefs": 1,
+     "objectiveMet": true
+    }
+   ]
+  },
+  "L1R1O1V1": {
+   "games": 3,
+   "examples": [
+    {
+     "genome": [
+      2,
+      3,
+      2
+     ],
+     "values": [
+      40000,
+      27500,
+      2000
+     ],
+     "changed": 1,
+     "persona": "community-protector",
+     "seed": 1,
+     "levies": 3,
+     "reliefs": 1,
+     "objectiveMet": true
+    },
+    {
+     "genome": [
+      2,
+      3,
+      3
+     ],
+     "values": [
+      40000,
+      27500,
+      2500
+     ],
+     "changed": 2,
+     "persona": "community-protector",
+     "seed": 1,
+     "levies": 3,
+     "reliefs": 1,
+     "objectiveMet": true
+    },
+    {
+     "genome": [
+      1,
+      2,
+      2
+     ],
+     "values": [
+      35000,
+      25000,
+      2000
+     ],
+     "changed": 2,
+     "persona": "community-protector",
+     "seed": 2,
+     "levies": 1,
+     "reliefs": 6,
+     "objectiveMet": true
+    }
+   ]
+  },
+  "L2R0O1V1": {
+   "games": 25,
+   "examples": [
+    {
+     "genome": [
+      2,
+      2,
+      2
+     ],
+     "values": [
+      40000,
+      25000,
+      2000
+     ],
+     "changed": 1,
+     "persona": "adviser-dependent",
+     "seed": 2,
+     "levies": 13,
+     "reliefs": 0,
+     "objectiveMet": true
+    },
+    {
+     "genome": [
+      2,
+      2,
+      2
+     ],
+     "values": [
+      40000,
+      25000,
+      2000
+     ],
+     "changed": 1,
+     "persona": "adviser-dependent",
+     "seed": 5,
+     "levies": 9,
+     "reliefs": 0,
+     "objectiveMet": true
+    },
+    {
+     "genome": [
+      1,
+      1,
+      2
+     ],
+     "values": [
+      35000,
+      22500,
+      2000
+     ],
+     "changed": 1,
+     "persona": "adviser-dependent",
+     "seed": 7,
+     "levies": 7,
+     "reliefs": 0,
+     "objectiveMet": true
+    }
+   ]
+  },
+  "L3R0O0V1": {
+   "games": 2,
+   "examples": [
+    {
+     "genome": [
+      3,
+      3,
+      3
+     ],
+     "values": [
+      45000,
+      27500,
+      2500
+     ],
+     "changed": 3,
+     "persona": "adviser-dependent",
+     "seed": 3,
+     "levies": 50,
+     "reliefs": 0,
+     "objectiveMet": false
+    },
+    {
+     "genome": [
+      1,
+      3,
+      3
+     ],
+     "values": [
+      35000,
+      27500,
+      2500
+     ],
+     "changed": 3,
+     "persona": "adviser-dependent",
+     "seed": 10,
+     "levies": 53,
+     "reliefs": 0,
+     "objectiveMet": false
+    }
+   ]
+  },
+  "L3R0O1V1": {
+   "games": 117,
+   "examples": [
+    {
+     "genome": [
+      2,
+      3,
+      2
+     ],
+     "values": [
+      40000,
+      27500,
+      2000
+     ],
+     "changed": 1,
+     "persona": "adviser-dependent",
+     "seed": 1,
+     "levies": 36,
+     "reliefs": 0,
+     "objectiveMet": true
+    },
+    {
+     "genome": [
+      2,
+      3,
+      2
+     ],
+     "values": [
+      40000,
+      27500,
+      2000
+     ],
+     "changed": 1,
+     "persona": "adviser-dependent",
+     "seed": 2,
+     "levies": 50,
+     "reliefs": 0,
+     "objectiveMet": true
+    },
+    {
+     "genome": [
+      2,
+      2,
+      2
+     ],
+     "values": [
+      40000,
+      25000,
+      2000
+     ],
+     "changed": 1,
+     "persona": "adviser-dependent",
+     "seed": 3,
+     "levies": 41,
+     "reliefs": 0,
+     "objectiveMet": true
+    }
+   ]
+  }
+ },
+ "exploits": [
+  {
+   "cell": "L2R0O1V1",
+   "games": 25,
+   "examples": [
+    {
+     "genome": [
+      2,
+      2,
+      2
+     ],
+     "values": [
+      40000,
+      25000,
+      2000
+     ],
+     "changed": 1,
+     "persona": "adviser-dependent",
+     "seed": 2,
+     "levies": 13,
+     "reliefs": 0,
+     "objectiveMet": true
+    },
+    {
+     "genome": [
+      2,
+      2,
+      2
+     ],
+     "values": [
+      40000,
+      25000,
+      2000
+     ],
+     "changed": 1,
+     "persona": "adviser-dependent",
+     "seed": 5,
+     "levies": 9,
+     "reliefs": 0,
+     "objectiveMet": true
+    },
+    {
+     "genome": [
+      1,
+      1,
+      2
+     ],
+     "values": [
+      35000,
+      22500,
+      2000
+     ],
+     "changed": 1,
+     "persona": "adviser-dependent",
+     "seed": 7,
+     "levies": 7,
+     "reliefs": 0,
+     "objectiveMet": true
+    }
+   ]
+  },
+  {
+   "cell": "L3R0O1V1",
+   "games": 117,
+   "examples": [
+    {
+     "genome": [
+      2,
+      3,
+      2
+     ],
+     "values": [
+      40000,
+      27500,
+      2000
+     ],
+     "changed": 1,
+     "persona": "adviser-dependent",
+     "seed": 1,
+     "levies": 36,
+     "reliefs": 0,
+     "objectiveMet": true
+    },
+    {
+     "genome": [
+      2,
+      3,
+      2
+     ],
+     "values": [
+      40000,
+      27500,
+      2000
+     ],
+     "changed": 1,
+     "persona": "adviser-dependent",
+     "seed": 2,
+     "levies": 50,
+     "reliefs": 0,
+     "objectiveMet": true
+    },
+    {
+     "genome": [
+      2,
+      2,
+      2
+     ],
+     "values": [
+      40000,
+      25000,
+      2000
+     ],
+     "changed": 1,
+     "persona": "adviser-dependent",
+     "seed": 3,
+     "levies": 41,
+     "reliefs": 0,
+     "objectiveMet": true
+    }
+   ]
+  }
+ ],
+ "cliffs": [
+  {
+   "param": "scenario.economy.dailyUpkeepMilli",
+   "from": 25000,
+   "to": 27500,
+   "persona": "delegating-strategist",
+   "objectiveFrom": 90,
+   "objectiveTo": 40,
+   "seeds": 10,
+   "diff": -50
+  }
+ ],
+ "cliffCount": 1,
+ "verdict": "FINDINGS FOR REVIEW: 2 exploit cell(s), 1 cliff(s). Nothing applied. Confirm on validation seeds before any change.",
+ "applied": false,
+ "engineHash": "6aaf8da4f444"
+}
