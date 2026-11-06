@@ -1,4 +1,4 @@
-// Phase 7A: the Grain Crisis read from the event log (nothing here changes the world). Four outcomes, one end state.
+// Phase 7A: the Grain Crisis read from the event log (nothing here changes the world). Four outcomes, one end state. Names of places and people come from the content (scenario.grain.crisis), never from this file.
 import type { Content } from "./content.ts";
 import type { SimEvent } from "./events.ts";
 
@@ -10,9 +10,9 @@ export interface CrisisReading {
 }
 
 /** `place` is where the crisis lies (the place that needs grain), `grievance` the community whose people were asked, `actor` the one who may act on it. */
-export function readCrisis(log: readonly SimEvent[], c: Content, o: { place?: string; grievance?: string; actor?: string; ruler?: string } = {}): CrisisReading {
-  const place = o.place ?? "northwatch", comm = o.grievance ?? "greyfen", actor = o.actor ?? "varos", ruler = o.ruler ?? c.scenario.ruler;
+export function readCrisis(log: readonly SimEvent[], c: Content): CrisisReading {
   const g = c.scenario.grain;
+  const place = g?.crisis.place ?? "", comm = g?.crisis.community ?? "", actor = g?.crisis.actor ?? "", ruler = c.scenario.ruler;
   const store: Record<string, number> = Object.fromEntries((g?.places ?? []).map((p) => [p.location, p.store]));
   const need = Object.fromEntries((g?.places ?? []).map((p) => [p.location, p.need]));
   const bands = g?.bandDays ?? [30, 14, 7, 3];

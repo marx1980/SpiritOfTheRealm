@@ -177,7 +177,7 @@ test("grain stage 4: a hungry fort loses men, and a castellan with a nearly empt
   const own = log.find((e) => e.type === "GrainShipped" && e.payload.by === "bren");
   assert.ok(own && own.payload.orderId === 0 && own.payload.consulted === false && own.payload.how === "requisition", "an official's own shipment");
   assert.ok(log.some((e) => e.type === "GrainDelivered" && e.payload.to === "northwatch"));
-  assert.ok(log.find((e) => e.id === own!.causedBy[0])!.type === "BeliefUpdated", "caused by what he saw, not by an order");
+  assert.ok(log.find((e) => e.id === own!.causedBy[0])!.type === "GrainAsked" && log.find((e) => e.id === log.find((x) => x.id === own!.causedBy[0])!.causedBy[0])!.type === "BeliefUpdated", "caused by what he saw, not by an order");
 });
 
 test("grain stage 4: Varos rides to Greyfen when it has a fresh grievance, and earns its trust there; he does not go when it has none", () => {

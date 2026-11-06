@@ -60,6 +60,7 @@ export interface WorldState {
   grainLedger: Record<string, { produced: number; consumed: number; spilled: number; unmet: number; lost: number; seized: number }>;
   convoys: Record<string, { id: number; from: string; to: string; sacks: number; departedAt: number; arrivesAt: number; orderId: number; how: string; consulted: boolean }>;
   nextConvoyId: number;
+  grainAsked: Record<string, number>; // place -> tick its castellan last sent for grain himself
   grainBand: Record<string, string>;
   harvestHit: Record<string, { permille: number; until: number; eventId: number }>;
   repairs: Record<string, { mode: string; startedAt: number; orderId: number; work: number; done: number; lastT: number; men: number; gen: number; restoredMilli: number; startedEventId: number; engineer: string }>;
@@ -95,8 +96,8 @@ export function bandOf(store: number, need: number, bandDays: readonly number[])
   const i = bandDays.findIndex((d) => cover >= d);
   return BANDS[i < 0 ? 4 : i];
 }
-function initialGrain(c: Content): Pick<WorldState, "grain" | "grainLedger" | "grainBand" | "harvestHit" | "convoys" | "nextConvoyId"> {
-  const g = c.scenario.grain, out = { grain: {} as WorldState["grain"], grainLedger: {} as WorldState["grainLedger"], grainBand: {} as WorldState["grainBand"], harvestHit: {} as WorldState["harvestHit"], convoys: {} as WorldState["convoys"], nextConvoyId: 1 };
+function initialGrain(c: Content): Pick<WorldState, "grain" | "grainLedger" | "grainBand" | "harvestHit" | "convoys" | "nextConvoyId" | "grainAsked"> {
+  const g = c.scenario.grain, out = { grain: {} as WorldState["grain"], grainLedger: {} as WorldState["grainLedger"], grainBand: {} as WorldState["grainBand"], harvestHit: {} as WorldState["harvestHit"], convoys: {} as WorldState["convoys"], nextConvoyId: 1, grainAsked: {} as WorldState["grainAsked"] };
   for (const p of [...(g?.places ?? [])].sort((a, b) => cmp(a.location, b.location))) {
     out.grain[p.location] = p.store; out.grainLedger[p.location] = { produced: 0, consumed: 0, spilled: 0, unmet: 0, lost: 0, seized: 0 };
     out.grainBand[p.location] = bandOf(p.store, p.need, g!.bandDays);
@@ -259,6 +260,7 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   },
   HarvestDamaged: (s, p, e) => { s.harvestHit[p.place] = { permille: p.permille, until: p.until, eventId: e.id }; },
   GarrisonStarved: (s, p) => { for (const [loc, n] of p.changes as [string, number][]) { const f = s.fortifications[loc]; f.garrison = Math.max(0, f.garrison - n); } },
+  GrainAsked: (s, p, e) => { s.grainAsked[p.place] = e.tick; },
   GrainConsulted: noop,
   GrainShipped: (s, p) => {
     s.grain[p.from] -= p.sacks;
@@ -271,6 +273,7 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   ScarcityChanged: (s, p) => { s.grainBand[p.place] = p.to; },
   // communities (Phase 6)
   CommunityHeard: applyEffects,
+  NarratorVisited: applyEffects,
   TroopMisconduct: noop,
   ReliefDelivered: noop,
   PetitionMade: (s, p, e) => { const g = s.communities[p.community].grievances.find((x) => x.id === p.grievanceId); if (g) g.petitionedAt = e.tick; },

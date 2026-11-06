@@ -63,6 +63,8 @@ export interface GrainParams {
   official: { cover: number; cooldownDays: number };
   /** A castellan who dislikes bringing bad news writes a low store as this much higher (the same temperament that understates damage to walls). */
   understatePermille: number;
+  /** Where the crisis lies, whose people are asked, and who may act on their grievance (read by the log classifier, not by the world). */
+  crisis: { place: string; community: string; actor: string };
 }
 export interface Scenario {
   ruler: string; treasuryMilli: number;
@@ -93,6 +95,8 @@ export type GrievanceKind = (typeof GRIEVANCE_KINDS)[number];
 export interface CommunityDef {
   id: string; name: string; cohorts: { id: string; sharePermille: number; weights: Record<GrievanceKind, number> }[];
   material: number; cohesion: number; resources: number; expectedBase: number;
+  /** Weight of grievance at which this community would rally to a named actor, where it differs from the ladder's. */
+  supportAt?: number;
   leader: { id: string; trust: number } | null; reporter: string; exposedTo: string[]; levySharePermille: number; incomeFrom?: string; recruitsFor?: string;
   trust: Record<string, number>; memories: { kind: string; actor: string; about?: string; weight: number }[];
 }
@@ -224,6 +228,7 @@ export function validateContent(raw: RawContent): { errors: ContentError[] } {
       if (c.leader) need(chars, c.leader.id, "character", `community ${c.id} leader`);
       for (const x of c.exposedTo) if (!sc.threat.sites.some((t) => t.site === x)) err("ID_UNKNOWN", `community ${c.id} exposed to ${x}: not a threat site`);
       if (c.cohorts.reduce((a, x) => a + x.sharePermille, 0) !== 1000) err("RANGE", `community ${c.id} cohort shares must sum to 1000`);
+      if (c.supportAt !== undefined && !(c.supportAt >= 0 && c.supportAt <= 1000)) err("RANGE", `community ${c.id} supportAt`);
       for (const k of ["material", "cohesion", "resources", "expectedBase"] as const) if (!(c[k] >= 0 && c[k] <= 1000)) err("RANGE", `community ${c.id} ${k}`);
       if (c.incomeFrom && !sc.economy.holdings.some((h) => h.location === c.incomeFrom)) err("ID_UNKNOWN", `community ${c.id} income from ${c.incomeFrom}: no holding`);
       if (c.recruitsFor && !raw.locations.find((l) => l.id === c.recruitsFor)?.fortification) err("ID_UNKNOWN", `community ${c.id} recruits for ${c.recruitsFor}: not a fort`);

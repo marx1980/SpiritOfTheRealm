@@ -100,6 +100,7 @@ export const EVENT_TYPES: Readonly<Record<string, EventTypeDef>> = Object.freeze
   // communities (Phase 6)
   CommunityHeard: T("communities", "social", 1),
   CommunitiesDrifted: T("communities", "social", 0, true), // a clock-driven review: time passing is its cause
+  NarratorVisited: T("communities", "social", 1), // a day among them: the visitor's standing grows
   TroopMisconduct: T("communities", "social", 2),
   ReliefDelivered: T("communities", "social", 2),
   PetitionMade: T("communities", "political", 2),
@@ -112,6 +113,7 @@ export const EVENT_TYPES: Readonly<Record<string, EventTypeDef>> = Object.freeze
   GrainShipped: T("grain", "economic", 2),
   GrainDelivered: T("grain", "economic", 2),
   GrainLost: T("grain", "economic", 2),
+  GrainAsked: T("grain", "economic", 1), // a castellan decides to send for grain himself
   ScarcityChanged: T("grain", "economic", 2),
   // player and advice
   PlayerInput: T("player", "political", 3, true),

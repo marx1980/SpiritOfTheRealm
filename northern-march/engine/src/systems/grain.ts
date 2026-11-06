@@ -1,7 +1,7 @@
 // Phase 7A grain: stores, harvests and the daily tally. Whole sacks; no random draws (the shortage is caused by the raids,
 // not by chance). Conservation: store = start + produced - consumed - spilled, exactly, at every place.
 import type { Ctx, System } from "./types.ts";
-import { DAY, HOUR, loc } from "./types.ts";
+import { DAY, HOUR, chr, loc } from "./types.ts";
 import { bandOf } from "../world.ts";
 import type { ActionRef } from "../agents/model.ts";
 import { finish } from "./orders.ts";
@@ -92,7 +92,6 @@ export const grain: System = {
         if (to !== from) ctx.emit("ScarcityChanged", [day.id], [loc(p.location)], { place: p.location, from, to, store: after[p.location] });
       }
       // a castellan at his post looks at his own store; if it would feed his place for too few days he sends for grain himself
-      const rt = (ctx.runtime.grain ??= { last: {} as Record<string, number> }) as { last: Record<string, number> };
       for (const p of g.places) {
         const who = [...ctx.content.characters].filter((c) => c.location === p.location && c.reportsTo === ctx.content.scenario.ruler && ctx.s.tiers[c.id] !== "C").sort((a, b) => (a.id < b.id ? -1 : 1))[0]?.id;
         const pos = who ? ctx.s.positions[who] : null;
@@ -100,14 +99,15 @@ export const grain: System = {
         const upd = observe(ctx, who, loc(p.location), "grain.stock", day.id)!;
         const cover = Math.floor(((upd.payload.prop as { believedValue: number }).believedValue) / p.need);
         if (cover >= g.official.cover || Object.values(ctx.s.convoys).some((c) => c.to === p.location)) continue;
-        if (rt.last[p.location] !== undefined && ctx.tick - rt.last[p.location] < g.official.cooldownDays * DAY) continue;
+        const asked = ctx.s.grainAsked[p.location];
+        if (asked !== undefined && ctx.tick - asked < g.official.cooldownDays * DAY) continue;
         const from = g.places.filter((x) => x.location !== p.location).map((x) => ({ x, b: best(ctx, who, x.location, "grain.stock") })).filter(({ x, b }) => b && (b.believedValue as number) >= 12 * x.need)
           .sort((a, b) => (b.b!.believedValue as number) - (a.b!.believedValue as number) || (a.x.location < b.x.location ? -1 : 1))[0];
         if (!from) continue;
         const there = ctx.map.path(p.location, from.x.location, "rider", (r) => ctx.isOpen(r));
         if (!there) continue;
-        rt.last[p.location] = ctx.tick;
-        ctx.at(ctx.tick + there.ticks, "grain:ship", { orderId: 0, kind: "requisition", source: from.x.location, dest: p.location, consult: false, cause: upd.id, official: who });
+        const ask = ctx.emit("GrainAsked", [upd.id], [chr(who), loc(p.location), loc(from.x.location)], { place: p.location, by: who, source: from.x.location });
+        ctx.at(ctx.tick + there.ticks, "grain:ship", { orderId: 0, kind: "requisition", source: from.x.location, dest: p.location, consult: false, cause: ask.id, official: who });
       }
       ctx.at(ctx.tick + DAY, "grain:day", {});
     },

@@ -208,6 +208,7 @@ export class Sim {
       ...(e.payload.order ? { order: e.payload.order as InputRecord["order"] } : {}), ...(e.payload.followed ? { followed: e.payload.followed as string } : {}),
       ...(e.payload.mission ? { mission: e.payload.mission as InputRecord["mission"] } : {}), ...(e.payload.raid ? { raid: e.payload.raid as string } : {}),
       ...(e.payload.repairMode ? { repairMode: e.payload.repairMode as InputRecord["repairMode"] } : {}),
+      ...(e.payload.to ? { to: e.payload.to as string } : {}), ...(e.payload.consult ? { consult: true } : {}),
     }));
     const rngStates: SaveFile["rngStates"] = {};
     for (const [n, r] of [...this.streams].sort(([a], [b]) => (a < b ? -1 : 1))) rngStates[n] = { state: r.getState(), draws: r.draws };
@@ -239,7 +240,8 @@ export class Sim {
       const recs = rp.inputs.filter((i) => i.decision === n);
       for (const r of recs) if (r.tick !== ctx.tick) throw new Error(`replay diverged: decision ${n} recorded at ${r.tick}, reached at ${ctx.tick}`);
       actions = recs.map((r) => ({ action: r.action, ...(r.target ? { target: r.target } : {}), ...(r.order ? { order: r.order } : {}), ...(r.followed ? { followed: r.followed } : {}),
-        ...(r.mission ? { mission: r.mission } : {}), ...(r.raid ? { raid: r.raid } : {}), ...(r.repairMode ? { repairMode: r.repairMode } : {}) }));
+        ...(r.mission ? { mission: r.mission } : {}), ...(r.raid ? { raid: r.raid } : {}), ...(r.repairMode ? { repairMode: r.repairMode } : {}),
+        ...(r.to ? { to: r.to } : {}), ...(r.consult ? { consult: true } : {}) }));
     } else if ((rp ? this.resumePolicy : this.cfg.policy) === "external") {
       actions = this.pendingAnswer ?? [];
     } else {

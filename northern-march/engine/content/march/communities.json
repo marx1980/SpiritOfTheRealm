@@ -214,7 +214,8 @@
           "about": "consult_before_levy",
           "weight": 600
         }
-      ]
+      ],
+      "supportAt": 340
     },
     {
       "id": "eastmarch",

@@ -291,6 +291,11 @@
       "cover": 3,
       "cooldownDays": 20
     },
-    "understatePermille": 350
+    "understatePermille": 350,
+    "crisis": {
+      "place": "northwatch",
+      "community": "greyfen",
+      "actor": "varos"
+    }
   }
 }

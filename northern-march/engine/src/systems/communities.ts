@@ -186,7 +186,7 @@ export function geoMean(xs: number[]): number {
   return Number(lo);
 }
 
-export interface LadderInputs { G: number; Gall: number; N: number; L: number; C: number; R: number; E: number; T: boolean; M: number; Md: number; leader: string | null; supporter: string | null }
+export interface LadderInputs { S: number; G: number; Gall: number; N: number; L: number; C: number; R: number; E: number; T: boolean; M: number; Md: number; leader: string | null; supporter: string | null }
 
 /** The inputs of plan D1, computed from what the community knows: its grievances, memories, trust and what it sees. */
 export function inputsOf(ctx: Ctx, id: string): LadderInputs {
@@ -215,7 +215,7 @@ export function inputsOf(ctx: Ctx, id: string): LadderInputs {
   // a named actor the community would rally to: one who tells them the crown is to blame, has access, and is trusted enough
   const supporter = ctx.content.communities.narrators.filter((n) => n.story === "crown" && hasAccess(ctx, id, n.who) && (c.trust[n.who] ?? 0) >= pr.ladder.supportTrust)
     .map((n) => n.who).sort(cmp)[0] ?? null;
-  return { G, Gall, N, L, C, R, E, T, M, Md, leader: d.leader?.id ?? null, supporter };
+  return { S: d.supportAt ?? pr.ladder.support, G, Gall, N, L, C, R, E, T, M, Md, leader: d.leader?.id ?? null, supporter };
 }
 
 function hasAccess(ctx: Ctx, id: string, who: string) {
@@ -229,7 +229,7 @@ function hasAccess(ctx: Ctx, id: string, who: string) {
 export function rungOf(ctx: Ctx, x: LadderInputs, k = 1000): number {
   const l = P(ctx).ladder, t = (v: number) => scale(v, k);
   const gates = x.G >= t(l.gMin) && x.N >= t(l.nMin) && x.leader !== null && x.L >= t(l.lMin) && x.T;
-  if (gates && x.M >= t(l.support) && x.supporter) return 5;
+  if (gates && x.M >= t(x.S) && x.supporter) return 5;
   if (gates && x.M >= t(l.refuse)) return 4;
   if (gates && x.M >= t(l.withhold)) return 3;
   if (x.G >= t(l.gMin) && x.N >= t(l.nMin) && x.Md >= t(l.delay)) return 2;
@@ -330,10 +330,11 @@ function courting(ctx: Ctx) {
       const x = inputsOf(ctx, here.id);
       if (arrived !== undefined && (ctx.tick - since >= n.stayDays * DAY || x.G < pr.ladder.gMin)) { travel(ctx, nar.who, home, "rider", false, arrived); continue; }
       if (arrived !== undefined && (c.trust[nar.who] ?? 0) < 1000)
-        ctx.emit("CommunityHeard", [arrived], [loc(here.id)], { community: here.id, type: "NarratorVisit", how: "witnessed", source: arrived, trust: [[nar.who, n.trustPerDay]], memoryCap: pr.memoryCap });
+        ctx.emit("NarratorVisited", [arrived], [loc(here.id), chr(nar.who)], { community: here.id, who: nar.who, trust: [[nar.who, n.trustPerDay]], memoryCap: pr.memoryCap });
       continue;
     }
     if (pos.at !== home) continue;
+    if (ctx.s.communities[home] && inputsOf(ctx, home).G >= pr.ladder.gMin) continue; // his own people come first
     const goal = defs(ctx).filter((d) => d.id !== home && d.id !== pos.at).map((d) => ({ d, x: inputsOf(ctx, d.id), h: hoursBetween(ctx, home, d.id) }))
       .filter(({ x, h, d }) => h !== null && h <= n.courtHours && x.G >= pr.ladder.gMin && x.N >= pr.ladder.nMin && x.T && ctx.s.communities[d.id].lastTriggerEvent)
       .sort((a, b) => b.x.G - a.x.G || cmp(a.d.id, b.d.id))[0];
