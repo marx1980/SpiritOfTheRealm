@@ -57,7 +57,7 @@ function relevance(ctx: Ctx, holder: string, subj: SubjectRef): number {
   return subjLoc && ctx.content.byId.location.get(subjLoc)?.province === prov ? 600 : 300;
 }
 
-export const CAPABILITY_FOR: Record<string, string> = { "fortification.condition": "engineering", "fortification.garrison": "intelligence", "character.troops": "intelligence", "character.location": "intelligence", "threat.intensity": "intelligence", "treasury.balance": "administration" };
+export const CAPABILITY_FOR: Record<string, string> = { "fortification.condition": "engineering", "fortification.garrison": "intelligence", "character.troops": "intelligence", "character.location": "intelligence", "threat.intensity": "intelligence", "treasury.balance": "administration", "grain.stock": "administration" };
 
 /** A character looks at something where they are. Quality = capability minus conditions; error shrinks with quality. */
 /** `relay`: someone else who is with the observer hears what they see (the steward tells the ruler at the seat). */
@@ -120,6 +120,16 @@ export function observe(ctx: Ctx, observer: string, subject: SubjectRef, predica
     const here = ctx.s.positions[observer], there = ctx.s.positions[subject.id];
     quality = "at" in here && "at" in there && here.at === there.at ? 1000 : skill(ctx, observer, CAPABILITY_FOR[predicate]);
     const maxErr = Math.floor((1000 - quality) / 50);
+    const r = ctx.keyed(`knowledge:observe:${observer}:${Math.floor(ctx.tick / 86400)}:${subject.id}:${predicate}`);
+    value = Math.max(0, truth + r.int(-maxErr, maxErr));
+  } else if (predicate === "grain.stock") {
+    // a count of the sacks in a place's stores, by eye: within a share of the true figure that shrinks with administration skill;
+    // about a place the observer is not at, it is what they have heard, and the error is twice as wide
+    const truth = ctx.s.grain[subject.id] ?? 0;
+    const here = ctx.s.positions[observer];
+    const near = "at" in here && here.at === subject.id;
+    quality = near ? skill(ctx, observer, CAPABILITY_FOR[predicate]) : Math.floor(skill(ctx, observer, CAPABILITY_FOR[predicate]) / 2);
+    const maxErr = Math.floor((truth * (1000 - quality)) / 2000);
     const r = ctx.keyed(`knowledge:observe:${observer}:${Math.floor(ctx.tick / 86400)}:${subject.id}:${predicate}`);
     value = Math.max(0, truth + r.int(-maxErr, maxErr));
   } else if (predicate === "character.location") {

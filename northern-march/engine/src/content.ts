@@ -51,6 +51,12 @@ export interface GrainParams {
   harvestHitPermille: number; harvestHitDays: number;
   /** Days of cover at which a place moves to the next scarcity band: plenty, adequate, tight, short (below that: famine). */
   bandDays: [number, number, number, number];
+  /** The crown takes grain: `sacks` asked, the place keeps `reserveDays` of its own need; consulting first adds `consultDays` and softens the grievance. */
+  requisition: { sacks: number; reserveDays: number; consultDays: number; grievance: number; consultedPermille: number; material: number; trustConsulted: number; trustTaken: number };
+  /** The crown buys: limited by coin and by the seller's surplus (it keeps `reserveDays` of its own need). */
+  purchase: { sacks: number; reserveDays: number; priceMilliPerSack: number };
+  /** Carts walk. A convoy can be lost on the road, or seized by raiders in proportion to the threat at either end. */
+  convoy: { lossPermillePerDay: number; seizurePermilleAtFull: number };
 }
 export interface Scenario {
   ruler: string; treasuryMilli: number;

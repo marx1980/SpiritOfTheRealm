@@ -107,6 +107,10 @@ export const EVENT_TYPES: Readonly<Record<string, EventTypeDef>> = Object.freeze
   // grain (Phase 7A)
   GrainDay: T("grain", "economic", 1, true), // the daily tally: a clock-driven step
   HarvestDamaged: T("grain", "economic", 2), // raids cut a place's harvest
+  GrainConsulted: T("grain", "political", 2),
+  GrainShipped: T("grain", "economic", 2),
+  GrainDelivered: T("grain", "economic", 2),
+  GrainLost: T("grain", "economic", 2),
   ScarcityChanged: T("grain", "economic", 2),
   // player and advice
   PlayerInput: T("player", "political", 3, true),

@@ -266,6 +266,25 @@
       14,
       7,
       3
-    ]
+    ],
+    "requisition": {
+      "sacks": 150,
+      "reserveDays": 7,
+      "consultDays": 3,
+      "grievance": 140,
+      "consultedPermille": 300,
+      "material": 25,
+      "trustConsulted": 30,
+      "trustTaken": -30
+    },
+    "purchase": {
+      "sacks": 100,
+      "reserveDays": 14,
+      "priceMilliPerSack": 120
+    },
+    "convoy": {
+      "lossPermillePerDay": 15,
+      "seizurePermilleAtFull": 600
+    }
   }
 }

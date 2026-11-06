@@ -31,6 +31,8 @@ function placeOf(e: SimEvent): string | null {
     case "Arrived": return p.at as string;
     case "LevyRaised": return null; // paid where each community lives
     case "ReliefDelivered": case "TroopMisconduct": return p.community as string;
+    case "GrainShipped": return p.from as string;
+    case "GrainDelivered": return p.to as string;
     default: return null;
   }
 }
@@ -142,6 +144,30 @@ function effectsOf(ctx: Ctx, id: string, type: string, p: Record<string, any>, h
       out.material = -pr.misconductMaterial;
       out.grievances = [{ kind: "misconduct", delta: scale(scale(g.misconduct, p.severityPermille), weight(d, "misconduct")), blameCrown: 400 }];
       out.trust = [["crown", pr.trust.misconductCrown]];
+      return out;
+    }
+    case "GrainShipped": {
+      const q = ctx.content.scenario.grain!.requisition;
+      if (p.how !== "requisition") { out.memory = { kind: "sold_grain", actor: "crown", at: p.from, weight: p.from === id ? 300 : 100 }; return out; }
+      out.memory = { kind: p.consulted ? "consulted" : "requisitioned", actor: "crown", at: p.from, weight: p.from === id ? 600 : 150 };
+      if (p.from !== id) return out;
+      const delta = scale(scale(scale(q.grievance, context(ctx, c, d)), weight(d, "levy")), p.consulted ? q.consultedPermille : 1000);
+      out.grievances = [{ kind: "levy", delta, blameCrown: p.consulted ? 500 : 900 }];
+      out.material = -q.material;
+      out.trust = [["crown", p.consulted ? q.trustConsulted : q.trustTaken]];
+      const promise = c.memories.find((m) => m.kind === "promise" && m.about === "consult_before_levy" && !m.broken);
+      if (promise && !p.consulted) {
+        out.grievances.push({ kind: "broken_promise", delta: scale(g.brokenPromise, weight(d, "broken_promise")), blameCrown: 1000 });
+        out.trust.push(["crown", pr.trust.brokenPromiseCrown]);
+        out.breaks = "consult_before_levy";
+      }
+      return out;
+    }
+    case "GrainDelivered": {
+      out.memory = { kind: "grain_delivered", actor: "crown", at: p.to, weight: p.to === id ? 500 : 100 };
+      if (p.to !== id) return out;
+      out.material = Math.floor(pr.reliefMaterial / 2);
+      out.trust = [["crown", Math.floor(pr.trust.reliefCrown / 2)]];
       return out;
     }
   }
@@ -333,7 +359,7 @@ function audience(ctx: Ctx, e: SimEvent): { id: string; delay: number; how: "wit
   return out;
 }
 
-const HEARD = new Set(["RaidDamage", "FortFell", "FortRetaken", "SortieResolved", "LevyRaised", "ReliefDelivered", "TroopMisconduct", "Arrived"]);
+const HEARD = new Set(["RaidDamage", "FortFell", "FortRetaken", "SortieResolved", "LevyRaised", "ReliefDelivered", "TroopMisconduct", "Arrived", "GrainShipped", "GrainDelivered"]);
 
 export const communities: System = {
   id: "communities",

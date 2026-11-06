@@ -7,7 +7,7 @@ import { act, avgTrait } from "./model.ts";
 /** Clarity from what the order states; comprehension = clarity x the recipient's skill in the order's domain. */
 export function interpret(order: StructuredOrder, sit: Situation) {
   const clarity = Math.min(1000, 500 + 100 * Math.min(2, order.constraints.length) + 100 * Math.min(2, order.contingencies.length) + (order.discretion !== "bounded" ? 100 : 0));
-  const domain = order.intent === "repair" ? "engineering" : order.intent === "levy" || order.intent === "relief" ? "administration" : "military";
+  const domain = order.intent === "repair" ? "engineering" : order.intent === "levy" || order.intent === "relief" || order.intent === "requisition" || order.intent === "negotiate" ? "administration" : "military";
   const comprehension = Math.floor((clarity * (500 + Math.floor((sit.cap[domain] ?? 0) / 2))) / 1000);
   const understood = understoodAction(order);
   return { clarity, comprehension, understood, domain, ambiguity: comprehension < 400 ? "read literally: nothing beyond the intent and objective was understood" : null };
@@ -19,6 +19,8 @@ export function understoodAction(o: StructuredOrder): ActionRef {
     case "repair": return act("repair_works", o.objective.id);
     case "levy": return act("levy");
     case "relief": return act("relief", o.objective.id);
+    case "requisition": return act("requisition", o.objective.id);
+    case "negotiate": return act("purchase", o.objective.id);
     case "advance": return act("march_to", o.objective.id);
     case "investigate": return act("investigate", o.objective.id);
     case "attack": return act("sortie", o.objective.id); // KI-01: attacks are interpreted and obeyed like any order

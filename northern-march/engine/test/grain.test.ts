@@ -4,19 +4,26 @@ import assert from "node:assert/strict";
 import { EVENT_TYPES } from "../src/events.ts";
 import { bandOf } from "../src/world.ts";
 import { checkRun } from "../src/invariants.ts";
+import { createSim } from "../src/engine.ts";
+import { DAY } from "../src/systems/types.ts";
+import type { PlayerAction } from "../src/policies.ts";
 import { CONTENT, run, variant } from "./helpers.ts";
 
 const G = CONTENT.scenario.grain!;
 const SEEDS = [1, 2, 3, 4, 5, 6, 7, 8];
 
-test("grain: every place's store equals start + produced - consumed - spilled, exactly, on every seed", () => {
+/** Σ stores + Σ grain on the road = Σ start + produced - consumed - spilled - lost - seized, exactly. */
+function conserved(sim: { unsafeWorldForDebug(): any }) {
+  const w = sim.unsafeWorldForDebug(), L = Object.values(w.grainLedger) as { produced: number; consumed: number; spilled: number; lost: number; seized: number }[];
+  const sum = (f: (x: (typeof L)[number]) => number) => L.reduce((a, x) => a + f(x), 0);
+  const have = (Object.values(w.grain) as number[]).reduce((a, x) => a + x, 0) + (Object.values(w.convoys) as { sacks: number }[]).reduce((a, c) => a + c.sacks, 0);
+  return { have, want: G.places.reduce((a, p) => a + p.store, 0) + sum((x) => x.produced) - sum((x) => x.consumed) - sum((x) => x.spilled) - sum((x) => x.lost) - sum((x) => x.seized) };
+}
+test("grain: stores plus grain on the road equal start + produced - consumed - spilled - lost - seized, exactly, on every seed", () => {
   for (const seed of SEEDS) {
     const sim = run({ seed });
-    for (const p of G.places) {
-      const l = (sim.unsafeWorldForDebug() as any).grainLedger[p.location];
-      assert.equal(sim.unsafeWorldForDebug().grain[p.location], p.store + l.produced - l.consumed - l.spilled, `${p.location} seed ${seed}`);
-      assert.ok(sim.unsafeWorldForDebug().grain[p.location] >= 0 && sim.unsafeWorldForDebug().grain[p.location] <= p.cap, `${p.location} within 0..cap`);
-    }
+    const c = conserved(sim); assert.equal(c.have, c.want, `seed ${seed}`);
+    for (const p of G.places) assert.ok(sim.unsafeWorldForDebug().grain[p.location] >= 0 && sim.unsafeWorldForDebug().grain[p.location] <= p.cap, `${p.location} within 0..cap`);
     assert.deepEqual(checkRun(sim), [], `seed ${seed}`);
   }
 });
@@ -66,4 +73,93 @@ test("grain: grain events belong to the grain system and the content rejects a p
 test("grain: a surplus above the cap is spilled, not created", () => {
   const sim = run({ seed: 1 });
   assert.ok(sim.unsafeWorldForDebug().grainLedger.greyfen.spilled > 0);
+});
+
+test("grain stage 2: Anna learns of the stores only through letters, as an estimate that is usually not the true figure", () => {
+  let wrong = 0, heard = 0;
+  for (const seed of SEEDS) {
+    const sim = run({ seed }, 120);
+    const w = sim.unsafeWorldForDebug();
+    const anna = Object.values(w.beliefs.anna ?? {}).filter((b) => b.predicate === "grain.stock");
+    for (const b of anna) {
+      assert.ok(b.evidenceRefs.every((e) => e.kind === "report"), "no first-hand reading at the seat");
+      heard += 1;
+    }
+    const nw = anna.find((b) => b.subject.id === "northwatch");
+    if (nw && nw.believedValue !== w.grain.northwatch) wrong += 1;
+    // the error stays inside the observer's bound (half the true figure at worst, at skill zero)
+    for (const b of anna) assert.ok(Math.abs((b.believedValue as number) - (w.grain[b.subject.id] ?? 0)) <= 1500, `${b.subject.id} estimate wildly off`);
+  }
+  assert.ok(heard > 0, "Anna never heard of the stores");
+  assert.ok(wrong > 0, "Anna's estimates are always exact");
+});
+
+test("grain stage 2: Bren's letters carry Northwatch's stores and what he hears of Greyfen and Coldmere", () => {
+  const sim = run({ seed: 2 }, 60);
+  const claims = sim.log.filter((e) => e.type === "ReportComposed" && (e.payload.report as any).author === "bren").flatMap((e) => (e.payload.report as any).claims as { predicate: string; subject: { id: string } }[]);
+  const g = new Set(claims.filter((c) => c.predicate === "grain.stock").map((c) => c.subject.id));
+  assert.ok(g.has("northwatch") && g.has("greyfen"), [...g].join());
+});
+
+/** Play one game with the ruler giving a single grain order on a day; returns the finished simulation. */
+function ordered(seed: number, action: PlayerAction, day = 5, days = 60, content = CONTENT) {
+  const sim = createSim({ content, seed, policy: "external", params: { dayEnd: true } });
+  let done = false;
+  for (let i = 0; i < 4000 && sim.tick < days * DAY; i++) {
+    const p = sim.next(days * DAY); if (!p.paused) break;
+    if (!done && sim.tick >= day * DAY) { sim.answer([action]); done = true; continue; }
+    sim.answer([]);
+  }
+  return sim;
+}
+const REQ: PlayerAction = { action: "requisition", target: "greyfen", to: "northwatch", consult: true };
+const quiet = (edit: (r: any) => void = () => {}) => variant((r) => { r.scenario.scripts = []; r.scenario.threat.startPermillePerDay = 0; edit(r); });
+
+test("grain stage 3: a requisition becomes a physical convoy; the stock moves only on arrival, and conservation holds with grain on the road", () => {
+  const sim = ordered(2, REQ, 5, 40, quiet());
+  const ship = sim.log.find((e) => e.type === "GrainShipped")!;
+  assert.ok(ship, "shipped"); assert.equal(ship.payload.how, "requisition");
+  const done = sim.log.find((e) => e.type === "GrainDelivered" || e.type === "GrainLost")!;
+  assert.ok(done && done.tick > ship.tick, "arrival is later than departure (carts walk)");
+  assert.equal(done.causedBy[0], ship.id);
+  const c = conserved(sim); assert.equal(c.have, c.want);
+  assert.ok(sim.log.some((e) => e.type === "GrainShipped") && Object.keys(sim.unsafeWorldForDebug().convoys).length === 0);
+});
+
+test("grain stage 3: consulting Greyfen first keeps the crown's promise; taking without asking breaks it", () => {
+  const grievances = (sim: ReturnType<typeof ordered>, kind: string) => sim.log.filter((e) => e.type === "CommunityHeard" && e.payload.community === "greyfen" && ((e.payload.grievances ?? []) as { kind: string }[]).some((g) => g.kind === kind));
+  const asked = ordered(2, REQ, 5, 40, quiet()), taken = ordered(2, { ...REQ, consult: false }, 5, 40, quiet());
+  assert.ok(asked.log.some((e) => e.type === "GrainConsulted"), "the consultation happened");
+  assert.equal(grievances(asked, "broken_promise").length, 0, "consulted: the promise stands");
+  assert.ok(grievances(taken, "broken_promise").length > 0, "not consulted: the promise is broken");
+  const s1 = asked.log.find((e) => e.type === "GrainShipped")!, s2 = taken.log.find((e) => e.type === "GrainShipped")!;
+  assert.ok(s1.tick > s2.tick, "consulting is slower");
+  const g = (sim: ReturnType<typeof ordered>) => sim.unsafeWorldForDebug().communities.greyfen;
+  assert.ok(g(asked).grievances.reduce((a, x) => a + x.intensity, 0) < g(taken).grievances.reduce((a, x) => a + x.intensity, 0), "less grievance when consulted");
+});
+
+test("grain stage 3: a purchase is limited by coin and pays for what it buys", () => {
+  const BUY: PlayerAction = { action: "purchase", target: "greyfen", to: "northwatch" };
+  const rich = ordered(2, BUY, 5, 30, quiet()), poor = ordered(2, BUY, 5, 30, quiet((r) => { r.scenario.treasuryMilli = 2500; r.scenario.economy.holdings.forEach((h: any) => { h.dailyIncomeMilli = 0; h.jitterMilli = 0; }); r.scenario.economy.dailyUpkeepMilli = 0; r.scenario.economy.captainAwayMilli = 0; }));
+  const a = rich.log.find((e) => e.type === "GrainShipped")!, b = poor.log.find((e) => e.type === "GrainShipped");
+  assert.equal(a.payload.sacks, G.purchase.sacks); assert.equal(a.payload.costMilli, G.purchase.sacks * G.purchase.priceMilliPerSack);
+  assert.ok(b && (b.payload.sacks as number) * G.purchase.priceMilliPerSack <= 2500 && (b.payload.sacks as number) < G.purchase.sacks, "bought only what the coin allowed");
+  assert.ok(!rich.log.some((e) => e.type === "CommunityHeard" && e.payload.community === "greyfen" && ((e.payload.grievances ?? []) as unknown[]).length), "a sale makes no grievance");
+});
+
+test("grain stage 3: a convoy can be lost or seized, and the grain is accounted for", () => {
+  const lost = ordered(2, REQ, 5, 40, quiet((r) => { r.scenario.grain.convoy.lossPermillePerDay = 1000; }));
+  const e = lost.log.find((x) => x.type === "GrainLost")!;
+  assert.ok(e && !lost.log.some((x) => x.type === "GrainDelivered"));
+  const w = lost.unsafeWorldForDebug();
+  assert.equal(w.grainLedger.greyfen.lost, e.payload.sacks);
+  const raided = ordered(2, REQ, 5, 40, variant((r) => { r.scenario.grain!.convoy.seizurePermilleAtFull = 1000; r.scenario.scripts = [{ day: 1, kind: "threat", site: "blackwood", intensityPermille: 1000, durationDays: 90 }]; }));
+  const s = raided.log.find((x) => x.type === "GrainLost");
+  if (s) assert.equal(s.payload.reason, "seized");
+});
+
+test("grain stage 3: an order with nothing to take is abandoned with a reason, not silently dropped", () => {
+  const sim = ordered(2, { ...REQ, target: "northwatch", to: "greyfen" }, 5, 40, quiet((r) => { r.scenario.grain.places.find((p: any) => p.location === "northwatch").store = 100; }));
+  const o = sim.log.find((e) => e.type === "OrderAbandoned" && (e.payload as any).reason);
+  assert.ok(o, "abandoned with a reason"); assert.ok(!sim.log.some((e) => e.type === "GrainShipped"));
 });

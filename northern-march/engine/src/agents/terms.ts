@@ -125,6 +125,7 @@ export function expect(sit: Situation, per: Perceiver, a: ActionRef): Expectatio
     case "delegate_investigation": break; // someone else goes
     case "levy": e.gainMilli = sit.p.levyMilli; break;
     case "relief": e.costMilli = sit.p.reliefMilli; break; // what it buys (the community's goodwill) the steward does not price
+    case "requisition": case "purchase": break; // the steward does not price grain; the order carries the crown's will
     case "half_levy": e.gainMilli = Math.floor(sit.p.levyMilli / 2); break;
     // advice: what the adviser expects if the ruler did this
     case "advise_repair": {

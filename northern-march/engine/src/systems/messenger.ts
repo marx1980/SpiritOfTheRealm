@@ -183,9 +183,14 @@ function inspectAndReport(ctx: Ctx, author: string, cause: number) {
   // captains' companies with them at the fort are counted too
   const companies = Object.entries(ctx.s.positions).filter(([id, p]) => "at" in p && p.at === ch.location && (ctx.s.troops[id] ?? 0) > 0).map(([id]) => id).sort();
   for (const id of companies) observe(ctx, author, chr(id), "character.troops", cause);
+  // the stores: the author's own place, and the places of the communities he writes for (heard of, not seen)
+  const grainPlaces = new Set(ctx.content.scenario.grain?.places.map((x) => x.location) ?? []);
+  const grainFor = [ch.location, ...ctx.content.communities.communities.filter((c) => c.reporter === author).map((c) => c.id)].filter((l, i, a) => grainPlaces.has(l) && a.indexOf(l) === i).sort();
+  for (const l of grainFor) observe(ctx, author, loc(l), "grain.stock", cause);
   const recent = (b: { observedAt: number } | undefined | null) => !!b && ctx.tick - b.observedAt <= ctx.content.scenario.messenger.reportEveryDays * DAY;
   const beliefs = [best(ctx, author, ch.location, "fortification.condition"), best(ctx, author, ch.location, "fortification.garrison"), ...companies.map((id) => best(ctx, author, id, "character.troops")),
     ...ctx.content.scenario.threat.sites.filter((x) => x.target === ch.location).map((x) => best(ctx, author, x.site, "threat.intensity")),
+    ...grainFor.map((l) => best(ctx, author, l, "grain.stock")),
     ...[best(ctx, author, ch.location, "fortification.incident"), best(ctx, author, ch.location, "fortification.holder")].filter((b) => recent(b)),
     // a fight since the last routine letter is told, so that a change in men is explained
     ...ctx.content.scenario.threat.sites.filter((x) => x.target === ch.location).map((x) => best(ctx, author, x.site, "battle.result"))

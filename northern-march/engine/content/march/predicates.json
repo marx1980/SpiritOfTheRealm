@@ -158,5 +158,13 @@
     "domain": "political",
     "wakeSignificance": 1,
     "materialDelta": 1
+  },
+  {
+    "id": "grain.stock",
+    "subjectKind": "location",
+    "halfLifeTicks": 1728000,
+    "domain": "economic",
+    "wakeSignificance": 1,
+    "materialDelta": 100
   }
 ]

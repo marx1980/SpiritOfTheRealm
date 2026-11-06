@@ -15,6 +15,7 @@ import { battleLoss, raiderMen } from "../battle.ts";
 import { travel } from "./movement.ts";
 import { companyAt, menAt, resyncRepair, scheduleRepairEnd } from "./repairs.ts";
 import { contribution } from "./communities.ts";
+import { startGrainOrder } from "./grain.ts";
 
 const oref = (id: number) => ({ kind: "order" as const, id: String(id) });
 
@@ -209,6 +210,8 @@ function process(ctx: Ctx, orderId: number, receivedId: number) {
     const ticks = ctx.map.path(from, where, "foot", (r) => ctx.isOpen(r))?.ticks ?? 0; // carts go at a walking pace
     ctx.at(ctx.tick + ticks, "communities:relief", { community: where, orderId, cause: rs.id });
     finish(ctx, orderId, "completed", rs.id);
+  } else if (a.kind === "requisition" || a.kind === "purchase") {
+    startGrainOrder(ctx, orderId, a, ex.id);
   } else if (a.kind === "march_to" && "at" in ctx.s.positions[who] && (ctx.s.positions[who] as { at: string }).at === a.target) {
     finish(ctx, orderId, "completed", ex.id);
   } else if (a.kind === "investigate") {
