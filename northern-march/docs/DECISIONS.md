@@ -27,3 +27,7 @@ Convoy loss/seizure variants running. No content committed from these; no band m
 Convoy loss ×2 / seizure ×2: caution 3.3% (passive, cautious, delegating), 1.7% aggressive; end states 8.3 / 38.3 / 25 / 38.3 (passive/cautious/delegating/aggressive). ×4 / ×3: same caution, end states 8.3 / 36.7 / 28.3 / 40. Saturates; no further gain from harsher convoys.
 Purchase-only cautious persona: caution 0%, misinformation 40% (buying while stocks are healthy). Rejected; persona reverted to "never asks for grain".
 Best reachable caution share by parameter changes is ~3.3%, below the 5% floor. Nothing adopted; content unchanged (march-0.8).
+
+#### D-027 (proposed, in progress) — requisition refusal
+Marko chose "add a refusal mechanism" for the low political_caution_military_danger share. New event GrainRefused (grain, political); requisition.refuse {gFloor, chancePerG, consultedPermille} in scenario.json: the lending community's grievance against the crown G gives a refusal chance (G − gFloor) × chancePerG / 1000, capped, scaled by consultedPermille when asked first. Keyed draw per attempt; ordered shipments stop with "refused", castellans' own asks simply fail. Refusal needs the communities system on.
+First setting (gFloor 300, 1000, 0.3), TUNE seeds 1–60: end state 8.3 / 31.7 / 21.7 / 33.3 (passive/cautious/delegating/aggressive); caution still 1.7%. About 20 refusals per 60 seeds, mostly after a first delivery. Stronger settings being tried. Not final; content march-0.8 unchanged in version; KI-01 hash will need re-recording.

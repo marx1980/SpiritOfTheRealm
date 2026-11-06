@@ -6,7 +6,7 @@ import { bandOf } from "../world.ts";
 import type { ActionRef } from "../agents/model.ts";
 import { finish } from "./orders.ts";
 import { best, observe, observeTreasury } from "./knowledge.ts";
-import { contribution } from "./communities.ts";
+import { contribution, inputsOf } from "./communities.ts";
 
 const place = (ctx: Ctx, l: string) => ctx.content.scenario.grain!.places.find((p) => p.location === l);
 
@@ -47,6 +47,14 @@ export const grain: System = {
       if (buy) sacks = Math.min(sacks, Math.floor(Math.max(0, ctx.s.treasuryMilli[ctx.content.scenario.ruler]) / g.purchase.priceMilliPerSack));
       else sacks = Math.floor((sacks * contribution(ctx, "levy", source)) / 1000); // a community that refuses gives nothing
       if (sacks <= 0) return stop(spare <= 0 ? "noSurplus" : buy ? "funds" : "refused");
+      const rf = g.requisition.refuse;
+      if (!buy && rf && ctx.enabled("communities") && ctx.s.communities[source]) { // angry people may say no, and say it less when they were asked first
+        const G = inputsOf(ctx, source).G, base = Math.min(1000, Math.max(0, ((G - rf.gFloor) * rf.chancePerG) / 1000)), chance = consult ? Math.floor((base * rf.consultedPermille) / 1000) : Math.floor(base);
+        if (chance > 0 && ctx.keyed(`grain:refuse:${source}:${dest}:${ctx.tick}`).chancePermille(chance)) {
+          ctx.emit("GrainRefused", [cause], [loc(source), loc(dest), ...(official ? [] : [{ kind: "order" as const, id: String(orderId) }])], { community: source, to: dest, by, orderId, grievance: G, chance, consulted: consult });
+          return stop("refused");
+        }
+      }
       const trip = ctx.map.path(source, dest, "foot", (r) => ctx.isOpen(r)); // carts walk
       if (!trip) return stop("noRoute");
       const consulted = !buy && consult;

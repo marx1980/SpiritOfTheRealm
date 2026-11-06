@@ -113,6 +113,7 @@ export const EVENT_TYPES: Readonly<Record<string, EventTypeDef>> = Object.freeze
   GrainShipped: T("grain", "economic", 2),
   GrainDelivered: T("grain", "economic", 2),
   GrainLost: T("grain", "economic", 2),
+  GrainRefused: T("grain", "political", 2), // the people whose grain it is say no
   GrainAsked: T("grain", "economic", 1), // a castellan decides to send for grain himself
   ScarcityChanged: T("grain", "economic", 2),
   // player and advice

@@ -1,301 +1,306 @@
 {
-  "ruler": "anna",
-  "treasuryMilli": 60000,
-  "movement": {
-    "speedsKmPerDay": {
-      "rider": {
-        "road": 80,
-        "track": 60,
-        "forest": 35,
-        "marsh": 25,
-        "hills": 45
-      },
-      "foot": {
-        "road": 30,
-        "track": 25,
-        "forest": 18,
-        "marsh": 12,
-        "hills": 20
-      },
-      "army": {
-        "road": 20,
-        "track": 15,
-        "forest": 10,
-        "marsh": 6,
-        "hills": 12
-      }
-    },
-    "crossingDelayTicks": {
-      "bridge": 0,
-      "ford": 7200,
-      "ferry": 21600
-    }
+ "ruler": "anna",
+ "treasuryMilli": 60000,
+ "movement": {
+  "speedsKmPerDay": {
+   "rider": {
+    "road": 80,
+    "track": 60,
+    "forest": 35,
+    "marsh": 25,
+    "hills": 45
+   },
+   "foot": {
+    "road": 30,
+    "track": 25,
+    "forest": 18,
+    "marsh": 12,
+    "hills": 20
+   },
+   "army": {
+    "road": 20,
+    "track": 15,
+    "forest": 10,
+    "marsh": 6,
+    "hills": 12
+   }
   },
-  "knowledge": {
-    "beliefCaps": {
-      "A": 300,
-      "B": 60,
-      "C": 15
-    },
-    "bands": {
-      "certain": 850,
-      "probable": 650,
-      "uncertain": 400
-    },
-    "stormPenaltyPermille": 150,
-    "maxErrorMilliPerMissingPermille": 15,
-    "lowTrustBelow": 500
-  },
-  "economy": {
-    "holdings": [
-      {
-        "location": "ravenport",
-        "dailyIncomeMilli": 19000,
-        "jitterMilli": 3000
-      },
-      {
-        "location": "greyfen",
-        "dailyIncomeMilli": 4000,
-        "jitterMilli": 1500
-      },
-      {
-        "location": "eastmarch",
-        "dailyIncomeMilli": 3000,
-        "jitterMilli": 1000
-      }
-    ],
-    "dailyUpkeepMilli": 22500,
-    "captainAwayMilli": 2000
-  },
-  "weather": {
-    "decayMilliPerDay": 0,
-    "fireDailyPermille": 3,
-    "fireDamageMilli": [
-      8000,
-      30000
-    ],
-    "quakeDailyPermille": 1,
-    "quakeDamageMilli": [
-      15000,
-      45000
-    ],
-    "stormDamageMilli": [
-      5000,
-      25000
-    ]
-  },
-  "threat": {
-    "sites": [
-      {
-        "site": "blackwood",
-        "target": "northwatch"
-      },
-      {
-        "site": "stonewood",
-        "target": "eastmarch"
-      }
-    ],
-    "startPermillePerDay": 10,
-    "intensityPermille": [
-      300,
-      1000
-    ],
-    "durationDays": [
-      30,
-      90
-    ],
-    "raidDamageMilliAtFullIntensity": 2000,
-    "retakeConditionMilli": 40000,
-    "retakeGarrisonPermille": 250,
-    "growthPermille": 100,
-    "growthEveryDays": 10,
-    "awayStartMultiplier": 2
-  },
-  "messenger": {
-    "reportEveryDays": 10,
-    "alarmBelowMilli": 60000,
-    "legJitterPermille": [
-      900,
-      1300
-    ],
-    "lossPermillePerDay": 20,
-    "redirectLimit": 2,
-    "understateMilli": 5000
-  },
-  "interception": [
-    {
-      "location": "greybridge",
-      "by": "varos",
-      "permille": 40
-    },
-    {
-      "location": "veyford",
-      "by": "varos",
-      "permille": 150
-    }
-  ],
-  "player": {
-    "repairCostMilliPerMilli": 1,
-    "repairRestoreToMilli": 90000,
-    "repairDays": 5,
-    "levyMilli": 40000,
-    "repairRushCostPermille": 2000,
-    "repairLabourWorkPermille": 3500,
-    "repairLabourToMilli": 70000,
-    "repairCompanyWorkPermille": 200
-  },
-  "scripts": [],
-  "endStates": {
-    "fortificationBreachedBelowMilli": 30000
-  },
-  "agents": {
-    "reviewDays": {
-      "strategic": 7,
-      "operational": 1
-    },
-    "commitment": {
-      "baseMarginPermille": 150,
-      "absFloorMilli": 1000
-    },
-    "obedience": {
-      "adaptMarginMilli": 3000,
-      "refuseMarginMilli": 9000,
-      "changedCircumstancesPermille": 500,
-      "dutyMilli": 4000,
-      "legitimacyRulerPermille": 900
-    },
-    "planning": {
-      "minCandidates": 3,
-      "maxCandidates": 7,
-      "skillPerExtraCandidate": 250
-    },
-    "horizonDays": 20,
-    "quietDaysToEnd": 3,
-    "wakeBudgetPerDay": {
-      "A": 20,
-      "B": 3,
-      "C": 0
-    },
-    "values": {
-      "manMilli": 150,
-      "renownMilli": 15000,
-      "postMilli": 8000,
-      "breachPenaltyMilli": 30000,
-      "goodConditionMilli": 70000
-    },
-    "experience": {
-      "perTaskPermille": 20,
-      "capPermille": 200
-    },
-    "requestAssessDays": 10,
-    "answerLearningPermille": 300,
-    "demoteAfterDays": 30,
-    "recommendationTrustMin": 500
-  },
-  "battle": {
-    "sortie": {
-      "skillBasePermille": 500,
-      "intensityFactorPermille": 400,
-      "lossOnSuccessPermille": 30,
-      "lossOnFailurePermille": 150,
-      "hours": 12,
-      "raiderMenAtFull": 400,
-      "ambushPermilleAtFull": 300,
-      "ambushFactorPermille": 1800
-    },
-    "raidMitigationPerManPermille": 8
-  },
-  "regency": {
-    "regent": "elara",
-    "seat": "ravenport",
-    "maxRepairCostMilli": 0,
-    "mayLevy": false,
-    "maySendCaptain": false
-  },
-  "presence": {
-    "dangerBelowMilli": 60000,
-    "deathPermille": 300,
-    "travelTo": [
-      "ravenport",
-      "greybridge",
-      "northwatch"
-    ]
-  },
-  "objective": {
-    "forts": [
-      "northwatch",
-      "greybridge",
-      "eastmarch"
-    ]
-  },
-  "grain": {
-    "places": [
-      {
-        "location": "coldmere",
-        "store": 200,
-        "production": 18,
-        "need": 15,
-        "cap": 400
-      },
-      {
-        "location": "eastmarch",
-        "store": 400,
-        "production": 40,
-        "need": 35,
-        "cap": 700
-      },
-      {
-        "location": "greyfen",
-        "store": 500,
-        "production": 55,
-        "need": 30,
-        "cap": 900
-      },
-      {
-        "location": "northwatch",
-        "store": 600,
-        "production": 44,
-        "need": 40,
-        "cap": 800
-      }
-    ],
-    "harvestHitPermille": 400,
-    "harvestHitDays": 25,
-    "bandDays": [
-      30,
-      14,
-      7,
-      3
-    ],
-    "requisition": {
-      "sacks": 150,
-      "reserveDays": 7,
-      "consultDays": 3,
-      "grievance": 260,
-      "consultedPermille": 300,
-      "material": 25,
-      "trustConsulted": 30,
-      "trustTaken": -30
-    },
-    "purchase": {
-      "sacks": 100,
-      "reserveDays": 14,
-      "priceMilliPerSack": 120
-    },
-    "convoy": {
-      "lossPermillePerDay": 15,
-      "seizurePermilleAtFull": 600
-    },
-    "hungerPermille": 40,
-    "official": {
-      "cover": 5,
-      "cooldownDays": 20
-    },
-    "understatePermille": 350,
-    "crisis": {
-      "place": "northwatch",
-      "community": "greyfen",
-      "actor": "varos"
-    }
+  "crossingDelayTicks": {
+   "bridge": 0,
+   "ford": 7200,
+   "ferry": 21600
   }
+ },
+ "knowledge": {
+  "beliefCaps": {
+   "A": 300,
+   "B": 60,
+   "C": 15
+  },
+  "bands": {
+   "certain": 850,
+   "probable": 650,
+   "uncertain": 400
+  },
+  "stormPenaltyPermille": 150,
+  "maxErrorMilliPerMissingPermille": 15,
+  "lowTrustBelow": 500
+ },
+ "economy": {
+  "holdings": [
+   {
+    "location": "ravenport",
+    "dailyIncomeMilli": 19000,
+    "jitterMilli": 3000
+   },
+   {
+    "location": "greyfen",
+    "dailyIncomeMilli": 4000,
+    "jitterMilli": 1500
+   },
+   {
+    "location": "eastmarch",
+    "dailyIncomeMilli": 3000,
+    "jitterMilli": 1000
+   }
+  ],
+  "dailyUpkeepMilli": 22500,
+  "captainAwayMilli": 2000
+ },
+ "weather": {
+  "decayMilliPerDay": 0,
+  "fireDailyPermille": 3,
+  "fireDamageMilli": [
+   8000,
+   30000
+  ],
+  "quakeDailyPermille": 1,
+  "quakeDamageMilli": [
+   15000,
+   45000
+  ],
+  "stormDamageMilli": [
+   5000,
+   25000
+  ]
+ },
+ "threat": {
+  "sites": [
+   {
+    "site": "blackwood",
+    "target": "northwatch"
+   },
+   {
+    "site": "stonewood",
+    "target": "eastmarch"
+   }
+  ],
+  "startPermillePerDay": 10,
+  "intensityPermille": [
+   300,
+   1000
+  ],
+  "durationDays": [
+   30,
+   90
+  ],
+  "raidDamageMilliAtFullIntensity": 2000,
+  "retakeConditionMilli": 40000,
+  "retakeGarrisonPermille": 250,
+  "growthPermille": 100,
+  "growthEveryDays": 10,
+  "awayStartMultiplier": 2
+ },
+ "messenger": {
+  "reportEveryDays": 10,
+  "alarmBelowMilli": 60000,
+  "legJitterPermille": [
+   900,
+   1300
+  ],
+  "lossPermillePerDay": 20,
+  "redirectLimit": 2,
+  "understateMilli": 5000
+ },
+ "interception": [
+  {
+   "location": "greybridge",
+   "by": "varos",
+   "permille": 40
+  },
+  {
+   "location": "veyford",
+   "by": "varos",
+   "permille": 150
+  }
+ ],
+ "player": {
+  "repairCostMilliPerMilli": 1,
+  "repairRestoreToMilli": 90000,
+  "repairDays": 5,
+  "levyMilli": 40000,
+  "repairRushCostPermille": 2000,
+  "repairLabourWorkPermille": 3500,
+  "repairLabourToMilli": 70000,
+  "repairCompanyWorkPermille": 200
+ },
+ "scripts": [],
+ "endStates": {
+  "fortificationBreachedBelowMilli": 30000
+ },
+ "agents": {
+  "reviewDays": {
+   "strategic": 7,
+   "operational": 1
+  },
+  "commitment": {
+   "baseMarginPermille": 150,
+   "absFloorMilli": 1000
+  },
+  "obedience": {
+   "adaptMarginMilli": 3000,
+   "refuseMarginMilli": 9000,
+   "changedCircumstancesPermille": 500,
+   "dutyMilli": 4000,
+   "legitimacyRulerPermille": 900
+  },
+  "planning": {
+   "minCandidates": 3,
+   "maxCandidates": 7,
+   "skillPerExtraCandidate": 250
+  },
+  "horizonDays": 20,
+  "quietDaysToEnd": 3,
+  "wakeBudgetPerDay": {
+   "A": 20,
+   "B": 3,
+   "C": 0
+  },
+  "values": {
+   "manMilli": 150,
+   "renownMilli": 15000,
+   "postMilli": 8000,
+   "breachPenaltyMilli": 30000,
+   "goodConditionMilli": 70000
+  },
+  "experience": {
+   "perTaskPermille": 20,
+   "capPermille": 200
+  },
+  "requestAssessDays": 10,
+  "answerLearningPermille": 300,
+  "demoteAfterDays": 30,
+  "recommendationTrustMin": 500
+ },
+ "battle": {
+  "sortie": {
+   "skillBasePermille": 500,
+   "intensityFactorPermille": 400,
+   "lossOnSuccessPermille": 30,
+   "lossOnFailurePermille": 150,
+   "hours": 12,
+   "raiderMenAtFull": 400,
+   "ambushPermilleAtFull": 300,
+   "ambushFactorPermille": 1800
+  },
+  "raidMitigationPerManPermille": 8
+ },
+ "regency": {
+  "regent": "elara",
+  "seat": "ravenport",
+  "maxRepairCostMilli": 0,
+  "mayLevy": false,
+  "maySendCaptain": false
+ },
+ "presence": {
+  "dangerBelowMilli": 60000,
+  "deathPermille": 300,
+  "travelTo": [
+   "ravenport",
+   "greybridge",
+   "northwatch"
+  ]
+ },
+ "objective": {
+  "forts": [
+   "northwatch",
+   "greybridge",
+   "eastmarch"
+  ]
+ },
+ "grain": {
+  "places": [
+   {
+    "location": "coldmere",
+    "store": 200,
+    "production": 18,
+    "need": 15,
+    "cap": 400
+   },
+   {
+    "location": "eastmarch",
+    "store": 400,
+    "production": 40,
+    "need": 35,
+    "cap": 700
+   },
+   {
+    "location": "greyfen",
+    "store": 500,
+    "production": 55,
+    "need": 30,
+    "cap": 900
+   },
+   {
+    "location": "northwatch",
+    "store": 600,
+    "production": 44,
+    "need": 40,
+    "cap": 800
+   }
+  ],
+  "harvestHitPermille": 400,
+  "harvestHitDays": 25,
+  "bandDays": [
+   30,
+   14,
+   7,
+   3
+  ],
+  "requisition": {
+   "sacks": 150,
+   "reserveDays": 7,
+   "consultDays": 3,
+   "grievance": 260,
+   "consultedPermille": 300,
+   "material": 25,
+   "trustConsulted": 30,
+   "trustTaken": -30,
+   "refuse": {
+    "gFloor": 300,
+    "chancePerG": 1000,
+    "consultedPermille": 300
+   }
+  },
+  "purchase": {
+   "sacks": 100,
+   "reserveDays": 14,
+   "priceMilliPerSack": 120
+  },
+  "convoy": {
+   "lossPermillePerDay": 15,
+   "seizurePermilleAtFull": 600
+  },
+  "hungerPermille": 40,
+  "official": {
+   "cover": 5,
+   "cooldownDays": 20
+  },
+  "understatePermille": 350,
+  "crisis": {
+   "place": "northwatch",
+   "community": "greyfen",
+   "actor": "varos"
+  }
+ }
 }
