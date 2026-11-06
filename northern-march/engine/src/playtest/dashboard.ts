@@ -87,7 +87,8 @@ export function buildDashboard(dir: string, o: { title: string; comparison?: Ret
 :root[data-theme="dark"] { --bg: #141b1c; --surface: #1b2425; --ink: #e2ebe8; --muted: #9aaba8; --rule: #2e3c3d; --accent: #7fb0d6;
   --pass: #6fc08c; --review: #e0a24a; --fail: #ef7a6e; --insufficient: #ad9bd6; --na: #93a19f; color-scheme: dark }
 body { background: var(--bg); color: var(--ink); font: 16px/1.5 var(--body); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 48px; }
-main { max-width: 1180px; margin: 0 auto; display: grid; gap: 28px; }
+main { max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; }
+main > * { min-width: 0; }
 h1, h2, h3 { font-family: var(--display); font-weight: 700; letter-spacing: .03em; text-wrap: balance; margin: 0; }
 h1 { font-size: 1.9rem; } h2 { font-size: 1.25rem; color: var(--accent); margin-bottom: 10px; } h3 { font-size: 1rem; }
 header { display: grid; gap: 6px; border-bottom: 2px solid var(--ink); padding-bottom: 12px; }
@@ -125,7 +126,7 @@ select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 <div class="meta"><span>${a.games}${manifest.budgets ? ` / ${manifest.budgets.maxGames}` : ""} games</span><span>${esc(manifest.days ?? "")} days</span><span>seeds ${esc(manifest.seeds?.first ?? "")}+${esc(manifest.seeds?.count ?? "")}</span><span>${esc(manifest.partition ?? "")}</span><span>commit ${esc(manifest.commit ?? "")}</span><span>engine ${esc(manifest.engineHash ?? "")}</span><span>content ${esc(manifest.contentVersion ?? "")}</span></div></header>
 <section><h2>Status</h2><div class="panels">${panels}</div></section>
 ${cmp}
-<section><h2>Personas</h2><div class="scroll"><table><tr><th></th><th>Games</th><th>Objective met</th><th>Forts fallen</th><th>Levies</th><th>Reliefs</th><th>Repairs</th><th>Sends</th><th>Petitions</th><th>Varos following</th><th>Cites evidence</th><th>Rejected</th><th>ms</th></tr>${personaRows}</table></div></section>
+<section><h2>Personas · per game</h2><div class="scroll"><table><tr><th></th><th>Games</th><th>Objective met</th><th>Forts fallen</th><th>Levies</th><th>Reliefs</th><th>Repairs</th><th>Sends</th><th>Petitions</th><th>Varos following</th><th>Cites evidence</th><th>Rejected</th><th>ms</th></tr>${personaRows}</table></div></section>
 <section><h2>Failures</h2><div class="scroll"><table><tr><th>Class</th><th>Games</th><th>Count</th><th>Replay first</th></tr>${failRows}</table></div></section>
 ${known ? `<section><h2>Known issues</h2>${known}</section>` : ""}
 <section><h2>Findings</h2><ul class="findings">${findings}</ul></section>

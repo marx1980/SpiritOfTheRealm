@@ -1,0 +1,45 @@
+# Northern March Agent Playtest Lab: long runs and report email (docs/playtest/README.md).
+# Runs only when started by hand. Email is sent only if the repository variable PLAYTEST_REAL_EMAIL_APPROVED is "1"
+# and the three secrets below are set; otherwise reports stay in the outbox (fake provider) and in the artifact.
+name: playtest
+on:
+  workflow_dispatch:
+    inputs:
+      mode: { description: "quick, full or adversarial", default: "full", required: true }
+      seeds: { description: "seeds (x 10 personas = games)", default: "100", required: true }
+      days: { description: "days per game", default: "150", required: true }
+      email: { description: "send report email (needs approval variable and secrets)", type: boolean, default: false }
+permissions: { contents: read }
+jobs:
+  lab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    defaults: { run: { working-directory: northern-march/engine } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22.23" }
+      - run: npm ci
+      - name: Mail transport (msmtp)
+        if: ${{ inputs.email && vars.PLAYTEST_REAL_EMAIL_APPROVED == '1' }}
+        env:
+          SMTP_USER: ${{ secrets.PLAYTEST_SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.PLAYTEST_SMTP_PASSWORD }}
+        run: |
+          sudo apt-get install -y -qq msmtp >/dev/null
+          umask 077
+          printf 'defaults\nauth on\ntls on\ntls_trust_file /etc/ssl/certs/ca-certificates.crt\naccount gmail\nhost smtp.gmail.com\nport 587\nfrom %s\nuser %s\npassword %s\naccount default : gmail\n' "$SMTP_USER" "$SMTP_USER" "$SMTP_PASSWORD" > ~/.msmtprc
+      - name: Run
+        env:
+          PLAYTEST_REPORT_EMAIL_TO: ${{ secrets.PLAYTEST_REPORT_EMAIL_TO }}
+          PLAYTEST_MAIL_COMMAND: msmtp -t
+          PLAYTEST_REAL_EMAIL_APPROVED: ${{ inputs.email && vars.PLAYTEST_REAL_EMAIL_APPROVED || '0' }}
+        run: npm run -s playtest:${{ inputs.mode }} -- --id ci-${{ github.run_id }} --seeds ${{ inputs.seeds }} --days ${{ inputs.days }} --workers 4 --wall-min 330 ${{ inputs.email && vars.PLAYTEST_REAL_EMAIL_APPROVED == '1' && '--real-email' || '' }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playtest-${{ github.run_id }}
+          path: |
+            northern-march/engine/results/playtest/ci-${{ github.run_id }}/
+            !northern-march/engine/results/playtest/ci-${{ github.run_id }}/records.jsonl
+          retention-days: 30

@@ -85,7 +85,7 @@ function findings(sums: Summary[], per: Record<string, { games: number; objectiv
   const ps = Object.entries(per).filter(([p]) => p !== "adversarial-probe" && p !== "random-valid");
   if (ps.length >= 2) {
     const best = ps.sort((a, b) => b[1].objectiveMet - a[1].objectiveMet)[0], worst = ps[ps.length - 1];
-    out.push({ id: "F-spread", certainty: cert(Math.min(best[1].games, worst[1].games)), text: `Objective met: ${best[0]} ${best[1].objectiveMet}% vs ${worst[0]} ${worst[1].objectiveMet}% (spread ${Math.round(10 * (best[1].objectiveMet - worst[1].objectiveMet)) / 10} points). A small spread means play style matters little.`, evidence: [best[0], worst[0]] });
+    out.push({ id: "F-spread", certainty: cert(Math.min(best[1].games, worst[1].games)), text: `Objective met: ${best[0]} ${best[1].objectiveMet}% vs ${worst[0]} ${worst[1].objectiveMet}% (spread ${Math.round(10 * (best[1].objectiveMet - worst[1].objectiveMet)) / 10} points)`, evidence: [best[0], worst[0]] });
     const lev = ps.filter(([, v]) => v.levies > 0).sort((a, b) => b[1].levies - a[1].levies)[0];
     if (lev) out.push({ id: "F-levy", certainty: cert(lev[1].games), text: `${lev[0]} raises ${lev[1].levies} levies a game; ${lev[1].supportForVaros}% of its games end with a community declaring for Varos.`, evidence: [lev[0]], investigate: "communities.params.grievance.levy" });
     const prot = per["community-protector"];

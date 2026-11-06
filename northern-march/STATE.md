@@ -1,9 +1,12 @@
 # STATE
 
-Updated: 6 Nov 2026, end of Phase 6 (6A) build (Opus 5.5). Plan in force: `docs/IMPLEMENTATION_PLAN.md` v4.
+Updated: 6 Nov 2026, Phase 6 (6A) built; Agent Playtest Lab L0-L7 built (Opus 5.5). Plan in force: `docs/IMPLEMENTATION_PLAN.md` v4; lab: `docs/playtest/` (v4 + V4_1_AMENDMENTS, D-022).
 
 ## Built
-**Engine (`engine/`, TypeScript on Node 22, no build step).** `npm test` runs 160 tests, all passing; `npx tsc -p .` is clean (src, test, tools, ui).
+**Engine (`engine/`, TypeScript on Node 22, no build step).** `npm test`: 160 tests passed at the L0 baseline; since then `test/saveload.test.ts` (+1) and `test/playtest.test.ts` (10) pass on their own; full suite re-run pending. `npx tsc -p .` is clean.
+
+**Agent Playtest Lab (D-022, `engine/src/playtest/`, operator guide `docs/playtest/README.md`).** L0 baseline, L1 strict contracts (Zod, playtest layer only), L2 one affordance module for page and agents with import barriers and leak tests, L3 runner and exact replay, L4 ten personas and worker batches with resume, L5 analysis, known issues, shrinker and regression cases, L6 paired evaluator, sealed packages and dashboard with causal explorer, L7 milestones, durable outbox, retries and fake provider. Real email waits for Marko's secrets and approval; L8/L9 not started (separate approvals). Quick run: `results/playtest/quick-demo/` (100 games). 1,100-game unattended run: `results/playtest/full-140054b/` (running).
+Finds: save replay dropped mission/raid/repair mode (fixed); KI-01 attack orders skip interpretation and obedience (BACKLOG, decision needed); bridge offered unaffordable advice (fixed).
 
 Phase 6 (6A) added (DECISIONS D-021):
 - `src/systems/communities.ts` and `content/march/communities.json` (content march-0.6): Northwatch (no named leader), Greyfen (Mara; the crown promised to consult before a levy), Eastmarch (Varos), Coldmere (Wenna; the Blackwood settlement).
@@ -29,9 +32,9 @@ Phases 0-4: see DECISIONS D-001 to D-014.
 - Phase 5: built; G-12 PASS on earlier blocks (D-015); H-01/H-02 overridden (D-020), to run at 7A.
 - Phase 6 (6A), 6 Nov:
   - G-01 PASS: Node and Bun give the same combined hash, `0271266eaa91e448a41a7fe52d1037e57dd48237030907adec18aa965556cbda` (100 seeds).
-  - G-13 on sealed block 60000-60999 (three policies): PENDING (results/phase6_g13_60000.txt).
-  - G-12 with communities on, sealed block 98000: PENDING (results/phase6_g12_98000.txt).
-  - Regression (G-02, invariants, 1,000 seeds x 2 arms): PENDING (results/phase6_regression.log).
+  - G-13 on sealed block 60000-60999: passive PASS (0 revolts, 0 unsupported escalations, 0 invariant violations, 1,000 seeds); delegating and aggressive running (results/phase6_g13_60000.txt).
+  - G-12 TUNE with communities on: Elara 33.0%, Selene 30.5%, Oren 14.5%, passive 0.5% (gap 18.5 points; 7 before communities). Block 98000 was refused by the gate tool (not a multiple of 10,000) before any seed ran; re-registered as 100000-100999 (D-021); running (results/phase6_g12_100000.txt).
+  - Regression: G-02 PASS (results/phase6_regression.log); rest of that run pending.
 
 ## Known gaps
 - G-11 open (D-016). Standing instruction: tell Marko if a re-run passes.
