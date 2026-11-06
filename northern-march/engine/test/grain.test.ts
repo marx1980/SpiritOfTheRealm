@@ -31,7 +31,11 @@ test("grain: stores plus grain on the road equal start + produced - consumed - s
 test("grain: the log alone gives the same stores as the world (projection)", () => {
   const sim = run({ seed: 3 });
   const store = Object.fromEntries(G.places.map((p) => [p.location, p.store]));
-  for (const e of sim.log) if (e.type === "GrainDay") for (const [l, pr, c, sp] of e.payload.changes as number[][] as unknown as [string, number, number, number][]) store[l] += pr - c - sp;
+  for (const e of sim.log) {
+    if (e.type === "GrainDay") for (const [l, pr, c, sp] of e.payload.changes as number[][] as unknown as [string, number, number, number][]) store[l] += pr - c - sp;
+    if (e.type === "GrainShipped") store[e.payload.from as string] -= e.payload.sacks as number;
+    if (e.type === "GrainDelivered") store[e.payload.to as string] += (e.payload.sacks as number) - (e.payload.spilled as number);
+  }
   assert.deepEqual(store, sim.unsafeWorldForDebug().grain);
 });
 
@@ -161,5 +165,42 @@ test("grain stage 3: a convoy can be lost or seized, and the grain is accounted 
 test("grain stage 3: an order with nothing to take is abandoned with a reason, not silently dropped", () => {
   const sim = ordered(2, { ...REQ, target: "northwatch", to: "greyfen" }, 5, 40, quiet((r) => { r.scenario.grain.places.find((p: any) => p.location === "northwatch").store = 100; }));
   const o = sim.log.find((e) => e.type === "OrderAbandoned" && (e.payload as any).reason);
-  assert.ok(o, "abandoned with a reason"); assert.ok(!sim.log.some((e) => e.type === "GrainShipped"));
+  assert.ok(o, "abandoned with a reason"); assert.ok(!sim.log.some((e) => e.type === "GrainShipped" && e.payload.orderId !== 0), "the ordered shipment never left (an official may send his own)");
+});
+
+import { readCrisis, OUTCOMES } from "../src/crisis.ts";
+test("grain stage 4: a hungry fort loses men, and a castellan with a nearly empty store sends for grain himself, unasked and unconsulted", () => {
+  const c = quiet((r) => { const n = r.scenario.grain.places.find((p: any) => p.location === "northwatch"); n.store = 60; n.production = 0; });
+  const sim = run({ seed: 2, content: c, policy: "passive" }, 40);
+  const log = sim.log;
+  assert.ok(log.some((e) => e.type === "GarrisonStarved" && (e.payload.changes as [string, number][]).some(([l]) => l === "northwatch")), "men lost to hunger");
+  const own = log.find((e) => e.type === "GrainShipped" && e.payload.by === "bren");
+  assert.ok(own && own.payload.orderId === 0 && own.payload.consulted === false && own.payload.how === "requisition", "an official's own shipment");
+  assert.ok(log.some((e) => e.type === "GrainDelivered" && e.payload.to === "northwatch"));
+  assert.ok(log.find((e) => e.id === own!.causedBy[0])!.type === "BeliefUpdated", "caused by what he saw, not by an order");
+});
+
+test("grain stage 4: Varos rides to Greyfen when it has a fresh grievance, and earns its trust there; he does not go when it has none", () => {
+  const sim = ordered(2, { ...REQ, consult: false }, 5, 40, quiet());
+  const went = sim.log.find((e) => e.type === "Departed" && e.payload.who === "varos" && e.payload.dest === "greyfen");
+  assert.ok(went, "Varos went to Greyfen");
+  const w = sim.unsafeWorldForDebug();
+  assert.ok(w.communities.greyfen.trust.varos > 450, "his standing there grew");
+  const calm = ordered(2, { ...REQ, consult: true }, 5, 40, quiet());
+  assert.ok(!calm.log.some((e) => e.type === "Departed" && e.payload.who === "varos" && e.payload.dest === "greyfen"), "no grievance, no visit");
+});
+
+test("grain stage 4: the crisis reading is silent without raids, and every reading is one of the named outcomes", () => {
+  for (const seed of SEEDS) {
+    const off = readCrisis(run({ seed, ablate: ["threat"], policy: "passive" }).log, CONTENT);
+    assert.equal(off.outcome, "no_crisis", `seed ${seed}`); assert.equal(off.endState, false);
+    const on = readCrisis(run({ seed, policy: "passive" }).log, CONTENT);
+    assert.ok([...OUTCOMES, "unresolved", "no_crisis"].includes(on.outcome));
+  }
+});
+
+test("grain stage 4: the end state needs the grievance to trace back to a requisition, not to a levy alone", () => {
+  // Aggressive play levies Greyfen too; with grain orders removed from the world (no stores to take from) the end state cannot count
+  const c = variant((r) => { r.scenario.grain!.places.forEach((p) => { if (p.location === "greyfen") p.store = 0; p.production = Math.min(p.production, p.need); }); });
+  for (const seed of [1, 2, 3, 4]) assert.equal(readCrisis(run({ seed, content: c, policy: "aggressive" }, 160).log, c).endState, false, `seed ${seed}`);
 });

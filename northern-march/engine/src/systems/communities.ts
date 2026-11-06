@@ -14,6 +14,7 @@ import type { Ctx, System } from "./types.ts";
 import { DAY, HOUR, chr, loc } from "./types.ts";
 import { best, learn } from "./knowledge.ts";
 import { compose } from "./messenger.ts";
+import { travel } from "./movement.ts";
 
 const P = (ctx: Ctx): CommunityParams => ctx.content.communities.params;
 const defs = (ctx: Ctx): CommunityDef[] => [...ctx.content.communities.communities].sort((a, b) => cmp(a.id, b.id));
@@ -316,6 +317,30 @@ function misconduct(ctx: Ctx, id: string) {
   }
 }
 
+/** A narrator of the crown-blame story who has a home post rides to a nearby community that has a fresh, serious grievance
+ *  (access by presence), stays a while, and returns. Each day among them he earns their trust (organisation). */
+function courting(ctx: Ctx) {
+  const pr = P(ctx), n = pr.narrative;
+  for (const nar of ctx.content.communities.narrators.filter((x) => x.story === "crown" && x.who !== ctx.content.scenario.ruler)) {
+    const home = ctx.content.byId.character.get(nar.who)?.location, pos = ctx.s.positions[nar.who];
+    if (!home || !pos || !("at" in pos)) continue;
+    const here = defs(ctx).find((d) => d.id === pos.at && d.id !== home);
+    if (here) {
+      const c = ctx.s.communities[here.id], arrived = rt(ctx).arrived[nar.who], since = ctx.s.lastArrival[here.id]?.[nar.who] ?? ctx.tick;
+      const x = inputsOf(ctx, here.id);
+      if (arrived !== undefined && (ctx.tick - since >= n.stayDays * DAY || x.G < pr.ladder.gMin)) { travel(ctx, nar.who, home, "rider", false, arrived); continue; }
+      if (arrived !== undefined && (c.trust[nar.who] ?? 0) < 1000)
+        ctx.emit("CommunityHeard", [arrived], [loc(here.id)], { community: here.id, type: "NarratorVisit", how: "witnessed", source: arrived, trust: [[nar.who, n.trustPerDay]], memoryCap: pr.memoryCap });
+      continue;
+    }
+    if (pos.at !== home) continue;
+    const goal = defs(ctx).filter((d) => d.id !== home && d.id !== pos.at).map((d) => ({ d, x: inputsOf(ctx, d.id), h: hoursBetween(ctx, home, d.id) }))
+      .filter(({ x, h, d }) => h !== null && h <= n.courtHours && x.G >= pr.ladder.gMin && x.N >= pr.ladder.nMin && x.T && ctx.s.communities[d.id].lastTriggerEvent)
+      .sort((a, b) => b.x.G - a.x.G || cmp(a.d.id, b.d.id))[0];
+    if (goal) travel(ctx, nar.who, goal.d.id, "rider", false, ctx.s.communities[goal.d.id].lastTriggerEvent);
+  }
+}
+
 /** Once a day: grievances fade, the land recovers a little, and the stories told by those with access move the blame. */
 function drift(ctx: Ctx) {
   const pr = P(ctx), changes: { community: string; material: number; grievances: [number, number, number][] }[] = [];
@@ -381,6 +406,7 @@ export const communities: System = {
     },
     "communities:day": (ctx) => {
       drift(ctx);
+      courting(ctx);
       for (const d of defs(ctx)) misconduct(ctx, d.id);
       for (const d of defs(ctx)) { review(ctx, d.id, ctx.s.communities[d.id].lastTriggerEvent); petitions(ctx, d.id); }
       ctx.extraDraws("communities");

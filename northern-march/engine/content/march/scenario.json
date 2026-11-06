@@ -254,13 +254,13 @@
       {
         "location": "northwatch",
         "store": 600,
-        "production": 40,
+        "production": 44,
         "need": 40,
         "cap": 800
       }
     ],
-    "harvestHitPermille": 350,
-    "harvestHitDays": 20,
+    "harvestHitPermille": 400,
+    "harvestHitDays": 25,
     "bandDays": [
       30,
       14,
@@ -285,6 +285,12 @@
     "convoy": {
       "lossPermillePerDay": 15,
       "seizurePermilleAtFull": 600
-    }
+    },
+    "hungerPermille": 40,
+    "official": {
+      "cover": 3,
+      "cooldownDays": 20
+    },
+    "understatePermille": 350
   }
 }

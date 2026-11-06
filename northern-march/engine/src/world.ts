@@ -258,6 +258,7 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
     }
   },
   HarvestDamaged: (s, p, e) => { s.harvestHit[p.place] = { permille: p.permille, until: p.until, eventId: e.id }; },
+  GarrisonStarved: (s, p) => { for (const [loc, n] of p.changes as [string, number][]) { const f = s.fortifications[loc]; f.garrison = Math.max(0, f.garrison - n); } },
   GrainConsulted: noop,
   GrainShipped: (s, p) => {
     s.grain[p.from] -= p.sacks;

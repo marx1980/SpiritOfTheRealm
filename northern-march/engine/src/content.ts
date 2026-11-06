@@ -57,6 +57,12 @@ export interface GrainParams {
   purchase: { sacks: number; reserveDays: number; priceMilliPerSack: number };
   /** Carts walk. A convoy can be lost on the road, or seized by raiders in proportion to the threat at either end. */
   convoy: { lossPermillePerDay: number; seizurePermilleAtFull: number };
+  /** A fort with an empty store loses this share of its men a day (they leave or fall sick). */
+  hungerPermille: number;
+  /** A castellan who believes his own store would feed his place for fewer than `cover` days sends for grain himself (no one told him to, and he does not stop to consult); not again within `cooldownDays`. */
+  official: { cover: number; cooldownDays: number };
+  /** A castellan who dislikes bringing bad news writes a low store as this much higher (the same temperament that understates damage to walls). */
+  understatePermille: number;
 }
 export interface Scenario {
   ruler: string; treasuryMilli: number;
@@ -97,7 +103,7 @@ export interface CommunityParams {
   context: { underThreatPermille: number; poorBelow: number; poorPermille: number; calmPermille: number };
   remedy: { sortieWonPermille: number; fortRetakenPermille: number; reliefPermille: number; reliefPromisePermille: number; companyGoneDecayPermille: number };
   protectedDays: number;
-  narrative: { ratePermillePerDay: number; accessHours: number; trustFloor: number };
+  narrative: { ratePermillePerDay: number; accessHours: number; trustFloor: number; courtHours: number; trustPerDay: number; stayDays: number };
   trust: { reliefCrown: number; protectedCrown: number; brokenPromiseCrown: number; misconductCrown: number; levyCrown: number };
   weakness: { fortFell: number; unanswered: number; noCompany: number; lowGarrison: number; windowDays: number };
   misconduct: { dailyPermille: number; traitPermille: number; afterDays: number };

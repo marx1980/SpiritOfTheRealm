@@ -5,7 +5,7 @@ import { DAY, HOUR, loc } from "./types.ts";
 import { bandOf } from "../world.ts";
 import type { ActionRef } from "../agents/model.ts";
 import { finish } from "./orders.ts";
-import { observeTreasury } from "./knowledge.ts";
+import { best, observe, observeTreasury } from "./knowledge.ts";
 import { contribution } from "./communities.ts";
 
 const place = (ctx: Ctx, l: string) => ctx.content.scenario.grain!.places.find((p) => p.location === l);
@@ -33,27 +33,30 @@ export const grain: System = {
   handlers: {
     "grain:harvest": (ctx, { place, cause }) => {
       const g = ctx.content.scenario.grain!;
+      if ((ctx.s.harvestHit[place]?.until ?? 0) > ctx.tick) return; // a spoiled harvest is spoiled once; the next raid after it recovers hits it again
       ctx.emit("HarvestDamaged", [cause], [loc(place)], { place, permille: g.harvestHitPermille, until: ctx.tick + g.harvestHitDays * DAY });
     },
-    "grain:ship": (ctx, { orderId, kind, source, dest, consult, cause }) => {
+    "grain:ship": (ctx, { orderId, kind, source, dest, consult, cause, official }) => {
       const g = ctx.content.scenario.grain!, o = ctx.s.orders[String(orderId)]?.order;
-      if (!o || ctx.s.orders[String(orderId)].status !== "executing") return;
+      if (!official && (!o || ctx.s.orders[String(orderId)].status !== "executing")) return;
+      const stop = (reason: string) => { if (!official) finish(ctx, orderId, "abandoned", cause, reason); };
+      const by = official ?? o!.recipient;
       const sp = place(ctx, source)!, buy = kind === "purchase", rule = buy ? g.purchase : g.requisition;
       const spare = Math.max(0, ctx.s.grain[source] - rule.reserveDays * sp.need);
       let sacks = Math.min(rule.sacks, spare);
       if (buy) sacks = Math.min(sacks, Math.floor(Math.max(0, ctx.s.treasuryMilli[ctx.content.scenario.ruler]) / g.purchase.priceMilliPerSack));
       else sacks = Math.floor((sacks * contribution(ctx, "levy", source)) / 1000); // a community that refuses gives nothing
-      if (sacks <= 0) return finish(ctx, orderId, "abandoned", cause, spare <= 0 ? "noSurplus" : buy ? "funds" : "refused");
+      if (sacks <= 0) return stop(spare <= 0 ? "noSurplus" : buy ? "funds" : "refused");
       const trip = ctx.map.path(source, dest, "foot", (r) => ctx.isOpen(r)); // carts walk
-      if (!trip) return finish(ctx, orderId, "abandoned", cause, "noRoute");
+      if (!trip) return stop("noRoute");
       const consulted = !buy && consult;
-      const talk = consulted ? ctx.emit("GrainConsulted", [cause], [loc(source), { kind: "order", id: String(orderId) }], { community: source, orderId, by: o.recipient, days: g.requisition.consultDays }) : null;
+      const talk = consulted ? ctx.emit("GrainConsulted", [cause], [loc(source), { kind: "order", id: String(orderId) }], { community: source, orderId, by, days: g.requisition.consultDays }) : null;
       const costMilli = buy ? sacks * g.purchase.priceMilliPerSack : 0;
-      const sh = ctx.emit("GrainShipped", [talk?.id ?? cause], [loc(source), loc(dest), { kind: "order", id: String(orderId) }], { convoyId: ctx.s.nextConvoyId, from: source, to: dest, sacks, departedAt: ctx.tick,
+      const sh = ctx.emit("GrainShipped", [talk?.id ?? cause], [loc(source), loc(dest), ...(official ? [] : [{ kind: "order" as const, id: String(orderId) }])], { by, convoyId: ctx.s.nextConvoyId, from: source, to: dest, sacks, departedAt: ctx.tick,
         arrivesAt: ctx.tick + trip.ticks, orderId, how: buy ? "purchase" : "requisition", consulted, costMilli, payer: ctx.content.scenario.ruler });
       if (costMilli) observeTreasury(ctx, sh.id);
       ctx.at(ctx.tick + trip.ticks, "grain:arrive", { convoyId: sh.payload.convoyId, cause: sh.id });
-      finish(ctx, orderId, "completed", sh.id);
+      if (!official) finish(ctx, orderId, "completed", sh.id);
     },
     "grain:arrive": (ctx, { convoyId, cause }) => {
       const c = ctx.s.convoys[String(convoyId)], g = ctx.content.scenario.grain!;
@@ -80,9 +83,31 @@ export const grain: System = {
         after[p.location] = have - consumed - spilled;
       }
       const day = ctx.emit("GrainDay", [], changes.map(([l]) => loc(l)), { changes });
+      // a fort whose stores are empty loses men to hunger
+      const starving = g.places.filter((p) => after[p.location] === 0 && p.need > 0 && ctx.s.fortifications[p.location] && !ctx.s.fallen[p.location] && ctx.s.fortifications[p.location].garrison > 0)
+        .map((p): [string, number] => [p.location, Math.max(1, Math.floor((ctx.s.fortifications[p.location].garrison * g.hungerPermille) / 1000))]);
+      if (starving.length) ctx.emit("GarrisonStarved", [day.id], starving.map(([l]) => loc(l)), { changes: starving });
       for (const p of g.places) {
         const to = bandOf(after[p.location], p.need, g.bandDays), from = ctx.s.grainBand[p.location];
         if (to !== from) ctx.emit("ScarcityChanged", [day.id], [loc(p.location)], { place: p.location, from, to, store: after[p.location] });
+      }
+      // a castellan at his post looks at his own store; if it would feed his place for too few days he sends for grain himself
+      const rt = (ctx.runtime.grain ??= { last: {} as Record<string, number> }) as { last: Record<string, number> };
+      for (const p of g.places) {
+        const who = [...ctx.content.characters].filter((c) => c.location === p.location && c.reportsTo === ctx.content.scenario.ruler && ctx.s.tiers[c.id] !== "C").sort((a, b) => (a.id < b.id ? -1 : 1))[0]?.id;
+        const pos = who ? ctx.s.positions[who] : null;
+        if (!who || !pos || !("at" in pos) || pos.at !== p.location || !ctx.s.fortifications[p.location] || p.need <= 0) continue;
+        const upd = observe(ctx, who, loc(p.location), "grain.stock", day.id)!;
+        const cover = Math.floor(((upd.payload.prop as { believedValue: number }).believedValue) / p.need);
+        if (cover >= g.official.cover || Object.values(ctx.s.convoys).some((c) => c.to === p.location)) continue;
+        if (rt.last[p.location] !== undefined && ctx.tick - rt.last[p.location] < g.official.cooldownDays * DAY) continue;
+        const from = g.places.filter((x) => x.location !== p.location).map((x) => ({ x, b: best(ctx, who, x.location, "grain.stock") })).filter(({ x, b }) => b && (b.believedValue as number) >= 12 * x.need)
+          .sort((a, b) => (b.b!.believedValue as number) - (a.b!.believedValue as number) || (a.x.location < b.x.location ? -1 : 1))[0];
+        if (!from) continue;
+        const there = ctx.map.path(p.location, from.x.location, "rider", (r) => ctx.isOpen(r));
+        if (!there) continue;
+        rt.last[p.location] = ctx.tick;
+        ctx.at(ctx.tick + there.ticks, "grain:ship", { orderId: 0, kind: "requisition", source: from.x.location, dest: p.location, consult: false, cause: upd.id, official: who });
       }
       ctx.at(ctx.tick + DAY, "grain:day", {});
     },

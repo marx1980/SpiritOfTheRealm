@@ -129,7 +129,7 @@ export function observe(ctx: Ctx, observer: string, subject: SubjectRef, predica
     const here = ctx.s.positions[observer];
     const near = "at" in here && here.at === subject.id;
     quality = near ? skill(ctx, observer, CAPABILITY_FOR[predicate]) : Math.floor(skill(ctx, observer, CAPABILITY_FOR[predicate]) / 2);
-    const maxErr = Math.floor((truth * (1000 - quality)) / 2000);
+    const maxErr = Math.floor((truth * (1000 - quality)) / 1200);
     const r = ctx.keyed(`knowledge:observe:${observer}:${Math.floor(ctx.tick / 86400)}:${subject.id}:${predicate}`);
     value = Math.max(0, truth + r.int(-maxErr, maxErr));
   } else if (predicate === "character.location") {

@@ -31,6 +31,8 @@ export interface WorldKnowledge {
   names: Record<string, string>;
   /** What each known person is known for: their strongest skill, in words (the area they advise on). */
   areas: Record<string, string>;
+  /** What each store feeds each day, and the days of cover that mark the scarcity bands: the stewards know their own needs. */
+  grain?: { places: { id: string; need: number }[]; bandDays: number[] };
 }
 export interface View {
   readonly now: number;
@@ -72,6 +74,7 @@ export function buildView(s: Readonly<WorldState>, c: Content, who: string, now:
       routes: c.routes.map((r) => ({ from: r.from, to: r.to, ...(r.crossing ? { crossing: r.crossing.kind } : {}) })),
       names: Object.fromEntries([...c.locations.map((l) => [l.id, l.name]), ...[...known].sort().map((id) => [id, c.byId.character.get(id)?.name ?? id])]),
       areas: Object.fromEntries([...known].sort().map((id) => [id, areaOf(c.byId.character.get(id)?.capabilities ?? {})])),
+      ...(c.scenario.grain ? { grain: { places: c.scenario.grain.places.map((p) => ({ id: p.location, need: p.need })), bandDays: [...c.scenario.grain.bandDays] } } : {}),
     },
   });
 }

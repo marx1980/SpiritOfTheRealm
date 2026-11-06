@@ -32,6 +32,22 @@ const believedThreats = (v: View, minIntensity: number) => {
 const advanceTo = (minIntensity: number, cooldownDays: number): PolicyFn => (v) =>
   believedThreats(v, minIntensity).filter((f) => !recently(v, "advance", f, cooldownDays)).slice(0, 1).map((f) => ({ action: "advance" as const, target: f }));
 
+/** What the ruler believes a store holds, in sacks, and how many days it would feed its place (null when she has no belief). */
+const believedStore = (v: View, place: string) => {
+  const b = beliefsAbout(v, place, "grain.stock")[0], need = v.world.grain?.places.find((p) => p.id === place)?.need;
+  return b && need ? { sacks: b.believedValue as number, cover: Math.floor((b.believedValue as number) / need), need } : null;
+};
+/** When she believes a place has under TRIGGER_COVER days of grain, ask the richest other store for some; at most once in 30 days. */
+const TRIGGER_COVER = 8;
+const grainRelief = (consult: boolean): PolicyFn => (v) => {
+  const places = v.world.grain?.places ?? [];
+  const forts = new Set(v.world.places.filter((p) => p.fortified).map((p) => p.id)); // she worries about the garrisons' bread
+  const short = places.filter((p) => forts.has(p.id)).map((p) => ({ id: p.id, k: believedStore(v, p.id) })).filter((x) => x.k && x.k.cover < TRIGGER_COVER).sort((a, b) => a.k!.cover - b.k!.cover || (a.id < b.id ? -1 : 1))[0];
+  if (!short || recently(v, "requisition", null, 30)) return [];
+  const from = places.filter((p) => p.id !== short.id).map((p) => ({ id: p.id, k: believedStore(v, p.id) })).filter((x) => x.k && x.k.sacks >= 12 * x.k.need)
+    .sort((a, b) => b.k!.sacks - a.k!.sacks || (a.id < b.id ? -1 : 1))[0];
+  return from ? [{ action: "requisition" as const, target: from.id, to: short.id, consult }] : [];
+};
 const repairBelow = (threshold: number, cooldownDays: number): PolicyFn => (v) =>
   believedForts(v).filter((f) => f.value < threshold && !recently(v, "repair", f.loc, cooldownDays)).map((f) => ({ action: "repair" as const, target: f.loc }));
 
@@ -73,10 +89,10 @@ export function policyFn(id: PolicyId, aliases: Record<string, string> = {}): Po
 
 export const POLICIES: Record<"passive" | "delegating" | "aggressive" | "random-valid" | "follow-best-adviser" | "follow-worst-adviser", { fn: PolicyFn | null; note: string }> = {
   passive: { fn: () => [], note: "never acts" },
-  delegating: { fn: (v, rng) => [...repairBelow(60000, 20)(v, rng), ...advanceTo(400, 20)(v, rng)], note: "repairs below 60%; sends the captain against raiders reported at 400 or more" },
+  delegating: { fn: (v, rng) => [...repairBelow(60000, 20)(v, rng), ...advanceTo(400, 20)(v, rng), ...grainRelief(true)(v, rng)], note: "repairs below 60%; sends the captain against raiders reported at 400 or more; asks Greyfen's people first when a store looks low" },
   aggressive: {
-    fn: (v, rng) => [...repairBelow(80000, 10)(v, rng), ...advanceTo(1, 10)(v, rng), ...(recently(v, "levy", null, 30) ? [] : [{ action: "levy" as const }])],
-    note: "repairs below 80%, sends the captain against any reported raiders, levies every 30 days",
+    fn: (v, rng) => [...repairBelow(80000, 10)(v, rng), ...advanceTo(1, 10)(v, rng), ...(recently(v, "levy", null, 30) ? [] : [{ action: "levy" as const }]), ...grainRelief(false)(v, rng)],
+    note: "repairs below 80%, sends the captain against any reported raiders, levies every 30 days, takes grain without asking when a store looks low",
   },
   "random-valid": {
     fn: (v, rng) => {
@@ -84,7 +100,8 @@ export const POLICIES: Record<"passive" | "delegating" | "aggressive" | "random-
       // random ruler answers every piece of advice with a fresh order, which wakes the advisers again)
       const opts: PlayerAction[][] = [[], ...(recently(v, "levy", null, 10) ? [] : [[{ action: "levy" as const }]]),
         ...believedForts(v).filter((f) => !recently(v, "repair", f.loc, 10)).map((f) => [{ action: "repair" as const, target: f.loc }]),
-        ...believedThreats(v, 1).filter((f) => !recently(v, "advance", f, 10)).map((f) => [{ action: "advance" as const, target: f }])];
+        ...believedThreats(v, 1).filter((f) => !recently(v, "advance", f, 10)).map((f) => [{ action: "advance" as const, target: f }]),
+        ...(recently(v, "requisition", null, 10) ? [] : (v.world.grain?.places ?? []).filter((p) => beliefsAbout(v, p.id, "grain.stock").length).flatMap((from) => (v.world.grain!.places).filter((to) => to.id !== from.id).flatMap((to) => [true, false].map((consult) => [{ action: "requisition" as const, target: from.id, to: to.id, consult }]))))];
       return opts[rng().int(0, opts.length - 1)];
     },
     note: "uniform over valid actions (no repeat of the same order within 10 days)",

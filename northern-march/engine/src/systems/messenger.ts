@@ -160,6 +160,11 @@ export function compose(ctx: Ctx, author: string, recipient: string, claims: Bel
       bias.push("understates_damage");
       return { ...c, believedValue: Math.min(100000, (c.believedValue as number) + sc.understateMilli) };
     }
+    const gp = c.predicate === "grain.stock" ? ctx.content.scenario.grain?.places.find((x) => x.location === c.subject.id) : undefined;
+    if (gp && (c.believedValue as number) < gp.need * ctx.content.scenario.grain!.official.cover * 2 && r.chancePermille(1000 - badNews)) {
+      bias.push("understates_grain");
+      return { ...c, believedValue: Math.floor(((c.believedValue as number) * (1000 + ctx.content.scenario.grain!.understatePermille)) / 1000) };
+    }
     return c;
   });
   const report: Report = { id, author, recipient, subject: out[0].subject, claims: out, composedAt: ctx.tick, route: [], ...(bias.length ? { authorBias: bias } : {}), ...(purpose ? { purpose } : {}) };
