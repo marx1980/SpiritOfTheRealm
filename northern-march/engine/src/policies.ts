@@ -91,8 +91,8 @@ export const POLICIES: Record<"passive" | "delegating" | "aggressive" | "random-
   passive: { fn: () => [], note: "never acts" },
   delegating: { fn: (v, rng) => [...repairBelow(60000, 20)(v, rng), ...advanceTo(400, 20)(v, rng), ...grainRelief(true)(v, rng)], note: "repairs below 60%; sends the captain against raiders reported at 400 or more; asks the people whose grain it is first when a store looks low" },
   aggressive: {
-    fn: (v, rng) => [...repairBelow(80000, 10)(v, rng), ...advanceTo(1, 10)(v, rng), ...(recently(v, "levy", null, 70) ? [] : [{ action: "levy" as const }]), ...grainRelief(false, 60)(v, rng)],
-    note: "repairs below 80%, sends the captain against any reported raiders, levies every 70 days, takes grain without asking when a store looks low, at most once in 60 days",
+    fn: (v, rng) => [...repairBelow(80000, 10)(v, rng), ...advanceTo(1, 10)(v, rng), ...(recently(v, "levy", null, 60) ? [] : [{ action: "levy" as const }]), ...grainRelief(false, 60)(v, rng)],
+    note: "repairs below 80%, sends the captain against any reported raiders, levies every 60 days, takes grain without asking when a store looks low, at most once in 60 days",
   },
   "random-valid": {
     fn: (v, rng) => {
