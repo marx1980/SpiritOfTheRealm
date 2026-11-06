@@ -1,4 +1,4 @@
-# H-01 and H-02 session protocol (Phase 5)
+# H-01 and H-02 session protocol (Phase 5; run at Phase 7A, D-020)
 
 Gate text: IMPLEMENTATION_PLAN C4. This file is the practical script for running it.
 
@@ -25,7 +25,13 @@ Each tester should meet at least three. The observer marks which ones occurred.
 | C3 | Repairs ordered without money | The order is abandoned for lack of funds; Anna learns it only by letter, days later |
 | C4 | Anna travels to Northwatch or Greybridge | Letters for her are read to the council at Ravenport, then forwarded; Elara governs as regent and may order repairs within her limits, then writes to Anna |
 | C5 | Anna stays in a fort with failing walls when the second wave comes (day 55+) | A danger warning first; if the walls are breached with her inside, she is killed or captured |
-| C6 | Following Oren (the steward) | He mostly advises waiting or a levy; the walls keep falling while the treasury looks healthy |
+| C6 | Following Oren (the steward) | He mostly advises waiting; the walls keep falling while the treasury looks healthy |
+| C7 | A fort falls to the raiders | A red-bordered letter; the court shows the fall first; advisers give opinions on retaking it |
+| C8 | The captain fights near a fort | His letter asks whether to return home to refill or stay to rebuild and defend; advisers answer |
+| C9 | Repairs with the captain's men | Rush (paid extra, faster) or labour (no coin, slower) only while his company is at the fort |
+| C10 | The captain away from home | The crown pays 2k a day more; raids grow bolder while he is away |
+| C11 | Anna raises a levy (Phase 6) | Greyfen remembers the crown's promise to consult before a levy: Mara petitions within days and Greyfen may withhold its dues; Northwatch pays nothing and is unmoved |
+| C12 | The captain stays at a fort that is not his home (Phase 6) | The townsfolk complain of the soldiers; a petition asks for them to be withdrawn |
 
 ## Observer sheet (one row per decision)
 
@@ -52,3 +58,16 @@ Each tester should meet at least three. The observer marks which ones occurred.
 - Moments where a tester said they did not know something they wanted to know.
 - Moments where a tester trusted an old letter without noticing its age.
 - Any wording testers misread.
+
+## Worksheet additions (from the handover package, 6 Nov)
+For each consequential moment also record: the player's belief, the evidence they cite, the decision, the result they expect, the result they see, any confusion, a verbatim quote. Tag each: INFO, AGENCY, NPC, DELAY, TRUST, EMERGE, UNFAIR or DELIGHT.
+
+**Trust map** at the start, midpoint and end: whom the tester trusts, distrusts, sees as competent in which area, and suspects of an agenda.
+
+**Information mental model** (ask once, mid-session): which letter is the freshest; whose word they trust most; what is uncertain; whether the map shows the truth or what the crown believes.
+
+**NPC legibility score** per surprising NPC action: 0 random or broken; 1 weak explanation after the fact; 2 plausible but poorly signalled; 3 the tester inferred the likely cause; 4 the tester anticipated it from the character.
+
+**Agency checklist** (observer, end of session): at least two approaches were available; enough evidence to reason; a way to seek information; delegation options; a lever to manage risk; a consequence that mattered.
+
+**End questions:** What happened? Your biggest mistake? Whom would you trust next time? What information was missing? What felt unfair, what deserved? Any "I knew it" or "should have listened" moment? Could you say what you wanted to order? Would you play again?

@@ -2,6 +2,13 @@
 
 Things agreed but not built, with the decision that set them. Newest first.
 
+## From Phase 6 (6 Nov 2026)
+- **Advisers on communities:** no adviser yet recommends relief or warns before a levy that Greyfen was promised consultation. Add with care: it changes G-12.
+- **Consultation:** the crown cannot yet keep its promise to Greyfen (consult before a levy); only relief eases the broken promise. Natural home: 7A (requisition with consultation).
+- **Petition repetition:** a standing grievance is petitioned again every 30 days even if unchanged; consider "only when it grew".
+- **Community memory of good deeds** decays only by eviction; trust in the crown moves but has no slow return to its base.
+- **Wider population (6B):** 8-12 communities, migration, sabotage, open revolt, leaders co-opted or imprisoned.
+
 ## From the Phase 5 playtest rounds (Nov 2026)
 - **Troop levy and levy advice** (Marko, 2 Nov): advisers never suggest levying men or taxes beyond the coin levy when money is short. A real troop levy (cost 1.5 times a garrison man) is not built; advisers suggest the coin levy only when the treasury is low or a fort has fallen.
 - **More incidents:** magic and other rarer disasters (fires and earthquakes exist since 2 Nov).

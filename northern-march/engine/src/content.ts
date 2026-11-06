@@ -65,10 +65,35 @@ export interface Scenario {
   presence: { dangerBelowMilli: number; deathPermille: number; travelTo: string[] };
   objective: { forts: string[] };
 }
+export const STANCES = ["cooperate", "petition", "delay", "withhold", "refuse", "support"] as const;
+export type Stance = (typeof STANCES)[number];
+export const GRIEVANCE_KINDS = ["unprotected", "levy", "broken_promise", "misconduct"] as const;
+export type GrievanceKind = (typeof GRIEVANCE_KINDS)[number];
+export interface CommunityDef {
+  id: string; name: string; cohorts: { id: string; sharePermille: number; weights: Record<GrievanceKind, number> }[];
+  material: number; cohesion: number; resources: number; expectedBase: number;
+  leader: { id: string; trust: number } | null; reporter: string; exposedTo: string[]; levySharePermille: number; incomeFrom?: string; recruitsFor?: string;
+  trust: Record<string, number>; memories: { kind: string; actor: string; about?: string; weight: number }[];
+}
+export interface CommunityParams {
+  rumourDays: number; triggerDays: number; memoryCap: number; materialRecoveryPerDay: number; raidMaterialAtFull: number; levyMaterial: number;
+  reliefMaterial: number; reliefMilli: number; misconductMaterial: number;
+  grievance: { raidAtFull: number; levy: number; brokenPromise: number; misconduct: number; decayPermillePerDay: number; dropBelow: number };
+  context: { underThreatPermille: number; poorBelow: number; poorPermille: number; calmPermille: number };
+  remedy: { sortieWonPermille: number; fortRetakenPermille: number; reliefPermille: number; reliefPromisePermille: number; companyGoneDecayPermille: number };
+  protectedDays: number;
+  narrative: { ratePermillePerDay: number; accessHours: number; trustFloor: number };
+  trust: { reliefCrown: number; protectedCrown: number; brokenPromiseCrown: number; misconductCrown: number; levyCrown: number };
+  weakness: { fortFell: number; unanswered: number; noCompany: number; lowGarrison: number; windowDays: number };
+  misconduct: { dailyPermille: number; traitPermille: number; afterDays: number };
+  ladder: { petition: number; gMin: number; nMin: number; lMin: number; delay: number; withhold: number; refuse: number; support: number; downPermille: number; supportTrust: number; repetitionDays: number };
+  effects: { income: Record<Stance, number>; recruits: Record<Stance, number>; levy: Record<Stance, number> };
+}
+export interface CommunitiesFile { params: CommunityParams; communities: CommunityDef[]; narrators: { who: string; story: "crown" | "others" }[] }
 export interface RawContent {
   manifest: { schemaVersion: number; contentVersion: string };
   traits: Trait[]; provinces: Province[]; rivers: River[]; locations: Location[]; routes: Route[];
-  predicates: Predicate[]; characters: Character[]; scenario: Scenario;
+  predicates: Predicate[]; characters: Character[]; scenario: Scenario; communities: CommunitiesFile;
 }
 export interface Content extends RawContent {
   version: string; hash: string;
@@ -76,7 +101,7 @@ export interface Content extends RawContent {
 }
 export interface ContentError { code: string; msg: string }
 
-const FILES = ["manifest", "traits", "provinces", "rivers", "locations", "routes", "predicates", "characters", "scenario"] as const;
+const FILES = ["manifest", "traits", "provinces", "rivers", "locations", "routes", "predicates", "characters", "scenario", "communities"] as const;
 
 export function readContentDir(dir: string): RawContent {
   const out: Record<string, unknown> = {};
@@ -161,6 +186,24 @@ export function validateContent(raw: RawContent): { errors: ContentError[] } {
     else if (s.kind === "order") { need(chars, s.from, "character", "script"); need(chars, s.to, "character", "script"); }
     else if (s.kind === "threat") { if (!sc.threat.sites.some((x) => x.site === s.site)) err("ID_UNKNOWN", `script threat site ${s.site}`); }
     else err("SCRIPT_UNKNOWN", `script kind ${(s as { kind: string }).kind}`);
+  }
+  const cm = raw.communities;
+  if (!cm?.communities) err("COMMUNITIES_MISSING", "communities.json");
+  else {
+    const cids = ids(cm.communities, "community");
+    for (const c of cm.communities) {
+      need(locs, c.id, "location", `community ${c.id} (a community lives at the place of its id)`);
+      need(chars, c.reporter, "character", `community ${c.id} reporter`);
+      if (c.leader) need(chars, c.leader.id, "character", `community ${c.id} leader`);
+      for (const x of c.exposedTo) if (!sc.threat.sites.some((t) => t.site === x)) err("ID_UNKNOWN", `community ${c.id} exposed to ${x}: not a threat site`);
+      if (c.cohorts.reduce((a, x) => a + x.sharePermille, 0) !== 1000) err("RANGE", `community ${c.id} cohort shares must sum to 1000`);
+      for (const k of ["material", "cohesion", "resources", "expectedBase"] as const) if (!(c[k] >= 0 && c[k] <= 1000)) err("RANGE", `community ${c.id} ${k}`);
+      if (c.incomeFrom && !sc.economy.holdings.some((h) => h.location === c.incomeFrom)) err("ID_UNKNOWN", `community ${c.id} income from ${c.incomeFrom}: no holding`);
+      if (c.recruitsFor && !raw.locations.find((l) => l.id === c.recruitsFor)?.fortification) err("ID_UNKNOWN", `community ${c.id} recruits for ${c.recruitsFor}: not a fort`);
+    }
+    if (cm.communities.reduce((a, c) => a + c.levySharePermille, 0) > 1000) err("RANGE", "community levy shares exceed 1000");
+    for (const n of cm.narrators) need(chars, n.who, "character", "narrator");
+    void cids;
   }
   for (const id of ["fortification.condition", "character.location", "character.seat", "order.status", "order.content", "report.route", "threat.intensity", "treasury.balance", "request.reinforce"]) need(preds, id, "predicate", "engine requires");
 

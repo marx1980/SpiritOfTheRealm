@@ -156,7 +156,7 @@ function raidNear(v: View, fort: string): string | undefined {
 }
 const actionText = (v: View, a: PlayerAction) =>
   a.action === "order" ? `Order ${name(v, a.order!.recipient)}: ${a.order!.intent} ${name(v, a.order!.objective.id)}`
-  : a.action === "levy" ? "Raise a levy" : a.action === "travel" ? `Travel to ${name(v, a.target!)}`
+  : a.action === "levy" ? "Raise a levy" : a.action === "relief" ? `Send relief to ${name(v, a.target!)}` : a.action === "travel" ? `Travel to ${name(v, a.target!)}`
   : a.action === "repair" ? `Repair ${name(v, a.target!)}${a.repairMode === "rush" ? " quickly, paying extra, with the captain's men" : a.repairMode === "labour" ? " with the captain's men only (no cost, slower)" : ""}`
   : a.mission === "attack" && a.raid ? `Attack the raiders at ${name(v, a.raid)}` : a.mission === "scout" && a.raid ? `Scout the raiders at ${name(v, a.raid)}` : (fallenAt(v, a.target!) ? `Retake ${name(v, a.target!)}` : `Send the captain to ${name(v, a.target!)}`);
 const queue = (a: PlayerAction) => {
@@ -282,7 +282,7 @@ function adviceRows(v: View, lines: AdviceLine[]) {
 function orderDetails(v: View, id: string): string {
   const o = v.self.orders.find((x) => String(x.orderId) === id);
   if (!o) return "";
-  const verb: Record<string, string> = { repair: "Repair", advance: "Send to", levy: "Raise a levy", travel: "Travel to", investigate: "Scout the raiders at", attack: "Attack the raiders at" };
+  const verb: Record<string, string> = { repair: "Repair", advance: "Send to", levy: "Raise a levy", relief: "Send relief to", travel: "Travel to", investigate: "Scout the raiders at", attack: "Attack the raiders at" };
   const hist = beliefsAbout(v, id, "order.status").sort((a, b) => b.observedAt - a.observedAt)
     .map((b) => `<div>${tone(String(b.believedValue))} · ${esc(sourceOf(v, b))} · ${ageTone(dayAgo(v, b.observedAt))} · ${esc(certainty[b.effectiveBand])}</div>`).filter((x, i, a) => a.indexOf(x) === i).join("");
   return `<div class="ev order-detail"><div><span class="k">To:</span> ${esc(name(v, o.recipient))}</div><div><span class="k">Order:</span> ${esc(verb[o.action] ?? o.action)}${o.action === "levy" ? "" : " " + esc(name(v, o.target))}</div>
@@ -298,7 +298,7 @@ function court(v: View) {
   const issues = shown.map(({ i, advice }) => `<div class="card issue ${i.key.startsWith("fallen:") ? "fallen " : ""}${i.priority >= 45 ? "p-hi" : i.priority >= 25 ? "p-mid" : ""}"${i.key.startsWith("order:") ? ` data-issue="${esc(i.key)}" role="button" tabindex="0"` : ""}>
     <div class="t">${tone(i.title)}</div>${st.openIssue === i.key ? orderDetails(v, i.key.slice(6)) : ""}
     <div class="ev">${i.evidence.map((e) => `<span><b>${esc(e.text)}</b> · ${esc(e.source)} · ${ageTone(e.age)} · ${esc(e.certainty)}</span>`).join("")}</div>
-    ${advice.length ? `<div class="adv">${adviceRows(v, advice)}</div>` : ""}</div>`).join("");
+    ${advice.length ? `<div class="adv">${adviceRows(v, advice)}</div>` : ""}${i.key.startsWith("people:") && st.paused && affordable(v, { action: "relief", target: i.place }) ? `<div class="adv"><div class="row"><span></span><span>Send relief (about ${kCoins(RELIEF)})</span><button data-act='${esc(JSON.stringify({ action: "relief", target: i.place }))}'>Do it</button></div></div>` : ""}</div>`).join("");
   const rest = c.advice.filter((l) => !inBox(l));
   const general = rest.length ? `<div class="card"><h2>Council</h2><div class="adv">${adviceRows(v, rest)}</div></div>` : "";
   return `<div class="col"><h2>Court · ${esc(c.at)}</h2>${issues || `<div class="card">No pressing matters</div>`}${general}</div>`;
@@ -338,13 +338,15 @@ function side(v: View) {
   const fortId = !st.draft.objective.startsWith("@") && content.byId.location.get(st.draft.objective)?.fortification ? st.draft.objective : null;
   // each thing appears once: the four things Anna does herself, then the other orders she can send (repair, levy, advance and travel are the first four)
   const OTHER: Record<string, string> = { hold: "Hold position", withdraw: "Withdraw", screen: "Screen", escort: "Escort", requisition: "Requisition", investigate: "Scout", attack: "Attack raiders", negotiate: "Negotiate", report: "Ask for a report" };
-  const ACTIONS: [string, string][] = [["p:repair", "Repair walls"], ["p:advance", "Send captain"], ["p:levy", "Raise a levy"], ["p:travel", "Travel"], ...INTENTS.filter((k) => OTHER[k]).map((k) => [`o:${k}`, OTHER[k]] as [string, string])];
+  const ACTIONS: [string, string][] = [["p:repair", "Repair walls"], ["p:advance", "Send captain"], ["p:levy", "Raise a levy"], ["p:relief", "Send relief"], ["p:travel", "Travel"], ...INTENTS.filter((k) => OTHER[k]).map((k) => [`o:${k}`, OTHER[k]] as [string, string])];
   const aboutPeople = st.draft.action === "o:escort" || st.draft.action === "o:negotiate"; // only these are about a person; everything else is about a place
   const draft = isPlayer ? null : toDraft();
   const problems: string[] = isPlayer ? (
       (pAct === "repair" || pAct === "advance") && !fortId ? ["choose a fort under Where"]
       : pAct === "advance" && st.draft.mission !== "defend" && !raidNear(v, fortId!) ? ["no raiders known to be answered from this fort"]
-      : pAct === "travel" && !travel.includes(st.draft.objective) ? ["choose a place to travel to under Where"] : [])
+      : pAct === "travel" && !travel.includes(st.draft.objective) ? ["choose a place to travel to under Where"]
+      : pAct === "relief" && !PEOPLE.has(st.draft.objective) ? [`choose ${[...PEOPLE].map((x) => name(v, x)).join(", ")} under Where`]
+      : pAct === "relief" && (coinsKnown(v) ?? Infinity) < RELIEF ? [`not enough coins: relief costs about ${kCoins(RELIEF)}`] : [])
     : draft ? validateDraft(v, draft) : ["no recipient"];
   // A repair is only offered if Anna can pay for it (from what she believes about the walls and her coins).
   const isRepair = st.draft.action === "p:repair" || st.draft.action === "o:repair";
@@ -360,7 +362,7 @@ function side(v: View) {
       ${pAct === "repair" && isPlayer ? `<label for="o-rmode">Repair</label><select id="o-rmode">${["standard", "rush", "labour"].map((k) => opt(k, MODE_TEXT[k], st.draft.repairMode)).join("")}</select>` : ""}
       ${pAct === "advance" ? `<label for="o-mission">Mission</label><select id="o-mission">${[["defend", "Defend the fort"], ["scout", "Scout the raiders"], ["attack", "Attack the raiders"]].map(([k, l]) => opt(k, l, st.draft.mission)).join("")}</select>` : ""}
       ${isPlayer ? "" : `<label for="o-disc">Freedom</label><select id="o-disc">${[["strict", "Exactly as told"], ["bounded", "Some freedom"], ["delegated", "Full freedom"]].map(([k, l]) => opt(k, l, st.draft.discretion)).join("")}</select>`}
-      ${costLine}
+      ${costLine}${pAct === "relief" && isPlayer ? `<span></span><span class="cost">Relief costs about ${kCoins(RELIEF)}</span>` : ""}
       <span></span><button id="o-add" ${p && !problems.length ? "" : "disabled"}>Make an order</button>
     </div>
     ${problems.length ? `<div class="err">${esc(problems.join("; "))}</div>` : ""}</div>`;
@@ -417,7 +419,10 @@ const kCoins = (n: number) => `${Math.round(n / 1000)}k`;
 const baseNetMilli = content.scenario.economy.holdings.reduce((a, h) => a + h.dailyIncomeMilli, 0) - content.scenario.economy.dailyUpkeepMilli;
 const LOW_COINS = 30000;
 /** A repair is only possible if Anna can pay for it, as far as she knows. Other actions are always possible. */
+const RELIEF = content.communities.params.reliefMilli;
+const PEOPLE = new Set(content.communities.communities.map((c) => c.id));
 function affordable(v: View, a: PlayerAction): boolean {
+  if (a.action === "relief") { const k = coinsKnown(v); return k === undefined || RELIEF <= k; }
   if (a.action !== "repair") return true;
   const c = repairCostKnown(v, a.target!, a.repairMode), k = coinsKnown(v);
   return c === undefined || k === undefined || c <= k;
@@ -433,7 +438,7 @@ function coinStatus(v: View): string {
   const netDailyMilli = baseNetMilli - away * content.scenario.economy.captainAwayMilli;
   const net = `${netDailyMilli >= 0 ? "+" : "−"}${kCoins(Math.abs(netDailyMilli))} a day`;
   const low = n < LOW_COINS ? ` <span class="low">Low. <button data-use-levy>Raise a levy (about ${kCoins(content.scenario.player.levyMilli)})</button></span>` : "";
-  const wf = st.windfall && Math.floor(v.now / DAY) - st.windfall.day <= 3 ? ` <span class="stat-net ok">+${kCoins(st.windfall.milli)} raised, day ${st.windfall.day - Math.floor(PRE / DAY) + 1}</span>` : "";
+  const wf = st.windfall && Math.floor(v.now / DAY) - st.windfall.day <= 3 ? ` <span class="stat-net ok">Levy raised, day ${st.windfall.day - Math.floor(PRE / DAY) + 1}</span>` : "";
   return `<span class="stat${b.effectiveBand === "stale" ? " old" : ""}"><span class="emo" aria-hidden="true">🪙</span> Coins: ${kCoins(n)}</span>
     <span class="stat-net ${netDailyMilli >= 0 ? "ok" : "bad"}">${net}</span> <em class="stat-age">(${ageTone(dayAgo(v, b.observedAt))})</em>${wf}${low}`;
 }
@@ -519,6 +524,7 @@ document.addEventListener("click", (e) => {
     const pa = st.draft.action.slice(2);
     if (st.draft.action.startsWith("p:")) {
       if (pa === "levy") return queue({ action: "levy" });
+      if (pa === "relief") return queue({ action: "relief", target: st.draft.objective });
       if (pa === "travel") return queue({ action: "travel", target: st.draft.objective });
       if (pa === "advance" && st.draft.mission !== "defend") { const raid = raidNear(st.sim.viewOf("player"), st.draft.objective); return queue({ action: "advance", target: st.draft.objective, mission: st.draft.mission as "scout" | "attack", raid }); }
       return queue({ action: pa as "repair" | "advance", target: st.draft.objective, ...(pa === "repair" && st.draft.repairMode !== "standard" ? { repairMode: st.draft.repairMode as "rush" | "labour" } : {}) });

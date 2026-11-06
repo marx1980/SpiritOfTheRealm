@@ -7,10 +7,10 @@ Phases 0-5 are built. The safest next move is a narrow foundation acceptance gat
 Run T01, T05, T10, T02, T03, T04 and T06. Block only on information leakage, undelivered knowledge, broken latency, WorldState access, unreconstructable decisions or unexplained replay divergence.
 
 ### Next build
-Add Northwatch, Greyfen, Eastmere and Blackwood communities, then grain only. Communities need beliefs, memories, grievances, source trust and organisation, but no armed revolt. Grain needs exact stocks, flows and physical convoys.
+Add Northwatch, Greyfen, Eastmarch and Coldmere (the Blackwood settlement) communities, then grain only. Communities need beliefs, memories, grievances, source trust and organisation, but no armed revolt. Grain needs exact stocks, flows and physical convoys.
 
 ### First integrated proof
-The Grain Crisis must allow the same shipment to make Northwatch more supportive and Greyfen more hostile, depending on material experience and competing narratives. Varos or Lord Greyfen can mobilise political consequences only through credible access and organisation.
+The Grain Crisis must allow the same shipment to make Northwatch more supportive and Greyfen more hostile, depending on material experience and competing narratives. Varos, or Mara speaking for Greyfen, can mobilise political consequences only through credible access and organisation.
 
 ### Challenge
 Do not accept success until the same community architecture handles a non-grain grievance such as troop misconduct or a broken protection promise.

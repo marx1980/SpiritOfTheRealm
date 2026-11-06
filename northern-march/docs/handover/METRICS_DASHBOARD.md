@@ -1,26 +1,17 @@
-# Northern March Interaction Prototype
+# Metrics dashboard
 
-## Integrity targets
-- Hidden information leaks: 0.
-- Undelivered information use: 0.
-- Unsupported armed revolts: 0.
-- Missing DecisionTrace on consequential Tier A choices: 0 in test builds.
-- Unexplained deterministic replay divergence: 0.
+## Computed (headless, every batch)
+| Metric | Target | Where |
+|---|---|---|
+| Hidden information leaks; undelivered information use | 0 | invariants (C3), every seed |
+| Unsupported escalations past "delay"; revolts | 0 | G-13, `tools/phase6_gate.ts` |
+| Missing DecisionTrace on consequential Tier A choices | 0 | agents tests |
+| Unexplained replay divergence | 0 | G-01 (Node and Bun), save/load tests |
+| Highest rung reached per community; petitions, misconduct, relief per run; payers diverging after the same levies | reported | `tools/phase6_gate.ts` |
+| Replanning frequency, plan churn, wakes per tier | within G-14 budgets | `tools/phase4_gate.ts` |
+| Stale-belief use, wrong-belief harm | G-11 bands | `tools/phase3_gate.ts` |
+| Attributable rate, lift, link necessity of the Grain Crisis | G-03/04/05 | 7A |
+| Grain stock conservation | exact | 7A |
 
-## NPC health
-Replanning frequency, plan churn, trigger efficiency, belief-store size, stale-belief use and behavioural-gradient alerts.
-
-## Information ecology
-Belief diversity, report latency, contradiction rate and player stale-marker confusion.
-
-## Human experience
-NPC legibility, unfair-opacity incidents, meaningful-choice coverage, trust differentiation and mental-model accuracy.
-
-## Emergence
-Causal depth, cross-system breadth, outcome diversity, fake-emergence rate and memorable “I knew it/should have listened” moments.
-
-## 6A-7A
-Community belief divergence, grievance specificity, mobilisation ladder, exact grain accounting and material-to-political causal chains.
-
-## Gates
-Foundation gate requires integrity and explainable T01/T02/T04/T05/T10. Integrated gate requires exact grain flow, no unsupported revolt, divergent Greyfen/Northwatch reactions and at least two plausible Grain Crisis outcomes.
+## Human (playtest sessions)
+NPC legibility (0-4), unfair-opacity incidents, meaningful-choice coverage, trust differentiation (H-02), mental-model accuracy (do testers read the map as belief), "I knew it / should have listened" moments, stale-marker confusion. Recorded with `../H01_PROTOCOL.md`.

@@ -134,5 +134,29 @@
     "domain": "military",
     "wakeSignificance": 2,
     "materialDelta": 1
+  },
+  {
+    "id": "community.grievance",
+    "subjectKind": "location",
+    "halfLifeTicks": 1728000,
+    "domain": "political",
+    "wakeSignificance": 1,
+    "materialDelta": 1
+  },
+  {
+    "id": "community.stance",
+    "subjectKind": "location",
+    "halfLifeTicks": 1728000,
+    "domain": "political",
+    "wakeSignificance": 1,
+    "materialDelta": 1
+  },
+  {
+    "id": "community.request",
+    "subjectKind": "location",
+    "halfLifeTicks": 1728000,
+    "domain": "political",
+    "wakeSignificance": 1,
+    "materialDelta": 1
   }
 ]

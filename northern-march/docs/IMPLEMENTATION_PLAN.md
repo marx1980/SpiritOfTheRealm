@@ -1,6 +1,6 @@
 # Northern March - Implementation Plan
 
-Version 3. Supersedes v1 and v2.
+Version 4 (6 Nov 2026). Supersedes v1-v3. Changes from v3: Phases 6 and 7 narrowed to one closed loop (6A: four communities, no armed revolt; 7A: grain only and the Grain Crisis); the rest moves to 6B/7B; H-01/H-02 overridden at Phase 5 (DECISIONS D-020); canonical scenarios T01-T10 and I01-I03 (section C5); the handover package and its review are in `docs/handover/`.
 
 ## Goal
 Build the smallest system capable of testing the game's interaction thesis: imperfect knowledge + event-driven autonomous people + conversational delegation + cross-system consequences.
@@ -208,7 +208,7 @@ Thresholds are initial guesses, revised after the first real batch. The protocol
 | G-10 | 3, 14 | Bad outcomes with `failureOrigin` attributed | at least 300 bad outcomes | PASS: point >= 95% and interval lower bound >= 90%; AMBER: point >= 95% only |
 | G-11 | 3, 14 | Wrong beliefs matter: (a) decisions using stale or wrong beliefs; (b) bad-outcome rate after wrong-belief decisions divided by the rate after correct-belief decisions | 1,000 seeds | (a) in [5%, 35%]; (b) >= 1.5 with interval lower bound > 1.0 |
 | G-12 | 5, 14 | Advisers matter: objective-success rate of "follow the best adviser" minus "follow the worst adviser" | paired policies, 1,000 seeds | difference >= 10 points, interval lower bound > 0 |
-| G-13 | 6 | Revolts without a named leader; revolts triggered by maximum grievance alone | all seeds | 0; 0 |
+| G-13 | 6 | Revolts without a named leader; revolts triggered by maximum grievance alone; (v4) escalations past "delay" with any D2 gate unmet | all seeds | 0; 0; 0 |
 | G-14 | 4, 14 | Wakes within tier budgets; doubling background characters raises Tier A wakes by less than 20%; wall-clock per sim year | 100 seeds | all three within limits (wall-clock <= 60 s) |
 | G-15 | 14 | Ablation sanity: disabling a system cuts crises of its own type to <= 20% of the ON-arm rate and moves other types by < 5 points | 1,000 seeds per system | every system |
 | G-16 | 13 | Swapping the language layer for templates leaves the event log identical | 100 seeds | identical |
@@ -218,6 +218,7 @@ Thresholds are initial guesses, revised after the first real batch. The protocol
 - No UI or planner module reads WorldState directly (static import check plus runtime proxy).
 - No inactive agent produces a DecisionTrace without a trigger.
 - Every revolt has a named leader or institution and all gates satisfied at trigger time.
+- (v4) Every community escalation past "delay" (withhold, refuse, support) has all D2 gates satisfied in its recorded inputs, and a named leader.
 - Every order lifecycle is a valid path through B2.
 - Every `causedBy` reference points to an earlier event.
 - The language layer can be swapped for the templated layer with an identical event log.
@@ -238,6 +239,24 @@ After two sessions of at least 30 minutes, testers rank at least 3 advisers by r
 
 **H-03 Battle readability (Phase 8).**
 Testers watch clips of formations in each of the 7 behaviours, with no numbers shown. PASS: at least 80% correct identification of behaviour, and at least 90% correct distinction between observed and reported markers.
+
+## C5. Canonical scenarios (v4)
+Named tests in `engine/test/canonical.test.ts`; each maps to an automated check.
+| ID | Scenario | Phase |
+|---|---|---|
+| T01 | Stale scout report: an old belief stays in force until new word arrives; stale beliefs are flagged | 2-3 (that they *matter* is G-11) |
+| T02 | Contradictory intelligence: contradictions from different sources are kept; first-hand and same-source resolve | 2 |
+| T03 | Bad royal order: the recipient adapts or refuses an order he judges wrong, with reasons | 3 |
+| T04 | Opportunity versus order: obey/adapt/refuse follow margins, and change gradually (no cliff edges) as the margin moves | 3 |
+| T05 | Missing messenger: the old order stays in force until the new one is received | 2 |
+| T06 | Resource shock: an empty treasury changes plans (repairs abandoned for funds) without spawning unrest | 5 (grain version at 7A) |
+| T07 | Community grievance: the same burden helps or hurts communities differently | 6 (levy), 7A (requisition) |
+| T08 | Emergent candidate: Stefan rises through recommendation | 4 |
+| T09 | Controlled withdrawal misread as rout | battlefield (Phase 8) |
+| T10 | Same reality, different beliefs: councillors advise differently from the same dispatch | 3 |
+| I01 | Grain Crisis: full material-political loop | 7A |
+| I02 | Two-community divergence: one stimulus, opposite interpretations | 6 (raids and levy), 7A (shipment) |
+| I03 | Mobilisation without a revolt meter: maximum grievance alone never escalates past "delay" | 6 |
 
 ---
 
@@ -310,15 +329,23 @@ Rebellion is a mobilisation state with structural gates plus a continuous score.
 **Deliver:** Court issue aggregator; adviser interpretation and disagreement; belief-based map with report age, source and uncertainty; structured order composer; messenger delivery; Anna's travel between Ravenport, Greybridge and Northwatch; who holds court and decides while she is absent; campaign objective tracking; defeat on Anna's death or capture; debug UI with templated phrasing.
 **Gate:** H-01 (protocol in C4), plus G-12 and H-02. If testers cannot explain their decisions from the information shown, fix this before any further phase.
 **Result (1 Nov):** built; G-12 AMBER (5.9 points, interval 4.4-7.5, block 50000); H-01 and H-02 waiting for testers (docs/H01_PROTOCOL.md). See DECISIONS D-015.
+**Override (6 Nov, D-020):** proceed to Phase 6 without H-01/H-02; they run with the first serious human playtests at Phase 7A.
 
-## Phase 6 - Population communities and rebellion
-**Deliver:** 8-12 communities, relevant cohorts, material condition, sparse collective beliefs, competing narratives, memory and grievance, trusted leaders and organisations, rebellion function (section D), cooperation/evasion/protest/migration/sabotage/revolt behaviours.
-**Tests:** section D5; invariant "no revolt without named leader".
-**Gate:** G-13.
+## Phase 6 (6A) - Four population communities
+**Deliver:** Northwatch, Greyfen, Eastmarch and Coldmere (the Blackwood settlement); 2-3 cohorts each; material condition; sparse memory; specific grievances with a cause, someone blamed and a remedy; source trust; competing narratives told by people with access (Varos, Bren, Anna); a named leader where there is one; the section D inputs and hard gates; a behaviour ladder (cooperate, petition, delay, withhold, refuse a demand, support a named actor) with effects on income, recruits and levies; petitions and officers' letters back to Anna; relief as a remedy. No armed revolt. The second, non-grain grievance is built here: troops quartered away from home (misconduct), alongside raids, levies and a broken promise.
+**Tests:** section D5; I02, I03, T07 (levy); invariant "no escalation past delay without the D2 gates".
+**Gate:** G-13, plus the regression gates (G-01, G-02, invariants) and G-12 still PASS with communities on.
 
-## Phase 7 - Economy and cross-system event bus
-**Deliver:** grain, timber, iron, horses, coin; stocks and flows; harvest and consumption; taxation and requisition; House/community control of resources; causal references across systems.
-**Gate:** G-03, G-04, G-05, G-06 on a sealed seed block, with the DECISIONS D-004 requirements implemented. Compare with Phase 0 findings.
+## Phase 6B - Wider population and rebellion (deferred)
+8-12 communities, migration, sabotage, open revolt (section D3 m2), leaders co-opted or imprisoned (D4). After the 6A-7A loop is validated.
+
+## Phase 7 (7A) - Grain and the Grain Crisis
+**Deliver:** grain only: stores, production, consumption, requisition delegated to officials, physical convoys with loss and seizure, scarcity bands, exact stock conservation; purchase constrained by coin (D-004.2). The Grain Crisis fixture without outcome branches: Northwatch needs grain, Greyfen can give some at real cost and remembers the crown's promise to consult, Anna has imperfect estimates, Varos can exploit grievance only with access and organisation. The shortage must be caused by the Blackwood raids (damaged harvest or roads), so the ON/OFF threat arms differ.
+**Tests:** T06 and T07 (grain versions), I01, I02 (shipment), a log classifier for the four outcomes (cooperative support; material success with political damage; political caution with military danger; misinformation failure).
+**Gate:** G-03, G-04, G-05, G-06 on a sealed seed block with the end state "Varos acts on Greyfen's grievance"; each Grain Crisis outcome at least 5% of 1,000 seeds; the second-grievance test (misconduct) passes on the same community architecture; first serious human playtests.
+
+## Phase 7B - Wider economy (deferred)
+Timber, iron, horses, prices and markets, House control of resources, full levy system and manpower. Then choose the timber/Blackwood loop or the Grey Hill battlefield laboratory from the evidence.
 
 ## Phase 8 - Minimal battle slice
 **Deliver:** battle entry from campaign contact and exit back to campaign (BATTLEFIELD §2B, §22); BattleReality vs BattleBeliefs; about 6 formations and 3 commanders; physical order transmission; receipt/interpretation/obedience split; one formation behaviour model; Anna's command position and exposure risk; post-battle imperfect reports.
@@ -366,9 +393,9 @@ Player-known timeline, objective reconstruction, DecisionTrace explorer, communi
 | P0.06 Court and Map | 5 | Core |
 | P0.07 Personal presence | 5 | Core |
 | P0.08 Character network, Houses | 4, 14 | Core (basic), Full |
-| P0.09 Population communities | 6 | Core |
-| P0.10 Rebellion mechanics | 6 | Core |
-| P0.11 Material economy | 7 | Core |
+| P0.09 Population communities | 6 (6A), 6B | Core |
+| P0.10 Rebellion mechanics | 6B | Core |
+| P0.11 Material economy | 7 (7A grain), 7B | Core |
 | P0.12 Standing policy | 9 | Full |
 | P0.13 Environment | 10 | Full |
 | P0.14 Magic | P1 (deferred) | — |

@@ -89,6 +89,11 @@ export function planWords(v: View, planId: string): string {
   }
 }
 
+/** Communities: what they hold against the crown, what they ask, and how they now behave. */
+export const GRIEF: Record<string, string> = { unprotected: "say the crown leaves them to the raiders", levy: "resent the levy", broken_promise: "say the crown broke its promise to consult them before a levy", misconduct: "complain of the soldiers quartered on them" };
+export const REQUEST: Record<string, string> = { protection: "protection from the raiders", relief: "relief", recall: "the soldiers to be withdrawn" };
+export const STANCE_WORDS: Record<string, string> = { cooperate: "cooperate again", petition: "are petitioning", delay: "are slow to pay their dues", withhold: "are withholding their dues", refuse: "refuse the crown's demands", support: "have declared for another lord" };
+const people = (place: string) => `The people of ${place}`;
 type LetterLike = { author: string; composedAt?: number; claims: { predicate: string; subject: { id: string }; believedValue: unknown }[] };
 /** What an earlier letter (written before this one) said about the same thing, if anything. */
 function earlier(v: View, r: LetterLike, c: { predicate: string; subject: { id: string } }): unknown {
@@ -121,6 +126,9 @@ function letterParts(v: View, r: LetterLike): { rank: number; text: string }[] {
       case "captain.heading": out.push({ rank: 0, text: `I am returning to ${nameOf(v, String(val))} to refill my company.` }); break;
       case "captain.refilled": out.push({ rank: 3, text: `My company is full again. Shall I return to ${nameOf(v, String(val))} to attack the raiders or to defend it?` }); break;
       case "captain.query": out.push({ rank: 3, text: `Shall I return to ${seatOf(v, r.author)} to refill my company, or stay at ${nameOf(v, String(val))} to help rebuild the walls and defend?` }); break;
+      case "community.grievance": out.push({ rank: -1, text: `${people(s)} ${GRIEF[String(val)] ?? `have a grievance (${String(val)})`}.` }); break;
+      case "community.request": out.push({ rank: 0, text: `They ask for ${REQUEST[String(val)] ?? String(val)}.` }); break;
+      case "community.stance": out.push({ rank: -1, text: `${people(s)} ${STANCE_WORDS[String(val)] ?? String(val)}.` }); break;
       case "fortification.holder": out.push({ rank: -2, text: val === "raiders" ? `${s} has fallen to the raiders!` : `${s} is ours again.` }); break;
       case "battle.result": out.push({ rank: 0, text: val === "nobody" ? `We found no raiders at ${s}.` : `We fought the raiders at ${s} and ${val === "won" ? "won" : "were beaten"}.` }); break;
       case "threat.intensity":
@@ -143,7 +151,7 @@ function letterParts(v: View, r: LetterLike): { rank: number; text: string }[] {
       case "order.status": {
         // the subject is the order's number: say what the order was, not its number
         const o = v.self.orders.find((x) => String(x.orderId) === c.subject.id);
-        const verb: Record<string, string> = { repair: "repair", advance: "send the captain to", levy: "raise a levy", travel: "travel to", investigate: "scout", attack: "attack the raiders at" };
+        const verb: Record<string, string> = { repair: "repair", advance: "send the captain to", levy: "raise a levy", relief: "send relief to", travel: "travel to", investigate: "scout", attack: "attack the raiders at" };
         out.push({ rank: 0, text: o ? `Your order to ${verb[o.action] ?? o.action} ${o.action === "levy" ? "" : nameOf(v, o.target) + " "}is ${String(val)}.`.replace("  ", " ") : `Your order is ${String(val)}.` });
         break;
       }

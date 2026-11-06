@@ -17,6 +17,12 @@ export interface AgentState { operational: Intention | null; focus: string | nul
 export type Tier = "A" | "B" | "C";
 export interface HistoryEntry { tick: number; event: "promoted" | "demoted" | "appointed"; from?: Tier; to?: Tier; role?: string; reason?: string }
 
+export interface Grievance { id: number; kind: string; intensity: number; blameCrown: number; cause: number; since: number; last: number; petitionedAt: number | null }
+export interface Memory { kind: string; actor: string; at: string; tick: number; eventId: number; weight: number; count: number; about?: string; broken?: boolean }
+export interface CommunityState {
+  material: number; grievances: Grievance[]; memories: Memory[]; trust: Record<string, number>;
+  stance: string; stanceSince: number; supports: string | null; told: string; lastTrigger: number; lastTriggerEvent: number; nextGrievance: number;
+}
 export interface WorldState {
   treasuryMilli: Record<string, number>;
   fortifications: Record<string, { conditionMilli: number; lastChangeEvent: number; garrison: number; establishment: number }>;
@@ -49,6 +55,7 @@ export interface WorldState {
   advisePending: Record<string, number>; // adviser -> day their advice is due or was given (given at the end of that day)
   ordersInForce: Record<string, number[]>;
   issued: Record<string, IssuedRecord[]>;
+  communities: Record<string, CommunityState>;
   repairs: Record<string, { mode: string; startedAt: number; orderId: number; work: number; done: number; lastT: number; men: number; gen: number; restoredMilli: number; startedEventId: number; engineer: string }>;
 }
 
@@ -70,10 +77,46 @@ export function initialState(c: Content): WorldState {
   return {
     treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, tiers, history: {}, agents, recommendations: {}, heard: {}, campaign: { ended: null, lastDanger: -1 }, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, sortieOpen: {}, lastStorm: {}, fallen: {}, threats: {}, routesClosed: {},
     positions, departures: {}, beliefs: {}, nextPropId: 1, reports: {}, nextReportId: 1, messengers: {}, nextMessengerId: 1,
-    orders: {}, nextOrderId: 1, advisePending: {}, dayEndDay: -1, ordersInForce: {}, issued: {}, repairs: {},
+    orders: {}, nextOrderId: 1, advisePending: {}, dayEndDay: -1, ordersInForce: {}, issued: {}, repairs: {}, communities: initialCommunities(c),
   };
 }
 
+function initialCommunities(c: Content): WorldState["communities"] {
+  const out: WorldState["communities"] = {};
+  for (const d of [...(c.communities?.communities ?? [])].sort((a, b) => cmp(a.id, b.id)))
+    out[d.id] = { material: d.material, grievances: [], trust: { ...d.trust }, stance: "cooperate", stanceSince: 0, supports: null, told: "cooperate", lastTrigger: -1, lastTriggerEvent: 0, nextGrievance: 1,
+      memories: d.memories.map((m) => ({ kind: m.kind, actor: m.actor, at: d.id, tick: 0, eventId: 1, weight: m.weight, count: 1, ...(m.about ? { about: m.about } : {}) })) };
+  return out;
+}
+const clamp1000 = (v: number) => Math.max(0, Math.min(1000, v));
+/** A community remembers few things: the same kind of thing at the same place by the same actor is one memory, and the
+ *  least weighty old memory is forgotten when there are too many (a promise is never forgotten). */
+function remember(c: CommunityState, m: Memory, cap: number) {
+  const same = c.memories.find((x) => x.kind === m.kind && x.at === m.at && x.actor === m.actor && x.about === m.about);
+  if (same) { same.tick = m.tick; same.eventId = m.eventId; same.count += 1; same.weight = Math.max(same.weight, m.weight); return; }
+  c.memories.push(m);
+  while (c.memories.length > cap) {
+    const drop = c.memories.map((x, i) => ({ x, i })).filter(({ x }) => x.kind !== "promise").sort((a, b) => a.x.weight - b.x.weight || a.x.tick - b.x.tick || a.i - b.i)[0];
+    if (!drop) break;
+    c.memories.splice(drop.i, 1);
+  }
+}
+/** Effects a community's experience has on it, worked out by the communities system and applied here. */
+function applyEffects(s: WorldState, p: P, e: SimEvent) {
+  const c = s.communities[p.community];
+  if (p.memory) remember(c, { ...p.memory, tick: e.tick, eventId: e.id, count: 1 }, p.memoryCap);
+  if (p.material) c.material = clamp1000(c.material + p.material);
+  for (const [src, d] of (p.trust ?? []) as [string, number][]) c.trust[src] = clamp1000((c.trust[src] ?? 0) + d);
+  for (const [gid, v] of (p.eased ?? []) as [number, number][]) { const g = c.grievances.find((x) => x.id === gid); if (g) g.intensity = v; }
+  c.grievances = c.grievances.filter((g) => g.intensity > 0);
+  for (const g of (p.grievances ?? []) as { kind: string; delta: number; blameCrown: number }[]) {
+    const open = c.grievances.find((x) => x.kind === g.kind);
+    if (open) { open.intensity = clamp1000(open.intensity + g.delta); open.last = e.tick; open.cause = e.id; }
+    else c.grievances.push({ id: c.nextGrievance++, kind: g.kind, intensity: clamp1000(g.delta), blameCrown: g.blameCrown, cause: e.id, since: e.tick, last: e.tick, petitionedAt: null });
+    c.lastTrigger = e.tick; c.lastTriggerEvent = e.id;
+  }
+  if (p.breaks) for (const m of c.memories) if (m.kind === "promise" && m.about === p.breaks) m.broken = true;
+}
 const clampCond = (v: number) => Math.max(0, Math.min(100000, v));
 const noop = () => {};
 type P = Record<string, any>;
@@ -184,6 +227,21 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   RepairResynced: (s, p, e) => { const r = s.repairs[p.location]; r.done = p.done; r.lastT = e.tick; r.men = p.men; r.gen = p.gen; },
   RepairCompleted: (s, p, e) => { const f = s.fortifications[p.location]; f.conditionMilli = clampCond(f.conditionMilli + p.restoredMilli); f.lastChangeEvent = e.id; delete s.repairs[p.location]; },
   LevyRaised: (s, p) => { s.treasuryMilli[p.payer] += p.amountMilli; },
+  ReliefSent: (s, p) => { s.treasuryMilli[p.payer] -= p.amountMilli; },
+  // communities (Phase 6)
+  CommunityHeard: applyEffects,
+  TroopMisconduct: noop,
+  ReliefDelivered: noop,
+  PetitionMade: (s, p, e) => { const g = s.communities[p.community].grievances.find((x) => x.id === p.grievanceId); if (g) g.petitionedAt = e.tick; },
+  CommunitiesDrifted: (s, p) => {
+    for (const ch of p.changes as { community: string; material: number; grievances: [number, number, number][] }[]) {
+      const c = s.communities[ch.community];
+      c.material = ch.material;
+      for (const [gid, intensity, blame] of ch.grievances) { const g = c.grievances.find((x) => x.id === gid); if (g) { g.intensity = intensity; g.blameCrown = blame; } }
+      c.grievances = c.grievances.filter((g) => g.intensity > 0);
+    }
+  },
+  CommunityStanceChanged: (s, p, e) => { const c = s.communities[p.community]; c.stance = p.to; c.stanceSince = e.tick; c.supports = p.supports ?? null; if (p.tell) c.told = p.to; },
   PlayerInput: noop,
   RecommendationMade: (s, p) => {
     s.recommendations[p.recommendation.author] = p.recommendation;

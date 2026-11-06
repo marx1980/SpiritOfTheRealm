@@ -5,6 +5,7 @@ import { DAY, HOUR, chr, loc, sorted } from "./types.ts";
 import { cmp } from "../world.ts";
 import { best, learn, observe, observeTreasury } from "./knowledge.ts";
 import { travel } from "./movement.ts";
+import { contribution } from "./communities.ts";
 
 const presentAt = (ctx: Ctx, where: string) => sorted(Object.entries(ctx.s.positions).filter(([, p]) => "at" in p && p.at === where).map(([id]) => id), (x) => x);
 export function defence(ctx: Ctx, where: string) {
@@ -68,8 +69,12 @@ export const economy: System = {
     "economy:day": (ctx) => {
       const sc = ctx.content.scenario, r = ctx.rng("economy");
       for (const h of sorted(sc.economy.holdings, (h) => h.location)) {
-        const amountMilli = h.dailyIncomeMilli + r.int(-h.jitterMilli, h.jitterMilli);
-        ctx.emit("TreasuryCollected", [], [loc(h.location)], { holder: sc.ruler, location: h.location, amountMilli }, "economy");
+        const gross = h.dailyIncomeMilli + r.int(-h.jitterMilli, h.jitterMilli);
+        // a community that withholds keeps its dues (Phase 6); the draw is made either way, so the stream stays aligned
+        const cm = ctx.content.communities.communities.find((x) => x.incomeFrom === h.location);
+        const k = cm ? contribution(ctx, "income", cm.id) : 1000;
+        const amountMilli = Math.floor((gross * k) / 1000);
+        ctx.emit("TreasuryCollected", [], [loc(h.location)], { holder: sc.ruler, location: h.location, amountMilli, ...(k < 1000 ? { withheldMilli: gross - amountMilli } : {}) }, "economy");
       }
       // a captain with a company who is away from his home town is a cost to the crown
       const away = awayCaptains(ctx).length;
@@ -78,7 +83,10 @@ export const economy: System = {
       // Garrisons refill by 2% of their establishment (at least one man) a day, up to that establishment.
       const gains = Object.keys(ctx.s.fortifications).sort(cmp).flatMap((f): [string, number][] => {
         const fo = ctx.s.fortifications[f], gap = fo.establishment - fo.garrison;
-        return gap > 0 && !ctx.s.fallen[f] ? [[f, Math.min(gap, Math.max(1, Math.floor((fo.establishment * 20) / 1000)))]] : [];
+        const cm = ctx.content.communities.communities.find((x) => x.recruitsFor === f);
+        const k = cm ? contribution(ctx, "recruits", cm.id) : 1000; // the town gives fewer recruits when it does not cooperate
+        const n = Math.floor((Math.min(gap, Math.max(1, Math.floor((fo.establishment * 20) / 1000))) * k) / 1000);
+        return gap > 0 && !ctx.s.fallen[f] && n > 0 ? [[f, n]] : [];
       });
       if (gains.length) ctx.emit("GarrisonRecovered", [], gains.map(([f]) => loc(f)), { changes: gains });
       // A captain's company refills by 2% of its establishment a day, only while he is in his home town.

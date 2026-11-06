@@ -120,7 +120,7 @@ export function buildSituation(s: Readonly<WorldState>, c: Content, agent: strin
     mode, order,
     p: { agents: c.scenario.agents, battle: c.scenario.battle, raidBaseMilli: c.scenario.threat.raidDamageMilliAtFullIntensity,
       restoreToMilli: c.scenario.player.repairRestoreToMilli, repairCostPerMilli: c.scenario.player.repairCostMilliPerMilli,
-      repairDays: c.scenario.player.repairDays, levyMilli: c.scenario.player.levyMilli, breachMilli: c.scenario.endStates.fortificationBreachedBelowMilli,
+      repairDays: c.scenario.player.repairDays, levyMilli: c.scenario.player.levyMilli, reliefMilli: c.communities.params.reliefMilli, breachMilli: c.scenario.endStates.fortificationBreachedBelowMilli,
       partialRestoreToMilli: c.scenario.agents.values.goodConditionMilli, decayMilliPerDay: c.scenario.weather.decayMilliPerDay, retakeMilli: c.scenario.threat.retakeConditionMilli, captainAwayMilli: c.scenario.economy.captainAwayMilli,
       rushCostPermille: c.scenario.player.repairRushCostPermille, labourWorkPermille: c.scenario.player.repairLabourWorkPermille, labourToMilli: c.scenario.player.repairLabourToMilli,
       companyWorkPermille: c.scenario.player.repairCompanyWorkPermille },

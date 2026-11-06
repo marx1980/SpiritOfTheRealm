@@ -35,7 +35,8 @@ test("G-02: extra weather draws do not change economy outcomes", () => {
     const base = run({ seed });
     const perturbed = run({ seed, params: { extraDraws: { weather: 3 } } });
     const econ = (log: readonly { type: string; payload: unknown; tick: number }[]) =>
-      JSON.stringify(log.filter((e) => e.type === "TreasuryCollected").map((e) => [e.tick, e.payload]));
+      // the economy's own draws (what was due); what a community withholds depends on the world, legitimately (Phase 6)
+      JSON.stringify(log.filter((e) => e.type === "TreasuryCollected").map((e) => { const p = e.payload as { location: string; amountMilli: number; withheldMilli?: number }; return [e.tick, p.location, p.amountMilli + (p.withheldMilli ?? 0)]; }));
     assert.equal(econ(perturbed.log), econ(base.log), `seed ${seed}`);
     assert.ok(perturbed.rngDraws().weather > base.rngDraws().weather);
   }

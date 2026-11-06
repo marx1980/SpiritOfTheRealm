@@ -4,6 +4,26 @@ Newest first. Numbers come from `phase0/results/` (files named in each entry). A
 
 ---
 
+## D-021 (Phase 6 / 6A) Four communities: built (6 Nov)
+
+**What.** `engine/src/systems/communities.ts`, content `communities.json` (march-0.6). Northwatch (no named leader; Bren reports), Greyfen (Mara; remembers the crown's promise to consult before a levy), Eastmarch (Varos leads and reports), Coldmere (Wenna; the Blackwood settlement). Each: 2-3 cohorts weighting each grievance kind, material condition, sparse memory (cap 16, one memory per kind/place/actor, promises never forgotten), specific grievances (unprotected, levy, broken_promise, misconduct) with crown blame, source trust. Communities witness what happens where they live (and raids by the band they are exposed to) and hear the rest by rumour after the rider travel time (up to 2 days). Narrators with access (within 26 rider-hours) and trust >= 400 move the blame each day: Varos tells "the crown is to blame", Bren and Anna "the raiders/the soldiers are" (a levy or a broken promise cannot be blamed on others). Plan D1 inputs from the community's own knowledge; D2 hard gates for everything past "delay"; integer geometric mean. Ladder: cooperate, petition (G >= 120), delay (G >= gMin 250, N >= 550, M without L >= 120), withhold (all gates, M >= 220), refuse (M >= 320), support a named actor (M >= 340, someone with the crown story, access and trust >= 550). One rung a day, a 20% margin before stepping down. Effects: income from Greyfen and Eastmarch (delay 50%, withhold+ 0), Northwatch recruits (same), levy shares (Greyfen 20%, Eastmarch 20%, Coldmere 10%; withhold pays half, refuse and support nothing). Petitions by the leader (or the officer) at most every 30 days; officers write when things get worse than they last wrote or settle back; Varos does not report a following that declared for him. Relief (new player action, 15k, sent by the steward, carts at walking pace) eases grievances 45% (a broken promise 15%) and restores trust. Second, non-grain grievance: a company quartered away from home (3% a day after 3 days, x1.5 for proud or aggressive captains) misbehaves; the grievance fades three times faster once it leaves.
+
+**Why these choices.** D-004.3 (one quantity for reserve and alarm) waits for grain (7A). D-004.4 and .9: expected success E sums independent weakness signals the community witnessed (a fort fell, raids unanswered, no company at their fort, garrison below half). D-004.6: no compassion weight; Oren's levy now has a real cost through the communities. D-004.8: a burden weighs double under threat, 1.5x when poor, 0.7x when calm.
+
+**Key parameters (C0.6, up to 8):** ladder.gMin 250, ladder.nMin 550, ladder.lMin 450, ladder.withhold 220, ladder.support 340, grievance.levy 160, grievance.raidAtFull 30, narrative.ratePermillePerDay 40.
+
+**Tests.** `test/communities.test.ts` (D5, I02/T07 levy, I03, G-13, rumour latency, petitions only by letter, relief, income and levy effects, ablation leaves Phase 5 economics unchanged, competing narratives, misconduct, Varos's silence); `test/canonical.test.ts` (C5 registry; T04 gradient; T06 resource shock); invariant in `src/invariants.ts`.
+
+**Gate (pre-registered here before the run).** G-13 on sealed block 60000-60999 under passive, delegating and aggressive: 0 revolts, 0 escalations past delay without the D2 gates. Regression: G-01 (Node and Bun), G-02, invariants on 1,000 seeds x 2 arms. G-12 re-run on sealed block 98000 with communities on (must stay >= 10 points). Results: see STATE.md.
+
+---
+
+## D-020 H-01/H-02 override; plan v4 (6 Nov)
+
+Marko: proceed to Phase 6 without the Phase 5 human gates (no testers yet). H-01 and H-02 run with the first serious human playtests at Phase 7A. Plan v4 adopts the handover package's narrowing (docs/handover/REVIEW.md): Phase 6 = 6A (four communities, no armed revolt), Phase 7 = 7A (grain only, the Grain Crisis, gated by G-03/04/05 and outcome shares), 6B/7B deferred; canonical scenarios in plan C5. Standing instruction from D-016 holds: tell Marko whenever G-11 is re-run and passes.
+
+---
+
 ## D-016 G-11 override confirmed (2 Nov)
 
 Marko confirmed the D-013 override: G-11 stays FAIL and the project proceeds. Recommendation 3 stands: re-test at Phase 7 (and Phase 14). **Standing instruction: tell Marko whenever G-11 is re-run and passes.**

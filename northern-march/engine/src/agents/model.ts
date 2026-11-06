@@ -53,7 +53,7 @@ export interface Situation {
   mode: Mode;
   order?: StructuredOrder;               // in "obey" mode
   p: { agents: AgentParams; battle: BattleParams; raidBaseMilli: number; restoreToMilli: number; repairCostPerMilli: number;
-       repairDays: number; levyMilli: number; breachMilli: number; partialRestoreToMilli: number; decayMilliPerDay: number; retakeMilli: number; captainAwayMilli: number; rushCostPermille: number;
+       repairDays: number; levyMilli: number; reliefMilli: number; breachMilli: number; partialRestoreToMilli: number; decayMilliPerDay: number; retakeMilli: number; captainAwayMilli: number; rushCostPermille: number;
        labourWorkPermille: number; labourToMilli: number; companyWorkPermille: number };
 }
 

@@ -4,8 +4,8 @@
 export const EVENT_SCHEMA_VERSION = 3; // v3 (Phase 3): agents, DecisionTrace, obedience payloads; v2 (Phase 2): B2/B5 payloads
 
 export type Domain = "military" | "economic" | "political" | "social" | "environment" | "magic" | "info";
-export type SystemId = "core" | "economy" | "weather" | "threat" | "movement" | "knowledge" | "messenger" | "orders" | "player" | "advice" | "agents" | "battle";
-export const ABLATABLE: readonly SystemId[] = ["economy", "weather", "threat", "messenger"];
+export type SystemId = "core" | "economy" | "weather" | "threat" | "movement" | "knowledge" | "messenger" | "orders" | "player" | "advice" | "agents" | "battle" | "communities";
+export const ABLATABLE: readonly SystemId[] = ["economy", "weather", "threat", "messenger", "communities"];
 
 export interface SubjectRef {
   kind: "character" | "location" | "report" | "order";
@@ -96,6 +96,14 @@ export const EVENT_TYPES: Readonly<Record<string, EventTypeDef>> = Object.freeze
   DayEndScheduled: T("player", "info", 0),
   AdviceSettled: T("agents", "political", 0),
   LevyRaised: T("orders", "economic", 2),
+  ReliefSent: T("orders", "economic", 2),
+  // communities (Phase 6)
+  CommunityHeard: T("communities", "social", 1),
+  CommunitiesDrifted: T("communities", "social", 0, true), // a clock-driven review: time passing is its cause
+  TroopMisconduct: T("communities", "social", 2),
+  ReliefDelivered: T("communities", "social", 2),
+  PetitionMade: T("communities", "political", 2),
+  CommunityStanceChanged: T("communities", "political", 3),
   // player and advice
   PlayerInput: T("player", "political", 3, true),
   DangerSignalled: T("core", "military", 3), // the ruler is warned before danger can be lethal

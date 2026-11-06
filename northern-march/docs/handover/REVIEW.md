@@ -19,7 +19,7 @@
 - **Eastmere** does not exist (content has Eastmarch, Varos's seat, plus Coldmere and Saltmere).
 - **Lord Greyfen** is not a character; Greyfen's voice is Mara (spokeswoman).
 - **Blackwood Settlements:** Blackwood is the raider site, not a settlement.
-- **Grey Hill** does not exist (Highcairn is the hill).
+- (Correction, 6 Nov: Grey Hill does exist, as `grey_hill`; the first version of this review said it did not.)
 
 ### 3. Stale or missing state
 - Says only "Phases 0-5 reported built". Missing: G-11 open under D-016, G-12 history, the published debug page, and everything added 1-2 Nov (forts fall and are retaken, captains, repair modes, coin economy and levy, adviser roles).
@@ -51,8 +51,11 @@
 ## Proposed changes
 1. **Plan v4:** Phase 6 = 6A (4 communities, behaviour ladder, no revolt), Phase 7 = 7A (grain only); 8-12 communities, rebellion and other resources become 6B/7B. One phase numbering, the plan's.
 2. **Gates for 6A-7A:** G-03, G-04, G-05 on a sealed block with the Grain Crisis end state; I03 replaces G-13 until revolt exists; outcome-share target for the four outcomes; second-grievance test required.
-3. **Communities:** Northwatch, Greyfen (Mara), Eastmarch (Varos), and Thornfield or Pinegate as the fourth, matching content.
+3. **Communities:** Northwatch, Greyfen (Mara), Eastmarch (Varos), and a fourth from content. Built (6 Nov): Coldmere (Wenna), the village north of Blackwood, as the "Blackwood settlement".
 4. **Crisis cause:** raids at Blackwood/Stonewood damage Northwatch's harvest or roads.
 5. **H-01 decision for Marko:** either run H-01 now with 3 testers (the page exists) or record an override with conditions.
 6. **`test/canonical.test.ts`:** names T01-T10 over existing tests; adds T02, T03, T04 and T06.
 7. **Package upkeep:** one index; CURRENT_STATE generated from `STATE.md`; risks as a table (sign, mitigation, status); dashboard split into computed and human; worksheet merged into `H01_PROTOCOL.md`.
+
+## Status (6 Nov)
+Marko accepted the override and every proposal. Plan v4 is in `docs/IMPLEMENTATION_PLAN.md`, the override in `DECISIONS.md` D-020.

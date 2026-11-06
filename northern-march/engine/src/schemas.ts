@@ -5,7 +5,7 @@ import type { SubjectRef } from "./events.ts";
 
 export const ORDER_SCHEMA_VERSION = 1;
 
-export const INTENTS = ["hold", "advance", "withdraw", "screen", "escort", "requisition", "investigate", "attack", "negotiate", "report", "repair", "levy", "travel"] as const;
+export const INTENTS = ["hold", "advance", "withdraw", "screen", "escort", "requisition", "investigate", "attack", "negotiate", "report", "repair", "levy", "travel", "relief"] as const;
 export type IntentKind = (typeof INTENTS)[number];
 
 export interface Constraint { kind: string; ref?: SubjectRef; textKey: string }

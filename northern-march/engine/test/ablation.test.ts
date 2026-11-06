@@ -5,7 +5,7 @@ import { EVENT_TYPES } from "../src/events.ts";
 import { checkPairing } from "../src/invariants.ts";
 import { run } from "./helpers.ts";
 
-const SYSTEMS = ["economy", "weather", "threat", "messenger"] as const;
+const SYSTEMS = ["economy", "weather", "threat", "messenger", "communities"] as const;
 
 test("a disabled system emits no events and consumes no RNG", () => {
   for (const sys of SYSTEMS) {

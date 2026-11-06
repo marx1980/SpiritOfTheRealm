@@ -29,8 +29,9 @@ const crisis = variant((r) => {
 test("inactive characters do no work", () => {
   for (const seed of [1, 2, 3]) {
     const sim = run({ seed }, 240);
-    assert.equal(wakes(sim, "mara").length, 0, "Mara: nothing touches Greyfen");
-    assert.equal(traces(sim, "mara").length, 0);
+    // Mara works only when her people have something to put to the crown (Phase 6: she writes their petitions)
+    if (!sim.log.some((e) => e.type === "PetitionMade" && e.payload.author === "mara")) assert.equal(wakes(sim, "mara").length, 0, "Mara: nothing touches Greyfen");
+    if (!sim.log.some((e) => e.type === "PetitionMade" && e.payload.author === "mara")) assert.equal(traces(sim, "mara").length, 0);
     assert.equal(traces(sim, "anna").length, 0, "the ruler is the player, not an agent");
   }
 });

@@ -39,6 +39,13 @@ export function checkLog(log: readonly SimEvent[]): string[] {
         if (ev.kind === "order" && !(src?.type === "OrderReceived" && src.payload.recipient === holder)) v.push(`event ${e.id}: ${holder} learned from an order it did not receive`);
       }
     }
+    // G-13 (v4): escalation past "delay" only with every D2 gate and a named leader (plan D2; no revolt in 6A)
+    if (e.type === "CommunityStanceChanged") {
+      const R = ["cooperate", "petition", "delay", "withhold", "refuse", "support"], to = R.indexOf(e.payload.to as string), from = R.indexOf(e.payload.from as string);
+      const g = e.payload.gates as Record<string, boolean>, x = e.payload.inputs as { leader: string | null };
+      if (to >= 3 && to > from && !(g.G && g.N && g.L && g.T && x.leader)) v.push(`event ${e.id}: ${e.payload.community} escalated to ${e.payload.to} without the D2 gates`);
+    }
+    if (/Revolt/.test(e.type)) v.push(`event ${e.id}: a revolt (none exists in 6A)`);
     if (e.type === "PlayerInput" && e.causedBy.length) {
       const src = log[pos.get(e.causedBy[0]) ?? -1];
       const p = (src?.payload ?? {}) as Record<string, unknown>, who = e.payload.player;

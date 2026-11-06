@@ -4,7 +4,7 @@
 Close one complete causal loop: Anna needs grain -> delegates acquisition -> grain moves -> communities experience consequences -> beliefs/grievances form -> leaders react -> cooperation changes -> imperfect reports return to Anna.
 
 ## Phase 6A communities
-Northwatch, Greyfen, Eastmere and Blackwood Settlements only. Each has 2-3 cohorts, material condition, sparse beliefs, memory, grievance, source trust, organisations and behaviour state.
+Northwatch, Greyfen, Eastmarch and Coldmere (the Blackwood settlement) only. Each has 2-3 cohorts, material condition, sparse beliefs, memory, grievance, source trust, organisations and behaviour state.
 
 ## Behaviour ladder
 Cooperate, petition, delay, conceal/withhold, refuse later demand, support a named actor. No full armed rebellion yet.

@@ -2,6 +2,7 @@
 // separately. Built from the player's view only (A7).
 import { beliefsAbout, type View } from "../view.ts";
 import { dayOf, pct } from "./format.ts";
+import { GRIEF, REQUEST, STANCE_WORDS } from "./phrasing.ts";
 import { ago, certainty, fallenAt, nameOf, nearestFort, planOf, planWords, raiderWords, reasonWords, sourceOf, wallWords } from "./phrasing.ts";
 
 export interface Evidence { text: string; age: string; source: string; certainty: string }
@@ -118,6 +119,19 @@ export function buildCourt(v: View): Court {
     issues.push({ key: `raiders:${site.id}`, title: `${site.name}: ${raiderWords(s)}`, priority: 40 + Math.round(s / 20),
       evidence: beliefsAbout(v, site.id, "threat.intensity").slice(0, 3).map((x) => ({ text: raiderWords(x.believedValue as number), age: ago(v.now, x.observedAt), source: sourceOf(v, x), certainty: certainty[x.effectiveBand] })),
       advice: adviceLines(v, site.id), place: site.id });
+  }
+  // communities: the latest word on what a people hold against the crown and how they behave (from petitions and officers' letters)
+  const RANK: Record<string, number> = { cooperate: 0, petition: 1, delay: 2, withhold: 3, refuse: 4, support: 5 };
+  for (const p of v.world.places.filter((x) => beliefsAbout(v, x.id, "community.grievance").length || beliefsAbout(v, x.id, "community.stance").length)) {
+    const latest = (pred: string) => beliefsAbout(v, p.id, pred).sort((a, b) => b.observedAt - a.observedAt)[0];
+    const g = latest("community.grievance"), st = latest("community.stance"), rq = latest("community.request");
+    const stance = st ? String(st.believedValue) : "petition";
+    // a people said to cooperate again, with no grievance told since, is no longer an issue
+    if (stance === "cooperate" && (!g || g.observedAt <= st!.observedAt)) continue;
+    const ev: Evidence[] = [g, st, rq].filter((x): x is NonNullable<typeof x> => !!x).map((x) => ({
+      text: x.predicate === "community.grievance" ? `They ${GRIEF[String(x.believedValue)] ?? String(x.believedValue)}` : x.predicate === "community.request" ? `They ask for ${REQUEST[String(x.believedValue)] ?? String(x.believedValue)}` : `They ${STANCE_WORDS[String(x.believedValue)] ?? String(x.believedValue)}`,
+      age: ago(v.now, x.observedAt), source: sourceOf(v, x), certainty: certainty[x.effectiveBand] }));
+    issues.push({ key: `people:${p.id}`, title: `${p.name}: ${st ? STANCE_WORDS[stance] ?? stance : "a petition"}`, priority: 30 + 12 * (RANK[stance] ?? 1), evidence: ev, advice: adviceLines(v, p.id), place: p.id });
   }
   for (const b of Object.values(v.beliefs).filter((x) => x.predicate === "order.status")) {
     const o = v.self.orders.find((x) => String(x.orderId) === b.subject.id);

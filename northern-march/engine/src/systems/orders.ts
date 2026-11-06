@@ -14,6 +14,7 @@ import { battleClaims, buildSituation, capability, defenceAt, execute, isIdle, p
 import { battleLoss, raiderMen } from "../battle.ts";
 import { travel } from "./movement.ts";
 import { companyAt, menAt, resyncRepair, scheduleRepairEnd } from "./repairs.ts";
+import { contribution } from "./communities.ts";
 
 const oref = (id: number) => ({ kind: "order" as const, id: String(id) });
 
@@ -185,10 +186,29 @@ function process(ctx: Ctx, orderId: number, receivedId: number) {
     observeTreasury(ctx, st.id);
     scheduleRepairEnd(ctx, where);
   } else if (a.kind === "levy" || a.kind === "half_levy") {
-    const amount = a.kind === "levy" ? sc.player.levyMilli : Math.floor(sc.player.levyMilli / 2);
-    const lv = ctx.emit("LevyRaised", [ex.id], [chr(sc.ruler), oref(orderId)], { payer: sc.ruler, amountMilli: amount, orderId });
+    const asked = a.kind === "levy" ? sc.player.levyMilli : Math.floor(sc.player.levyMilli / 2);
+    // each community pays its share as far as its stance allows; one that refuses pays nothing (Phase 6)
+    const shares: [string, number][] = [], refused: string[] = [];
+    let amount = asked;
+    for (const cd of [...ctx.content.communities.communities].filter((x) => x.levySharePermille > 0).sort((x, y) => (x.id < y.id ? -1 : 1))) {
+      const part = Math.floor((asked * cd.levySharePermille) / 1000), k = contribution(ctx, "levy", cd.id);
+      const unpaid = Math.floor((part * (1000 - k)) / 1000);
+      amount -= unpaid;
+      shares.push([cd.id, part - unpaid]);
+      if (k === 0) refused.push(cd.id);
+    }
+    const lv = ctx.emit("LevyRaised", [ex.id], [chr(sc.ruler), oref(orderId)], { payer: sc.ruler, amountMilli: amount, orderId, askedMilli: asked, shares, refused });
     observeTreasury(ctx, lv.id);
     finish(ctx, orderId, "completed", lv.id);
+  } else if (a.kind === "relief") {
+    const cost = ctx.content.communities.params.reliefMilli, where = a.target!;
+    if (ctx.s.treasuryMilli[sc.ruler] < cost) return finish(ctx, orderId, "abandoned", ex.id, "funds");
+    const rs = ctx.emit("ReliefSent", [ex.id], [loc(where), oref(orderId)], { payer: sc.ruler, amountMilli: cost, community: where, orderId, by: who });
+    observeTreasury(ctx, rs.id);
+    const from = "at" in ctx.s.positions[who] ? (ctx.s.positions[who] as { at: string }).at : where;
+    const ticks = ctx.map.path(from, where, "foot", (r) => ctx.isOpen(r))?.ticks ?? 0; // carts go at a walking pace
+    ctx.at(ctx.tick + ticks, "communities:relief", { community: where, orderId, cause: rs.id });
+    finish(ctx, orderId, "completed", rs.id);
   } else if (a.kind === "march_to" && "at" in ctx.s.positions[who] && (ctx.s.positions[who] as { at: string }).at === a.target) {
     finish(ctx, orderId, "completed", ex.id);
   } else if (a.kind === "investigate") {
