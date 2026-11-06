@@ -15,3 +15,10 @@ TUNE seeds 1–60, ON arm: passive 8.3% (AMBER), delegating 23.3% (PASS), aggres
 
 #### D-026 addendum 6 — aggressive levy every 70 days (Marko), supportAt 480, TUNE seeds 1–60, ON arm
 passive 8.3% (AMBER), delegating 23.3% (PASS), aggressive 48.3% (FAIL, CI 37–62). Higher than the 38.3% at 60 days, so the cadence effect is not monotonic at n=60 (interval overlap; likely noise plus timing of levies against the crisis). Full suite and KI-01 hash re-record still pending.
+
+#### D-026 addendum 7 — outcome-share exploration (Marko: "combine pooled reading and scenario tuning"), TUNE seeds 1–60, ON arm
+Suite 190/190 and KI-01 hash re-recorded on march-0.8 (aggressive levy 60 days, Greyfen supportAt 480). political_caution_military_danger is 1.7% (target ≥5%).
+- New test persona `cautious` (as delegating, never asks for grain): end state 36.7%, caution 1.7% (castellans' own requisitions still carry the end state).
+- Official cover 3: caution 3.3% passive / 1.7% others; end state 5 / 23.3 / 8.3 / 41.7 (passive/cautious/delegating/aggressive).
+- Harvest hit 500‰ × 35 days: caution ≤3.3%, end states 3.3–60%, misinformation up to 28%. Rejected.
+Convoy loss/seizure variants running. No content committed from these; no band moved; no gate block used.

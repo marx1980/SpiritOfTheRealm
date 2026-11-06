@@ -4,7 +4,7 @@ import { beliefsAbout, type OrderDraft, type View } from "./view.ts";
 import { captainSentTo, planOf } from "./presentation/phrasing.ts";
 
 
-export type PolicyId = "passive" | "delegating" | "aggressive" | "random-valid" | "follow-best-adviser" | "follow-worst-adviser" | "external" | "replay" | `follow:${string}`;
+export type PolicyId = "passive" | "delegating" | "aggressive" | "cautious" | "random-valid" | "follow-best-adviser" | "follow-worst-adviser" | "external" | "replay" | `follow:${string}`;
 /** `mission` (for sending a captain): defend the fort (default), or scout / attack the raiders at `raid`. */
 export interface PlayerAction { action: "repair" | "levy" | "advance" | "travel" | "order" | "relief" | "requisition" | "purchase"; target?: string; to?: string; consult?: boolean; order?: OrderDraft; decision?: number; followed?: string; mission?: "defend" | "scout" | "attack"; raid?: string; repairMode?: "standard" | "rush" | "labour" }
 export type PolicyFn = (v: View, rng: () => Rng) => PlayerAction[];
@@ -87,13 +87,14 @@ export function policyFn(id: PolicyId, aliases: Record<string, string> = {}): Po
   return POLICIES[id as keyof typeof POLICIES]?.fn ?? null;
 }
 
-export const POLICIES: Record<"passive" | "delegating" | "aggressive" | "random-valid" | "follow-best-adviser" | "follow-worst-adviser", { fn: PolicyFn | null; note: string }> = {
+export const POLICIES: Record<"passive" | "delegating" | "aggressive" | "cautious" | "random-valid" | "follow-best-adviser" | "follow-worst-adviser", { fn: PolicyFn | null; note: string }> = {
   passive: { fn: () => [], note: "never acts" },
   delegating: { fn: (v, rng) => [...repairBelow(60000, 20)(v, rng), ...advanceTo(400, 20)(v, rng), ...grainRelief(true)(v, rng)], note: "repairs below 60%; sends the captain against raiders reported at 400 or more; asks the people whose grain it is first when a store looks low" },
   aggressive: {
     fn: (v, rng) => [...repairBelow(80000, 10)(v, rng), ...advanceTo(1, 10)(v, rng), ...(recently(v, "levy", null, 60) ? [] : [{ action: "levy" as const }]), ...grainRelief(false, 60)(v, rng)],
     note: "repairs below 80%, sends the captain against any reported raiders, levies every 60 days, takes grain without asking when a store looks low, at most once in 60 days",
   },
+  cautious: { fn: (v, rng) => [...repairBelow(60000, 20)(v, rng), ...advanceTo(400, 20)(v, rng)], note: "as delegating, but never asks anyone for grain (holds back from a people already angry)" },
   "random-valid": {
     fn: (v, rng) => {
       // valid = not repeating an order given in the last 10 days (advice now opens decision points too; without this a
