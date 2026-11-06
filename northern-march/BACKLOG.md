@@ -3,8 +3,8 @@
 Things agreed but not built, with the decision that set them. Newest first.
 
 ## From the playtest lab (6 Nov 2026, D-022)
-- **KI-01 fixed (6 Nov, approved by Marko):** attack orders now go through interpretation, obedience and the local plan like other orders. Regression case `engine/test/regression/KI-01-attack-obeys-after-interpretation.json` asserts the fix. The fix changes what the aggressive persona does, so G-12 and G-13 must be re-run on the new engine (a fresh sealed block is needed).
-- **L9 change applied (D-023, Marko approved 6 Nov):** `scenario.economy.dailyUpkeepMilli` 25,000 to 22,500, content march-0.7. G-12 and G-13 re-runs on sealed block 110000 are in progress; the gates decide whether it stands.
+- **KI-01 fixed (6 Nov, approved by Marko):** attack orders now go through interpretation, obedience and the local plan like other orders. Regression case `engine/test/regression/KI-01-attack-obeys-after-interpretation.json` asserts the fix. G-12 and G-13 re-ran on sealed block 110000 and passed (D-023).
+- **L9 change applied (D-023, Marko approved 6 Nov):** `scenario.economy.dailyUpkeepMilli` 25,000 to 22,500, content march-0.7. G-12 and G-13 re-runs on sealed block 110000 both PASS on the post-fix engine (D-023).
 - **Real report email (Prompt 9/10):** needs Marko to set the GitHub secrets and approval variable (`docs/playtest/README.md`), then one approved test.
 - **L8 search:** not started; needs a separate approval.
 - **Gate regression coverage:** the regression batches use scripted policies that never order an attack, which is why KI-01 went unnoticed; add a lab persona run to the regression set.

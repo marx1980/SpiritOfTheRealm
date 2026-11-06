@@ -1,17 +1,17 @@
 {
  "gate": "L0",
  "date": "2026-11-06",
- "commit": "8b7424c",
- "note": "re-baseline after KI-01 fix and L9 (D-023)",
+ "commit": "7ae4f71",
+ "note": "re-baseline after KI-01 fix and the L9 upkeep change (content march-0.7, D-023)",
  "node": "v22.23.4",
- "content": "march-0.6",
- "contentHash": "7e072a8d47e6cfe48411479aabe939513ec49c0d10475415d5810a286e617aa9",
+ "content": "march-0.7",
+ "contentHash": "3beefb3f5052d070efe23ff6f934297f14475d21322ffb40a58fedaa91d81404",
  "engineHash": "83a31003c44a",
  "tests": {
   "total": 171,
   "pass": 171,
   "fail": 0,
-  "note": "npm test on 8b7424c; gate runs were in parallel on the same 2 cores"
+  "note": "npm test on 7ae4f71 (content march-0.7)"
  },
  "typecheck": "clean (tsc -p .)",
  "gates": {
@@ -19,15 +19,15 @@
   "G-02": "PASS (Phase 1); pre-fix re-run only (phase1_gates.json)",
   "G-10": "PASS",
   "G-11": "FAIL, overridden (D-013, D-016)",
-  "G-12": "PASS on earlier blocks; post-KI-01 re-run pending (new sealed block needed; block 98000 refused, 100000 void)",
-  "G-13": "pre-fix 60000 batch: PASS for passive, delegating and aggressive (engine before KI-01); post-KI-01 re-run pending",
+  "G-12": "PASS on sealed block 110000 (march-0.7, post-KI-01, D-023); earlier blocks predate KI-01",
+  "G-13": "PASS on sealed block 110000 (march-0.7, post-KI-01, D-023) for passive, delegating and aggressive; the 60000 batch predates KI-01",
   "G-14": "PASS",
   "H-01/H-02": "overridden to 7A (D-020)"
  },
  "runtime": {
-  "passive240DaysSeed51Ms": 759,
-  "external240DaysSeed51Ms": 889,
-  "externalPauses": 357,
-  "passiveLogHash": "28ccb22472259ef1608b1b3c406805bbb7ce012b70777379122e07b26caaf47a"
+  "passive240DaysSeed51Ms": 844,
+  "external240DaysSeed51Ms": 1234,
+  "externalPauses": 380,
+  "passiveLogHash": "5d771d998331ae2d9e5b1bf4fb947acd481356710d0b9d27369865420897ac33"
  }
 }
