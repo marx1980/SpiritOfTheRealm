@@ -12,3 +12,6 @@ passive / delegating / aggressive-with-60-day-levy: supportAt 470: 10% / 21.7% /
 
 #### D-026 addendum 5 — chosen by Marko: Greyfen supportAt 480; aggressive levies every 60 days
 TUNE seeds 1–60, ON arm: passive 8.3% (AMBER), delegating 23.3% (PASS), aggressive 38.3% (AMBER, CI 27–52). No band moved. Pending: full suite, KI-01 hash re-record, then sealed-block gate run.
+
+#### D-026 addendum 6 — aggressive levy every 70 days (Marko), supportAt 480, TUNE seeds 1–60, ON arm
+passive 8.3% (AMBER), delegating 23.3% (PASS), aggressive 48.3% (FAIL, CI 37–62). Higher than the 38.3% at 60 days, so the cadence effect is not monotonic at n=60 (interval overlap; likely noise plus timing of levies against the crisis). Full suite and KI-01 hash re-record still pending.
