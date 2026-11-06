@@ -8,7 +8,7 @@ import { OUTCOMES, readCrisis } from "../src/crisis.ts";
 import { evaluateCausalGate } from "../src/gates.ts";
 
 export function arms(first: number, count: number, policies: string[], days = 240) {
-  const content = loadContent(new URL("../content/march/", import.meta.url).pathname);
+  const content = loadContent(process.env.CONTENT_DIR ?? new URL("../content/march/", import.meta.url).pathname);
   const out: Record<string, any> = { block: [first, first + count - 1], content: content.version, contentHash: content.hash };
   for (const policy of policies) {
     const on: boolean[] = [], off: boolean[] = [], share: Record<string, number> = {}, shareOff: Record<string, number> = {};
