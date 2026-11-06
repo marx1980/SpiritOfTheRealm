@@ -288,7 +288,7 @@
     },
     "hungerPermille": 40,
     "official": {
-      "cover": 3,
+      "cover": 5,
       "cooldownDays": 20
     },
     "understatePermille": 350,
