@@ -64,3 +64,11 @@ Built (engine, untested at the time of this note): (1) official.consultCover —
 - A (consultCover 8, cover 3, refusal stands 30 days): end 0.7 / 3.3 / 24.7 / 7.3; cooperative_support 7.3 / 52.7 / 0 / 14 (pooled over the three gated policies 20.0%); caution 1.3 / 0 / 0 / 0.7 (pooled 0.4%).
 - B (same, no standing refusal): end 1.3 / 4.7 / 31.3 / 7.3; cooperative pooled 19.8%; caution pooled 0.4%.
 Reading: asking first fixes cooperative_support but removes the unconsulted takes that carried the end state under passive and delegating (G-03 fails there), and caution drops. Next: the emergency take gets its own cooldown (world.grainAsked keyed by "place" for consulted asks and "place!" for emergency takes, so a slow or refused consultation can still end in a take), tested with consultCover 8 and 6 (running). Not adopted.
+
+#### D-029 addendum 2 — emergency cooldown and resentment from consulted asks (TUNE seeds 1–150, ON arm; passive / delegating / aggressive / cautious)
+Common: official.cover 3, consultCover 6 (D) or 8 (C), refusal stands 30 days, emergency take on its own cooldown.
+- C (consultCover 8): end 2.0 / 1.3 / 21.3 / 6.7; cooperative pooled 19.1%; caution pooled 1.3%.
+- D (consultCover 6): end 2.0 / 5.3 / 21.3 / 8.0; cooperative pooled 17.1%; caution pooled 1.8%.
+- E (D + requisition.consultedPermille 600): end 1.3 / 10.0 / 24.7 / 10.7; cooperative pooled 16.2%; caution pooled 1.8%.
+- F (D + consultedPermille 850): end 0.7 / 10.7 / 27.3 / 12.7; cooperative pooled 15.1%; caution pooled 1.8%.
+Reading: E and F put delegating and aggressive inside the band and clear the cooperative_support floor (pooled ≥15%), but passive's end state collapses (≤2%, its route was the castellans' unconsulted takes) and caution stays ≈1.8% (floor 5%). Passive failing G-03 breaks the policy-group rule (C0.5: no group may FAIL). Not adopted; committed content unchanged.
