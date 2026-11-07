@@ -110,7 +110,7 @@ export const grain: System = {
         const askCover = Math.max(g.official.cover, g.official.consultCover ?? 0); // below this he asks the people first; below official.cover he takes without asking
         if (cover >= askCover || Object.values(ctx.s.convoys).some((c) => c.to === p.location)) continue;
         const consult = cover >= g.official.cover;
-        const asked = ctx.s.grainAsked[p.location];
+        const asked = ctx.s.grainAsked[p.location + (consult ? "" : "!")];
         if (asked !== undefined && ctx.tick - asked < g.official.cooldownDays * DAY) continue;
         const from = g.places.filter((x) => x.location !== p.location).map((x) => ({ x, b: best(ctx, who, x.location, "grain.stock") })).filter(({ x, b }) => b && (b.believedValue as number) >= 12 * x.need && !(g.requisition.refuse?.standDays !== undefined && ctx.s.grainRefusedAt[x.location] !== undefined && ctx.tick - ctx.s.grainRefusedAt[x.location] < g.requisition.refuse.standDays * DAY))
           .sort((a, b) => (b.b!.believedValue as number) - (a.b!.believedValue as number) || (a.x.location < b.x.location ? -1 : 1))[0];

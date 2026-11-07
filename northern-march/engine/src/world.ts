@@ -261,7 +261,7 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   },
   HarvestDamaged: (s, p, e) => { s.harvestHit[p.place] = { permille: p.permille, until: p.until, eventId: e.id }; },
   GarrisonStarved: (s, p) => { for (const [loc, n] of p.changes as [string, number][]) { const f = s.fortifications[loc]; f.garrison = Math.max(0, f.garrison - n); } },
-  GrainAsked: (s, p, e) => { s.grainAsked[p.place] = e.tick; },
+  GrainAsked: (s, p, e) => { s.grainAsked[p.place + (p.consult ? "" : "!")] = e.tick; }, // a consulted ask and an emergency take have their own cooldowns
   GrainConsulted: noop,
   GrainRefused: (s, p, e) => { if (!p.stood) s.grainRefusedAt[p.community] = e.tick; },
   GrainShipped: (s, p) => {
