@@ -90,3 +90,8 @@ Result against the pre-registration in D-030:
 - Invariant violations: 0.
 Honest reading: the only unrecovered item is delegating's G-03 AMBER. Under C0 it gets one extension (doubled seeds, fresh sealed block, no change to engine or content), after which it counts as FAIL unless Marko records an override. No tuning was done after this verdict. Not claimed: fun or balance.
 Next: G-06 knife-edge on TUNE seeds (rule fixed in advance: ≤2 parameters knife-edge at ±25%), then the AMBER extension on block 140000 (2,000 seeds).
+
+## D-032 — Castellan tries the next lender after a refusal (pre-registration)
+Why: block 130000 (D-031) left delegating's G-03 at 5.8% AMBER, down from 18.2% on block 120000. Cause (hypothesis, not yet isolated): castellans now ask first, and a refusal stands for 30 days, so a castellan who is turned away waits out the 20-day cooldown before asking again, usually too late.
+Change (one, engine only): a refused official request clears that ask's cooldown (GrainRefused carries `official`; reducer deletes world.grainAsked for the place), so he asks the next lender at once. Standing refusals already exclude refusers from his choice. No content value changes.
+Evaluation plan, fixed before running: tune-seed check of end state on seeds 1–600 (4 policies; noise ≈ ±4 points at that size), then a fresh sealed block 140000 with the same gate tool, rules and bands as D-030 (G-03 for delegating and aggressive, G-04, G-05, outcome shares ≥5% pooled except caution, overrides 1 and 2 stay as recorded). G-06 knife-edge is run on the final design only. If the change does not move delegating on tune seeds, it is not adopted and no further tuning happens before asking Marko.
