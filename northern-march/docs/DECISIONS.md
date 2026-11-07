@@ -31,3 +31,15 @@ Best reachable caution share by parameter changes is ~3.3%, below the 5% floor. 
 #### D-027 (proposed, in progress) — requisition refusal
 Marko chose "add a refusal mechanism" for the low political_caution_military_danger share. New event GrainRefused (grain, political); requisition.refuse {gFloor, chancePerG, consultedPermille} in scenario.json: the lending community's grievance against the crown G gives a refusal chance (G − gFloor) × chancePerG / 1000, capped, scaled by consultedPermille when asked first. Keyed draw per attempt; ordered shipments stop with "refused", castellans' own asks simply fail. Refusal needs the communities system on.
 First setting (gFloor 300, 1000, 0.3), TUNE seeds 1–60: end state 8.3 / 31.7 / 21.7 / 33.3 (passive/cautious/delegating/aggressive); caution still 1.7%. About 20 refusals per 60 seeds, mostly after a first delivery. Stronger settings being tried. Not final; content march-0.8 unchanged in version; KI-01 hash will need re-recording.
+
+#### D-027 addendum — refusal settings scan (gFloor 0 unless stated; TUNE seeds 1–60, ON arm; order passive / delegating / aggressive / cautious)
+| setting (chancePerG, consultedPermille) | end state % | caution % |
+|---|---|---|
+| 300 floor, 1000, 300 (committed) | 8.3 / 21.7 / 33.3 / 31.7 | 1.7 / 1.7 / 0 / 1.7 |
+| floor 100, 1000, 300 | 8.3 / 16.7 / 28.3 / 25 | 1.7 / 1.7 / 1.7 / 3.3 |
+| 1000, 600 | 8.3 / 15 / 28.3 / 21.7 | 1.7 / 1.7 / 3.3 / 5 |
+| 1500, 600 | 8.3 / 10 / 13.3 / 16.7 | 1.7 / 1.7 / 3.3 / 6.7 |
+| 2000, 700 | 6.7 / 6.7 / 8.3 / 13.3 | 1.7 / 1.7 / 8.3 / 10 |
+| 2500, 800 | 5 / 5 / 6.7 / 10 | 1.7 / 3.3 / 16.7 / 10 |
+| 2500, 800 on seeds 61–120 | 3.3 / 11.7 / 3.3 / 10 | 1.7 / 0 / 20 / 3.3 |
+Reading: refusal blocks the route Varos uses, so caution (grain refused, fort starves) and the end state trade off nearly one for one. Pooled over the three gated policies caution reaches ~5% only where end states fall to 5–8% (amber/fail). Seed-to-seed noise at n=60 is large (setting 2500/800: aggressive end state 6.7% vs 3.3%). Nothing adopted beyond the committed first setting.
