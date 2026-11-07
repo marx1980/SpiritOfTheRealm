@@ -43,3 +43,9 @@ First setting (gFloor 300, 1000, 0.3), TUNE seeds 1–60: end state 8.3 / 31.7 /
 | 2500, 800 | 5 / 5 / 6.7 / 10 | 1.7 / 3.3 / 16.7 / 10 |
 | 2500, 800 on seeds 61–120 | 3.3 / 11.7 / 3.3 / 10 | 1.7 / 0 / 20 / 3.3 |
 Reading: refusal blocks the route Varos uses, so caution (grain refused, fort starves) and the end state trade off nearly one for one. Pooled over the three gated policies caution reaches ~5% only where end states fall to 5–8% (amber/fail). Seed-to-seed noise at n=60 is large (setting 2500/800: aggressive end state 6.7% vs 3.3%). Nothing adopted beyond the committed first setting.
+
+#### D-027 final — pre-registration for the 7A sealed run (written before any run on the block)
+Content march-0.8 with: Greyfen supportAt 480; aggressive levy every 60 days; requisition refusal (gFloor 0, chancePerG 1000, consultedPermille 600) chosen by Marko. Suite 191/191 (KI-01 hash unchanged by the refusal rule).
+Named links for G-05 (ablation of each must cut A = R_on − R_off by ≥50%, 600 seeds, delegating and aggressive; passive's A is too small to judge): (1) raids cause the shortage = the threat system (the OFF arm itself, so it cuts 100% by construction); (2) the word reaches the ruler = the messenger system; (3) Greyfen's grievance climbs the ladder = the communities system. Requisition and Varos's courting are not separately ablatable (not systems); recorded as a limit.
+Outcome shares: each of the four named outcomes ≥5% of all seeds pooled over passive, delegating and aggressive (Marko's choice of the pooled reading). Expected from TUNE: political_caution_military_danger ≈2% pooled → FAIL; to be recorded as is.
+Block 120000 (seeds 120000..120999), tool tools/phase7_gate.ts (shards then eval). G-06 knife-edge and the second-grievance test follow on TUNE seeds / existing tests.
