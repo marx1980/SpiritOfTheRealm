@@ -49,9 +49,10 @@ export const grain: System = {
       if (sacks <= 0) return stop(spare <= 0 ? "noSurplus" : buy ? "funds" : "refused");
       const rf = g.requisition.refuse;
       if (!buy && rf && ctx.enabled("communities") && ctx.s.communities[source]) { // angry people may say no, and say it less when they were asked first
-        const G = inputsOf(ctx, source).G, base = Math.min(1000, Math.max(0, ((G - rf.gFloor) * rf.chancePerG) / 1000)), chance = consult ? Math.floor((base * rf.consultedPermille) / 1000) : Math.floor(base);
+        const stood = rf.standDays !== undefined && ctx.s.grainRefusedAt[source] !== undefined && ctx.tick - ctx.s.grainRefusedAt[source] < rf.standDays * DAY; // having said no, they keep saying it for a while
+        const G = inputsOf(ctx, source).G, base = Math.min(1000, Math.max(0, ((G - rf.gFloor) * rf.chancePerG) / 1000)), chance = stood ? 1000 : consult ? Math.floor((base * rf.consultedPermille) / 1000) : Math.floor(base);
         if (chance > 0 && ctx.keyed(`grain:refuse:${source}:${dest}:${ctx.tick}`).chancePermille(chance)) {
-          ctx.emit("GrainRefused", [cause], [loc(source), loc(dest), ...(official ? [] : [{ kind: "order" as const, id: String(orderId) }])], { community: source, to: dest, by, orderId, grievance: G, chance, consulted: consult });
+          ctx.emit("GrainRefused", [cause], [loc(source), loc(dest), ...(official ? [] : [{ kind: "order" as const, id: String(orderId) }])], { community: source, to: dest, by, orderId, grievance: G, chance, consulted: consult, stood });
           return stop("refused");
         }
       }
@@ -106,16 +107,18 @@ export const grain: System = {
         if (!who || !pos || !("at" in pos) || pos.at !== p.location || !ctx.s.fortifications[p.location] || p.need <= 0) continue;
         const upd = observe(ctx, who, loc(p.location), "grain.stock", day.id)!;
         const cover = Math.floor(((upd.payload.prop as { believedValue: number }).believedValue) / p.need);
-        if (cover >= g.official.cover || Object.values(ctx.s.convoys).some((c) => c.to === p.location)) continue;
+        const askCover = Math.max(g.official.cover, g.official.consultCover ?? 0); // below this he asks the people first; below official.cover he takes without asking
+        if (cover >= askCover || Object.values(ctx.s.convoys).some((c) => c.to === p.location)) continue;
+        const consult = cover >= g.official.cover;
         const asked = ctx.s.grainAsked[p.location];
         if (asked !== undefined && ctx.tick - asked < g.official.cooldownDays * DAY) continue;
-        const from = g.places.filter((x) => x.location !== p.location).map((x) => ({ x, b: best(ctx, who, x.location, "grain.stock") })).filter(({ x, b }) => b && (b.believedValue as number) >= 12 * x.need)
+        const from = g.places.filter((x) => x.location !== p.location).map((x) => ({ x, b: best(ctx, who, x.location, "grain.stock") })).filter(({ x, b }) => b && (b.believedValue as number) >= 12 * x.need && !(g.requisition.refuse?.standDays !== undefined && ctx.s.grainRefusedAt[x.location] !== undefined && ctx.tick - ctx.s.grainRefusedAt[x.location] < g.requisition.refuse.standDays * DAY))
           .sort((a, b) => (b.b!.believedValue as number) - (a.b!.believedValue as number) || (a.x.location < b.x.location ? -1 : 1))[0];
         if (!from) continue;
         const there = ctx.map.path(p.location, from.x.location, "rider", (r) => ctx.isOpen(r));
         if (!there) continue;
-        const ask = ctx.emit("GrainAsked", [upd.id], [chr(who), loc(p.location), loc(from.x.location)], { place: p.location, by: who, source: from.x.location });
-        ctx.at(ctx.tick + there.ticks, "grain:ship", { orderId: 0, kind: "requisition", source: from.x.location, dest: p.location, consult: false, cause: ask.id, official: who });
+        const ask = ctx.emit("GrainAsked", [upd.id], [chr(who), loc(p.location), loc(from.x.location)], { place: p.location, by: who, source: from.x.location, consult });
+        ctx.at(ctx.tick + there.ticks + (consult ? g.requisition.consultDays * DAY : 0), "grain:ship", { orderId: 0, kind: "requisition", source: from.x.location, dest: p.location, consult, cause: ask.id, official: who });
       }
       ctx.at(ctx.tick + DAY, "grain:day", {});
     },

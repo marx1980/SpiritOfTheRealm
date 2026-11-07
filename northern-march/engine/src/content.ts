@@ -54,7 +54,7 @@ export interface GrainParams {
   /** The crown takes grain: `sacks` asked, the place keeps `reserveDays` of its own need; consulting first adds `consultDays` and softens the grievance. */
   requisition: { sacks: number; reserveDays: number; consultDays: number; grievance: number; consultedPermille: number; material: number; trustConsulted: number; trustTaken: number;
     /** A people may refuse to give: chance (permille) = (their grievance against the crown - gFloor) x chancePerG / 1000, capped; consulting first scales it by consultedPermille. */
-    refuse?: { gFloor: number; chancePerG: number; consultedPermille: number } };
+    refuse?: { gFloor: number; chancePerG: number; consultedPermille: number; standDays?: number } };
   /** The crown buys: limited by coin and by the seller's surplus (it keeps `reserveDays` of its own need). */
   purchase: { sacks: number; reserveDays: number; priceMilliPerSack: number };
   /** Carts walk. A convoy can be lost on the road, or seized by raiders in proportion to the threat at either end. */
@@ -62,7 +62,7 @@ export interface GrainParams {
   /** A fort with an empty store loses this share of its men a day (they leave or fall sick). */
   hungerPermille: number;
   /** A castellan who believes his own store would feed his place for fewer than `cover` days sends for grain himself (no one told him to, and he does not stop to consult); not again within `cooldownDays`. */
-  official: { cover: number; cooldownDays: number };
+  official: { cover: number; cooldownDays: number; consultCover?: number };
   /** A castellan who dislikes bringing bad news writes a low store as this much higher (the same temperament that understates damage to walls). */
   understatePermille: number;
   /** Where the crisis lies, whose people are asked, and who may act on their grievance (read by the log classifier, not by the world). */
