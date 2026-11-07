@@ -5,21 +5,21 @@
         "seeds": 100,
         "firstDivergenceOwn": 100,
         "perturbedChanged": 100,
-        "otherDrawnEventsIdentical": 41,
+        "otherDrawnEventsIdentical": 46,
         "firstForeign": []
       },
       "weather": {
         "seeds": 100,
         "firstDivergenceOwn": 100,
         "perturbedChanged": 100,
-        "otherDrawnEventsIdentical": 20,
+        "otherDrawnEventsIdentical": 24,
         "firstForeign": []
       },
       "threat": {
         "seeds": 100,
         "firstDivergenceOwn": 100,
         "perturbedChanged": 100,
-        "otherDrawnEventsIdentical": 38,
+        "otherDrawnEventsIdentical": 32,
         "firstForeign": []
       }
     },
@@ -28,14 +28,14 @@
   "batch": {
     "seedsPerArm": 1000,
     "days": 240,
-    "wallClockSeconds": 2033.9,
+    "wallClockSeconds": 2347.3,
     "invariantViolations": 0,
     "firstViolations": [],
-    "breachedOn": 0.354,
+    "breachedOn": 0.415,
     "breachedOff": 0.271,
-    "meanEvents": 9573,
-    "meanDecisions": 13.351,
-    "staleOrWrongShare": 0.12366114897760468,
-    "meanWallClockPerSimYearMs": 1531
+    "meanEvents": 12359,
+    "meanDecisions": 15.835,
+    "staleOrWrongShare": 0.11777707609725292,
+    "meanWallClockPerSimYearMs": 1729
   }
 }
