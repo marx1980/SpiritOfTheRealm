@@ -80,3 +80,13 @@ official.cover 3, consultCover 6, cooldown 20; requisition.consultedPermille 600
 Content march-0.8 as committed (variant E, D-029 addendum 3). Suite 191/191 after two fixes: the KI-01 hash re-recorded (fd4d1cc5…, predicate still passes), and the "no flip between plans" property test now requires that A was still possible when B was chosen (Varos holding while away courting Greyfen is not dithering; the old check only asked whether B was possible on return).
 Links for G-05 (ablation must cut A = R_on − R_off by ≥50%, 600 seeds, delegating and aggressive): threat (the OFF arm), messenger (system switch), communities (system switch), requisition (content: requisition.sacks = 0), Varos's courting (content: courtHours = 0). Castellan initiative, refusal and the consult promise are not named links: they shape the rate but the chain does not need them (delegating and aggressive rulers can requisition themselves; refusal only lowers A).
 Marko's overrides, recorded in advance: (1) passive's G-03 end state may fall below 5% (passive no longer breaks promises through its castellans; reached on TUNE seeds 1–150 at ≈1.3%); (2) political_caution_military_danger may stay below 5% pooled (≈1.8% on TUNE). Both stay reported as FAIL numbers; no band moved. Pass requirements that remain: G-03 for delegating and aggressive, G-04, G-05, each other outcome ≥5% pooled (cooperative_support, material_success_political_damage, misinformation_failure), 0 invariant violations.
+
+## D-031 — Sealed verdict, block 130000 (1,000 seeds, variant E)
+Result against the pre-registration in D-030:
+- G-03 A (R_on − R_off): passive 1.0% [0.4, 1.7] FAIL (covered by Marko's recorded override 1); delegating 5.8% [4.3, 7.3] AMBER (interval crosses the 5% edge); aggressive 26.1% [23.5, 28.8] PASS.
+- G-04 lift ≥1.5: PASS for all three policies.
+- G-05 link necessity (messenger, communities, requisition, courting): PASS for delegating and aggressive.
+- Outcomes pooled: cooperative_support 15.7%, material_success_political_damage 23.8%, misinformation_failure 5.9% (all ≥5%); political_caution_military_danger 2.4% (below 5%, covered by recorded override 2).
+- Invariant violations: 0.
+Honest reading: the only unrecovered item is delegating's G-03 AMBER. Under C0 it gets one extension (doubled seeds, fresh sealed block, no change to engine or content), after which it counts as FAIL unless Marko records an override. No tuning was done after this verdict. Not claimed: fun or balance.
+Next: G-06 knife-edge on TUNE seeds (rule fixed in advance: ≤2 parameters knife-edge at ±25%), then the AMBER extension on block 140000 (2,000 seeds).
