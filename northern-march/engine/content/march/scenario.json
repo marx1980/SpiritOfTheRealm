@@ -277,9 +277,9 @@
    "trustConsulted": 30,
    "trustTaken": -30,
    "refuse": {
-    "gFloor": 300,
+    "gFloor": 0,
     "chancePerG": 1000,
-    "consultedPermille": 300
+    "consultedPermille": 600
    }
   },
   "purchase": {

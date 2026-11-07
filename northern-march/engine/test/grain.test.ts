@@ -168,6 +168,16 @@ test("grain stage 3: an order with nothing to take is abandoned with a reason, n
   assert.ok(o, "abandoned with a reason"); assert.ok(!sim.log.some((e) => e.type === "GrainShipped" && e.payload.orderId !== 0), "the ordered shipment never left");
 });
 
+test("grain stage 5: a people may refuse a requisition (certain refusal is an event and the order is abandoned); with no refusal rule nobody refuses", () => {
+  const sure = ordered(2, REQ, 5, 40, quiet((r) => { r.scenario.grain.official.cover = 0; r.scenario.grain.requisition.refuse = { gFloor: -1000, chancePerG: 1000, consultedPermille: 1000 }; }));
+  const no = sure.log.find((e) => e.type === "GrainRefused");
+  assert.ok(no, "refused"); assert.equal(no.payload.community, "greyfen");
+  assert.ok(sure.log.some((e) => e.type === "OrderAbandoned" && (e.payload as any).reason === "refused"), "the order is abandoned as refused");
+  assert.ok(!sure.log.some((e) => e.type === "GrainShipped"), "nothing left");
+  const off = ordered(2, REQ, 5, 40, quiet((r) => { delete r.scenario.grain.requisition.refuse; }));
+  assert.ok(!off.log.some((e) => e.type === "GrainRefused") && off.log.some((e) => e.type === "GrainShipped"));
+});
+
 import { readCrisis, OUTCOMES } from "../src/crisis.ts";
 test("grain stage 4: a hungry fort loses men, and a castellan with a nearly empty store sends for grain himself, unasked and unconsulted", () => {
   const c = quiet((r) => { const n = r.scenario.grain.places.find((p: any) => p.location === "northwatch"); n.store = 60; n.production = 0; });
