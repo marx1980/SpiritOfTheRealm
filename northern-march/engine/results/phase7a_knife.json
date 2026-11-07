@@ -1,0 +1,114 @@
+{
+ "seeds": [
+  1,
+  150
+ ],
+ "policies": [
+  "delegating",
+  "aggressive"
+ ],
+ "baseline": {
+  "delegating": 10,
+  "aggressive": 24.7
+ },
+ "params": {
+  "harvestHitPermille": {
+   "-25%": {
+    "delegating": 4.7,
+    "aggressive": 18
+   },
+   "+25%": {
+    "delegating": 19.3,
+    "aggressive": 36
+   },
+   "base": 400,
+   "knifeEdge": false
+  },
+  "harvestHitDays": {
+   "-25%": {
+    "delegating": 5.3,
+    "aggressive": 30.7
+   },
+   "+25%": {
+    "delegating": 10,
+    "aggressive": 28.7
+   },
+   "base": 25,
+   "knifeEdge": false
+  },
+  "requisition.grievance": {
+   "-25%": {
+    "delegating": 4.7,
+    "aggressive": 12
+   },
+   "+25%": {
+    "delegating": 10.7,
+    "aggressive": 34.7
+   },
+   "base": 260,
+   "knifeEdge": false
+  },
+  "requisition.consultedPermille": {
+   "-25%": {
+    "delegating": 5.3,
+    "aggressive": 20.7
+   },
+   "+25%": {
+    "delegating": 10.7,
+    "aggressive": 27.3
+   },
+   "base": 600,
+   "knifeEdge": false
+  },
+  "refuse.chancePerG": {
+   "-25%": {
+    "delegating": 13.3,
+    "aggressive": 32
+   },
+   "+25%": {
+    "delegating": 8.7,
+    "aggressive": 20.7
+   },
+   "base": 1000,
+   "knifeEdge": false
+  },
+  "official.consultCover": {
+   "-25%": {
+    "delegating": 8.7,
+    "aggressive": 26
+   },
+   "+25%": {
+    "delegating": 6,
+    "aggressive": 30
+   },
+   "base": 6,
+   "knifeEdge": false
+  },
+  "greyfen.supportAt": {
+   "-25%": {
+    "delegating": 16,
+    "aggressive": 45.3
+   },
+   "+25%": {
+    "delegating": 0,
+    "aggressive": 4
+   },
+   "base": 480,
+   "knifeEdge": true
+  },
+  "narrative.trustPerDay": {
+   "-25%": {
+    "delegating": 9.3,
+    "aggressive": 27.3
+   },
+   "+25%": {
+    "delegating": 11.3,
+    "aggressive": 27.3
+   },
+   "base": 45,
+   "knifeEdge": false
+  }
+ },
+ "knifeEdgeCount": 1,
+ "G06": "PASS"
+}
