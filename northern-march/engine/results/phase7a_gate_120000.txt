@@ -1,0 +1,10 @@
+shard 0..500 done: 1500 rows
+n 1000 G03 {'verdict': 'PASS', 'distinctPolicies': 3, 'groups': {'aggressive': 'aggressive', 'delegating': 'delegating', 'passive': 'passive'}} G04 {'verdict': 'PASS', 'distinctPolicies': 3, 'groups': {'aggressive': 'aggressive', 'delegating': 'delegating', 'passive': 'passive'}} outcomeVerdict FAIL G05 PASS viol 0
+passive {'rOn': 0.05, 'rOff': 0, 'A': 0.05, 'A_ci': [0.037, 0.064], 'lift': None, 'G03': 'AMBER', 'G04': 'PASS'}
+delegating {'rOn': 0.182, 'rOff': 0, 'A': 0.182, 'A_ci': [0.157, 0.207], 'lift': None, 'G03': 'PASS', 'G04': 'PASS'}
+aggressive {'rOn': 0.329, 'rOff': 0, 'A': 0.329, 'A_ci': [0.3, 0.358], 'lift': None, 'G03': 'PASS', 'G04': 'PASS'}
+pooled {'cooperative_support': 3.9, 'material_success_political_damage': 32.1, 'political_caution_military_danger': 3, 'misinformation_failure': 8.8, 'unresolved': 16.3, 'no_crisis': 35.9}
+G05 delegating 0.192 {'messenger': (1, True), 'communities': (1, True)}
+G05 aggressive 0.325 {'messenger': (1, True), 'communities': (1, True)}
+
+[exited with code 0]
