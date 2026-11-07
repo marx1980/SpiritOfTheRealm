@@ -72,3 +72,6 @@ Common: official.cover 3, consultCover 6 (D) or 8 (C), refusal stands 30 days, e
 - E (D + requisition.consultedPermille 600): end 1.3 / 10.0 / 24.7 / 10.7; cooperative pooled 16.2%; caution pooled 1.8%.
 - F (D + consultedPermille 850): end 0.7 / 10.7 / 27.3 / 12.7; cooperative pooled 15.1%; caution pooled 1.8%.
 Reading: E and F put delegating and aggressive inside the band and clear the cooperative_support floor (pooled ≥15%), but passive's end state collapses (≤2%, its route was the castellans' unconsulted takes) and caution stays ≈1.8% (floor 5%). Passive failing G-03 breaks the policy-group rule (C0.5: no group may FAIL). Not adopted; committed content unchanged.
+
+#### D-029 addendum 3 — variant E adopted into content (by Marko: "record overrides for both, then finish 7A")
+official.cover 3, consultCover 6, cooldown 20; requisition.consultedPermille 600; refusal chance 1000, consulted 0.6, stands 30 days. Gate tool now ablates mechanism-level links (messenger, communities, requisition, Varos's courting) in addition to the threat OFF arm. Suite and KI-01 check pending; sealed block 130000 to follow after pre-registration (D-030).

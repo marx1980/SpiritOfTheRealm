@@ -272,14 +272,15 @@
    "reserveDays": 7,
    "consultDays": 3,
    "grievance": 260,
-   "consultedPermille": 300,
+   "consultedPermille": 600,
    "material": 25,
    "trustConsulted": 30,
    "trustTaken": -30,
    "refuse": {
     "gFloor": 0,
     "chancePerG": 1000,
-    "consultedPermille": 600
+    "consultedPermille": 600,
+    "standDays": 30
    }
   },
   "purchase": {
@@ -293,8 +294,9 @@
   },
   "hungerPermille": 40,
   "official": {
-   "cover": 5,
-   "cooldownDays": 20
+   "cover": 3,
+   "cooldownDays": 20,
+   "consultCover": 6
   },
   "understatePermille": 350,
   "crisis": {

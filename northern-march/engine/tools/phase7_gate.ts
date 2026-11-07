@@ -3,7 +3,7 @@
 //   node tools/phase7_gate.ts shard <block> <fromOffset> <toOffset> <out.json> [linkSeeds]   run seeds block+from .. block+to-1 (several shards in parallel)
 //   node tools/phase7_gate.ts eval <block> <out1.json> [out2.json ...]                        merge shards, claim the block, write the verdict to results/gate_log.jsonl
 import { readFileSync, writeFileSync } from "node:fs";
-import { loadContent } from "../src/content.ts";
+import { loadContent, readContentDir, deriveContent } from "../src/content.ts";
 import { createSim } from "../src/engine.ts";
 import { hashLog } from "../src/engine.ts";
 import { checkRun } from "../src/invariants.ts";
@@ -13,11 +13,16 @@ import { gateKey } from "../src/batch.ts";
 import type { SystemId } from "../src/events.ts";
 
 const POLICIES = ["passive", "delegating", "aggressive"] as const;
-const LINKS: SystemId[] = ["messenger", "communities"];
+// Links of the chain (named in DECISIONS D-030): two are systems (ablated by the engine switch), two are mechanisms (ablated by content: no requisition takes any grain; Varos never rides out to court). The threat link is the OFF arm itself.
+const dir = process.env.CONTENT_DIR ?? new URL("../content/march/", import.meta.url).pathname;
+const LINKS = ["messenger", "communities", "requisition", "courting"] as const;
+type Link = (typeof LINKS)[number];
+const variantOf = (l: Link) => { const raw: any = readContentDir(dir); if (l === "requisition") raw.scenario.grain.requisition.sacks = 0; if (l === "courting") raw.communities.params.narrative.courtHours = 0; return deriveContent(raw); };
+const linkContent: Partial<Record<Link, ReturnType<typeof loadContent>>> = { requisition: variantOf("requisition"), courting: variantOf("courting") };
 const LINK_POLICIES = ["delegating", "aggressive"];
 const LINK_SEEDS = 600;
 const days = 240;
-const content = loadContent(process.env.CONTENT_DIR ?? new URL("../content/march/", import.meta.url).pathname);
+const content = loadContent(dir);
 const cal = gateKey(content);
 const [mode, blockArg, a, b, c] = process.argv.slice(2);
 const block = Number(blockArg);
@@ -36,8 +41,9 @@ if (mode === "shard") {
     const ro = readCrisis(on.log, content), rf = readCrisis(offA.log, content);
     const row: any = { policy, seed, on: ro.endState, off: rf.endState, outcomeOn: ro.outcome, outcomeOff: rf.outcome, violations: checkRun(on).length + checkRun(offA).length, hash: hashLog(on.log), links: {} };
     if (off < linkSeeds && LINK_POLICIES.includes(policy)) for (const l of LINKS) {
-      const s = createSim({ content, seed, policy, ablate: [l] }); s.runDays(days);
-      row.links[l] = readCrisis(s.log, content).endState;
+      const lc = linkContent[l];
+      const s = createSim({ content: lc ?? content, seed, policy, ...(lc ? {} : { ablate: [l as SystemId] }) }); s.runDays(days);
+      row.links[l] = readCrisis(s.log, lc ?? content).endState;
     }
     rows.push(row);
   }
