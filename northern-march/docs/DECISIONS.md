@@ -103,3 +103,11 @@ Reading: the next-lender retry is not what limits delegating. Tune seeds read ab
 ## D-033 — Override 3: delegating's G-03 at AMBER (Marko, "1")
 Recorded: block 130000 delegating A = 5.8% [4.3, 7.3], AMBER; the doubled extension and the one design attempt (D-032) were not adopted. Marko chose to override rather than extend or tune further. The number stays a reported AMBER, no band moved, nothing tuned to it. Likely true rate 6–8% (tune seeds read ≈2 points above sealed), so delegating sits near the 5% edge; what limits it is carried to the adviser step (b).
 Phase 7A gate state: G-03 PASS for aggressive; delegating AMBER (override 3); passive FAIL (override 1). G-04 PASS. G-05 PASS. Outcome shares: caution 2.4% (override 2), others ≥5%. 0 invariant violations. G-06 knife-edge, regressions and lab baseline still to run on the final calibration.
+
+## D-034 — Phase 7A gate results on march-0.8 (fresh blocks, Marko's override 3 stands)
+- G-12 advisers, sealed block 150000 (1,000 seeds): follow-best 89.2% vs follow-worst 29.7%, difference 59.5 points [56.1, 62.8]. PASS.
+- G-13 communities, sealed block 160000 (1,000 seeds per policy): 0 revolts, 0 unsupported escalations, 0 invariant violations. PASS.
+- Phase 1 invariant batch (1,000 seeds per arm, 240 days): 0 violations. G-02 PASS (100 seeds). G-01 PASS (Node and Bun, seeds 1–100).
+- G-06 knife-edge (TUNE 1–150): PASS, one knife-edge parameter (greyfen.supportAt; −25% → 16/45%, +25% → 0/4%).
+- G-03/G-04/G-05 and outcome shares: as D-031 (block 130000), with overrides 1–3 recorded above.
+Still open: lab L0 baseline on march-0.8, STATE.md, handoff, H-01/H-02 playtests.

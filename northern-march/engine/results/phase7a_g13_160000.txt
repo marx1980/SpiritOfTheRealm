@@ -1,1 +1,170 @@
 passive {"seeds":1000,"G13":{"revolts":0,"unsupportedEscalations":0,"verdict":"PASS"},"invariantViolations":0,"firstViolations":[],"highestRungShare":{"coldmere":{"cooperate":53.5,"petition":17.4,"delay":12,"withhold":8.4,"refuse":1.4,"support":7.3},"eastmarch":{"cooperate":35.1,"petition":7.9,"delay":12.6,"withhold":13.4,"refuse":2.5,"support":28.5},"greyfen":{"cooperate":58.8,"petition":32.2,"delay":4.8,"withhold":0.8,"refuse":1.4,"support":2},"northwatch":{"cooperate":81.3,"petition":17.3,"delay":1.4,"withhold":0,"refuse":0,"support":0}},"perRun":{"petitions":6.96,"misconduct":0.02,"relief":0,"stanceChanges":7.6,"letters":8.61},"levySeeds":0,"payersDiverge":null}
+delegating {"seeds":1000,"G13":{"revolts":0,"unsupportedEscalations":0,"verdict":"PASS"},"invariantViolations":0,"firstViolations":[],"highestRungShare":{"coldmere":{"cooperate":49.6,"petition":20.7,"delay":9.9,"withhold":6.7,"refuse":1.5,"support":11.6},"eastmarch":{"cooperate":33.6,"petition":23.9,"delay":16,"withhold":14.4,"refuse":1.9,"support":10.2},"greyfen":{"cooperate":30.7,"petition":46,"delay":3.1,"withhold":3.5,"refuse":9,"support":7.7},"northwatch":{"cooperate":75.1,"petition":24.2,"delay":0.7,"withhold":0,"refuse":0,"support":0}},"perRun":{"petitions":6.87,"misconduct":0.82,"relief":0,"stanceChanges":10.12,"letters":8.43},"levySeeds":0,"payersDiverge":null}
+aggressive {"seeds":1000,"G13":{"revolts":0,"unsupportedEscalations":0,"verdict":"PASS"},"invariantViolations":0,"firstViolations":[],"highestRungShare":{"coldmere":{"cooperate":0,"petition":18,"delay":31.7,"withhold":21.7,"refuse":4.4,"support":24.2},"eastmarch":{"cooperate":0,"petition":0,"delay":37.4,"withhold":21.7,"refuse":4.8,"support":36.1},"greyfen":{"cooperate":0,"petition":0,"delay":0,"withhold":29.9,"refuse":35.4,"support":34.7},"northwatch":{"cooperate":74.2,"petition":13.5,"delay":12.3,"withhold":0,"refuse":0,"support":0}},"perRun":{"petitions":21.11,"misconduct":0.78,"relief":0,"stanceChanges":33.33,"letters":25.71},"levySeeds":1000,"payersDiverge":90.4}
+{
+ "block": [
+  160000,
+  160999
+ ],
+ "content": "march-0.8",
+ "contentHash": "49c768e17a4a2d5fad684f80b6dac638d18625c471f62ba08deda7307821e8e3",
+ "passive": {
+  "seeds": 1000,
+  "G13": {
+   "revolts": 0,
+   "unsupportedEscalations": 0,
+   "verdict": "PASS"
+  },
+  "invariantViolations": 0,
+  "firstViolations": [],
+  "highestRungShare": {
+   "coldmere": {
+    "cooperate": 53.5,
+    "petition": 17.4,
+    "delay": 12,
+    "withhold": 8.4,
+    "refuse": 1.4,
+    "support": 7.3
+   },
+   "eastmarch": {
+    "cooperate": 35.1,
+    "petition": 7.9,
+    "delay": 12.6,
+    "withhold": 13.4,
+    "refuse": 2.5,
+    "support": 28.5
+   },
+   "greyfen": {
+    "cooperate": 58.8,
+    "petition": 32.2,
+    "delay": 4.8,
+    "withhold": 0.8,
+    "refuse": 1.4,
+    "support": 2
+   },
+   "northwatch": {
+    "cooperate": 81.3,
+    "petition": 17.3,
+    "delay": 1.4,
+    "withhold": 0,
+    "refuse": 0,
+    "support": 0
+   }
+  },
+  "perRun": {
+   "petitions": 6.96,
+   "misconduct": 0.02,
+   "relief": 0,
+   "stanceChanges": 7.6,
+   "letters": 8.61
+  },
+  "levySeeds": 0,
+  "payersDiverge": null
+ },
+ "delegating": {
+  "seeds": 1000,
+  "G13": {
+   "revolts": 0,
+   "unsupportedEscalations": 0,
+   "verdict": "PASS"
+  },
+  "invariantViolations": 0,
+  "firstViolations": [],
+  "highestRungShare": {
+   "coldmere": {
+    "cooperate": 49.6,
+    "petition": 20.7,
+    "delay": 9.9,
+    "withhold": 6.7,
+    "refuse": 1.5,
+    "support": 11.6
+   },
+   "eastmarch": {
+    "cooperate": 33.6,
+    "petition": 23.9,
+    "delay": 16,
+    "withhold": 14.4,
+    "refuse": 1.9,
+    "support": 10.2
+   },
+   "greyfen": {
+    "cooperate": 30.7,
+    "petition": 46,
+    "delay": 3.1,
+    "withhold": 3.5,
+    "refuse": 9,
+    "support": 7.7
+   },
+   "northwatch": {
+    "cooperate": 75.1,
+    "petition": 24.2,
+    "delay": 0.7,
+    "withhold": 0,
+    "refuse": 0,
+    "support": 0
+   }
+  },
+  "perRun": {
+   "petitions": 6.87,
+   "misconduct": 0.82,
+   "relief": 0,
+   "stanceChanges": 10.12,
+   "letters": 8.43
+  },
+  "levySeeds": 0,
+  "payersDiverge": null
+ },
+ "aggressive": {
+  "seeds": 1000,
+  "G13": {
+   "revolts": 0,
+   "unsupportedEscalations": 0,
+   "verdict": "PASS"
+  },
+  "invariantViolations": 0,
+  "firstViolations": [],
+  "highestRungShare": {
+   "coldmere": {
+    "cooperate": 0,
+    "petition": 18,
+    "delay": 31.7,
+    "withhold": 21.7,
+    "refuse": 4.4,
+    "support": 24.2
+   },
+   "eastmarch": {
+    "cooperate": 0,
+    "petition": 0,
+    "delay": 37.4,
+    "withhold": 21.7,
+    "refuse": 4.8,
+    "support": 36.1
+   },
+   "greyfen": {
+    "cooperate": 0,
+    "petition": 0,
+    "delay": 0,
+    "withhold": 29.9,
+    "refuse": 35.4,
+    "support": 34.7
+   },
+   "northwatch": {
+    "cooperate": 74.2,
+    "petition": 13.5,
+    "delay": 12.3,
+    "withhold": 0,
+    "refuse": 0,
+    "support": 0
+   }
+  },
+  "perRun": {
+   "petitions": 21.11,
+   "misconduct": 0.78,
+   "relief": 0,
+   "stanceChanges": 33.33,
+   "letters": 25.71
+  },
+  "levySeeds": 1000,
+  "payersDiverge": 90.4
+ }
+}
