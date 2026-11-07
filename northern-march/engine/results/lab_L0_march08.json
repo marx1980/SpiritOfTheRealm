@@ -1,0 +1,34 @@
+{
+ "gate": "L0",
+ "date": "2026-11-07",
+ "commit": "2ecd48f",
+ "note": "baseline on march-0.8 after 7A stages 1-4 (D-025..D-033)",
+ "node": "v22.23.4",
+ "content": "march-0.8",
+ "typecheck": "clean (tsc -p .)",
+ "tests": {
+  "total": 191,
+  "pass": 191,
+  "fail": 0
+ },
+ "quick": {
+  "games": 100,
+  "coverage": "100 of 100",
+  "perGamePerf": "1855 ms"
+ },
+ "gates": {
+  "G-01": "PASS (Node=Bun, seeds 1-100, D-034)",
+  "G-02": "PASS (100 seeds, D-034)",
+  "G-03": "AMBER/FAIL on block 130000, overrides 1 and 3 (D-031, D-033)",
+  "G-04": "PASS",
+  "G-05": "PASS for delegating and aggressive",
+  "G-06": "PASS (1 knife-edge: greyfen.supportAt)",
+  "G-10": "PASS (earlier)",
+  "G-11": "not re-run; open since D-013",
+  "G-12": "PASS on sealed block 150000 (D-034)",
+  "G-13": "PASS on sealed block 160000 (D-034)",
+  "G-14": "PASS (earlier)",
+  "H-01/H-02": "not run; no testers yet"
+ },
+ "outcomes": "caution 2.4% pooled, override 2; others >=5% (block 130000)"
+}

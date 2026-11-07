@@ -1,6 +1,6 @@
 # STATE
 
-Updated: 6 Nov 2026, Phase 6 (6A) built; Agent Playtest Lab L0-L7 built (Opus 5.5). Plan in force: `docs/IMPLEMENTATION_PLAN.md` v4; lab: `docs/playtest/` (v4 + V4_1_AMENDMENTS, D-022).
+Updated: 7 Nov 2026, Phase 7A stages 1-4 built and gated (march-0.8); earlier: Phase 6 (6A) built; Agent Playtest Lab L0-L7 built (Opus 5.5). Plan in force: `docs/IMPLEMENTATION_PLAN.md` v4; lab: `docs/playtest/` (v4 + V4_1_AMENDMENTS, D-022).
 
 ## Built
 **Engine (`engine/`, TypeScript on Node 22, no build step).** `npm test`: 160 tests passed at the L0 baseline; since then `test/saveload.test.ts` (+1) and `test/playtest.test.ts` (10) pass on their own; full suite re-run pending. `npx tsc -p .` is clean.
@@ -14,7 +14,7 @@ L8 (D-024): first adversarial search run, findings for review only. Levy-spam ex
 
 Gate status after the KI-01 fix and the upkeep change (content march-0.7): G-12 and G-13 PASS on sealed block 110000 (D-023). The regression batch (phase1 gates) and the pre-fix results remain pre-fix evidence.
 
-**Phase 7A in progress (D-025), stage 1 of 5 built (content march-0.8).** Grain core: `scenario.grain`, `src/systems/grain.ts`, events GrainDay / HarvestDamaged / ScarcityChanged, exact conservation, harvest cut by raids (so the shortage exists only in the ON arm), scarcity bands. `test/grain.test.ts` (7). Not yet built: Anna's grain picture, requisition/purchase/convoys/consultation, the Grain Crisis fixture and Varos, the outcome classifier, the gates. Gates and lab baseline are NOT re-run on march-0.8.
+**Phase 7A (D-025..D-034), content march-0.8: stages 1-4 built, gates run.** Grain core, requisition with refusal (standing 30 days), purchase, convoys with loss and seizure, castellans who consult first, Varos courting, Greyfen support rule (supportAt 480), outcome classifier. Sealed results: G-12 PASS (150000), G-13 PASS (160000), G-03 aggressive PASS, delegating AMBER (5.8%, override 3), passive FAIL (1.0%, override 1), G-04/G-05 PASS, outcome caution 2.4% (override 2), G-06 PASS (1 knife-edge: greyfen.supportAt), G-01/G-02 PASS, 0 invariant violations. Lab L0 on march-0.8 (results/lab_L0_march08.json): tests 191/191, typecheck clean, quick 100/100 games. Still open: H-01/H-02 human playtests, G-11 re-run, and the design question of why delegating stays near the 5% edge (7B or adviser step).
 
 Phase 6 (6A) added (DECISIONS D-021):
 - `src/systems/communities.ts` and `content/march/communities.json` (content march-0.6): Northwatch (no named leader), Greyfen (Mara; the crown promised to consult before a levy), Eastmarch (Varos), Coldmere (Wenna; the Blackwood settlement).
