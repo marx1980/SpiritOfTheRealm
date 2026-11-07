@@ -263,7 +263,7 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   GarrisonStarved: (s, p) => { for (const [loc, n] of p.changes as [string, number][]) { const f = s.fortifications[loc]; f.garrison = Math.max(0, f.garrison - n); } },
   GrainAsked: (s, p, e) => { s.grainAsked[p.place + (p.consult ? "" : "!")] = e.tick; }, // a consulted ask and an emergency take have their own cooldowns
   GrainConsulted: noop,
-  GrainRefused: (s, p, e) => { if (!p.stood) s.grainRefusedAt[p.community] = e.tick; if (p.official) delete s.grainAsked[p.to + (p.consulted ? "" : "!")]; }, // a castellan who is turned away is free to ask the next lender at once
+  GrainRefused: (s, p, e) => { if (!p.stood) s.grainRefusedAt[p.community] = e.tick; },
   GrainShipped: (s, p) => {
     s.grain[p.from] -= p.sacks;
     s.convoys[String(p.convoyId)] = { id: p.convoyId, from: p.from, to: p.to, sacks: p.sacks, departedAt: p.departedAt, arrivesAt: p.arrivesAt, orderId: p.orderId, how: p.how, consulted: p.consulted };

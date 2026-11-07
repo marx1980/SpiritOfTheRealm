@@ -52,7 +52,7 @@ export const grain: System = {
         const stood = rf.standDays !== undefined && ctx.s.grainRefusedAt[source] !== undefined && ctx.tick - ctx.s.grainRefusedAt[source] < rf.standDays * DAY; // having said no, they keep saying it for a while
         const G = inputsOf(ctx, source).G, base = Math.min(1000, Math.max(0, ((G - rf.gFloor) * rf.chancePerG) / 1000)), chance = stood ? 1000 : consult ? Math.floor((base * rf.consultedPermille) / 1000) : Math.floor(base);
         if (chance > 0 && ctx.keyed(`grain:refuse:${source}:${dest}:${ctx.tick}`).chancePermille(chance)) {
-          ctx.emit("GrainRefused", [cause], [loc(source), loc(dest), ...(official ? [] : [{ kind: "order" as const, id: String(orderId) }])], { community: source, to: dest, by, orderId, grievance: G, chance, consulted: consult, stood, official: !!official });
+          ctx.emit("GrainRefused", [cause], [loc(source), loc(dest), ...(official ? [] : [{ kind: "order" as const, id: String(orderId) }])], { community: source, to: dest, by, orderId, grievance: G, chance, consulted: consult, stood });
           return stop("refused");
         }
       }
