@@ -140,10 +140,11 @@ test("no agent flips between plans and back on successive minor events", () => {
       if (!byAgent.has(t.agent)) byAgent.set(t.agent, []);
       byAgent.get(t.agent)!.push({ tick: t.tick, sel: JSON.stringify(t.selected), options: t.candidates.map((c) => JSON.stringify(c.action)) });
     }
-    // Dithering = going back to A while B was still possible. Returning because B is done or impossible is not.
+    // Dithering = going back to A while B was still possible, having chosen B while A was still possible. Returning because B is done or impossible is not,
+    // and neither is holding because A was impossible for a while (a rider on the road to court a people can sortie from nowhere).
     for (const [agent, xs] of byAgent)
       for (let i = 2; i < xs.length; i++)
-        if (xs[i].sel === xs[i - 2].sel && xs[i].sel !== xs[i - 1].sel && xs[i].tick - xs[i - 2].tick < 3 * DAY)
+        if (xs[i].sel === xs[i - 2].sel && xs[i].sel !== xs[i - 1].sel && xs[i].tick - xs[i - 2].tick < 3 * DAY && xs[i - 1].options.includes(xs[i].sel))
           assert.ok(!xs[i].options.includes(xs[i - 1].sel), `${agent} flipped A-B-A within 3 days at ${xs[i].tick} (seed ${seed})`);
   }
 });
