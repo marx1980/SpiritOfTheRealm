@@ -3,7 +3,7 @@
 // a commitment margin. Pure: the same Situation and beliefs always give the same decision.
 import type { Reason } from "../schemas.ts";
 import type { ActionRef, Candidate, Perceiver, Situation } from "./model.ts";
-import { act, actionKey, avgTrait, dominantTrait } from "./model.ts";
+import { act, actionKey, avgTrait, dominantTrait, DAY } from "./model.ts";
 import { expect, picture } from "./terms.ts";
 
 /** How many candidates the agent can think of: better planners consider more (capped). */
@@ -38,6 +38,9 @@ export function generate(sit: Situation, per: Perceiver): ActionRef[] {
     const need = w.reduce((n, f) => n + Math.max(0, sit.p.restoreToMilli - (picture(sit, per, f).cond ?? 0)) * sit.p.repairCostPerMilli, 0);
     const retakeNeed = lost.length ? sit.p.retakeMilli : 0;
     if (tre && ((tre.value as number) < sit.p.levyMilli || (tre.value as number) < need + retakeNeed + sit.p.levyMilli)) add(act("advise_levy"));
+    // A people who have petitioned for relief, as heard at court and still fresh: relief is one thing a ruler can do about it.
+    const fresh = sit.p.agents.values.communityFreshDays * DAY;
+    for (const id of sit.communities ?? []) { const r = per.get(id, "community.request"); if (r && r.value === "relief" && r.ageTicks <= fresh) add(act("advise_relief", id)); }
     // Which damaged walls this adviser presses for: all of them (works), those that could be in danger (war), or only the near-breached (purse).
     const scope = sit.repairScope ?? "all", threat = threatened(sit, per);
     const wanted = (f: string) => scope === "all" || (scope === "endangered"
@@ -118,6 +121,20 @@ export function score(sit: Situation, per: Perceiver, a: ActionRef): Candidate {
     const fail = 1000 - e.successP + (e.leavesPost ? 200 : 0);
     const w = -Math.floor((fail * 10000 * (1000 - appetite)) / (1000 * 500));
     c.push(R("trait", dominantTrait(sit.traits, "riskPermille"), w, w < 0 ? "reason.risk_averse" : "reason.risk"));
+  }
+  // communities: an adviser who minds how the crown stands, or cares for the people, counts what relief eases and what a levy inflames
+  if (a.kind === "advise_relief" || a.kind === "advise_levy") {
+    const minded = sit.objectives.filter((o) => o.objective === "crown_standing" || o.objective === "protect_community");
+    const fresh = sit.p.agents.values.communityFreshDays * DAY, worth = (x: number) => minded.reduce((n, o) => n + pr(o.priorityPermille, x), 0);
+    if (a.kind === "advise_relief") {
+      const req = per.get(a.target!, "community.request");
+      if (req && minded.length) c.push(R("belief", String(req.propId), worth(v.communityMilli), "reason.community_eased"));
+    } else {
+      for (const id of sit.communities ?? []) {
+        const g = per.get(id, "community.grievance");
+        if (g && (g.value === "levy" || g.value === "broken_promise") && g.ageTicks <= fresh && minded.length) c.push(R("belief", String(g.propId), -worth(v.communityMilli), "reason.community_resents"));
+      }
+    }
   }
   // a fort the raiders hold: waiting loses it, whatever the purse says
   if (a.kind === "advise_wait" && sit.captains.length && lostForts(sit, per).length) c.push(R("belief", lostForts(sit, per)[0], -Math.floor(v.breachPenaltyMilli / 2), "reason.fort_lost"));

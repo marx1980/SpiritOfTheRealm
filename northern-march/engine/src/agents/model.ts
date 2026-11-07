@@ -41,6 +41,7 @@ export interface Situation {
   focus: string | null;
   troops: number;                        // the agent's own company
   defenceHere: number | null;            // men at the fort where the agent stands (physical surroundings)
+  communities?: string[];                // static: the people who can petition the crown
   forts: FortInfo[];                     // static: fortified places and the threat sites near each
   captains: CaptainInfo[];               // known captains (roster + believed seat)
   travel: (from: string, to: string, mode: "rider" | "army") => number; // static map knowledge, ticks

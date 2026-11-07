@@ -293,8 +293,12 @@ function petitions(ctx: Ctx, id: string) {
   if (c.grievances.some((g) => g.petitionedAt !== null && ctx.tick - g.petitionedAt < pr.ladder.repetitionDays * DAY)) return;
   for (const g of [...c.grievances].sort((a, b) => scale(b.intensity, b.blameCrown) - scale(a.intensity, a.blameCrown) || a.id - b.id)) { // the sorest first
     if (scale(g.intensity, g.blameCrown) < pr.ladder.petition) continue;
-    if (g.petitionedAt !== null && ctx.tick - g.petitionedAt < pr.ladder.repetitionDays * DAY) continue;
-    const pe = ctx.emit("PetitionMade", [g.cause], [loc(id), chr(author)], { community: id, grievanceId: g.id, kind: g.kind, author, intensity: g.intensity });
+    if (g.petitionedAt !== null) { // told already: again only if it has grown since, or as a reminder after a long silence
+      const since = ctx.tick - g.petitionedAt;
+      if (since < pr.ladder.repetitionDays * DAY) continue;
+      if (since < pr.ladder.reminderDays * DAY && scale(g.intensity, g.blameCrown) - g.petitionedFelt < pr.ladder.regrowth) continue;
+    }
+    const pe = ctx.emit("PetitionMade", [g.cause], [loc(id), chr(author)], { community: id, grievanceId: g.id, kind: g.kind, author, intensity: g.intensity, felt: scale(g.intensity, g.blameCrown) });
     learn(ctx, author, { subject: loc(id), predicate: "community.grievance", value: g.kind, observedAt: ctx.tick, band: "certain" }, { kind: "observation", eventId: pe.id, source: author }, [pe.id]);
     learn(ctx, author, { subject: loc(id), predicate: "community.request", value: REMEDY[g.kind] ?? "relief", observedAt: ctx.tick, band: "certain" }, { kind: "observation", eventId: pe.id, source: author }, [pe.id]);
     send(ctx, author, ruler, id, ["community.grievance", "community.request"], pe.id, `petition:${id}`);

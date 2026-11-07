@@ -181,7 +181,9 @@
    "renownMilli": 15000,
    "postMilli": 8000,
    "breachPenaltyMilli": 30000,
-   "goodConditionMilli": 70000
+   "goodConditionMilli": 70000,
+   "communityMilli": 12000,
+   "communityFreshDays": 30
   },
   "experience": {
    "perTaskPermille": 20,

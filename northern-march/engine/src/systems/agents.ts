@@ -102,6 +102,7 @@ export function buildSituation(s: Readonly<WorldState>, c: Content, agent: strin
     post: ch.location, at, superior: ch.reportsTo, ruler: ruler.id, rulerSeat: seatOf(ruler.id),
     traits: ch.traits.map((t) => c.byId.trait.get(t)!), cap: caps, objectives: ch.objectives, focus: st?.focus ?? null,
     troops: s.troops[agent] ?? 0, defenceHere: at ? defenceAt(s, at) : null,
+    communities: c.communities.communities.map((x) => x.id).sort(),
     forts: sorted(c.locations.filter((l) => l.fortification), (l) => l.id).map((l) => ({ id: l.id, garrison: l.fortification!.garrison,
       sites: c.scenario.threat.sites.filter((x) => x.target === l.id).map((x) => x.site).sort(),
       stormMilliPerDay: Math.floor((l.exposurePermille * (c.scenario.weather.stormDamageMilli[0] + c.scenario.weather.stormDamageMilli[1])) / 2000) })),
@@ -278,7 +279,7 @@ function adviseNow(ctx: Ctx, agent: string, cause: number) {
   const fortOf = (a: { target?: string }) => !a.target ? undefined : sit.forts.find((f) => f.id === a.target || f.sites.includes(a.target!))?.id;
   // The adviser's word on the whole situation, then a word on each key issue it does not touch: raiders at a fort (defence)
   // and walls in bad shape (works). The best of the adviser's own options on that issue, whatever it is.
-  const cat = (a: { kind: string }) => (a.kind.startsWith("advise_repair") ? "works" : a.kind === "advise_wait" || a.kind === "advise_levy" ? "other" : "defence");
+  const cat = (a: { kind: string }) => (a.kind.startsWith("advise_repair") ? "works" : a.kind === "advise_wait" || a.kind === "advise_levy" || a.kind === "advise_relief" ? "other" : "defence");
   const groupOf = (a: { kind: string; target?: string }) => a.kind === "advise_recall" || a.kind === "advise_stay" ? "query" : `${fortOf(a) ?? ""}:${cat(a)}`;
   const mainGroup = groupOf(res.selected);
   const extras: typeof res.candidates = [];

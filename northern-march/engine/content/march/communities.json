@@ -69,7 +69,9 @@
       "support": 340,
       "downPermille": 800,
       "supportTrust": 550,
-      "repetitionDays": 30
+      "repetitionDays": 30,
+      "regrowth": 100,
+      "reminderDays": 90
     },
     "effects": {
       "income": {

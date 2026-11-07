@@ -17,7 +17,7 @@ export interface AgentState { operational: Intention | null; focus: string | nul
 export type Tier = "A" | "B" | "C";
 export interface HistoryEntry { tick: number; event: "promoted" | "demoted" | "appointed"; from?: Tier; to?: Tier; role?: string; reason?: string }
 
-export interface Grievance { id: number; kind: string; intensity: number; blameCrown: number; cause: number; since: number; last: number; petitionedAt: number | null }
+export interface Grievance { id: number; kind: string; intensity: number; blameCrown: number; cause: number; since: number; last: number; petitionedAt: number | null; petitionedFelt: number }
 export interface Memory { kind: string; actor: string; at: string; tick: number; eventId: number; weight: number; count: number; about?: string; broken?: boolean }
 export interface CommunityState {
   material: number; grievances: Grievance[]; memories: Memory[]; trust: Record<string, number>;
@@ -136,7 +136,7 @@ function applyEffects(s: WorldState, p: P, e: SimEvent) {
   for (const g of (p.grievances ?? []) as { kind: string; delta: number; blameCrown: number }[]) {
     const open = c.grievances.find((x) => x.kind === g.kind);
     if (open) { open.intensity = clamp1000(open.intensity + g.delta); open.last = e.tick; open.cause = e.id; }
-    else c.grievances.push({ id: c.nextGrievance++, kind: g.kind, intensity: clamp1000(g.delta), blameCrown: g.blameCrown, cause: e.id, since: e.tick, last: e.tick, petitionedAt: null });
+    else c.grievances.push({ id: c.nextGrievance++, kind: g.kind, intensity: clamp1000(g.delta), blameCrown: g.blameCrown, cause: e.id, since: e.tick, last: e.tick, petitionedAt: null, petitionedFelt: 0 });
     c.lastTrigger = e.tick; c.lastTriggerEvent = e.id;
   }
   if (p.breaks) for (const m of c.memories) if (m.kind === "promise" && m.about === p.breaks) m.broken = true;
@@ -278,7 +278,7 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   NarratorVisited: applyEffects,
   TroopMisconduct: noop,
   ReliefDelivered: noop,
-  PetitionMade: (s, p, e) => { const g = s.communities[p.community].grievances.find((x) => x.id === p.grievanceId); if (g) g.petitionedAt = e.tick; },
+  PetitionMade: (s, p, e) => { const g = s.communities[p.community].grievances.find((x) => x.id === p.grievanceId); if (g) { g.petitionedAt = e.tick; g.petitionedFelt = (p.felt as number | undefined) ?? 0; } },
   CommunitiesDrifted: (s, p) => {
     for (const ch of p.changes as { community: string; material: number; grievances: [number, number, number][] }[]) {
       const c = s.communities[ch.community];

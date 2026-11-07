@@ -111,3 +111,19 @@ Phase 7A gate state: G-03 PASS for aggressive; delegating AMBER (override 3); pa
 - G-06 knife-edge (TUNE 1–150): PASS, one knife-edge parameter (greyfen.supportAt; −25% → 16/45%, +25% → 0/4%).
 - G-03/G-04/G-05 and outcome shares: as D-031 (block 130000), with overrides 1–3 recorded above.
 Still open: lab L0 baseline on march-0.8, STATE.md, handoff, H-01/H-02 playtests.
+
+## D-035 — Phase 7A closed with overrides; 7B scope (Marko, 7 Nov)
+- H-01/H-02 human playtests: deferred by Marko ("no need for human tests just yet"). They remain unrun; no claim of fun or plausibility.
+- Delegating's G-03 AMBER: accepted (override 3, D-033).
+- "Build 7b" means the b and c of the agreed order, not the plan's wider economy: (b) advisers on communities, then (c) petition repetition. The plan's Phase 7B (timber, iron, horses, prices, markets, House control, full levy) stays deferred.
+
+## D-036 — 7B(b): advisers on communities (design and gate plan, before building)
+Facts found: petitions already reach the advisers. A petition letter to the ruler is read out at court and every councillor present learns `community.grievance` and `community.request` about that community (messenger.ts deliverReport). What is missing is advice that uses them; the planner's `protect_community` objective has no effect on any advice yet.
+Design (content-driven, no new frozen schema):
+1. New advice kind `advise_relief` (target: community). Generated when the adviser holds a `community.request = relief` belief about that community younger than `agents.values.communityFreshDays` (30). Expected cost is the relief cost (as the existing `relief` order).
+2. Advisers value it through the objectives they already carry: `crown_standing` and `protect_community` each credit `agents.values.communityMilli` (12,000) scaled by priority, as reason `reason.community_eased`. An adviser with neither objective (Oren, the steward) never prefers it; Elara (crown_standing 400) does when the request is fresh. Advisers with an explicit `adviceKinds` list (Oren, Selene) do not give it at all, so the advisers differ by design and G-12's best-minus-worst contrast is not erased.
+3. Levy caution: `advise_levy` is lowered by the same value for each fresh community grievance of kind levy or broken_promise the adviser believes (reason `reason.community_resents`). This is the "warn before a levy that Greyfen was promised consultation" item, in the form the present beliefs support (a resented levy, not a stored promise).
+4. Followers: `followAdviser` and the court/affordance mapping turn `advise_relief` into the existing `relief` action. No new order kind.
+Tests first: relief generated only with a fresh request and a crown-minded adviser; stale belief gives none; Oren never recommends it; levy score falls with a fresh levy grievance and not without; the policy maps it to a relief action; all 191 existing tests stay green.
+Gates: this changes adviser behaviour, so G-12 must re-pass on a fresh sealed block, with G-13 and the 7A gates (G-03/G-04/G-05, outcome shares) re-run on fresh blocks after (c) as well. Bands and the three recorded overrides stay as they are. Tune on seeds 1–9,999 only, with at least 300 seeds per arm. If G-12 falls below PASS, report the numbers and stop; no tuning to pass.
+Not claimed: that advisers' relief advice is wise or fun.

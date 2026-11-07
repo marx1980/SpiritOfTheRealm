@@ -35,6 +35,7 @@ const REASON: Record<string, string> = {
   "reason.hold_post": "staying at his post", "reason.win_renown": "his reputation", "reason.preserve_forces": "keeping the men alive",
   "reason.preserve_treasury": "the money in the treasury", "reason.sound_works": "keeping the works in good repair", "reason.house_standing": "his family's standing",
   "reason.risk": "the danger involved", "reason.risk_averse": "the danger involved", "reason.own_skill": "his own skill", "reason.trusts": "trust in the people involved",
+  "reason.community_eased": "easing the people's trouble", "reason.community_resents": "the people's anger at a levy",
   "reason.asked_for_help": "a request for help", "reason.as_ordered": "his orders", "reason.against_orders": "his orders", "reason.cost": "what it costs", "reason.fort_lost": "the fort that has been lost", "reason.duty": "duty",
 };
 export const reasonWords = (key: string) => REASON[key] ?? key.replace(/^reason\./, "").replace(/_/g, " ");
@@ -85,6 +86,7 @@ export function planWords(v: View, planId: string): string {
     // the captain is sent to the nearest fort, from which the attack is made (the wording matches what Do it does)
     case "advise_sortie": { const f = nearestFort(v, a.target!); return f && !captainSentTo(v, f) ? `Send the captain to ${nameOf(v, f)} to attack the raiders at ${t}` : `Attack the raiders at ${t}`; }
     case "advise_levy": return "Raise a levy";
+    case "advise_relief": return `Send relief to ${t}`;
     default: return a.kind.replace(/_/g, " ") + (t ? ` ${t}` : "");
   }
 }

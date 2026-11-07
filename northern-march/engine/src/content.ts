@@ -36,7 +36,7 @@ export interface AgentParams {
   obedience: { adaptMarginMilli: number; refuseMarginMilli: number; changedCircumstancesPermille: number; dutyMilli: number; legitimacyRulerPermille: number };
   planning: { minCandidates: number; maxCandidates: number; skillPerExtraCandidate: number };
   horizonDays: number; quietDaysToEnd: number; requestAssessDays: number; answerLearningPermille: number; wakeBudgetPerDay: Record<(typeof TIERS)[number], number>;
-  values: { manMilli: number; renownMilli: number; postMilli: number; breachPenaltyMilli: number; goodConditionMilli: number };
+  values: { manMilli: number; renownMilli: number; postMilli: number; breachPenaltyMilli: number; goodConditionMilli: number; communityMilli: number; communityFreshDays: number };
   experience: { perTaskPermille: number; capPermille: number };
   demoteAfterDays: number; recommendationTrustMin: number;
 }
@@ -113,7 +113,7 @@ export interface CommunityParams {
   trust: { reliefCrown: number; protectedCrown: number; brokenPromiseCrown: number; misconductCrown: number; levyCrown: number };
   weakness: { fortFell: number; unanswered: number; noCompany: number; lowGarrison: number; windowDays: number };
   misconduct: { dailyPermille: number; traitPermille: number; afterDays: number };
-  ladder: { petition: number; gMin: number; nMin: number; lMin: number; delay: number; withhold: number; refuse: number; support: number; downPermille: number; supportTrust: number; repetitionDays: number };
+  ladder: { petition: number; gMin: number; nMin: number; lMin: number; delay: number; withhold: number; refuse: number; support: number; downPermille: number; supportTrust: number; repetitionDays: number; regrowth: number; reminderDays: number };
   effects: { income: Record<Stance, number>; recruits: Record<Stance, number>; levy: Record<Stance, number> };
 }
 export interface CommunitiesFile { params: CommunityParams; communities: CommunityDef[]; narrators: { who: string; story: "crown" | "others" }[] }

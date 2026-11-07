@@ -81,6 +81,7 @@ export function adviceAction(v: View, r: Recommendation): PlayerAction | null {
   if (a.kind === "advise_recall" || a.kind === "advise_send_captain" || a.kind === "advise_retake") return { action: "advance", target: a.target, followed: r.author };
   if (a.kind === "advise_sortie") { const f = fortNear(v, a.target!); return !f ? null : captainSentTo(v, f) ? { action: "advance", target: f, mission: "attack", raid: a.target, followed: r.author } : { action: "advance", target: f, followed: r.author }; }
   if (a.kind === "advise_levy") return { action: "levy", followed: r.author };
+  if (a.kind === "advise_relief") return { action: "relief", target: a.target, followed: r.author };
   return null;
 }
 

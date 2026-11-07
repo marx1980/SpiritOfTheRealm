@@ -206,6 +206,7 @@ export function expect(sit: Situation, per: Perceiver, a: ActionRef): Expectatio
       break;
     }
     case "advise_levy": e.gainMilli = sit.p.levyMilli; break;
+    case "advise_relief": e.costMilli = sit.p.reliefMilli; break;
     default: throw new Error(`no expectation model for ${a.kind}`);
   }
   return e;
