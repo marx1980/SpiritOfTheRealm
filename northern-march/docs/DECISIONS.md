@@ -138,3 +138,14 @@ Sealed blocks, each used once on this calibration: 7A gates on block 140000 (1,0
 - Block 190000 (G-13, communities, 1,000 seeds per policy): 0 revolts, 0 unsupported escalations, 0 invariant violations. PASS.
 Reading: the petition rule (c) appears to have lifted delegating above the 5% edge without touching the aggressive path. Not a fun or balance claim.
 Open: H-01/H-02 human playtests (Marko deferred), G-11 re-run, override 1 and override 2 still recorded.
+
+## D-039 — Wider economy (plan Phase 7B): scope and stage 1 design (Marko, 8 Nov: "do everything, in order: goods and prices, then levy, then House control etc."; orders like grain)
+Naming: the advisers-on-communities and petition-repetition work (D-035..D-038) was called "7B" in this session by mistake; it is an extension of 7A. The plan's Phase 7B is the wider economy, built here in three stages: (1) goods and prices, (2) levy and manpower, (3) House control of resources and markets.
+Stage 1 design (additive; with nothing ordered, the realm plays as in 7A):
+- Goods: timber, iron, horses. Whole units. Stores at named places (sources: crownwood, pinegate timber; highcairn iron; thornfield horses; depots at the three forts, which start empty), daily production (horses every 3 days), caps with spill. No random draws in stores.
+- Price: one realm price per good from total stock against a target: base × (1000 + slope × (target − total)/target)/1000, clamped to [base/2, 3 × base].
+- Orders like grain, through the same intents: `requisition` moves stock between the crown's places free of coin, `purchase` (intent negotiate) buys units at today's price; both carry a `good` constraint, both limited by source stock above a reserve, both travel as convoys with the grain loss and seizure rules. Events GoodsDay, GoodsShipped, GoodsDelivered, GoodsLost.
+- First use: timber at a fort covers part of a repair. If the fort holds the timber the repair needs (1 unit per condition point restored), the coin cost falls by `coverPermille` (350) and the timber is used. Otherwise the repair is as before, so existing tuning is untouched.
+- Not in stage 1 (stated, not hidden): iron and horses have no sink yet (levy and arming in stage 2); no selling and no market towns (stage 3); advisers do not advise on goods; the page/composer has no goods affordance yet; stocks are not yet shown to the player as beliefs.
+Tests first: conservation of every store; price rises as stock falls and is clamped; purchase pays coin and delivers; requisition is free; refused when the source is below reserve; convoy loss ledger; repair discount with and without timber; scenario without goods unchanged.
+Gates: stage 1 adds no behaviour a scripted policy uses, so sealed gates are re-run once after stage 3 on fresh blocks (all of G-01..G-06, G-12, G-13, outcome shares, plus goods invariants). KI-01 hash re-recorded when the event stream changes. Fun and balance not claimed.

@@ -14,6 +14,7 @@ import { orders } from "./systems/orders.ts";
 import { agents } from "./systems/agents.ts";
 import { communities } from "./systems/communities.ts";
 import { grain } from "./systems/grain.ts";
+import { goods } from "./systems/goods.ts";
 import { makePlayer } from "./systems/player.ts";
 import { MapGraph } from "./map.ts";
 import { beliefsAbout } from "./view.ts";
@@ -77,7 +78,7 @@ export class Sim {
     this.state = initialState(cfg.content);
     this.map = new MapGraph(cfg.content);
     this.ctx = this.makeCtx();
-    for (const s of [economy, weather, threat, movement, knowledge, messenger, orders, agents, communities, grain, makePlayer((ctx, d, r) => this.decide(ctx, d, r))]) this.systems.set(s.id, s);
+    for (const s of [economy, weather, threat, movement, knowledge, messenger, orders, agents, communities, grain, goods, makePlayer((ctx, d, r) => this.decide(ctx, d, r))]) this.systems.set(s.id, s);
     this.emit("ScenarioStarted", [], [], { contentVersion: cfg.content.version, seed: cfg.seed });
     for (const s of this.systems.values()) if (!this.disabled.has(s.id)) s.start(this.ctx);
   }

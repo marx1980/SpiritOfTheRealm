@@ -51,7 +51,7 @@ export function makePlayer(decide: (ctx: Ctx, cause: number | null, reason: stri
  
           if (a.action === "requisition" || a.action === "purchase") {
             issue(ctx, ruler, to, a.action === "purchase" ? "negotiate" : "requisition", loc(a.target!), input.id, false,
-              { constraints: [{ kind: "deliverTo", textKey: a.to ?? "" }, ...(a.consult ? [{ kind: "consult", textKey: "yes" }] : [])] });
+              { constraints: [{ kind: "deliverTo", textKey: a.to ?? "" }, ...(a.good ? [{ kind: "good", textKey: a.good }] : []), ...(a.consult ? [{ kind: "consult", textKey: "yes" }] : [])] });
             continue;
           }
           issue(ctx, ruler, to, a.action, a.action === "levy" ? chr(ruler) : loc(a.target!), input.id, false,

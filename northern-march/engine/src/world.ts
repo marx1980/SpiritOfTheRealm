@@ -60,6 +60,11 @@ export interface WorldState {
   grainLedger: Record<string, { produced: number; consumed: number; spilled: number; unmet: number; lost: number; seized: number }>;
   convoys: Record<string, { id: number; from: string; to: string; sacks: number; departedAt: number; arrivesAt: number; orderId: number; how: string; consulted: boolean }>;
   nextConvoyId: number;
+  goods: Record<string, Record<string, number>>; // good -> place -> units
+  goodsLedger: Record<string, Record<string, { produced: number; spilled: number; lost: number; seized: number; used: number }>>;
+  goodsPrice: Record<string, number>;
+  goodsConvoys: Record<string, { id: number; good: string; from: string; to: string; units: number; departedAt: number; arrivesAt: number; orderId: number; how: string }>;
+  nextGoodsConvoyId: number;
   grainAsked: Record<string, number>; // place -> tick its castellan last sent for grain himself
   grainRefusedAt: Record<string, number>; // community -> tick it last refused to give grain
   grainBand: Record<string, string>;
@@ -85,7 +90,7 @@ export function initialState(c: Content): WorldState {
   return {
     treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, tiers, history: {}, agents, recommendations: {}, heard: {}, campaign: { ended: null, lastDanger: -1 }, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, sortieOpen: {}, lastStorm: {}, fallen: {}, threats: {}, routesClosed: {},
     positions, departures: {}, beliefs: {}, nextPropId: 1, reports: {}, nextReportId: 1, messengers: {}, nextMessengerId: 1,
-    orders: {}, nextOrderId: 1, advisePending: {}, dayEndDay: -1, ordersInForce: {}, issued: {}, repairs: {}, communities: initialCommunities(c), ...initialGrain(c),
+    orders: {}, nextOrderId: 1, advisePending: {}, dayEndDay: -1, ordersInForce: {}, issued: {}, repairs: {}, communities: initialCommunities(c), ...initialGrain(c), ...initialGoods(c),
   };
 }
 
@@ -96,6 +101,15 @@ export function bandOf(store: number, need: number, bandDays: readonly number[])
   const cover = Math.floor(store / need);
   const i = bandDays.findIndex((d) => cover >= d);
   return BANDS[i < 0 ? 4 : i];
+}
+function initialGoods(c: Content): Pick<WorldState, "goods" | "goodsLedger" | "goodsPrice" | "goodsConvoys" | "nextGoodsConvoyId"> {
+  const g = c.scenario.goods, out = { goods: {} as WorldState["goods"], goodsLedger: {} as WorldState["goodsLedger"], goodsPrice: {} as WorldState["goodsPrice"], goodsConvoys: {} as WorldState["goodsConvoys"], nextGoodsConvoyId: 1 };
+  for (const k of g?.kinds ?? []) { out.goods[k] = {}; out.goodsLedger[k] = {}; out.goodsPrice[k] = g!.price[k].baseMilli; }
+  for (const p of [...(g?.places ?? [])].sort((a, b) => cmp(a.location, b.location))) for (const k of g!.kinds) {
+    if (p.cap[k] === undefined) continue;
+    out.goods[k][p.location] = p.store[k] ?? 0; out.goodsLedger[k][p.location] = { produced: 0, spilled: 0, lost: 0, seized: 0, used: 0 };
+  }
+  return out;
 }
 function initialGrain(c: Content): Pick<WorldState, "grain" | "grainLedger" | "grainBand" | "harvestHit" | "convoys" | "nextConvoyId" | "grainAsked" | "grainRefusedAt"> {
   const g = c.scenario.grain, out = { grain: {} as WorldState["grain"], grainLedger: {} as WorldState["grainLedger"], grainBand: {} as WorldState["grainBand"], harvestHit: {} as WorldState["harvestHit"], convoys: {} as WorldState["convoys"], nextConvoyId: 1, grainAsked: {} as WorldState["grainAsked"], grainRefusedAt: {} as WorldState["grainRefusedAt"] };
@@ -244,7 +258,7 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   OrderCompleted: endOrder("completed"),
   OrderSuperseded: endOrder("superseded"),
   OrderAbandoned: endOrder("abandoned"),
-  RepairStarted: (s, p, e) => { s.repairs[p.location] = { mode: p.mode ?? "standard", startedAt: p.startedAt, orderId: p.orderId, work: p.work, done: 0, lastT: e.tick, men: p.men, gen: 0, restoredMilli: p.restoredMilli, startedEventId: e.id, engineer: p.engineer }; s.treasuryMilli[p.payer] -= p.costMilli; s.lastRepairStart[p.location] = e.tick; },
+  RepairStarted: (s, p, e) => { s.repairs[p.location] = { mode: p.mode ?? "standard", startedAt: p.startedAt, orderId: p.orderId, work: p.work, done: 0, lastT: e.tick, men: p.men, gen: 0, restoredMilli: p.restoredMilli, startedEventId: e.id, engineer: p.engineer }; s.treasuryMilli[p.payer] -= p.costMilli; s.lastRepairStart[p.location] = e.tick; if (p.timberUsed) { s.goods.timber[p.location] -= p.timberUsed; s.goodsLedger.timber[p.location].used += p.timberUsed; } },
   DayEndScheduled: (s, p) => { s.dayEndDay = p.day; },
   AdviceScheduled: (s, p) => { s.advisePending[p.agent] = p.day; },
   AdviceSettled: (s, p) => { s.advisePending[p.agent] = p.day; },
@@ -273,6 +287,19 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   GrainDelivered: (s, p) => { s.grain[p.to] += p.sacks - p.spilled; s.grainLedger[p.to].spilled += p.spilled; delete s.convoys[String(p.convoyId)]; },
   GrainLost: (s, p) => { s.grainLedger[p.from][p.reason === "seized" ? "seized" : "lost"] += p.sacks; delete s.convoys[String(p.convoyId)]; },
   ScarcityChanged: (s, p) => { s.grainBand[p.place] = p.to; },
+  // wider economy (D-039)
+  GoodsDay: (s, p) => {
+    for (const [place, good, produced, spilled] of p.changes as [string, string, number, number][]) { s.goods[good][place] += produced - spilled; const l = s.goodsLedger[good][place]; l.produced += produced; l.spilled += spilled; }
+    s.goodsPrice = { ...(p.prices as Record<string, number>) };
+  },
+  GoodsShipped: (s, p) => {
+    s.goods[p.good][p.from] -= p.units;
+    s.goodsConvoys[String(p.convoyId)] = { id: p.convoyId, good: p.good, from: p.from, to: p.to, units: p.units, departedAt: p.departedAt, arrivesAt: p.arrivesAt, orderId: p.orderId, how: p.how };
+    s.nextGoodsConvoyId = p.convoyId + 1;
+    if (p.costMilli) s.treasuryMilli[p.payer] -= p.costMilli;
+  },
+  GoodsDelivered: (s, p) => { s.goods[p.good][p.to] += p.units - p.spilled; s.goodsLedger[p.good][p.to].spilled += p.spilled; delete s.goodsConvoys[String(p.convoyId)]; },
+  GoodsLost: (s, p) => { s.goodsLedger[p.good][p.from][p.reason === "seized" ? "seized" : "lost"] += p.units; delete s.goodsConvoys[String(p.convoyId)]; },
   // communities (Phase 6)
   CommunityHeard: applyEffects,
   NarratorVisited: applyEffects,

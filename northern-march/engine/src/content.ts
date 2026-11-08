@@ -46,6 +46,15 @@ export interface BattleParams {
 }
 export interface GrainPlace { location: string; store: number; production: number; need: number; cap: number }
 /** Phase 7A grain: whole sacks, whole days. Raid damage at a place cuts its harvest for a while (the shortage is caused by the raids). */
+/** Wider economy (D-039): goods held in stores at named places, priced by the realm's stock, moved by orders and convoys. */
+export interface GoodsParams {
+  kinds: string[];
+  places: { location: string; store: Record<string, number>; production: Record<string, number>; everyDays?: Record<string, number>; cap: Record<string, number> }[];
+  price: Record<string, { baseMilli: number; target: number; slope: number }>;
+  buy: Record<string, { units: number; reserveUnits: number }>;
+  repair: { pointsPerUnit: number; coverPermille: number };
+  convoy: { lossPermillePerDay: number; seizurePermilleAtFull: number };
+}
 export interface GrainParams {
   places: GrainPlace[];
   harvestHitPermille: number; harvestHitDays: number;
@@ -82,6 +91,7 @@ export interface Scenario {
   interception: { location: string; by: string; permille: number }[];
   player: { repairCostMilliPerMilli: number; repairRestoreToMilli: number; repairDays: number; levyMilli: number; repairRushCostPermille: number; repairLabourWorkPermille: number; repairLabourToMilli: number; repairCompanyWorkPermille: number };
   grain?: GrainParams;
+  goods?: GoodsParams;
   scripts: Script[];
   endStates: { fortificationBreachedBelowMilli: number };
   agents: AgentParams;

@@ -16,6 +16,7 @@ import { travel } from "./movement.ts";
 import { companyAt, menAt, resyncRepair, scheduleRepairEnd } from "./repairs.ts";
 import { contribution } from "./communities.ts";
 import { startGrainOrder } from "./grain.ts";
+import { startGoodsOrder } from "./goods.ts";
 
 const oref = (id: number) => ({ kind: "order" as const, id: String(id) });
 
@@ -167,7 +168,10 @@ function process(ctx: Ctx, orderId: number, receivedId: number) {
     if (ctx.s.repairs[where]) return finish(ctx, orderId, "abandoned", ex.id, "inProgress");
     if (to - cond <= 0) return finish(ctx, orderId, "abandoned", ex.id, "notNeeded");
     if (mode !== "standard" && companyAt(ctx, where) <= 0) return finish(ctx, orderId, "abandoned", ex.id, "noCompany");
-    const costMilli = mode === "labour" ? 0 : Math.floor(((to - cond) * sc.player.repairCostMilliPerMilli * (mode === "rush" ? sc.player.repairRushCostPermille : 1000)) / 1000);
+    let costMilli = mode === "labour" ? 0 : Math.floor(((to - cond) * sc.player.repairCostMilliPerMilli * (mode === "rush" ? sc.player.repairRushCostPermille : 1000)) / 1000);
+    const gd = sc.goods, timberNeed = gd ? Math.ceil((to - cond) / gd.repair.pointsPerUnit) : 0;
+    const timberUsed = gd && costMilli > 0 && (ctx.s.goods.timber?.[where] ?? 0) >= timberNeed ? timberNeed : 0; // timber in the fort's store covers part of the bill
+    if (timberUsed) costMilli = Math.floor((costMilli * (1000 - gd!.repair.coverPermille)) / 1000);
     if (ctx.s.treasuryMilli[sc.ruler] < costMilli) return finish(ctx, orderId, "abandoned", ex.id, "funds");
     // execution quality: a skilled engineer works faster and lands closer to the target
     const eng = skill(ctx, who, "engineering");
@@ -182,7 +186,7 @@ function process(ctx: Ctx, orderId: number, receivedId: number) {
     // a full repair can fall short of its target by at most 5 points, so the walls are never worse than "sound"
     const jitter = a.kind === "repair_works" ? r.int(-Math.min(spread, 5000), 0) : r.int(-spread, Math.floor(spread / 4));
     const restoredMilli = Math.max(0, to - cond + jitter);
-    const st = ctx.emit("RepairStarted", [ex.id], [loc(where), oref(orderId)], { location: where, mode, payer: sc.ruler, costMilli, startedAt: ctx.tick, orderId, durationTicks, restoreToMilli: to,
+    const st = ctx.emit("RepairStarted", [ex.id], [loc(where), oref(orderId)], { location: where, mode, payer: sc.ruler, costMilli, timberUsed, startedAt: ctx.tick, orderId, durationTicks, restoreToMilli: to,
       work, men, restoredMilli, engineer: who });
     observeTreasury(ctx, st.id);
     scheduleRepairEnd(ctx, where);
@@ -211,7 +215,7 @@ function process(ctx: Ctx, orderId: number, receivedId: number) {
     ctx.at(ctx.tick + ticks, "communities:relief", { community: where, orderId, cause: rs.id });
     finish(ctx, orderId, "completed", rs.id);
   } else if (a.kind === "requisition" || a.kind === "purchase") {
-    startGrainOrder(ctx, orderId, a, ex.id);
+    if (o.constraints.some((c) => c.kind === "good")) startGoodsOrder(ctx, orderId, a, ex.id); else startGrainOrder(ctx, orderId, a, ex.id);
   } else if (a.kind === "march_to" && "at" in ctx.s.positions[who] && (ctx.s.positions[who] as { at: string }).at === a.target) {
     finish(ctx, orderId, "completed", ex.id);
   } else if (a.kind === "investigate") {

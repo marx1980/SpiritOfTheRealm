@@ -306,5 +306,134 @@
    "community": "greyfen",
    "actor": "varos"
   }
+ },
+ "goods": {
+  "kinds": [
+   "timber",
+   "iron",
+   "horses"
+  ],
+  "places": [
+   {
+    "location": "crownwood",
+    "store": {
+     "timber": 300
+    },
+    "production": {
+     "timber": 6
+    },
+    "cap": {
+     "timber": 600
+    }
+   },
+   {
+    "location": "pinegate",
+    "store": {
+     "timber": 120
+    },
+    "production": {
+     "timber": 3
+    },
+    "cap": {
+     "timber": 300
+    }
+   },
+   {
+    "location": "highcairn",
+    "store": {
+     "iron": 60
+    },
+    "production": {
+     "iron": 2
+    },
+    "cap": {
+     "iron": 160
+    }
+   },
+   {
+    "location": "thornfield",
+    "store": {
+     "horses": 20
+    },
+    "production": {
+     "horses": 1
+    },
+    "everyDays": {
+     "horses": 3
+    },
+    "cap": {
+     "horses": 40
+    }
+   },
+   {
+    "location": "greybridge",
+    "store": {},
+    "production": {},
+    "cap": {
+     "timber": 120,
+     "iron": 60,
+     "horses": 20
+    }
+   },
+   {
+    "location": "northwatch",
+    "store": {},
+    "production": {},
+    "cap": {
+     "timber": 120,
+     "iron": 60,
+     "horses": 20
+    }
+   },
+   {
+    "location": "eastmarch",
+    "store": {},
+    "production": {},
+    "cap": {
+     "timber": 120,
+     "iron": 60,
+     "horses": 20
+    }
+   }
+  ],
+  "price": {
+   "timber": {
+    "baseMilli": 300,
+    "target": 600,
+    "slope": 1000
+   },
+   "iron": {
+    "baseMilli": 900,
+    "target": 120,
+    "slope": 1000
+   },
+   "horses": {
+    "baseMilli": 8000,
+    "target": 40,
+    "slope": 1000
+   }
+  },
+  "buy": {
+   "timber": {
+    "units": 60,
+    "reserveUnits": 40
+   },
+   "iron": {
+    "units": 20,
+    "reserveUnits": 10
+   },
+   "horses": {
+    "units": 4,
+    "reserveUnits": 4
+   }
+  },
+  "repair": {
+   "pointsPerUnit": 1000,
+   "coverPermille": 350
+  },
+  "convoy": {
+   "lossPermillePerDay": 15,
+   "seizurePermilleAtFull": 600
+  }
  }
 }
