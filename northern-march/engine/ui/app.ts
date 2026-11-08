@@ -368,7 +368,7 @@ const repairCostKnown = (v: View, place: string, mode = "standard") => repairCos
 const MODE_TEXT: Record<string, string> = { standard: "Standard: the garrison, paid materials", rush: "Rush: pay extra, the captain's men help", labour: "Labour only: the captain's men, no cost, slower" };
 const kCoins = (n: number) => `${Math.round(n / 1000)}k`;
 /** A price per unit, as the books give it. */
-const priceK = (n: number) => String(n);
+const priceK = (n: number) => { const x = n / 100; return x < 10 ? x.toFixed(2) : x < 100 ? x.toFixed(1) : String(Math.round(x)); };
 /** Background income (holdings) minus upkeep, per day: a rough estimate Anna can see. */
 const baseNetMilli = content.scenario.economy.holdings.reduce((a, h) => a + h.dailyIncomeMilli, 0) - content.scenario.economy.dailyUpkeepMilli;
 const LOW_COINS = 30000;
@@ -442,7 +442,7 @@ function economyTab(v: View): string {
     <div class="books">${L ? `Books · ${ageTone(dayAgo(v, L.tick))}` : "Books · none yet"}</div></div>`;
   const sub = (t: string) => `<span class="dim"> ${t}</span>`;
   const markets = g ? `<div class="card"><h2>Marketplace</h2><span class="more" hidden>»</span><div class="scroll"><table><tr><th>Market</th>${g.kinds.map((k) => `<th class="n">${esc(GOOD_LABEL[k] ?? k)}${sub("buy / sell")}</th>`).join("")}${gr ? `<th class="n">Grain${sub("buy")}</th>` : ""}<th class="n">House takes</th></tr>
-    ${g.towns.map((t) => `<tr><td>${esc(name(v, t.id))}</td>${g.kinds.map((k) => { const sell = L?.town[t.id]?.[k], buy = L?.buy?.[t.id]?.[k]; return `<td class="n">${buy === undefined ? "?" : buy} / ${sell === undefined ? "?" : sell}</td>`; }).join("")}${gr ? `<td class="n">${L?.grain?.[t.id] ?? "?"}</td>` : ""}<td class="n">${t.cutPermille ? `${esc(houseName(v, t.house))} ${Math.round(t.cutPermille / 10)}%` : `${esc(houseName(v, t.house))} (–)`}</td></tr>`).join("")}</table></div></div>` : "";
+    ${g.towns.map((t) => `<tr><td>${esc(name(v, t.id))}</td>${g.kinds.map((k) => { const sell = L?.town[t.id]?.[k], buy = L?.buy?.[t.id]?.[k]; return `<td class="n">${buy === undefined ? "?" : priceK(buy)} / ${sell === undefined ? "?" : priceK(sell)}</td>`; }).join("")}${gr ? `<td class="n">${L?.grain?.[t.id] === undefined ? "?" : priceK(L.grain[t.id])}</td>` : ""}<td class="n">${t.cutPermille ? `${esc(houseName(v, t.house))} ${Math.round(t.cutPermille / 10)}%` : `${esc(houseName(v, t.house))} (–)`}</td></tr>`).join("")}</table></div></div>` : "";
   const a = f.action, problems = a ? economyProblems(v, a) : ["choose an order"];
   const cost = a && a.action === "purchase" ? purchaseCostKnown(v, RULES, a) : undefined, coins = coinsKnown(v);
   if (cost !== undefined && coins !== undefined && cost > coins) problems.push(`not enough coins: it costs about ${kCoins(cost)} and you have about ${kCoins(coins)}`);
