@@ -460,7 +460,7 @@ function economyTab(v: View): string {
     const mk = e.act === "buy" ? a.target! : a.to!, place = e.act === "buy" ? a.to! : a.target!;
     const price = e.act === "buy" ? buyKnown(v, mk, a.good) : a.good ? v.ledger?.town?.[mk]?.[a.good] : undefined, days = roadDays(mk, place), n = a.units ?? e.qty;
     if (price === undefined && days === undefined) return "";
-    const sum = price === undefined ? "" : `${e.act === "buy" ? "You pay" : "You receive"} ${priceK(price * n)} (${n} × ${priceK(price)})`;
+    const sum = price === undefined ? "" : `${e.act === "buy" ? "You pay" : "You receive"} ${priceK(price * n)}`;
     const when = days === undefined ? "" : `${e.act === "buy" ? "delivered in" : "paid after"} about ${dayTone(days)}`;
     return [sum, when].filter(Boolean).join(", ");
   })() : "";
