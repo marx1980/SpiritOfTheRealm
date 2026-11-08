@@ -246,3 +246,11 @@ Marko's brief: no "Move goods"; buy at a market for a place and the goods come b
 - Delays. `convoy.delayPermillePerDay` 40 and `delayDays` 1-3 on market purchases, sales and grain purchases: a caravan may lose days to weather and flooded roads (a general draw; no flood system exists). Loss and seizure draws are as before, now also checking raiders at the market end.
 - Page. Marketplace table (buy / sell per good, grain price, House takes), Supplies, order form (Buy / Sell / Take / Recruit), Prices and Houses tiles removed.
 - Not claimed: that the economy is balanced or fun; the delay and grain price parameters are first values, not calibrated.
+
+## D-052 — Marketplace: gate plan (written before any run on these blocks)
+Same protocol as D-042/D-046, fresh blocks, once each, calibration changed by D-051:
+- 7A gates (G-03/G-04/G-05, outcome shares, invariants, 600 link seeds): block 260000, 1,000 seeds. Overrides 1-3 stand.
+- G-12 advisers: block 270000. G-13 communities: block 280000.
+- Tune seeds (not sealed): G-06 knife-edge (1-150), G-01 node and bun, G-02, Phase 1 invariant batch, lab quick playtest.
+- Equivalence to the previous commit is not applicable: the rebuild changes behaviour (new event fields, delay draws, grain price, advice that buys at markets).
+- If a gate that passed in D-050 now fails: report and stop, no tuning, no band moved. AMBER gets one extension on a fresh block, then counts as FAIL. Fun and balance are not claimed.
