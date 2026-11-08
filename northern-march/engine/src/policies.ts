@@ -6,7 +6,7 @@ import { captainSentTo, planOf } from "./presentation/phrasing.ts";
 
 export type PolicyId = "passive" | "delegating" | "aggressive" | "cautious" | "random-valid" | "follow-best-adviser" | "follow-worst-adviser" | "external" | "replay" | `follow:${string}`;
 /** `mission` (for sending a captain): defend the fort (default), or scout / attack the raiders at `raid`. */
-export interface PlayerAction { action: "repair" | "levy" | "advance" | "travel" | "order" | "relief" | "requisition" | "purchase"; target?: string; to?: string; consult?: boolean; good?: string; order?: OrderDraft; decision?: number; followed?: string; mission?: "defend" | "scout" | "attack"; raid?: string; repairMode?: "standard" | "rush" | "labour" }
+export interface PlayerAction { action: "repair" | "levy" | "advance" | "travel" | "order" | "relief" | "requisition" | "purchase"; target?: string; to?: string; consult?: boolean; good?: string; muster?: boolean; order?: OrderDraft; decision?: number; followed?: string; mission?: "defend" | "scout" | "attack"; raid?: string; repairMode?: "standard" | "rush" | "labour" }
 export type PolicyFn = (v: View, rng: () => Rng) => PlayerAction[];
 
 const DAY = 86400;

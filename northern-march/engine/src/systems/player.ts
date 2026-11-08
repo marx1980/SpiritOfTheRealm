@@ -33,7 +33,7 @@ export function makePlayer(decide: (ctx: Ctx, cause: number | null, reason: stri
         for (const a of decide(ctx, why, reason ?? "report")) {
           const input = ctx.emit("PlayerInput", why ? [why] : [], [chr(ruler)], { player: ruler, action: a.action, target: a.target ?? null, decision: a.decision!,
             ...(a.order ? { order: a.order } : {}), ...(a.followed ? { followed: a.followed } : {}),
-            ...(a.mission ? { mission: a.mission } : {}), ...(a.to ? { to: a.to } : {}), ...(a.consult ? { consult: true } : {}), ...(a.raid ? { raid: a.raid } : {}), ...(a.repairMode ? { repairMode: a.repairMode } : {}) });
+            ...(a.mission ? { mission: a.mission } : {}), ...(a.to ? { to: a.to } : {}), ...(a.consult ? { consult: true } : {}), ...(a.muster ? { muster: true } : {}), ...(a.raid ? { raid: a.raid } : {}), ...(a.repairMode ? { repairMode: a.repairMode } : {}) });
           if (a.action === "travel") { travel(ctx, ruler, a.target!, "rider", false, input.id); continue; }
           if (a.action === "order") {
             const d = a.order!;
@@ -49,6 +49,10 @@ export function makePlayer(decide: (ctx: Ctx, cause: number | null, reason: stri
             continue;
           }
  
+          if (a.action === "levy" && a.muster) {
+            issue(ctx, ruler, to, "levy", loc(a.target!), input.id, false, { constraints: [{ kind: "men", textKey: "yes" }, { kind: "deliverTo", textKey: a.to ?? "" }] });
+            continue;
+          }
           if (a.action === "requisition" || a.action === "purchase") {
             issue(ctx, ruler, to, a.action === "purchase" ? "negotiate" : "requisition", loc(a.target!), input.id, false,
               { constraints: [{ kind: "deliverTo", textKey: a.to ?? "" }, ...(a.good ? [{ kind: "good", textKey: a.good }] : []), ...(a.consult ? [{ kind: "consult", textKey: "yes" }] : [])] });

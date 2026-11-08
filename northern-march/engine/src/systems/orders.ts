@@ -17,6 +17,7 @@ import { companyAt, menAt, resyncRepair, scheduleRepairEnd } from "./repairs.ts"
 import { contribution } from "./communities.ts";
 import { startGrainOrder } from "./grain.ts";
 import { startGoodsOrder } from "./goods.ts";
+import { startMuster } from "./manpower.ts";
 
 const oref = (id: number) => ({ kind: "order" as const, id: String(id) });
 
@@ -190,6 +191,8 @@ function process(ctx: Ctx, orderId: number, receivedId: number) {
       work, men, restoredMilli, engineer: who });
     observeTreasury(ctx, st.id);
     scheduleRepairEnd(ctx, where);
+  } else if (a.kind === "levy" && o.constraints.some((c) => c.kind === "men")) {
+    startMuster(ctx, orderId, ex.id);
   } else if (a.kind === "levy" || a.kind === "half_levy") {
     const asked = a.kind === "levy" ? sc.player.levyMilli : Math.floor(sc.player.levyMilli / 2);
     // each community pays its share as far as its stance allows; one that refuses pays nothing (Phase 6)

@@ -65,6 +65,10 @@ export interface WorldState {
   goodsPrice: Record<string, number>;
   goodsConvoys: Record<string, { id: number; good: string; from: string; to: string; units: number; departedAt: number; arrivesAt: number; orderId: number; how: string }>;
   nextGoodsConvoyId: number;
+  hands: Record<string, number>; // men still at home and available to a muster
+  musterAway: Record<string, number>;
+  musters: Record<string, { id: number; community: string; fort: string; men: number; mounted: number; until: number; arrived: boolean }>;
+  nextMusterId: number;
   grainAsked: Record<string, number>; // place -> tick its castellan last sent for grain himself
   grainRefusedAt: Record<string, number>; // community -> tick it last refused to give grain
   grainBand: Record<string, string>;
@@ -90,7 +94,7 @@ export function initialState(c: Content): WorldState {
   return {
     treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, tiers, history: {}, agents, recommendations: {}, heard: {}, campaign: { ended: null, lastDanger: -1 }, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, sortieOpen: {}, lastStorm: {}, fallen: {}, threats: {}, routesClosed: {},
     positions, departures: {}, beliefs: {}, nextPropId: 1, reports: {}, nextReportId: 1, messengers: {}, nextMessengerId: 1,
-    orders: {}, nextOrderId: 1, advisePending: {}, dayEndDay: -1, ordersInForce: {}, issued: {}, repairs: {}, communities: initialCommunities(c), ...initialGrain(c), ...initialGoods(c),
+    orders: {}, nextOrderId: 1, advisePending: {}, dayEndDay: -1, ordersInForce: {}, issued: {}, repairs: {}, communities: initialCommunities(c), ...initialGrain(c), ...initialGoods(c), hands: Object.fromEntries(c.communities.communities.map((x) => [x.id, x.hands ?? 0])), musterAway: {}, musters: {}, nextMusterId: 1,
   };
 }
 
@@ -180,7 +184,7 @@ const capture = (s: WorldState, p: P, kind: "report" | "order", e: SimEvent) => 
 export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void> = {
   ScenarioStarted: noop,
   TreasuryCollected: (s, p) => { s.treasuryMilli[p.holder] = (s.treasuryMilli[p.holder] ?? 0) + p.amountMilli; },
-  UpkeepPaid: (s, p) => { s.treasuryMilli[p.holder] -= p.amountMilli; },
+  UpkeepPaid: (s, p) => { s.treasuryMilli[p.holder] -= p.amountMilli; }, // includes any muster wages (p.musterMen)
   GarrisonRecovered: (s, p) => { for (const [loc, n] of p.changes as [string, number][]) { const f = s.fortifications[loc]; f.garrison = Math.min(f.establishment, f.garrison + n); } },
   CompanyRecovered: (s, p) => { for (const [who, n] of p.changes as [string, number][]) s.troops[who] += n; },
   FortificationsWeathered: (s, p, e) => {
@@ -287,6 +291,20 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   GrainDelivered: (s, p) => { s.grain[p.to] += p.sacks - p.spilled; s.grainLedger[p.to].spilled += p.spilled; delete s.convoys[String(p.convoyId)]; },
   GrainLost: (s, p) => { s.grainLedger[p.from][p.reason === "seized" ? "seized" : "lost"] += p.sacks; delete s.convoys[String(p.convoyId)]; },
   ScarcityChanged: (s, p) => { s.grainBand[p.place] = p.to; },
+  // levy and manpower (D-040)
+  MusterCalled: (s, p) => {
+    s.hands[p.community] -= p.men; s.musterAway[p.community] = (s.musterAway[p.community] ?? 0) + p.men;
+    if (p.ironUsed) { s.goods.iron[p.fort] -= p.ironUsed; s.goodsLedger.iron[p.fort].used += p.ironUsed; }
+    if (p.mounted) { s.goods.horses[p.fort] -= p.mounted; s.goodsLedger.horses[p.fort].used += p.mounted; }
+    s.musters[String(p.musterId)] = { id: p.musterId, community: p.community, fort: p.fort, men: p.men, mounted: p.mounted, until: p.until, arrived: false };
+    s.nextMusterId = p.musterId + 1;
+  },
+  MusterArrived: (s, p) => { const m = s.musters[String(p.musterId)]; if (m) { m.arrived = true; s.fortifications[m.fort].garrison += m.men + m.mounted; } },
+  MusterEnded: (s, p) => {
+    const m = s.musters[String(p.musterId)]; if (!m) return;
+    const f = s.fortifications[m.fort], surplus = Math.min(m.arrived ? m.men + m.mounted : 0, Math.max(0, f.garrison - f.establishment));
+    f.garrison -= surplus; s.hands[m.community] += m.men; s.musterAway[m.community] -= m.men; delete s.musters[String(p.musterId)];
+  },
   // wider economy (D-039)
   GoodsDay: (s, p) => {
     for (const [place, good, produced, spilled] of p.changes as [string, string, number, number][]) { s.goods[good][place] += produced - spilled; const l = s.goodsLedger[good][place]; l.produced += produced; l.spilled += spilled; }

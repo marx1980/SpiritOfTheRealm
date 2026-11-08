@@ -1,328 +1,332 @@
 {
-  "params": {
-    "rumourDays": 2,
-    "triggerDays": 10,
-    "memoryCap": 16,
-    "materialRecoveryPerDay": 1,
-    "raidMaterialAtFull": 6,
-    "levyMaterial": 40,
-    "reliefMaterial": 120,
-    "reliefMilli": 15000,
-    "misconductMaterial": 15,
-    "grievance": {
-      "raidAtFull": 30,
-      "levy": 160,
-      "brokenPromise": 300,
-      "misconduct": 120,
-      "decayPermillePerDay": 12,
-      "dropBelow": 10
-    },
-    "context": {
-      "underThreatPermille": 2000,
-      "poorBelow": 400,
-      "poorPermille": 1500,
-      "calmPermille": 700
-    },
-    "remedy": {
-      "sortieWonPermille": 400,
-      "fortRetakenPermille": 500,
-      "reliefPermille": 450,
-      "reliefPromisePermille": 150,
-      "companyGoneDecayPermille": 3000
-    },
-    "protectedDays": 7,
-    "narrative": {
-      "ratePermillePerDay": 40,
-      "accessHours": 26,
-      "trustFloor": 400,
-      "courtHours": 50,
-      "trustPerDay": 45,
-      "stayDays": 14
-    },
-    "trust": {
-      "reliefCrown": 80,
-      "protectedCrown": 40,
-      "brokenPromiseCrown": -250,
-      "misconductCrown": -30,
-      "levyCrown": -40
-    },
-    "weakness": {
-      "fortFell": 250,
-      "unanswered": 150,
-      "noCompany": 100,
-      "lowGarrison": 100,
-      "windowDays": 60
-    },
-    "misconduct": {
-      "dailyPermille": 30,
-      "traitPermille": 1500,
-      "afterDays": 3
-    },
-    "ladder": {
-      "petition": 120,
-      "gMin": 250,
-      "nMin": 550,
-      "lMin": 450,
-      "delay": 120,
-      "withhold": 220,
-      "refuse": 320,
-      "support": 340,
-      "downPermille": 800,
-      "supportTrust": 550,
-      "repetitionDays": 30,
-      "regrowth": 100,
-      "reminderDays": 90
-    },
-    "effects": {
-      "income": {
-        "cooperate": 1000,
-        "petition": 1000,
-        "delay": 500,
-        "withhold": 0,
-        "refuse": 0,
-        "support": 0
-      },
-      "recruits": {
-        "cooperate": 1000,
-        "petition": 1000,
-        "delay": 500,
-        "withhold": 0,
-        "refuse": 0,
-        "support": 0
-      },
-      "levy": {
-        "cooperate": 1000,
-        "petition": 1000,
-        "delay": 1000,
-        "withhold": 500,
-        "refuse": 0,
-        "support": 0
-      }
-    }
+ "params": {
+  "rumourDays": 2,
+  "triggerDays": 10,
+  "memoryCap": 16,
+  "materialRecoveryPerDay": 1,
+  "raidMaterialAtFull": 6,
+  "levyMaterial": 40,
+  "reliefMaterial": 120,
+  "reliefMilli": 15000,
+  "misconductMaterial": 15,
+  "grievance": {
+   "raidAtFull": 30,
+   "levy": 160,
+   "brokenPromise": 300,
+   "misconduct": 120,
+   "decayPermillePerDay": 12,
+   "dropBelow": 10
   },
-  "communities": [
+  "context": {
+   "underThreatPermille": 2000,
+   "poorBelow": 400,
+   "poorPermille": 1500,
+   "calmPermille": 700
+  },
+  "remedy": {
+   "sortieWonPermille": 400,
+   "fortRetakenPermille": 500,
+   "reliefPermille": 450,
+   "reliefPromisePermille": 150,
+   "companyGoneDecayPermille": 3000
+  },
+  "protectedDays": 7,
+  "narrative": {
+   "ratePermillePerDay": 40,
+   "accessHours": 26,
+   "trustFloor": 400,
+   "courtHours": 50,
+   "trustPerDay": 45,
+   "stayDays": 14
+  },
+  "trust": {
+   "reliefCrown": 80,
+   "protectedCrown": 40,
+   "brokenPromiseCrown": -250,
+   "misconductCrown": -30,
+   "levyCrown": -40
+  },
+  "weakness": {
+   "fortFell": 250,
+   "unanswered": 150,
+   "noCompany": 100,
+   "lowGarrison": 100,
+   "windowDays": 60
+  },
+  "misconduct": {
+   "dailyPermille": 30,
+   "traitPermille": 1500,
+   "afterDays": 3
+  },
+  "ladder": {
+   "petition": 120,
+   "gMin": 250,
+   "nMin": 550,
+   "lMin": 450,
+   "delay": 120,
+   "withhold": 220,
+   "refuse": 320,
+   "support": 340,
+   "downPermille": 800,
+   "supportTrust": 550,
+   "repetitionDays": 30,
+   "regrowth": 100,
+   "reminderDays": 90
+  },
+  "effects": {
+   "income": {
+    "cooperate": 1000,
+    "petition": 1000,
+    "delay": 500,
+    "withhold": 0,
+    "refuse": 0,
+    "support": 0
+   },
+   "recruits": {
+    "cooperate": 1000,
+    "petition": 1000,
+    "delay": 500,
+    "withhold": 0,
+    "refuse": 0,
+    "support": 0
+   },
+   "levy": {
+    "cooperate": 1000,
+    "petition": 1000,
+    "delay": 1000,
+    "withhold": 500,
+    "refuse": 0,
+    "support": 0
+   }
+  }
+ },
+ "communities": [
+  {
+   "id": "northwatch",
+   "name": "Northwatch townsfolk",
+   "cohorts": [
     {
-      "id": "northwatch",
-      "name": "Northwatch townsfolk",
-      "cohorts": [
-        {
-          "id": "soldiers_kin",
-          "sharePermille": 400,
-          "weights": {
-            "unprotected": 1300,
-            "levy": 800,
-            "broken_promise": 1000,
-            "misconduct": 900
-          }
-        },
-        {
-          "id": "craftsmen",
-          "sharePermille": 350,
-          "weights": {
-            "unprotected": 1000,
-            "levy": 1100,
-            "broken_promise": 1000,
-            "misconduct": 1100
-          }
-        },
-        {
-          "id": "farmers",
-          "sharePermille": 250,
-          "weights": {
-            "unprotected": 1100,
-            "levy": 1200,
-            "broken_promise": 1000,
-            "misconduct": 1200
-          }
-        }
-      ],
-      "material": 650,
-      "cohesion": 600,
-      "resources": 450,
-      "expectedBase": 200,
-      "leader": null,
-      "reporter": "bren",
-      "exposedTo": [
-        "blackwood"
-      ],
-      "levySharePermille": 0,
-      "recruitsFor": "northwatch",
-      "trust": {
-        "crown": 700,
-        "bren": 750,
-        "varos": 250
-      },
-      "memories": []
+     "id": "soldiers_kin",
+     "sharePermille": 400,
+     "weights": {
+      "unprotected": 1300,
+      "levy": 800,
+      "broken_promise": 1000,
+      "misconduct": 900
+     }
     },
     {
-      "id": "greyfen",
-      "name": "Greyfen villagers",
-      "cohorts": [
-        {
-          "id": "marsh_farmers",
-          "sharePermille": 550,
-          "weights": {
-            "unprotected": 1100,
-            "levy": 1200,
-            "broken_promise": 1200,
-            "misconduct": 1000
-          }
-        },
-        {
-          "id": "fishers",
-          "sharePermille": 300,
-          "weights": {
-            "unprotected": 1000,
-            "levy": 1000,
-            "broken_promise": 1100,
-            "misconduct": 1000
-          }
-        },
-        {
-          "id": "guides",
-          "sharePermille": 150,
-          "weights": {
-            "unprotected": 900,
-            "levy": 800,
-            "broken_promise": 1000,
-            "misconduct": 1100
-          }
-        }
-      ],
-      "material": 500,
-      "cohesion": 750,
-      "resources": 500,
-      "expectedBase": 250,
-      "leader": {
-        "id": "mara",
-        "trust": 800
-      },
-      "reporter": "bren",
-      "exposedTo": [
-        "blackwood"
-      ],
-      "levySharePermille": 200,
-      "incomeFrom": "greyfen",
-      "trust": {
-        "crown": 500,
-        "bren": 550,
-        "mara": 800,
-        "varos": 450
-      },
-      "memories": [
-        {
-          "kind": "promise",
-          "actor": "crown",
-          "about": "consult_before_levy",
-          "weight": 600
-        }
-      ],
-      "supportAt": 480
+     "id": "craftsmen",
+     "sharePermille": 350,
+     "weights": {
+      "unprotected": 1000,
+      "levy": 1100,
+      "broken_promise": 1000,
+      "misconduct": 1100
+     }
     },
     {
-      "id": "eastmarch",
-      "name": "Eastmarch townsfolk",
-      "cohorts": [
-        {
-          "id": "keep_tenants",
-          "sharePermille": 500,
-          "weights": {
-            "unprotected": 1000,
-            "levy": 1100,
-            "broken_promise": 1000,
-            "misconduct": 1000
-          }
-        },
-        {
-          "id": "traders",
-          "sharePermille": 500,
-          "weights": {
-            "unprotected": 900,
-            "levy": 1300,
-            "broken_promise": 1000,
-            "misconduct": 1100
-          }
-        }
-      ],
-      "material": 700,
-      "cohesion": 650,
-      "resources": 650,
-      "expectedBase": 300,
-      "leader": {
-        "id": "varos",
-        "trust": 700
-      },
-      "reporter": "varos",
-      "exposedTo": [
-        "stonewood"
-      ],
-      "levySharePermille": 200,
-      "incomeFrom": "eastmarch",
-      "trust": {
-        "crown": 450,
-        "varos": 750
-      },
-      "memories": []
-    },
-    {
-      "id": "coldmere",
-      "name": "Coldmere marsh folk",
-      "cohorts": [
-        {
-          "id": "reed_cutters",
-          "sharePermille": 600,
-          "weights": {
-            "unprotected": 1100,
-            "levy": 1200,
-            "broken_promise": 1000,
-            "misconduct": 1000
-          }
-        },
-        {
-          "id": "guides",
-          "sharePermille": 400,
-          "weights": {
-            "unprotected": 1000,
-            "levy": 900,
-            "broken_promise": 1000,
-            "misconduct": 1000
-          }
-        }
-      ],
-      "material": 450,
-      "cohesion": 500,
-      "resources": 350,
-      "expectedBase": 200,
-      "leader": {
-        "id": "wenna",
-        "trust": 500
-      },
-      "reporter": "bren",
-      "exposedTo": [
-        "blackwood"
-      ],
-      "levySharePermille": 100,
-      "trust": {
-        "crown": 550,
-        "wenna": 600,
-        "mara": 650,
-        "varos": 560
-      },
-      "memories": []
+     "id": "farmers",
+     "sharePermille": 250,
+     "weights": {
+      "unprotected": 1100,
+      "levy": 1200,
+      "broken_promise": 1000,
+      "misconduct": 1200
+     }
     }
-  ],
-  "narrators": [
+   ],
+   "material": 650,
+   "cohesion": 600,
+   "resources": 450,
+   "expectedBase": 200,
+   "leader": null,
+   "reporter": "bren",
+   "exposedTo": [
+    "blackwood"
+   ],
+   "levySharePermille": 0,
+   "recruitsFor": "northwatch",
+   "trust": {
+    "crown": 700,
+    "bren": 750,
+    "varos": 250
+   },
+   "memories": [],
+   "hands": 300
+  },
+  {
+   "id": "greyfen",
+   "name": "Greyfen villagers",
+   "cohorts": [
     {
-      "who": "varos",
-      "story": "crown"
+     "id": "marsh_farmers",
+     "sharePermille": 550,
+     "weights": {
+      "unprotected": 1100,
+      "levy": 1200,
+      "broken_promise": 1200,
+      "misconduct": 1000
+     }
     },
     {
-      "who": "bren",
-      "story": "others"
+     "id": "fishers",
+     "sharePermille": 300,
+     "weights": {
+      "unprotected": 1000,
+      "levy": 1000,
+      "broken_promise": 1100,
+      "misconduct": 1000
+     }
     },
     {
-      "who": "anna",
-      "story": "others"
+     "id": "guides",
+     "sharePermille": 150,
+     "weights": {
+      "unprotected": 900,
+      "levy": 800,
+      "broken_promise": 1000,
+      "misconduct": 1100
+     }
     }
-  ]
+   ],
+   "material": 500,
+   "cohesion": 750,
+   "resources": 500,
+   "expectedBase": 250,
+   "leader": {
+    "id": "mara",
+    "trust": 800
+   },
+   "reporter": "bren",
+   "exposedTo": [
+    "blackwood"
+   ],
+   "levySharePermille": 200,
+   "incomeFrom": "greyfen",
+   "trust": {
+    "crown": 500,
+    "bren": 550,
+    "mara": 800,
+    "varos": 450
+   },
+   "memories": [
+    {
+     "kind": "promise",
+     "actor": "crown",
+     "about": "consult_before_levy",
+     "weight": 600
+    }
+   ],
+   "supportAt": 480,
+   "hands": 220
+  },
+  {
+   "id": "eastmarch",
+   "name": "Eastmarch townsfolk",
+   "cohorts": [
+    {
+     "id": "keep_tenants",
+     "sharePermille": 500,
+     "weights": {
+      "unprotected": 1000,
+      "levy": 1100,
+      "broken_promise": 1000,
+      "misconduct": 1000
+     }
+    },
+    {
+     "id": "traders",
+     "sharePermille": 500,
+     "weights": {
+      "unprotected": 900,
+      "levy": 1300,
+      "broken_promise": 1000,
+      "misconduct": 1100
+     }
+    }
+   ],
+   "material": 700,
+   "cohesion": 650,
+   "resources": 650,
+   "expectedBase": 300,
+   "leader": {
+    "id": "varos",
+    "trust": 700
+   },
+   "reporter": "varos",
+   "exposedTo": [
+    "stonewood"
+   ],
+   "levySharePermille": 200,
+   "incomeFrom": "eastmarch",
+   "trust": {
+    "crown": 450,
+    "varos": 750
+   },
+   "memories": [],
+   "hands": 260
+  },
+  {
+   "id": "coldmere",
+   "name": "Coldmere marsh folk",
+   "cohorts": [
+    {
+     "id": "reed_cutters",
+     "sharePermille": 600,
+     "weights": {
+      "unprotected": 1100,
+      "levy": 1200,
+      "broken_promise": 1000,
+      "misconduct": 1000
+     }
+    },
+    {
+     "id": "guides",
+     "sharePermille": 400,
+     "weights": {
+      "unprotected": 1000,
+      "levy": 900,
+      "broken_promise": 1000,
+      "misconduct": 1000
+     }
+    }
+   ],
+   "material": 450,
+   "cohesion": 500,
+   "resources": 350,
+   "expectedBase": 200,
+   "leader": {
+    "id": "wenna",
+    "trust": 500
+   },
+   "reporter": "bren",
+   "exposedTo": [
+    "blackwood"
+   ],
+   "levySharePermille": 100,
+   "trust": {
+    "crown": 550,
+    "wenna": 600,
+    "mara": 650,
+    "varos": 560
+   },
+   "memories": [],
+   "hands": 120
+  }
+ ],
+ "narrators": [
+  {
+   "who": "varos",
+   "story": "crown"
+  },
+  {
+   "who": "bren",
+   "story": "others"
+  },
+  {
+   "who": "anna",
+   "story": "others"
+  }
+ ]
 }

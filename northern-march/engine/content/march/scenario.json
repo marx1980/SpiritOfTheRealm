@@ -435,5 +435,15 @@
    "lossPermillePerDay": 15,
    "seizurePermilleAtFull": 600
   }
+ },
+ "manpower": {
+  "musterMen": 40,
+  "ironPerMan": 1,
+  "mountedPermille": 250,
+  "serviceDays": 60,
+  "wageMilli": 80,
+  "handsReservePermille": 300,
+  "harvestPermille": 700,
+  "grievanceAtFullPermille": 2000
  }
 }

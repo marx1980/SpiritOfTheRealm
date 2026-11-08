@@ -78,7 +78,8 @@ export const economy: System = {
       }
       // a captain with a company who is away from his home town is a cost to the crown
       const away = awayCaptains(ctx).length;
-      const up = ctx.emit("UpkeepPaid", [], [chr(sc.ruler)], { holder: sc.ruler, amountMilli: sc.economy.dailyUpkeepMilli + away * sc.economy.captainAwayMilli, awayCaptains: away });
+      const wages = (() => { const mp = sc.manpower, men = Object.values(ctx.s.musters).reduce((n, m) => n + m.men, 0); return { men, milli: mp ? men * mp.wageMilli : 0 }; })();
+      const up = ctx.emit("UpkeepPaid", [], [chr(sc.ruler)], { holder: sc.ruler, amountMilli: sc.economy.dailyUpkeepMilli + away * sc.economy.captainAwayMilli + wages.milli, awayCaptains: away, ...(wages.men ? { musterMen: wages.men } : {}) });
       observeTreasury(ctx, up.id);
       // Garrisons refill by 2% of their establishment (at least one man) a day, up to that establishment.
       const gains = Object.keys(ctx.s.fortifications).sort(cmp).flatMap((f): [string, number][] => {

@@ -85,7 +85,8 @@ export const grain: System = {
       const after: Record<string, number> = {};
       for (const p of [...g.places].sort((a, b) => (a.location < b.location ? -1 : 1))) {
         const hit = ctx.s.harvestHit[p.location], cut = hit && hit.until > ctx.tick ? hit.permille : 0;
-        const produced = Math.floor((p.production * (1000 - cut)) / 1000);
+        const raw = Math.floor((p.production * (1000 - cut)) / 1000), mp = ctx.content.scenario.manpower, gone = ctx.s.musterAway[p.location] ?? 0, base = ctx.content.communities.communities.find((x) => x.id === p.location)?.hands ?? 0;
+        const produced = gone > 0 && mp && base > 0 ? Math.floor((raw * (1000 - Math.min(1000, Math.floor((mp.harvestPermille * gone) / base)))) / 1000) : raw; // the men who are away are not at the harvest
         const have = ctx.s.grain[p.location] + produced;
         const consumed = Math.min(have, p.need), spilled = Math.max(0, have - consumed - p.cap);
         changes.push([p.location, produced, consumed, spilled, p.need - consumed]);

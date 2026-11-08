@@ -4,7 +4,7 @@
 export const EVENT_SCHEMA_VERSION = 3; // v3 (Phase 3): agents, DecisionTrace, obedience payloads; v2 (Phase 2): B2/B5 payloads
 
 export type Domain = "military" | "economic" | "political" | "social" | "environment" | "magic" | "info";
-export type SystemId = "core" | "economy" | "weather" | "threat" | "movement" | "knowledge" | "messenger" | "orders" | "player" | "advice" | "agents" | "battle" | "communities" | "grain" | "goods";
+export type SystemId = "core" | "economy" | "weather" | "threat" | "movement" | "knowledge" | "messenger" | "orders" | "player" | "advice" | "agents" | "battle" | "communities" | "grain" | "goods" | "manpower";
 export const ABLATABLE: readonly SystemId[] = ["economy", "weather", "threat", "messenger", "communities"];
 
 export interface SubjectRef {
@@ -117,6 +117,9 @@ export const EVENT_TYPES: Readonly<Record<string, EventTypeDef>> = Object.freeze
   GoodsShipped: T("goods", "economic", 2),
   GoodsDelivered: T("goods", "economic", 2),
   GoodsLost: T("goods", "economic", 2),
+  MusterCalled: T("manpower", "military", 2),
+  MusterArrived: T("manpower", "military", 2),
+  MusterEnded: T("manpower", "military", 2),
   GrainRefused: T("grain", "political", 2), // the people whose grain it is say no
   GrainAsked: T("grain", "economic", 1), // a castellan decides to send for grain himself
   ScarcityChanged: T("grain", "economic", 2),

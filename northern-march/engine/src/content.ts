@@ -55,6 +55,8 @@ export interface GoodsParams {
   repair: { pointsPerUnit: number; coverPermille: number };
   convoy: { lossPermillePerDay: number; seizurePermilleAtFull: number };
 }
+/** Wider economy, stage 2 (D-040): men called from a community's hands, armed from a fort's iron, paid for a season. */
+export interface ManpowerParams { musterMen: number; ironPerMan: number; mountedPermille: number; serviceDays: number; wageMilli: number; handsReservePermille: number; harvestPermille: number; grievanceAtFullPermille: number }
 export interface GrainParams {
   places: GrainPlace[];
   harvestHitPermille: number; harvestHitDays: number;
@@ -92,6 +94,7 @@ export interface Scenario {
   player: { repairCostMilliPerMilli: number; repairRestoreToMilli: number; repairDays: number; levyMilli: number; repairRushCostPermille: number; repairLabourWorkPermille: number; repairLabourToMilli: number; repairCompanyWorkPermille: number };
   grain?: GrainParams;
   goods?: GoodsParams;
+  manpower?: ManpowerParams;
   scripts: Script[];
   endStates: { fortificationBreachedBelowMilli: number };
   agents: AgentParams;
@@ -109,6 +112,8 @@ export interface CommunityDef {
   material: number; cohesion: number; resources: number; expectedBase: number;
   /** Weight of grievance at which this community would rally to a named actor, where it differs from the ladder's. */
   supportAt?: number;
+  /** Men of fighting age who can be called to a muster. */
+  hands?: number;
   leader: { id: string; trust: number } | null; reporter: string; exposedTo: string[]; levySharePermille: number; incomeFrom?: string; recruitsFor?: string;
   trust: Record<string, number>; memories: { kind: string; actor: string; about?: string; weight: number }[];
 }

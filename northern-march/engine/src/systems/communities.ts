@@ -34,6 +34,7 @@ function placeOf(e: SimEvent): string | null {
     case "ReliefDelivered": case "TroopMisconduct": return p.community as string;
     case "GrainShipped": return p.from as string;
     case "GrainDelivered": return p.to as string;
+    case "MusterCalled": return p.community as string;
     default: return null;
   }
 }
@@ -162,6 +163,15 @@ function effectsOf(ctx: Ctx, id: string, type: string, p: Record<string, any>, h
         out.trust.push(["crown", pr.trust.brokenPromiseCrown]);
         out.breaks = "consult_before_levy";
       }
+      return out;
+    }
+    case "MusterCalled": { // men taken from the village are a levy of another kind: the more of its hands, the greater the grievance
+      out.memory = { kind: "mustered", actor: "crown", at: p.community, weight: p.community === id ? 600 : 150 };
+      if (p.community !== id) return out;
+      const share = scale(p.sharePermille, ctx.content.scenario.manpower!.grievanceAtFullPermille);
+      out.grievances = [{ kind: "levy", delta: scale(scale(scale(g.levy, context(ctx, c, d)), weight(d, "levy")), share), blameCrown: 900 }];
+      out.material = -scale(pr.levyMaterial, share);
+      out.trust = [["crown", scale(pr.trust.levyCrown, share)]];
       return out;
     }
     case "GrainDelivered": {
@@ -388,7 +398,7 @@ function audience(ctx: Ctx, e: SimEvent): { id: string; delay: number; how: "wit
   return out;
 }
 
-const HEARD = new Set(["RaidDamage", "FortFell", "FortRetaken", "SortieResolved", "LevyRaised", "ReliefDelivered", "TroopMisconduct", "Arrived", "GrainShipped", "GrainDelivered"]);
+const HEARD = new Set(["RaidDamage", "FortFell", "FortRetaken", "SortieResolved", "LevyRaised", "ReliefDelivered", "TroopMisconduct", "Arrived", "GrainShipped", "GrainDelivered", "MusterCalled"]);
 
 export const communities: System = {
   id: "communities",
