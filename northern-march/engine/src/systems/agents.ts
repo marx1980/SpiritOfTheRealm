@@ -11,7 +11,7 @@ import { beliefsAbout, buildView, type View } from "../view.ts";
 import type { WorldState } from "../world.ts";
 import type { ActionRef, Perceiver, Seen, Situation } from "../agents/model.ts";
 import { actionKey } from "../agents/model.ts";
-import { chooseFocus, plan, type PlanResult } from "../agents/planner.ts";
+import { byScore, chooseFocus, generateEconomy, plan, score, type PlanResult } from "../agents/planner.ts";
 import type { Ctx, System } from "./types.ts";
 import { DAY, HOUR, chr, loc, sorted } from "./types.ts";
 import { battleLoss, raiderMen } from "../battle.ts";
@@ -103,6 +103,9 @@ export function buildSituation(s: Readonly<WorldState>, c: Content, agent: strin
     traits: ch.traits.map((t) => c.byId.trait.get(t)!), cap: caps, objectives: ch.objectives, focus: st?.focus ?? null,
     troops: s.troops[agent] ?? 0, defenceHere: at ? defenceAt(s, at) : null,
     communities: c.communities.communities.map((x) => x.id).sort(),
+    ...(at === c.scenario.regency.seat && s.books && c.scenario.goods && c.scenario.manpower ? { goods: { stock: structuredClone(s.books.stock), crownStores: c.scenario.goods.places.filter((p) => (p.house ?? "crown") === "crown" && p.cap.timber !== undefined).map((p) => p.location).sort(),
+      unitsPerOrder: c.scenario.goods.buy.timber.units, pointsPerUnit: c.scenario.goods.repair.pointsPerUnit, coverPermille: c.scenario.goods.repair.coverPermille,
+      musterMen: c.scenario.manpower.musterMen, ironPerMan: c.scenario.manpower.ironPerMan, serviceDays: c.scenario.manpower.serviceDays, wageMilli: c.scenario.manpower.wageMilli } } : {}),
     forts: sorted(c.locations.filter((l) => l.fortification), (l) => l.id).map((l) => ({ id: l.id, garrison: l.fortification!.garrison,
       sites: c.scenario.threat.sites.filter((x) => x.target === l.id).map((x) => x.site).sort(),
       stormMilliPerDay: Math.floor((l.exposurePermille * (c.scenario.weather.stormDamageMilli[0] + c.scenario.weather.stormDamageMilli[1])) / 2000) })),
@@ -318,6 +321,10 @@ function adviseNow(ctx: Ctx, agent: string, cause: number) {
   };
   speak(res.selected, "");
   for (const x of extras.slice(0, 3)) speak(x.action, "extra");
+  // what timber and men could do, said last and only when it pays: it never takes the place of any advice above
+  const waits = (res.candidates.find((x) => x.action.kind === "advise_wait") ?? score(sit, per, { kind: "advise_wait" })).score; // advice is worth giving if it beats saying nothing
+  const eco = generateEconomy(sit, per).map((a) => score(sit, per, a)).filter((x) => x.score > waits).sort(byScore).slice(0, 2);
+  for (const x of eco) { res.candidates.push(x); speak(x.action, "economy"); }
 }
 
 /** Regency (adopted decision 3): with the ruler away, the regent acts on her own advice within delegated authority and

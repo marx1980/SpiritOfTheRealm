@@ -7,6 +7,7 @@ import { DAY, HOUR, loc } from "./types.ts";
 import type { ActionRef } from "../agents/model.ts";
 import { finish } from "./orders.ts";
 import { observeTreasury, skill } from "./knowledge.ts";
+import type { Books } from "../world.ts";
 
 const holder = (ctx: Ctx, place: string, good: string) => ctx.content.scenario.goods!.places.find((p) => p.location === place && p.cap[good] !== undefined);
 
@@ -49,13 +50,18 @@ export const goods: System = {
       }
       const prices: Record<string, number> = {};
       for (const k of g.kinds) prices[k] = priceOf(ctx, k, total[k]);
-      // the steward keeps books of the stores and tells the ruler their figures when she is at the seat (no new events: the figures ride on the day's tally)
+      // town markets recover from what the crown sold them
+      const glutNow = ctx.s.townGlut ?? {}, glut: Record<string, Record<string, number>> = {};
+      let anyGlut = false;
+      for (const [town, byGood] of Object.entries(glutNow)) { glut[town] = {}; for (const [k, v] of Object.entries(byGood)) { glut[town][k] = Math.max(0, v - g.market.glutRecoverPermillePerDay); if (v > 0) anyGlut = true; } }
+      // the steward keeps books every day (stores, prices, each town's price, what the crown has paid each House); the ruler is read them when she is at the seat
       const seat = ctx.content.scenario.regency.seat, rulerPos = ctx.s.positions[ctx.content.scenario.ruler];
       const steward = [...ctx.content.characters].filter((c) => c.role === "steward").sort((a, b) => (a.id < b.id ? -1 : 1))[0]?.id;
-      let books: { stock: Record<string, Record<string, number>>; price: Record<string, number> } | undefined;
-      if (steward && "at" in rulerPos && rulerPos.at === seat) {
+      const atSeat = "at" in rulerPos && rulerPos.at === seat;
+      let books: Omit<Books, "tick"> | undefined;
+      if (steward) {
         const q = skill(ctx, steward, "administration");
-        books = { stock: {}, price: {} };
+        books = { stock: {}, price: {}, town: {}, paid: { ...(ctx.s.housePaid ?? {}) } };
         for (const k of g.kinds) {
           books.stock[k] = {};
           for (const [l, good, made, spilled] of changes) if (good === k) {
@@ -65,8 +71,18 @@ export const goods: System = {
           const e = Math.floor((prices[k] * (1000 - q)) / 3000);
           books.price[k] = Math.max(0, prices[k] + ctx.keyed(`goods:books:${day}:price:${k}`).int(-e, e));
         }
+        for (const t of g.market.towns) { books.town[t.location] = {}; for (const k of g.kinds) books.town[t.location][k] = Math.floor((books.price[k] * Math.max(0, 1000 - t.spreadPermille - (glut[t.location]?.[k] ?? 0))) / 1000); }
       }
-      ctx.emit("GoodsDay", [], changes.map(([l]) => loc(l)), { changes, prices, ...(books ? { books, tick: ctx.tick } : {}) });
+      const day0 = ctx.emit("GoodsDay", [], changes.map(([l]) => loc(l)), { changes, prices, ...(anyGlut ? { glut } : {}), ...(books ? { books, atSeat } : {}) });
+      // a House spends part of what it has been paid on refilling its own store, at the usual price
+      const rs = g.market.restock;
+      if (rs && day > 0 && day % rs.everyDays === 0) for (const p of [...g.places].filter((x) => (x.house ?? "crown") !== "crown").sort((a, b) => (a.location < b.location ? -1 : 1))) {
+        const house = p.house!, k = g.kinds.find((x) => p.cap[x] !== undefined && (p.production[x] ?? 0) > 0);
+        if (!k) continue;
+        const have = ctx.s.goods[k][p.location] + (changes.find(([l, good]) => l === p.location && good === k)?.[2] ?? 0) - (changes.find(([l, good]) => l === p.location && good === k)?.[3] ?? 0);
+        const units = Math.min(Math.floor((Math.floor(((ctx.s.houseCoin[house] ?? 0) * rs.permille) / 1000)) / g.price[k].baseMilli), Math.max(0, p.cap[k] - have));
+        if (units > 0) ctx.emit("HouseRestocked", [day0.id], [loc(p.location)], { house, place: p.location, good: k, units, costMilli: units * g.price[k].baseMilli });
+      }
       ctx.at(ctx.tick + DAY, "goods:day", {});
     },
     "goods:ship": (ctx, { orderId, kind, source, dest, good, sell, cause }) => {
@@ -98,9 +114,9 @@ export const goods: System = {
       const seized = r.chancePermille(Math.floor((g.convoy.seizurePermilleAtFull * intensity) / 1000));
       if (lost || seized) { ctx.emit("GoodsLost", [cause], [loc(c.from), loc(c.to)], { convoyId, good: c.good, from: c.from, to: c.to, units: c.units, reason: seized ? "seized" : "lost", orderId: c.orderId }); return; }
       if (c.how === "sale") {
-        const town = g.market.towns.find((t) => t.location === c.to)!, price = ctx.s.goodsPrice[c.good];
-        const proceedsMilli = Math.floor((c.units * price * (1000 - town.spreadPermille)) / 1000), houseCutMilli = town.house === "crown" ? 0 : Math.floor((proceedsMilli * town.cutPermille) / 1000);
-        const sold = ctx.emit("GoodsSold", [cause], [loc(c.from), loc(c.to)], { convoyId, good: c.good, from: c.from, to: c.to, units: c.units, priceMilli: price, proceedsMilli, houseCutMilli, house: town.house, crown: ctx.content.scenario.ruler, orderId: c.orderId });
+        const town = g.market.towns.find((t) => t.location === c.to)!, price = ctx.s.goodsPrice[c.good], glutBefore = ctx.s.townGlut?.[c.to]?.[c.good] ?? 0;
+        const proceedsMilli = Math.floor((c.units * price * Math.max(0, 1000 - town.spreadPermille - glutBefore)) / 1000), houseCutMilli = town.house === "crown" ? 0 : Math.floor((proceedsMilli * town.cutPermille) / 1000);
+        const sold = ctx.emit("GoodsSold", [cause], [loc(c.from), loc(c.to)], { convoyId, good: c.good, from: c.from, to: c.to, units: c.units, priceMilli: price, proceedsMilli, houseCutMilli, house: town.house, crown: ctx.content.scenario.ruler, orderId: c.orderId, glut: Math.min(g.market.glutMaxPermille, glutBefore + c.units * g.market.glutPermillePerUnit) });
         observeTreasury(ctx, sold.id);
         return;
       }

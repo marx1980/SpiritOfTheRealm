@@ -42,6 +42,8 @@ export interface Situation {
   troops: number;                        // the agent's own company
   defenceHere: number | null;            // men at the fort where the agent stands (physical surroundings)
   communities?: string[];                // static: the people who can petition the crown
+  /** The steward's books, for an adviser at the seat (D-045): stocks as he gives them, and the terms that make timber and men worth advising on. */
+  goods?: { stock: Record<string, Record<string, number>>; crownStores: string[]; unitsPerOrder: number; pointsPerUnit: number; coverPermille: number; musterMen: number; ironPerMan: number; serviceDays: number; wageMilli: number };
   forts: FortInfo[];                     // static: fortified places and the threat sites near each
   captains: CaptainInfo[];               // known captains (roster + believed seat)
   travel: (from: string, to: string, mode: "rider" | "army") => number; // static map knowledge, ticks

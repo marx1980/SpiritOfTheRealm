@@ -53,7 +53,7 @@ export interface View {
   readonly advice: readonly Recommendation[];
   readonly world: WorldKnowledge;
   /** The steward's books as last read out to the ruler at the seat (stocks and going prices, with his error); the ruler's view only. */
-  readonly ledger?: { readonly tick: number; readonly stock: Readonly<Record<string, Readonly<Record<string, number>>>>; readonly price: Readonly<Record<string, number>> };
+  readonly ledger?: { readonly tick: number; readonly stock: Readonly<Record<string, Readonly<Record<string, number>>>>; readonly price: Readonly<Record<string, number>>; readonly town: Readonly<Record<string, Readonly<Record<string, number>>>>; readonly paid: Readonly<Record<string, number>> };
 }
 
 function deepFreeze<T>(o: T): T {
@@ -79,7 +79,7 @@ export function buildView(s: Readonly<WorldState>, c: Content, who: string, now:
       orders: structuredClone(s.issued[who] ?? []) },
     beliefs,
     reports,
-    ...(who === c.scenario.ruler && s.books ? { ledger: structuredClone(s.books) } : {}),
+    ...(who === c.scenario.ruler && s.ledger ? { ledger: structuredClone(s.ledger) } : {}),
     advice: Object.values(s.heard[who] ?? {}).filter((r) => now - r.computedAt <= ADVICE_FRESH).map((r) => structuredClone(r))
       .sort((a, b) => (a.author < b.author ? -1 : a.author > b.author ? 1 : b.computedAt - a.computedAt || a.id - b.id)),
     world: {

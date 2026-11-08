@@ -2,9 +2,10 @@
 import type { Rng } from "./rng.ts";
 import { beliefsAbout, type OrderDraft, type View } from "./view.ts";
 import { captainSentTo, planOf } from "./presentation/phrasing.ts";
+import { adviceAction, economyProblems, affordable as affordableR, publicRulesOf } from "./presentation/affordances.ts";
 
 
-export type PolicyId = "passive" | "delegating" | "aggressive" | "cautious" | "random-valid" | "follow-best-adviser" | "follow-worst-adviser" | "external" | "replay" | `follow:${string}`;
+export type PolicyId = "passive" | "delegating" | "aggressive" | "cautious" | "provisioner" | "random-valid" | "follow-best-adviser" | "follow-worst-adviser" | "external" | "replay" | `follow:${string}`;
 /** `mission` (for sending a captain): defend the fort (default), or scout / attack the raiders at `raid`. */
 export interface PlayerAction { action: "repair" | "levy" | "advance" | "travel" | "order" | "relief" | "requisition" | "purchase"; target?: string; to?: string; consult?: boolean; good?: string; sell?: boolean; muster?: boolean; order?: OrderDraft; decision?: number; followed?: string; mission?: "defend" | "scout" | "attack"; raid?: string; repairMode?: "standard" | "rush" | "labour" }
 export type PolicyFn = (v: View, rng: () => Rng) => PlayerAction[];
@@ -80,6 +81,25 @@ function fortOfSite(v: View, site: string): string | undefined {
   return [...v.world.places].filter((p) => p.fortified).sort((a, b) => d(a) - d(b) || (a.id < b.id ? -1 : 1))[0]?.id;
 }
 
+/** The wider economy as a scripted player (D-045): follow advice on timber and men; sell a nearly full timber store at the dearest town. */
+function provision(v: View): PlayerAction[] {
+  const out: PlayerAction[] = [], rules = publicRulesOf(v);
+  for (const rec of v.advice) {
+    const k = planOf(v, rec.plan.id).kind;
+    if (k !== "advise_timber" && k !== "advise_muster") continue;
+    const a = adviceAction(v, rec);
+    if (!a || recently(v, a.action === "levy" ? "levy" : "requisition", a.target ?? null, 20) || out.some((x) => x.action === a.action && x.target === a.target && x.to === a.to)) continue;
+    if (economyProblems(v, a).length === 0 && affordableR(v, rules, a)) out.push(a);
+  }
+  const g = v.world.goods, L = v.ledger;
+  if (g && L) {
+    const store = [...g.stores].sort((a, b) => (a.id < b.id ? -1 : 1)).find((x) => x.house === "crown" && x.kinds.includes("timber") && (L.stock.timber?.[x.id] ?? 0) >= 450 && !recently(v, "requisition", x.id, 20));
+    const town = [...g.towns].sort((a, b) => (L.town[b.id]?.timber ?? 0) - (L.town[a.id]?.timber ?? 0) || (a.id < b.id ? -1 : 1))[0];
+    if (store && town) out.push({ action: "requisition", target: store.id, to: town.id, good: "timber", sell: true });
+  }
+  return out;
+}
+
 /** Which adviser "best" and "worst" mean is measured (G-12) and recorded in content; until then they are unavailable. */
 export function policyFn(id: PolicyId, aliases: Record<string, string> = {}): PolicyFn | null {
   if (id.startsWith("follow:")) return followAdviser(id.slice("follow:".length));
@@ -87,13 +107,14 @@ export function policyFn(id: PolicyId, aliases: Record<string, string> = {}): Po
   return POLICIES[id as keyof typeof POLICIES]?.fn ?? null;
 }
 
-export const POLICIES: Record<"passive" | "delegating" | "aggressive" | "cautious" | "random-valid" | "follow-best-adviser" | "follow-worst-adviser", { fn: PolicyFn | null; note: string }> = {
+export const POLICIES: Record<"passive" | "delegating" | "aggressive" | "cautious" | "provisioner" | "random-valid" | "follow-best-adviser" | "follow-worst-adviser", { fn: PolicyFn | null; note: string }> = {
   passive: { fn: () => [], note: "never acts" },
   delegating: { fn: (v, rng) => [...repairBelow(60000, 20)(v, rng), ...advanceTo(400, 20)(v, rng), ...grainRelief(true)(v, rng)], note: "repairs below 60%; sends the captain against raiders reported at 400 or more; asks the people whose grain it is first when a store looks low" },
   aggressive: {
     fn: (v, rng) => [...repairBelow(80000, 10)(v, rng), ...advanceTo(1, 10)(v, rng), ...(recently(v, "levy", null, 60) ? [] : [{ action: "levy" as const }]), ...grainRelief(false, 60)(v, rng)],
     note: "repairs below 80%, sends the captain against any reported raiders, levies every 60 days, takes grain without asking when a store looks low, at most once in 60 days",
   },
+  provisioner: { fn: (v, rng) => [...POLICIES.delegating.fn!(v, rng), ...provision(v)], note: "as delegating, and also: does what advisers say about timber and men (once in 20 days for each), and sells timber from a store that is nearly full at the town that pays most (D-045; an evidence policy, not a gate policy)" },
   cautious: { fn: (v, rng) => [...repairBelow(60000, 20)(v, rng), ...advanceTo(400, 20)(v, rng)], note: "as delegating, but never asks anyone for grain (holds back from a people already angry)" },
   "random-valid": {
     fn: (v, rng) => {

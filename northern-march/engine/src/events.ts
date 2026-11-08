@@ -118,6 +118,7 @@ export const EVENT_TYPES: Readonly<Record<string, EventTypeDef>> = Object.freeze
   GoodsDelivered: T("goods", "economic", 2),
   GoodsLost: T("goods", "economic", 2),
   GoodsSold: T("goods", "economic", 2),
+  HouseRestocked: T("goods", "economic", 1), // a House spends what the crown paid it on refilling its store (D-045)
   MusterCalled: T("manpower", "military", 2),
   MusterArrived: T("manpower", "military", 2),
   MusterEnded: T("manpower", "military", 2),

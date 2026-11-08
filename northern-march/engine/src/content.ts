@@ -51,7 +51,8 @@ export interface GoodsParams {
   kinds: string[];
   places: { location: string; house?: string; store: Record<string, number>; production: Record<string, number>; everyDays?: Record<string, number>; cap: Record<string, number> }[];
   houses: string[];
-  market: { houseMarkupPermille: number; towns: { location: string; house: string; spreadPermille: number; cutPermille: number }[] };
+  /** Selling in a town glut it for that good (permille off the price per unit sold, up to a cap, wearing off daily); a House spends `permille` of what it holds every `everyDays` on refilling its store at the usual price (D-045). */
+  market: { houseMarkupPermille: number; towns: { location: string; house: string; spreadPermille: number; cutPermille: number }[]; glutPermillePerUnit: number; glutMaxPermille: number; glutRecoverPermillePerDay: number; restock: { everyDays: number; permille: number } };
   price: Record<string, { baseMilli: number; target: number; slope: number }>;
   buy: Record<string, { units: number; reserveUnits: number }>;
   repair: { pointsPerUnit: number; coverPermille: number };

@@ -87,6 +87,8 @@ export function planWords(v: View, planId: string): string {
     case "advise_sortie": { const f = nearestFort(v, a.target!); return f && !captainSentTo(v, f) ? `Send the captain to ${nameOf(v, f)} to attack the raiders at ${t}` : `Attack the raiders at ${t}`; }
     case "advise_levy": return "Raise a levy";
     case "advise_relief": return `Send relief to ${t}`;
+    case "advise_timber": return `Bring timber to ${t}`;
+    case "advise_muster": return `Call men to ${t}`;
     default: return a.kind.replace(/_/g, " ") + (t ? ` ${t}` : "");
   }
 }
@@ -179,3 +181,16 @@ export function letterGist(v: View, r: LetterLike): string {
 /** A letter that brings word of a fort lost to the raiders. */
 export function lettersFall(r: LetterLike): boolean { return r.claims.some((c) => c.predicate === "fortification.holder" && c.believedValue === "raiders"); }
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/** The crown's store with the most timber, as far as the books say, other than the fort itself: where timber for a repair comes from. */
+export function timberSource(v: View, fort: string): string | undefined {
+  return (v.world.goods?.stores ?? []).filter((x) => x.house === "crown" && x.kinds.includes("timber") && x.id !== fort).map((x) => ({ id: x.id, n: v.ledger?.stock.timber?.[x.id] ?? 0 }))
+    .filter((x) => x.n > 0).sort((a, b) => b.n - a.n || (a.id < b.id ? -1 : 1))[0]?.id;
+}
+/** The people nearest a fort on the map, from whom men are called there. */
+export function nearestPeople(v: View, fort: string): string | undefined {
+  const f = v.world.places.find((p) => p.id === fort); if (!f) return undefined;
+  const d = (p: { pos: [number, number] }) => (p.pos[0] - f.pos[0]) ** 2 + (p.pos[1] - f.pos[1]) ** 2;
+  return (v.world.goods?.muster?.communities ?? []).map((id) => v.world.places.find((p) => p.id === id)).filter((p): p is NonNullable<typeof p> => !!p).sort((a, b) => d(a) - d(b) || (a.id < b.id ? -1 : 1))[0]?.id;
+}
+

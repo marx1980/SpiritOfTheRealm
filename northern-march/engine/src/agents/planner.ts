@@ -19,6 +19,22 @@ const worn = (sit: Situation, per: Perceiver) => sit.forts.filter((f) => { const
 export const lostForts = (sit: Situation, per: Perceiver) => sit.forts.filter((f) => per.get(f.id, "fortification.holder")?.value === "raiders").map((f) => f.id);
 const requested = (sit: Situation, per: Perceiver) => sit.forts.filter((f) => per.get(f.id, "request.reinforce")).map((f) => f.id);
 
+/** Timber and men as advice (D-045): timber for a worn fort when one order of it would cover the repair, men for a threatened fort that has iron. Voiced as extra advice; never selected as the adviser's main word. */
+export function generateEconomy(sit: Situation, per: Perceiver): ActionRef[] {
+  const out: ActionRef[] = [], gd = sit.goods;
+  if (sit.mode !== "advise" || !gd) return out;
+  const add = (a: ActionRef) => { if (sit.adviceKinds && !sit.adviceKinds.includes(a.kind)) return; out.push(a); };
+  const lost = lostForts(sit, per), srcStock = Math.max(0, ...gd.crownStores.map((p) => gd.stock.timber?.[p] ?? 0));
+  for (const f of worn(sit, per)) {
+    const cond = picture(sit, per, f).cond, have = gd.stock.timber?.[f] ?? 0;
+    if (lost.includes(f) || cond === null) continue;
+    const need = Math.ceil((sit.p.restoreToMilli - cond) / gd.pointsPerUnit);
+    if (have < need && have + Math.min(gd.unitsPerOrder, srcStock) >= need) add(act("advise_timber", f));
+  }
+  for (const f of threatened(sit, per)) if (!lost.includes(f) && (gd.stock.iron?.[f] ?? 0) >= 10 * gd.ironPerMan) add(act("advise_muster", f));
+  return out;
+}
+
 /** Candidate templates, in order of how obvious they are; a weaker planner stops earlier. */
 export function generate(sit: Situation, per: Perceiver): ActionRef[] {
   const out: ActionRef[] = [];
@@ -123,12 +139,14 @@ export function score(sit: Situation, per: Perceiver, a: ActionRef): Candidate {
     c.push(R("trait", dominantTrait(sit.traits, "riskPermille"), w, w < 0 ? "reason.risk_averse" : "reason.risk"));
   }
   // communities: an adviser who minds how the crown stands, or cares for the people, counts what relief eases and what a levy inflames
-  if (a.kind === "advise_relief" || a.kind === "advise_levy") {
+  if (a.kind === "advise_relief" || a.kind === "advise_levy" || a.kind === "advise_muster") {
     const minded = sit.objectives.filter((o) => o.objective === "crown_standing" || o.objective === "protect_community");
     const fresh = sit.p.agents.values.communityFreshDays * DAY, worth = (x: number) => minded.reduce((n, o) => n + pr(o.priorityPermille, x), 0);
     if (a.kind === "advise_relief") {
       const req = per.get(a.target!, "community.request");
       if (req && minded.length) c.push(R("belief", String(req.propId), worth(v.communityMilli), "reason.community_eased"));
+    } else if (a.kind === "advise_muster") {
+      for (const o of minded) c.push(R("objective", o.id, -pr(o.priorityPermille, v.communityMilli), "reason.community_resents")); // taking men from the people is felt by those who mind them
     } else {
       for (const id of sit.communities ?? []) {
         const g = per.get(id, "community.grievance");

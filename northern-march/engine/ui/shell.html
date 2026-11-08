@@ -70,6 +70,14 @@ select { border: 1px solid var(--line); background: var(--panel); border-radius:
 .map text { font-family: Georgia, "Times New Roman", serif; fill: #2b2117; paint-order: stroke; stroke: #ecdcaa; stroke-width: 4px; stroke-linejoin: round; }
 .map text.nm { font-size: 16px; font-weight: 600; } .map text.sb { font-size: 12.5px; font-style: italic; fill: #5a4a34; }
 .map .raid { fill: var(--bad); opacity: .85; }
+.map .raider-halo { opacity: .9; transform-box: fill-box; transform-origin: center; }
+.map .raider-disc { filter: drop-shadow(0 0 4px #ff2a1a); }
+@media (prefers-reduced-motion: no-preference) {
+  .map .raider-halo { animation: raider-pulse 1.5s ease-in-out infinite; }
+  .map .raider-disc { animation: raider-glow 1.5s ease-in-out infinite; }
+}
+@keyframes raider-pulse { 0%, 100% { opacity: .45; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.25); } }
+@keyframes raider-glow { 0%, 100% { filter: drop-shadow(0 0 2px #ff2a1a) drop-shadow(0 0 4px #ff1f12); } 50% { filter: drop-shadow(0 0 7px #ff3a24) drop-shadow(0 0 16px #ff1f12); } }
 .map .you { fill: none; stroke: var(--accent); stroke-width: 4; }
 .detail { font-size: 13px; display: grid; gap: 2px; }
 .detail .k { color: var(--mute); }

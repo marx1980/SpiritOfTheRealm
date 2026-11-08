@@ -34,6 +34,8 @@ test("houses: the crown cannot requisition from a place another House holds", ()
   assert.ok(sim.log.some((e) => e.type === "OrderAbandoned" && e.payload.reason === "houseHolds"));
 });
 
+const spent = (sim: { log: readonly { type: string; payload: Record<string, unknown> }[] }, house: string) => sim.log.filter((e) => e.type === "HouseRestocked" && e.payload.house === house).reduce((n, e) => n + Number(e.payload.costMilli), 0);
+
 test("houses: a purchase from a House's place costs the realm price plus the markup, and the coin goes to that House exactly", () => {
   const sim = ordered(2, { action: "purchase", target: "highcairn", to: "greybridge", good: "iron" });
   const ship = sim.log.find((e) => e.type === "GoodsShipped")!;
@@ -42,7 +44,8 @@ test("houses: a purchase from a House's place costs the realm price plus the mar
   assert.equal(price, Math.floor((num((([...sim.log].reverse().find((e) => e.type === "GoodsDay" && e.tick <= ship.tick)!.payload.prices) as Record<string, number>).iron) * (1000 + G.market.houseMarkupPermille)) / 1000));
   assert.equal(ship.payload.costMilli, units * price);
   const w = sim.unsafeWorldForDebug();
-  assert.equal(w.houseCoin.varos, units * price, "Varos is paid exactly what the crown paid");
+  assert.equal(w.housePaid!.varos, units * price, "the crown's ledger records exactly what it paid Varos");
+  assert.equal(w.houseCoin.varos + spent(sim, "varos"), units * price, "Varos holds what it was paid less what it spent restocking");
   assert.equal(w.houseCoin.crown ?? 0, 0);
 });
 
@@ -65,7 +68,7 @@ test("houses: at a market a House holds, that House takes its cut of the proceed
   const sold = sim.log.find((e) => e.type === "GoodsSold")!, town = G.market.towns.find((t) => t.location === "marchend")!;
   assert.ok(sold); const proceeds = num(sold.payload.proceedsMilli);
   assert.equal(sold.payload.houseCutMilli, Math.floor((proceeds * town.cutPermille) / 1000));
-  assert.equal(sim.unsafeWorldForDebug().houseCoin.varos, sold.payload.houseCutMilli);
+  assert.equal(sim.unsafeWorldForDebug().houseCoin.varos + spent(sim, "varos"), sold.payload.houseCutMilli);
 });
 
 test("houses: selling takes units out of the realm, so the price rises afterwards", () => {

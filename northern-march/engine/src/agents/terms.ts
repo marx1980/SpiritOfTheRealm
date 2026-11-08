@@ -205,6 +205,22 @@ export function expect(sit: Situation, per: Perceiver, a: ActionRef): Expectatio
       }
       break;
     }
+    case "advise_timber": { // timber at the fort covers part of the repair's coin cost, if a repair follows
+      const gd = sit.goods, cond = pics[T!]?.cond;
+      if (gd && cond !== null && cond !== undefined) e.gainMilli = Math.floor((repairCost(T!, sit.p.restoreToMilli) * gd.coverPermille * 700) / 1000000);
+      break;
+    }
+    case "advise_muster": { // men come from the nearest people, are armed from the fort's iron, and are paid for the season
+      const gd = sit.goods;
+      if (gd && pics[T!]) {
+        const men = Math.min(gd.musterMen, Math.floor((gd.stock.iron?.[T!] ?? 0) / gd.ironPerMan));
+        const from = [...(sit.communities ?? [])].sort((a, b) => sit.travel(a, T!, "army") - sit.travel(b, T!, "army") || (a < b ? -1 : 1))[0];
+        const delay = from ? sit.travel(sit.rulerSeat, from, "rider") + sit.travel(from, T!, "army") : 0;
+        reinforce(T!, men, delay, 800);
+        e.costMilli = men * gd.wageMilli * Math.min(gd.serviceDays, sit.p.agents.horizonDays); // the wages inside the span the adviser looks at, like the losses it saves
+      }
+      break;
+    }
     case "advise_levy": e.gainMilli = sit.p.levyMilli; break;
     case "advise_relief": e.costMilli = sit.p.reliefMilli; break;
     default: throw new Error(`no expectation model for ${a.kind}`);

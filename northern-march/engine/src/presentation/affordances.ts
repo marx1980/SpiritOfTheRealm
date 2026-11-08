@@ -2,7 +2,7 @@
 // use this module, so a human and a player agent are offered the same things at the same moment.
 // Inputs: the View and PublicRules (prices and lists anyone in the realm knows). Never Content or WorldState.
 import { beliefsAbout, type PlayerAction, type Recommendation, type View } from "../view.ts";
-import { captainSentTo, fallenAt, planOf, planWords } from "./phrasing.ts";
+import { captainSentTo, fallenAt, nearestPeople, planOf, planWords, timberSource } from "./phrasing.ts";
 import { adviceSettled, latestAdviceOf } from "./court.ts";
 
 /** Public rules of the realm: what things cost and where the ruler may go. Built from content by the caller. */
@@ -86,6 +86,8 @@ export function adviceAction(v: View, r: Recommendation): PlayerAction | null {
   if (a.kind === "advise_sortie") { const f = fortNear(v, a.target!); return !f ? null : captainSentTo(v, f) ? { action: "advance", target: f, mission: "attack", raid: a.target, followed: r.author } : { action: "advance", target: f, followed: r.author }; }
   if (a.kind === "advise_levy") return { action: "levy", followed: r.author };
   if (a.kind === "advise_relief") return { action: "relief", target: a.target, followed: r.author };
+  if (a.kind === "advise_timber") { const src = timberSource(v, a.target!); return src ? { action: "requisition", target: src, to: a.target, good: "timber", followed: r.author } : null; }
+  if (a.kind === "advise_muster") { const from = nearestPeople(v, a.target!); return from ? { action: "levy", muster: true, target: from, to: a.target, followed: r.author } : null; }
   return null;
 }
 
@@ -236,4 +238,9 @@ export function economyActions(v: View, rules: PublicRules): PlayerAction[] {
     const a: PlayerAction = { action: "levy", muster: true, target: c, to: f }; if (ok(a)) out.push(a);
   }
   return out.filter((a) => affordable(v, rules, a));
+}
+
+/** The public rules as far as a view carries them (what a scripted policy may know): the costs of orders it can price from the view alone. */
+export function publicRulesOf(v: View): PublicRules {
+  return { ruler: v.self.id, levyMilli: 0, reliefMilli: 0, repairRestoreToMilli: 0, repairCostMilliPerMilli: 0, repairRushCostPermille: 0, travelTo: [], peoplePlaces: [] };
 }

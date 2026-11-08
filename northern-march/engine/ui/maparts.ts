@@ -97,6 +97,17 @@ function artwork(m: MapModel, kinds: Map<string, string>, terrains: Map<string, 
   return svg;
 }
 
+
+/** A raider on a galloping horse with a lance and pennant, facing right; drawn about 36 wide, centred on the origin. */
+const HORSEMAN = [
+  `<path d="M-8-1c0-3 3-4 8-4s9 1 10 3c1 2-1 5-4 5h-3c-4 1-9 1-11-1z"/>`,                      // body
+  `<path d="M6-3l3-6 3-1 1 3-2 1 4 2-1 3-4-1-2 4z"/>`,                                        // neck and head
+  `<path d="M-8-1c-4 0-6 3-6 7 2-2 4-3 7-4z"/>`,                                              // tail
+  `<path d="M5 2l6 6M3 3l1 7M-5 2l-6 6M-3 3l-5 6" fill="none" stroke-width="2.4"/>`,           // legs at a gallop
+  `<path d="M-4-5l1-5 4 0 1 5z"/><circle cx="-1" cy="-12" r="2.7"/><path d="M-4-13c0-3 2-4 3-4s3 1 3 4z"/>`, // rider
+  `<path d="M-1-8L19-17" fill="none" stroke-width="1.8"/><path d="M19-17l8 1-5 4z"/>`,         // lance and pennant
+].join("");
+
 export interface MapArtInput { model: MapModel; selected: string; kinds: Map<string, string>; terrains: Map<string, string> }
 const wcls = (w?: string) => !w ? "none" : w === "sound" ? "sound" : w === "worn" ? "worn" : w === "damaged" ? "damaged" : "bad";
 
@@ -106,7 +117,8 @@ export function mapSvg({ model: m, selected, kinds, terrains }: MapArtInput): st
     const k = ICON[kinds.get(p.id) ?? "village"] ?? ICON.village;
     const flag = p.fortified ? `<path d="M0 ${k.top}v-12" stroke="${INK}" stroke-width="1.5"/><path d="M0 ${k.top - 12}l12 4-12 4z" fill="${FLAG[wcls(p.wall?.words)]}" stroke="${INK}" stroke-width="1.2" stroke-linejoin="round"/>` : "";
     const raided = !!p.raiders && p.raiders.words !== "no raiders";
-    const raid = raided ? `<g transform="translate(${p.x + 36} ${p.y - 30}) scale(2)"><path d="M-9 8L0-9 9 8z" fill="${p.raiders!.words.includes("small") ? FLAG.damaged : p.raiders!.words.includes("large") ? "#6e1410" : FLAG.bad}" stroke="${INK}" stroke-width="1.5" stroke-linejoin="round"/><path d="M0-9v-6" stroke="${INK}" stroke-width="1.3"/></g>` : "";
+    const rc = p.raiders?.words.includes("small") ? "#e5483a" : p.raiders?.words.includes("large") ? "#b3100c" : "#d71f18";
+    const raid = raided ? `<g class="raider" transform="translate(${p.x + 44} ${p.y - 40}) scale(1.5)"><circle class="raider-halo" r="30" fill="url(#raider-glow)"/><circle class="raider-disc" r="17" fill="${PAPER}" fill-opacity=".92" stroke="${rc}" stroke-width="2.2"/><g class="raider-body" transform="translate(-1 3) scale(.8)" fill="${rc}" stroke="${INK}" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round">${HORSEMAN}</g></g>` : "";
     const you = p.you ? `<circle cx="${p.x}" cy="${p.y}" r="27" fill="none" stroke="#a0381c" stroke-width="3" stroke-dasharray="5 4"/>` : "";
     const sel = p.id === selected ? `<circle cx="${p.x}" cy="${p.y}" r="31" fill="#a0381c" fill-opacity=".12" stroke="#a0381c" stroke-width="2"/>` : "";
     const sub = p.fortified ? (p.wall ? p.wall.words : "unknown") : raided ? p.raiders!.words : "";
@@ -114,5 +126,5 @@ export function mapSvg({ model: m, selected, kinds, terrains }: MapArtInput): st
     const txt = (s: string, dy: number, cls: string) => `<text class="${cls}" x="${p.x + 27}" y="${p.y + dy}">${s}</text>`;
     return `${sel}${you}<g transform="translate(${p.x} ${p.y}) scale(1.3)"><use href="#${k.id}"/>${flag}</g>${raid}${txt(esc(p.name), 5, "nm")}${sub ? txt(esc(sub), 20, "sb") : ""}${parts.length ? txt(parts.join(" · "), sub ? 34 : 20, "sb") : ""}<circle class="hit" fill="transparent" cx="${p.x}" cy="${p.y}" r="28" data-place="${p.id}"/>`;
   }).join("");
-  return `<svg viewBox="-120 -20 1160 1010" role="img" aria-label="Map of the realm">${art}${places}</svg>`;
+  return `<svg viewBox="-120 -20 1160 1010" role="img" aria-label="Map of the realm"><defs><radialGradient id="raider-glow"><stop offset="0" stop-color="#ff2a1a" stop-opacity=".9"/><stop offset=".55" stop-color="#ff2a1a" stop-opacity=".4"/><stop offset="1" stop-color="#ff2a1a" stop-opacity="0"/></radialGradient></defs>${art}${places}</svg>`;
 }

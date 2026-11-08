@@ -476,7 +476,14 @@
      "spreadPermille": 100,
      "cutPermille": 300
     }
-   ]
+   ],
+   "glutPermillePerUnit": 4,
+   "glutMaxPermille": 500,
+   "glutRecoverPermillePerDay": 20,
+   "restock": {
+    "everyDays": 30,
+    "permille": 600
+   }
   }
  },
  "manpower": {
