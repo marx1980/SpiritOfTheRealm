@@ -367,6 +367,8 @@ const coinsKnown = (v: View) => coinsKnownR(v, RULES);
 const repairCostKnown = (v: View, place: string, mode = "standard") => repairCostKnownR(v, RULES, place, mode);
 const MODE_TEXT: Record<string, string> = { standard: "Standard: the garrison, paid materials", rush: "Rush: pay extra, the captain's men help", labour: "Labour only: the captain's men, no cost, slower" };
 const kCoins = (n: number) => `${Math.round(n / 1000)}k`;
+/** A price per unit, in the same coins as the treasury: 0.34k a timber, 11.8k a horse. */
+const priceK = (n: number) => `${(n / 1000).toFixed(n >= 1000 ? 1 : 2)}k`;
 /** Background income (holdings) minus upkeep, per day: a rough estimate Anna can see. */
 const baseNetMilli = content.scenario.economy.holdings.reduce((a, h) => a + h.dailyIncomeMilli, 0) - content.scenario.economy.dailyUpkeepMilli;
 const LOW_COINS = 30000;
@@ -440,15 +442,12 @@ function economyTab(v: View): string {
   const stores = `<div class="card"><h2>Stores</h2><span class="more" hidden>»</span><div class="scroll"><table><tr><th>Place</th><th>House</th><th class="n">Grain</th><th class="n">Days left</th>${(g?.kinds ?? []).map((k) => `<th class="n">${esc(GOOD_LABEL[k] ?? k)}</th>`).join("")}<th class="n">Report</th></tr>
     ${rows.map((p) => `<tr><td>${esc(name(v, p))}</td><td>${esc(houseName(v, houseOf(v, p)))}</td>${grainCell(p)}${(g?.kinds ?? []).map((k) => goodCell(p, k)).join("")}${reportCell(p)}</tr>`).join("")}</table></div>
     <div class="books">${L ? `Books · ${ageTone(dayAgo(v, L.tick))}` : "Books · none yet"}</div></div>`;
-  const grainPrice = RULES.grainBuy && gr ? `<tr><td>Grain</td><td class="n">${RULES.grainBuy.priceMilliPerSack}</td><td class="n dim">–</td><td class="n dim">–</td></tr>` : "";
+  const grainPrice = RULES.grainBuy && gr ? `<tr><td>Grain</td><td class="n">${priceK(RULES.grainBuy.priceMilliPerSack)}</td><td class="n">${priceK(RULES.grainBuy.priceMilliPerSack)}</td><td class="n dim">${priceK(RULES.grainBuy.priceMilliPerSack)}</td></tr>` : "";
   const prices = g ? `<div class="card"><h2>Prices</h2><table><tr><th>Good</th><th class="n">Now</th><th class="n">Usual</th><th class="n">Range</th></tr>
-    ${g.kinds.map((k) => { const p = priceKnown(v, k), pr = g.price[k]; const cls = p === undefined ? "" : p > pr.baseMilli * 1.2 ? "warn" : p < pr.baseMilli * 0.8 ? "ok" : ""; return `<tr><td>${esc(GOOD_LABEL[k] ?? k)}</td><td class="n ${cls}">${p ?? "?"}</td><td class="n">${pr.baseMilli}</td><td class="n dim">${pr.minMilli}–${pr.maxMilli}</td></tr>`; }).join("")}${grainPrice}</table></div>` : "";
+    ${g.kinds.map((k) => { const p = priceKnown(v, k), pr = g.price[k]; const cls = p === undefined ? "" : p > pr.baseMilli * 1.2 ? "warn" : p < pr.baseMilli * 0.8 ? "ok" : ""; return `<tr><td>${esc(GOOD_LABEL[k] ?? k)}</td><td class="n ${cls}">${p === undefined ? "?" : priceK(p)}</td><td class="n">${priceK(pr.baseMilli)}</td><td class="n dim">${priceK(pr.minMilli)}–${priceK(pr.maxMilli)}</td></tr>`; }).join("")}${grainPrice}</table></div>` : "";
   const markets = g ? `<div class="card"><h2>Market towns</h2><span class="more" hidden>»</span><div class="scroll"><table><tr><th>Town</th>${g.kinds.map((k) => `<th class="n">${esc(GOOD_LABEL[k] ?? k)}</th>`).join("")}<th class="n">House takes</th></tr>
-    ${g.towns.map((t) => `<tr><td>${esc(name(v, t.id))}</td>${g.kinds.map((k) => { const n = L?.town[t.id]?.[k], base = L?.price[k], cls = n !== undefined && base ? (n < base * (1000 - t.spreadPermille) / 1000 * 0.9 ? "bad" : "") : ""; return `<td class="n ${cls}">${n ?? "?"}</td>`; }).join("")}<td class="n">${t.cutPermille ? `${esc(houseName(v, t.house))} ${Math.round(t.cutPermille / 10)}%` : `${esc(houseName(v, t.house))} (–)`}</td></tr>`).join("")}</table></div>
+    ${g.towns.map((t) => `<tr><td>${esc(name(v, t.id))}</td>${g.kinds.map((k) => { const n = L?.town[t.id]?.[k], base = L?.price[k], cls = n !== undefined && base ? (n < base * (1000 - t.spreadPermille) / 1000 * 0.9 ? "bad" : "") : ""; return `<td class="n ${cls}">${n === undefined ? "?" : priceK(n)}</td>`; }).join("")}<td class="n">${t.cutPermille ? `${esc(houseName(v, t.house))} ${Math.round(t.cutPermille / 10)}%` : `${esc(houseName(v, t.house))} (–)`}</td></tr>`).join("")}</table></div>
     <div class="books">Buying from a House · +${Math.round(g.markupPermille / 10)}%</div></div>` : "";
-  const houses = g ? [...new Set([...g.stores.map((x) => x.house), ...g.towns.map((x) => x.house)])].filter((h) => h !== "crown").sort() : [];
-  const paid = g && houses.length ? `<div class="card"><h2>Houses</h2><table><tr><th>House</th><th>Holds</th><th class="n">Paid by you</th></tr>
-    ${houses.map((h) => `<tr><td>${esc(houseName(v, h))}</td><td>${esc(g.stores.filter((x) => x.house === h).map((x) => name(v, x.id)).join(", ") || "–")}</td><td class="n">${L ? kCoins(L.paid[h] ?? 0) : "?"}</td></tr>`).join("")}</table></div>` : "";
   const a = f.action, problems = a ? economyProblems(v, a) : ["choose an order"];
   const cost = a && a.action === "purchase" ? purchaseCostKnown(v, RULES, a) : undefined, coins = coinsKnown(v);
   if (cost !== undefined && coins !== undefined && cost > coins) problems.push(`not enough coins: it costs about ${kCoins(cost)} and you have about ${kCoins(coins)}`);
@@ -478,7 +477,7 @@ function economyTab(v: View): string {
     const verb = o.action === "negotiate" ? "Buy at" : o.action === "levy" ? "Call men from" : "Take from";
     return `<div class="letter"><div class="h"><b>${esc(name(v, o.recipient))}</b><span>${ageTone(dayAgo(v, o.tick))}</span></div><div class="c">${esc(verb)} ${esc(name(v, o.target))} · ${esc(b ? String(b.believedValue) : "no word")}</div></div>`;
   }).join("")}</div></div>` : "";
-  return `<div class="eco-grid eco"><div class="col">${stores}${prices}${markets}${paid}</div><div class="col">${form}${line}${road}</div></div>`;
+  return `<div class="eco-grid eco"><div class="col">${stores}${prices}${markets}</div><div class="col">${form}${line}${road}</div></div>`;
 }
 
 /** Settings tab: what pauses the game, and the observer panel for H-01 observers. */
