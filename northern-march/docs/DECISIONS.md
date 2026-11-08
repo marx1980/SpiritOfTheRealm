@@ -169,3 +169,11 @@ Stage 2 is committed (D-040). Stage 3 adds who owns the goods and where they can
 Tests first: requisition from a House place refused; a purchase from a House place pays the markup and credits the House exactly; a sale pays the spread, the cut goes to the House at Marchend, units are recorded as sold in the ledger and conservation still holds with `sold`; selling raises the price; noMarket; nothing ordered changes nothing.
 Not in stage 3: Houses do not yet spend coin or change loyalty; no adviser advice on trade; no page affordance for sales or House accounts; the price is realm-wide, not per town (prices per town are a later refinement).
 After stage 3: the wider-economy gates on fresh sealed blocks (G-01..G-06 re-run, G-12, G-13, outcome shares, goods/manpower invariants) in one run, because stages 1-3 add no behaviour a scripted policy uses unless ordered.
+
+## D-042 — Wider economy: final gate plan (written before any run on these blocks)
+Stages 1-3 (D-039, D-040, D-041) are built and tested. They add no behaviour a scripted policy uses unless ordered, but they change the event stream, add systems and change the repair and harvest code paths, so every earlier gate is re-run on this calibration on fresh sealed blocks, once each:
+- 7A gates (G-03/G-04/G-05, outcome shares, invariants, 600 link seeds): block 200000, 1,000 seeds, same tool, bands and rules as D-030; overrides 1-3 stand (passive G-03, caution below 5% pooled, and delegating if it falls to AMBER again).
+- G-12 advisers: block 210000. G-13 communities: block 220000.
+- Tune seeds (not sealed): G-06 knife-edge (1-150), G-01 cross-engine and G-02 stream independence, Phase 1 invariant batch, lab L0 (tests, typecheck, quick playtest). KI-01 hash re-recorded.
+- New invariants checked in the suite: store conservation for every good (with sold), hands + away = base, House coin equals what was paid.
+A verdict is whatever comes out: no rerun, no tuning, no band moved. If a gate that passed in D-038 fails, report and stop. Fun and balance are not claimed; the new economy is not yet used by any scripted policy, adviser or the page, so it is unplayed.
