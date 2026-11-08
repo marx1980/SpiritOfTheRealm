@@ -4,8 +4,9 @@ import { deriveContent, type RawContent } from "../src/content.ts";
 import { createSim } from "../src/engine.ts";
 import { adviceSettled, buildCourt, latestAdviceOf, type AdviceLine } from "../src/presentation/court.ts";
 import { buildMap } from "../src/presentation/map.ts";
+import { MapGraph } from "../src/map.ts";
 import { mapSvg } from "./maparts.ts";
-import { actionText, adviceAction, adviceChoices, affordable as affordableR, coinsKnown as coinsKnownR, economyProblems, GOOD_LABEL, grainCover, grainKnown, houseOf, openAdvice, priceKnown, publicRules, purchaseCostKnown, raidNear, repairCostKnown as repairCostKnownR, storeKnown, type AdviceChoice } from "../src/presentation/affordances.ts";
+import { actionText, adviceAction, adviceChoices, affordable as affordableR, coinsKnown as coinsKnownR, buyKnown, economyProblems, GOOD_LABEL, grainCover, grainKnown, houseOf, openAdvice, priceKnown, publicRules, purchaseCostKnown, raidNear, repairCostKnown as repairCostKnownR, storeKnown, type AdviceChoice } from "../src/presentation/affordances.ts";
 import { captainSentTo, fallenAt, lettersFall, planOf, certainty, letterSentences, letterGist, planWords, reasonWords, sourceOf } from "../src/presentation/phrasing.ts";
 import { beliefsAbout, validateDraft, type OrderDraft, type View } from "../src/view.ts";
 import { INTENTS, type Recommendation } from "../src/schemas.ts";
@@ -368,6 +369,10 @@ const repairCostKnown = (v: View, place: string, mode = "standard") => repairCos
 const MODE_TEXT: Record<string, string> = { standard: "Standard: the garrison, paid materials", rush: "Rush: pay extra, the captain's men help", labour: "Labour only: the captain's men, no cost, slower" };
 const kCoins = (n: number) => `${Math.round(n / 1000)}k`;
 /** A price per unit, as the books give it. */
+const MAPG = new MapGraph(content);
+/** Days a caravan needs between two places on open roads (weather may add a few). */
+const roadDays = (a: string, b: string) => { const p = MAPG.path(a, b, "foot", () => true); return p ? Math.max(1, Math.ceil(p.ticks / 86400)) : undefined; };
+const dayTone = (d: number) => `<span class="${d <= 2 ? "ok" : d <= 4 ? "warn" : "bad"}">${d} ${d === 1 ? "day" : "days"}</span>`;
 const priceK = (n: number) => { const x = n / 100; return x < 10 ? x.toFixed(2) : x < 100 ? x.toFixed(1) : String(Math.round(x)); };
 /** Background income (holdings) minus upkeep, per day: a rough estimate Anna can see. */
 const baseNetMilli = content.scenario.economy.holdings.reduce((a, h) => a + h.dailyIncomeMilli, 0) - content.scenario.economy.dailyUpkeepMilli;
@@ -451,6 +456,14 @@ function economyTab(v: View): string {
   const goodKinds = e.act === "take" ? ["grain"] : [...(g?.kinds ?? []), ...(gr && e.act === "buy" ? ["grain"] : [])];
   const fromLabel = e.act === "buy" ? "At" : "From", toLabel = e.act === "sell" ? "At" : "For";
   const fortIron = a?.muster ? storeKnown(v, e.fort, "iron") : undefined;
+  const trade = (e.act === "buy" || e.act === "sell") && a && a.target && a.to ? (() => {
+    const mk = e.act === "buy" ? a.target! : a.to!, place = e.act === "buy" ? a.to! : a.target!;
+    const price = e.act === "buy" ? buyKnown(v, mk, a.good) : a.good ? v.ledger?.town?.[mk]?.[a.good] : undefined, days = roadDays(mk, place), n = a.units ?? e.qty;
+    if (price === undefined && days === undefined) return "";
+    const sum = price === undefined ? "" : `${e.act === "buy" ? "You pay" : "You receive"} ${priceK(price * n)} (${n} × ${priceK(price)})`;
+    const when = days === undefined ? "" : `${e.act === "buy" ? "delivered in" : "paid after"} about ${dayTone(days)}`;
+    return [sum, when].filter(Boolean).join(", ");
+  })() : "";
   const info = a?.muster && mu ? `Up to ${mu.men} men · iron ${fortIron === undefined ? "?" : fortIron} · wages ${kCoins(mu.men * mu.wageMilli)} a day for ${mu.serviceDays} days`
     : cost !== undefined ? `Costs about ${kCoins(cost)}${coins === undefined ? "" : `; you have about ${kCoins(coins)}`}`
     : "";
@@ -461,7 +474,7 @@ function economyTab(v: View): string {
       ${e.act === "muster" && mu ? `<label for="eco-comm">Men of</label><select id="eco-comm">${f.communities.map((c) => opt(c, name(v, c), e.community)).join("")}</select><label for="eco-fort">To</label><select id="eco-fort">${f.forts.map((x) => opt(x, name(v, x), e.fort)).join("")}</select>`
         : `<label for="eco-from">${fromLabel}</label><select id="eco-from">${f.from.map((x) => opt(x, name(v, x), e.from)).join("")}</select><label for="eco-to">${toLabel}</label><select id="eco-to">${f.to.map((x) => opt(x, name(v, x), e.to)).join("")}</select>`}
       ${e.act === "take" ? `<span></span><label class="check"><input type="checkbox" id="eco-consult" ${e.consult ? "checked" : ""}> Ask the people first</label>` : ""}
-      ${info ? `<span></span><span class="cost">${esc(info)}</span>` : ""}
+      ${trade ? `<span></span><span class="cost">${trade}</span>` : info ? `<span></span><span class="cost">${esc(info)}</span>` : ""}
       <span></span><button id="eco-add" ${st.paused && a && !problems.length ? "" : "disabled"}>Make an order</button>
     </div>${problems.length ? `<div class="err">${esc(problems.join("; "))}</div>` : st.error ? `<div class="err">${esc(st.error)}</div>` : ""}</div>`;
   const queued = st.queue.map((q, i) => ({ q, i })).filter(({ q }) => q.action === "requisition" || q.action === "purchase" || (q.action === "levy" && q.muster));
