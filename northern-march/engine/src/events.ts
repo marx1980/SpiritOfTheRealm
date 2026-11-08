@@ -117,6 +117,7 @@ export const EVENT_TYPES: Readonly<Record<string, EventTypeDef>> = Object.freeze
   GoodsShipped: T("goods", "economic", 2),
   GoodsDelivered: T("goods", "economic", 2),
   GoodsLost: T("goods", "economic", 2),
+  GoodsSold: T("goods", "economic", 2),
   MusterCalled: T("manpower", "military", 2),
   MusterArrived: T("manpower", "military", 2),
   MusterEnded: T("manpower", "military", 2),

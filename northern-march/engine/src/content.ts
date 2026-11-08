@@ -49,7 +49,9 @@ export interface GrainPlace { location: string; store: number; production: numbe
 /** Wider economy (D-039): goods held in stores at named places, priced by the realm's stock, moved by orders and convoys. */
 export interface GoodsParams {
   kinds: string[];
-  places: { location: string; store: Record<string, number>; production: Record<string, number>; everyDays?: Record<string, number>; cap: Record<string, number> }[];
+  places: { location: string; house?: string; store: Record<string, number>; production: Record<string, number>; everyDays?: Record<string, number>; cap: Record<string, number> }[];
+  houses: string[];
+  market: { houseMarkupPermille: number; towns: { location: string; house: string; spreadPermille: number; cutPermille: number }[] };
   price: Record<string, { baseMilli: number; target: number; slope: number }>;
   buy: Record<string, { units: number; reserveUnits: number }>;
   repair: { pointsPerUnit: number; coverPermille: number };

@@ -15,7 +15,7 @@ const ledgerSum = (w: any, good: string, k: string) => (Object.values(w.goodsLed
 const start = (c: typeof CONTENT, good: string) => c.scenario.goods!.places.reduce((n, p) => n + ((p.store as Record<string, number>)[good] ?? 0), 0);
 function conserved(sim: { unsafeWorldForDebug(): any; content: typeof CONTENT }, good: string) {
   const w = sim.unsafeWorldForDebug();
-  return { have: holdings(w, good) + onRoad(w, good), want: start(sim.content, good) + ledgerSum(w, good, "produced") - ledgerSum(w, good, "spilled") - ledgerSum(w, good, "lost") - ledgerSum(w, good, "seized") - ledgerSum(w, good, "used") };
+  return { have: holdings(w, good) + onRoad(w, good), want: start(sim.content, good) + ledgerSum(w, good, "produced") - ledgerSum(w, good, "spilled") - ledgerSum(w, good, "lost") - ledgerSum(w, good, "seized") - ledgerSum(w, good, "used") - ledgerSum(w, good, "sold") };
 }
 const quiet = (edit: (r: any) => void = () => {}) => variant((r) => { r.scenario.scripts = []; r.scenario.threat.startPermillePerDay = 0; edit(r); });
 function ordered(seed: number, action: PlayerAction, day = 5, days = 40, content = CONTENT) {

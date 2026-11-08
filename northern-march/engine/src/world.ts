@@ -61,8 +61,9 @@ export interface WorldState {
   convoys: Record<string, { id: number; from: string; to: string; sacks: number; departedAt: number; arrivesAt: number; orderId: number; how: string; consulted: boolean }>;
   nextConvoyId: number;
   goods: Record<string, Record<string, number>>; // good -> place -> units
-  goodsLedger: Record<string, Record<string, { produced: number; spilled: number; lost: number; seized: number; used: number }>>;
+  goodsLedger: Record<string, Record<string, { produced: number; spilled: number; lost: number; seized: number; used: number; sold: number }>>;
   goodsPrice: Record<string, number>;
+  houseCoin: Record<string, number>; // coin each House has earned from the crown (D-041)
   goodsConvoys: Record<string, { id: number; good: string; from: string; to: string; units: number; departedAt: number; arrivesAt: number; orderId: number; how: string }>;
   nextGoodsConvoyId: number;
   hands: Record<string, number>; // men still at home and available to a muster
@@ -106,12 +107,12 @@ export function bandOf(store: number, need: number, bandDays: readonly number[])
   const i = bandDays.findIndex((d) => cover >= d);
   return BANDS[i < 0 ? 4 : i];
 }
-function initialGoods(c: Content): Pick<WorldState, "goods" | "goodsLedger" | "goodsPrice" | "goodsConvoys" | "nextGoodsConvoyId"> {
-  const g = c.scenario.goods, out = { goods: {} as WorldState["goods"], goodsLedger: {} as WorldState["goodsLedger"], goodsPrice: {} as WorldState["goodsPrice"], goodsConvoys: {} as WorldState["goodsConvoys"], nextGoodsConvoyId: 1 };
+function initialGoods(c: Content): Pick<WorldState, "goods" | "goodsLedger" | "goodsPrice" | "goodsConvoys" | "nextGoodsConvoyId" | "houseCoin"> {
+  const g = c.scenario.goods, out = { goods: {} as WorldState["goods"], goodsLedger: {} as WorldState["goodsLedger"], goodsPrice: {} as WorldState["goodsPrice"], houseCoin: Object.fromEntries((g?.houses ?? []).map((h) => [h, 0])) as WorldState["houseCoin"], goodsConvoys: {} as WorldState["goodsConvoys"], nextGoodsConvoyId: 1 };
   for (const k of g?.kinds ?? []) { out.goods[k] = {}; out.goodsLedger[k] = {}; out.goodsPrice[k] = g!.price[k].baseMilli; }
   for (const p of [...(g?.places ?? [])].sort((a, b) => cmp(a.location, b.location))) for (const k of g!.kinds) {
     if (p.cap[k] === undefined) continue;
-    out.goods[k][p.location] = p.store[k] ?? 0; out.goodsLedger[k][p.location] = { produced: 0, spilled: 0, lost: 0, seized: 0, used: 0 };
+    out.goods[k][p.location] = p.store[k] ?? 0; out.goodsLedger[k][p.location] = { produced: 0, spilled: 0, lost: 0, seized: 0, used: 0, sold: 0 };
   }
   return out;
 }
@@ -315,6 +316,11 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
     s.goodsConvoys[String(p.convoyId)] = { id: p.convoyId, good: p.good, from: p.from, to: p.to, units: p.units, departedAt: p.departedAt, arrivesAt: p.arrivesAt, orderId: p.orderId, how: p.how };
     s.nextGoodsConvoyId = p.convoyId + 1;
     if (p.costMilli) s.treasuryMilli[p.payer] -= p.costMilli;
+    if (p.costMilli && p.payee) s.houseCoin[p.payee] += p.costMilli;
+  },
+  GoodsSold: (s, p) => {
+    s.treasuryMilli[p.crown] += p.proceedsMilli - p.houseCutMilli; if (p.houseCutMilli) s.houseCoin[p.house] += p.houseCutMilli;
+    s.goodsLedger[p.good][p.from].sold += p.units; delete s.goodsConvoys[String(p.convoyId)];
   },
   GoodsDelivered: (s, p) => { s.goods[p.good][p.to] += p.units - p.spilled; s.goodsLedger[p.good][p.to].spilled += p.spilled; delete s.goodsConvoys[String(p.convoyId)]; },
   GoodsLost: (s, p) => { s.goodsLedger[p.good][p.from][p.reason === "seized" ? "seized" : "lost"] += p.units; delete s.goodsConvoys[String(p.convoyId)]; },
