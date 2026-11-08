@@ -225,3 +225,4 @@ Page only, no engine change. Grain is treated as a good in the order form: one A
 - Page: Report last, Days left, "Crown (–)" for crown market towns, "House takes", queued orders listed under the order form, errors shown there, » on both scrolling tables.
 - Check: matched-seed state and event counts identical to the previous commit (seeds 1-12, passive, delegating, aggressive, 160 days), so the sealed verdicts in D-046 still describe the behaviour. Suite 250/250. Tests: `test/economy_quantity.test.ts`.
 - Horses: 17 at the start and 4 an order are content values, unchanged and not tuned.
+- Follow-up (8 Nov): the page never queues a goods or grain order without an amount; an order from an adviser or any other button gets the usual order size filled in and shown ("Move 60 timber ..."). The engine still accepts an order without an amount (scripted policies use it) and then moves the usual size, never more than the store has above its reserve.

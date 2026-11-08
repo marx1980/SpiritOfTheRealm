@@ -135,8 +135,15 @@ function send() {
   advance();
 }
 
+/** Every goods or grain order names its amount: the usual order size when none was given (an adviser's, say). */
+const sized = (a: PlayerAction): PlayerAction => {
+  if ((a.action !== "requisition" && a.action !== "purchase") || !a.to || a.units) return a;
+  const w = st.sim.viewOf("player").world, size = a.good ? w.goods?.unitsPerOrder[a.good] : a.action === "purchase" ? w.grain?.sacks.purchase : w.grain?.sacks.requisition;
+  return size ? { ...a, units: size } : a;
+};
 const queue = (a: PlayerAction) => {
   if (!st.paused) return;
+  a = sized(a);
   // the same action from two advisers (e.g. raiders and captain both mean "send the captain to Northwatch") is queued once
   if (st.queue.some((q) => JSON.stringify(q) === JSON.stringify(a))) { st.error = `${actionText(st.sim.viewOf("player"), a)} is already queued`; return render(); }
   if (!affordable(st.sim.viewOf("player"), a)) { st.error = `${actionText(st.sim.viewOf("player"), a)}: not enough coins`; return render(); }
@@ -144,7 +151,7 @@ const queue = (a: PlayerAction) => {
 };
 
 /** Two actions are the same action if they send the same captain to the same fort (its mission may differ). */
-const matches = (q: PlayerAction, a: PlayerAction) => a.action === "advance" ? q.action === "advance" && q.target === a.target : JSON.stringify(q) === JSON.stringify(a);
+const matches = (q: PlayerAction, a: PlayerAction) => a.action === "advance" ? q.action === "advance" && q.target === a.target : JSON.stringify(q) === JSON.stringify(sized(a));
 const listNames = (xs: string[]) => xs.length <= 1 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
 type Choice = AdviceChoice;
 const choices = (v: View): Choice[] => adviceChoices(v);
@@ -551,7 +558,7 @@ document.addEventListener("click", (e) => {
     st.error = ""; return render();
   }
   if (el.dataset.act) {
-    const a = JSON.parse(el.dataset.act) as PlayerAction, i = st.queue.findIndex((q) => JSON.stringify(q) === JSON.stringify(a));
+    const a = sized(JSON.parse(el.dataset.act) as PlayerAction), i = st.queue.findIndex((q) => JSON.stringify(q) === JSON.stringify(a));
     if (i >= 0) { st.queue.splice(i, 1); st.error = ""; return render(); }
     return queue(a);
   }
