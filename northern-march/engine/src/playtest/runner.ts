@@ -18,7 +18,7 @@ export const observationRules = (c: Content): ObservationRules => ({ ...publicRu
 const toRecord = (a: PlayerAction): ActionRecord => ({
   action: a.action as ActionRecord["action"], ...(a.target ? { target: a.target } : {}), ...(a.mission && a.mission !== "defend" ? { mission: a.mission } : {}),
   ...(a.raid ? { raid: a.raid } : {}), ...(a.repairMode && a.repairMode !== "standard" ? { repairMode: a.repairMode } : {}), ...(a.followed ? { followed: a.followed } : {}),
-  ...(a.to ? { to: a.to } : {}), ...(a.good ? { good: a.good } : {}), ...(a.units ? { units: a.units } : {}), ...(a.sell ? { sell: true } : {}), ...(a.muster ? { muster: true } : {}), ...(a.consult ? { consult: true } : {}),
+  ...(a.to ? { to: a.to } : {}), ...(a.good ? { good: a.good } : {}), ...(a.units ? { units: a.units } : {}), ...(a.market ? { market: true } : {}), ...(a.sell ? { sell: true } : {}), ...(a.muster ? { muster: true } : {}), ...(a.consult ? { consult: true } : {}),
 });
 const fromRecord = (r: ActionRecord): PlayerAction => ({ ...r } as PlayerAction);
 const newSim = (s: { content: Content; seed: number; params?: SimParams }) => createSim({ content: s.content, seed: s.seed, policy: "external", params: { dayEnd: true, ...(s.params ?? {}) } });

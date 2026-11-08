@@ -11,6 +11,13 @@ import type { Books } from "../world.ts";
 
 const holder = (ctx: Ctx, place: string, good: string) => ctx.content.scenario.goods!.places.find((p) => p.location === place && p.cap[good] !== undefined);
 
+/** Weather or flooded roads may hold a caravan up: a chance per day on the road, and a few days lost (D-050). */
+export function delayTicks(ctx: Ctx, key: string, tripTicks: number, cv: { delayPermillePerDay?: number; delayDays?: [number, number] }): number {
+  if (!cv.delayPermillePerDay || !cv.delayDays) return 0;
+  const r = ctx.keyed(`caravan:delay:${key}`), days = Math.max(1, Math.ceil(tripTicks / DAY));
+  return r.chancePermille(Math.min(1000, cv.delayPermillePerDay * days)) ? r.int(cv.delayDays[0], cv.delayDays[1]) * DAY : 0;
+}
+
 /** The realm's price of a good: dearer as the stock falls short of its target, cheaper as it grows, clamped to [base/2, 3 x base]. */
 export function priceOf(ctx: Ctx, good: string, total: number): number {
   const c = ctx.content.scenario.goods!.price[good];
@@ -22,7 +29,17 @@ export function priceOf(ctx: Ctx, good: string, total: number): number {
 export function startGoodsOrder(ctx: Ctx, orderId: number, a: ActionRef, cause: number) {
   const o = ctx.s.orders[String(orderId)].order, g = ctx.content.scenario.goods;
   const good = o.constraints.find((c) => c.kind === "good")?.textKey ?? "", source = a.target!, dest = o.constraints.find((c) => c.kind === "deliverTo")?.textKey ?? "";
-  const sell = o.constraints.some((c) => c.kind === "sell");
+  const sell = o.constraints.some((c) => c.kind === "sell"), market = o.constraints.some((c) => c.kind === "market");
+  if (market) { // buying at a market for a store of the crown's: the word reaches the market, then the goods are sent from wherever the realm has them
+    if (!g || !g.kinds.includes(good) || a.kind !== "purchase") return finish(ctx, orderId, "abandoned", cause, "noDestination");
+    if (!g.market.towns.some((t) => t.location === source)) return finish(ctx, orderId, "abandoned", cause, "noMarket");
+    const d = holder(ctx, dest, good);
+    if (!d || (d.house ?? "crown") !== "crown") return finish(ctx, orderId, "abandoned", cause, "noDestination");
+    const pos0 = ctx.s.positions[o.recipient], at0 = "at" in pos0 ? pos0.at : pos0.transit.dest, word = ctx.map.path(at0, source, "rider", (r) => ctx.isOpen(r));
+    if (!word) return finish(ctx, orderId, "abandoned", cause, "noRoute");
+    const asked0 = Number(o.constraints.find((c) => c.kind === "units")?.textKey);
+    return void ctx.at(ctx.tick + word.ticks, "goods:ship", { orderId, kind: "purchase", source, dest, good, sell: false, market: true, cause, ...(asked0 > 0 ? { asked: asked0 } : {}) });
+  }
   if (!g || !g.kinds.includes(good) || !holder(ctx, source, good) || source === dest) return finish(ctx, orderId, "abandoned", cause, "noDestination");
   if (sell ? !g.market.towns.some((t) => t.location === dest) : !holder(ctx, dest, good)) return finish(ctx, orderId, "abandoned", cause, sell ? "noMarket" : "noDestination");
   if ((sell || a.kind === "requisition") && (holder(ctx, source, good)!.house ?? "crown") !== "crown") return finish(ctx, orderId, "abandoned", cause, "houseHolds"); // another House keeps what is its own
@@ -72,7 +89,12 @@ export const goods: System = {
           const e = Math.floor((prices[k] * (1000 - q)) / 3000);
           books.price[k] = Math.max(0, prices[k] + ctx.keyed(`goods:books:${day}:price:${k}`).int(-e, e));
         }
-        for (const t of g.market.towns) { books.town[t.location] = {}; for (const k of g.kinds) books.town[t.location][k] = Math.floor((books.price[k] * Math.max(0, 1000 - t.spreadPermille - (glut[t.location]?.[k] ?? 0))) / 1000); }
+        books.buy = {};
+        for (const t of g.market.towns) {
+          books.town[t.location] = {}; books.buy[t.location] = {};
+          for (const k of g.kinds) { books.town[t.location][k] = Math.floor((books.price[k] * Math.max(0, 1000 - t.spreadPermille - (glut[t.location]?.[k] ?? 0))) / 1000); books.buy[t.location][k] = Math.floor((books.price[k] * (1000 + t.spreadPermille)) / 1000); }
+        }
+        if (ctx.s.grainPrice) { books.grain = {}; for (const t of g.market.towns) { const gp = ctx.s.grainPrice[t.location] ?? 0, e = Math.floor((gp * (1000 - q)) / 3000); books.grain[t.location] = Math.max(0, gp + ctx.keyed(`goods:books:${day}:grain:${t.location}`).int(-e, e)); } }
       }
       const day0 = ctx.emit("GoodsDay", [], changes.map(([l]) => loc(l)), { changes, prices, ...(anyGlut ? { glut } : {}), ...(books ? { books, atSeat } : {}) });
       // a House spends part of what it has been paid on refilling its own store, at the usual price
@@ -86,10 +108,29 @@ export const goods: System = {
       }
       ctx.at(ctx.tick + DAY, "goods:day", {});
     },
-    "goods:ship": (ctx, { orderId, kind, source, dest, good, sell, cause, asked }) => {
+    "goods:ship": (ctx, { orderId, kind, source, dest, good, sell, cause, asked, market }) => {
       const g = ctx.content.scenario.goods!, o = ctx.s.orders[String(orderId)]?.order;
       if (!o || ctx.s.orders[String(orderId)].status !== "executing") return;
       const stop = (reason: string) => finish(ctx, orderId, "abandoned", cause, reason);
+      if (market) { // a purchase at a market: the buyer pays at once; the seller is paid when the caravan reaches the buyer
+        const town = g.market.towns.find((t) => t.location === source);
+        if (!town) return stop("noMarket");
+        const rule = g.buy[good], realm = ctx.s.goodsPrice[good], buyP = Math.floor((realm * (1000 + town.spreadPermille)) / 1000), sellP = Math.floor((realm * (1000 - town.spreadPermille)) / 1000);
+        const sup = [...g.places].filter((p) => p.cap[good] !== undefined && p.location !== dest).map((p) => ({ p, spare: Math.max(0, ctx.s.goods[good][p.location] - rule.reserveUnits) })).filter((x) => x.spare > 0)
+          .sort((x, y) => y.spare - x.spare || (x.p.location < y.p.location ? -1 : 1))[0];
+        if (!sup) return stop("noSurplus");
+        const units = Math.min(asked > 0 ? Math.min(asked, rule.units) : rule.units, sup.spare, Math.floor(Math.max(0, ctx.s.treasuryMilli[ctx.content.scenario.ruler]) / buyP));
+        if (units <= 0) return stop("funds");
+        const trip = ctx.map.path(source, dest, "foot", (r) => ctx.isOpen(r)) ?? (source === dest ? { ticks: 0 } : null);
+        if (!trip) return stop("noRoute");
+        const late = delayTicks(ctx, String(orderId), trip.ticks, g.convoy);
+        const sh = ctx.emit("GoodsShipped", [cause], [loc(source), loc(dest), loc(sup.p.location), { kind: "order", id: String(orderId) }], { by: o.recipient, convoyId: ctx.s.nextGoodsConvoyId, good, from: sup.p.location, via: source, to: dest, units,
+          departedAt: ctx.tick, arrivesAt: ctx.tick + trip.ticks + late, orderId, how: "market", costMilli: units * buyP, priceMilli: buyP, payer: ctx.content.scenario.ruler, owedMilli: units * sellP, owedTo: sup.p.house ?? "crown", ...(late ? { delayTicks: late } : {}) });
+        observeTreasury(ctx, sh.id);
+        ctx.at(ctx.tick + trip.ticks + late, "goods:arrive", { convoyId: sh.payload.convoyId, cause: sh.id });
+        finish(ctx, orderId, "completed", sh.id);
+        return;
+      }
       const rule = g.buy[good], buy = kind === "purchase" && !sell, house = holder(ctx, source, good)!.house ?? "crown";
       const price = buy && house !== "crown" ? Math.floor((ctx.s.goodsPrice[good] * (1000 + g.market.houseMarkupPermille)) / 1000) : ctx.s.goodsPrice[good]; // a House sells dearer
       const spare = Math.max(0, ctx.s.goods[good][source] - rule.reserveUnits);
@@ -98,11 +139,12 @@ export const goods: System = {
       if (units <= 0) return stop(spare <= 0 ? "noSurplus" : "funds");
       const trip = ctx.map.path(source, dest, "foot", (r) => ctx.isOpen(r)); // carts walk
       if (!trip) return stop("noRoute");
+      const late = sell ? delayTicks(ctx, String(orderId), trip.ticks, g.convoy) : 0;
       const costMilli = buy ? units * price : 0;
       const sh = ctx.emit("GoodsShipped", [cause], [loc(source), loc(dest), { kind: "order", id: String(orderId) }], { by: o.recipient, convoyId: ctx.s.nextGoodsConvoyId, good, from: source, to: dest, units,
-        departedAt: ctx.tick, arrivesAt: ctx.tick + trip.ticks, orderId, how: sell ? "sale" : buy ? "purchase" : "requisition", costMilli, priceMilli: price, payer: ctx.content.scenario.ruler, ...(buy && house !== "crown" ? { payee: house } : {}) });
+        departedAt: ctx.tick, arrivesAt: ctx.tick + trip.ticks + late, orderId, how: sell ? "sale" : buy ? "purchase" : "requisition", costMilli, priceMilli: price, payer: ctx.content.scenario.ruler, ...(buy && house !== "crown" ? { payee: house } : {}) });
       if (costMilli) observeTreasury(ctx, sh.id);
-      ctx.at(ctx.tick + trip.ticks, "goods:arrive", { convoyId: sh.payload.convoyId, cause: sh.id });
+      ctx.at(ctx.tick + trip.ticks + late, "goods:arrive", { convoyId: sh.payload.convoyId, cause: sh.id });
       finish(ctx, orderId, "completed", sh.id);
     },
     "goods:arrive": (ctx, { convoyId, cause }) => {
@@ -111,7 +153,7 @@ export const goods: System = {
       const r = ctx.keyed(`goods:convoy:${convoyId}`);
       const days = Math.max(1, Math.ceil((c.arrivesAt - c.departedAt) / DAY));
       const lost = r.chancePermille(Math.min(1000, g.convoy.lossPermillePerDay * days));
-      const intensity = Math.max(0, ...ctx.content.scenario.threat.sites.filter((x) => x.target === c.from || x.target === c.to).map((x) => ctx.s.threats[x.site]?.intensityPermille ?? 0));
+      const intensity = Math.max(0, ...ctx.content.scenario.threat.sites.filter((x) => x.target === c.from || x.target === (c.via ?? c.from) || x.target === c.to).map((x) => ctx.s.threats[x.site]?.intensityPermille ?? 0));
       const seized = r.chancePermille(Math.floor((g.convoy.seizurePermilleAtFull * intensity) / 1000));
       if (lost || seized) { ctx.emit("GoodsLost", [cause], [loc(c.from), loc(c.to)], { convoyId, good: c.good, from: c.from, to: c.to, units: c.units, reason: seized ? "seized" : "lost", orderId: c.orderId }); return; }
       if (c.how === "sale") {
@@ -122,7 +164,8 @@ export const goods: System = {
         return;
       }
       const spilled = Math.max(0, ctx.s.goods[c.good][c.to] + c.units - holder(ctx, c.to, c.good)!.cap[c.good]);
-      ctx.emit("GoodsDelivered", [cause], [loc(c.from), loc(c.to)], { convoyId, good: c.good, from: c.from, to: c.to, units: c.units, spilled, orderId: c.orderId });
+      const arrived = ctx.emit("GoodsDelivered", [cause], [loc(c.from), loc(c.to)], { convoyId, good: c.good, from: c.from, to: c.to, units: c.units, spilled, orderId: c.orderId, ...(c.owedMilli ? { owedMilli: c.owedMilli, owedTo: c.owedTo, crown: ctx.content.scenario.ruler } : {}) });
+      if (c.owedMilli && c.owedTo === "crown") observeTreasury(ctx, arrived.id);
     },
   },
 };

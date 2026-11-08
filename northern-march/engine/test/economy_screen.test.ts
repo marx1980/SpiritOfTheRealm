@@ -67,14 +67,14 @@ test("books: the public rules show who holds each store and where goods sell, bu
 
 test("actions: what the page offers follows ownership: take from the crown's stores, buy from a House's, sell only the crown's", () => {
   const v = play(2, 12, undefined, 5, ARMED).viewOf("player"), acts = economyActions(v, RULES), has = (a: PlayerAction) => acts.some((x) => JSON.stringify(x) === JSON.stringify(a));
-  assert.ok(has({ action: "requisition", target: "crownwood", to: "greybridge", good: "timber" }));
-  assert.ok(has({ action: "purchase", target: "pinegate", to: "greybridge", good: "timber" }), "buy from Veyr's store");
-  assert.ok(!has({ action: "requisition", target: "pinegate", to: "greybridge", good: "timber" }), "cannot take from a House");
+  assert.ok(has({ action: "purchase", market: true, target: "marchend", to: "greybridge", good: "timber" }), "buy at a market for a crown store");
+  assert.ok(!acts.some((a) => a.action === "requisition" && !a.sell && !!a.good), "no goods are moved between stores");
+  assert.ok(!acts.some((a) => a.action === "purchase" && !a.market && !!a.good), "no buying straight from a store");
   assert.ok(has({ action: "requisition", target: "crownwood", to: "marchend", good: "timber", sell: true }));
   assert.ok(!acts.some((a) => a.sell && a.target === "pinegate"), "cannot sell a House's timber");
   assert.ok(!acts.some((a) => a.good && a.to === "pinegate"), "cannot send into a House's store");
   assert.ok(acts.some((a) => a.action === "levy" && a.muster && a.target === "northwatch" && a.to === "greybridge"));
-  assert.ok(acts.some((a) => !a.good && a.action === "requisition"), "grain moves are offered too");
+  assert.ok(acts.some((a) => !a.good && a.action === "purchase" && a.market), "grain can be bought at a market");
   assert.ok(playerActions(v, RULES).length > acts.length - 1);
 });
 
@@ -103,7 +103,7 @@ test("actions: the page explains why an order cannot work", () => {
 test("actions: every order the page offers is accepted by the engine (none abandoned for a reason the page should have caught)", () => {
   const v = play(2, 12, undefined, 5, ARMED).viewOf("player"), acts = economyActions(v, RULES);
   const pick = (f: (a: PlayerAction) => boolean) => acts.find(f)!;
-  const sample = [pick((a) => a.action === "requisition" && !!a.good && !a.sell), pick((a) => a.action === "purchase" && !!a.good), pick((a) => !!a.sell), pick((a) => !!a.muster), pick((a) => !a.good && a.action === "requisition")];
+  const sample = [pick((a) => a.action === "purchase" && !!a.market && !!a.good), pick((a) => a.action === "purchase" && !!a.market && !a.good), pick((a) => !!a.sell), pick((a) => !!a.muster)];
   for (const a of sample) {
     assert.ok(a, "a sample");
     const sim = play(2, 60, a, 12, ARMED), bad = sim.log.filter((e) => e.type === "OrderAbandoned" && ["houseHolds", "noMarket", "noDestination"].includes(String(e.payload.reason)));

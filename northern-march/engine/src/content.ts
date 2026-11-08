@@ -56,7 +56,7 @@ export interface GoodsParams {
   price: Record<string, { baseMilli: number; target: number; slope: number }>;
   buy: Record<string, { units: number; reserveUnits: number }>;
   repair: { pointsPerUnit: number; coverPermille: number };
-  convoy: { lossPermillePerDay: number; seizurePermilleAtFull: number };
+  convoy: { lossPermillePerDay: number; seizurePermilleAtFull: number; /** A caravan may be held up by weather or flooded roads: chance per day on the road, and how many days it loses (D-050). */ delayPermillePerDay?: number; delayDays?: [number, number] };
 }
 /** Wider economy, stage 2 (D-040): men called from a community's hands, armed from a fort's iron, paid for a season. */
 export interface ManpowerParams { musterMen: number; ironPerMan: number; mountedPermille: number; serviceDays: number; wageMilli: number; handsReservePermille: number; harvestPermille: number; grievanceAtFullPermille: number }
@@ -72,7 +72,9 @@ export interface GrainParams {
   /** The crown buys: limited by coin and by the seller's surplus (it keeps `reserveDays` of its own need). */
   purchase: { sacks: number; reserveDays: number; priceMilliPerSack: number };
   /** Carts walk. A convoy can be lost on the road, or seized by raiders in proportion to the threat at either end. */
-  convoy: { lossPermillePerDay: number; seizurePermilleAtFull: number };
+  convoy: { lossPermillePerDay: number; seizurePermilleAtFull: number; delayPermillePerDay?: number; delayDays?: [number, number] };
+  /** The grain price at a market (D-050): the base, dearer with a shortage across the realm and at the nearest granary, after a spoiled harvest there, and with raiders about; clamped. */
+  market?: { baseMilli: number; minMilli: number; maxMilli: number; targetDays: number; stockSlopePermille: number; bandPermille: number; harvestPermille: number; raidPermille: number };
   /** A fort with an empty store loses this share of its men a day (they leave or fall sick). */
   hungerPermille: number;
   /** A castellan who believes his own store would feed his place for fewer than `cover` days sends for grain himself (no one told him to, and he does not stop to consult); not again within `cooldownDays`. */

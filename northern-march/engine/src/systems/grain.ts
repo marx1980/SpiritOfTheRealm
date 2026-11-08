@@ -7,14 +7,44 @@ import type { ActionRef } from "../agents/model.ts";
 import { finish } from "./orders.ts";
 import { best, observe, observeTreasury } from "./knowledge.ts";
 import { contribution, inputsOf } from "./communities.ts";
+import { delayTicks } from "./goods.ts";
 
+/** The grain price at each market (D-050): dearer with a shortage across the realm, a tight or short granary nearest the market, a spoiled harvest there, and raiders about. */
+export function grainPrices(ctx: Ctx, after: Record<string, number>): Record<string, number> | undefined {
+  const g = ctx.content.scenario.grain!, m = g.market, gm = ctx.content.scenario.goods;
+  if (!m || !gm) return undefined;
+  const need = g.places.reduce((n, p) => n + p.need, 0), total = g.places.reduce((n, p) => n + (after[p.location] ?? 0), 0);
+  const coverX10 = need > 0 ? Math.floor((total * 10) / need) : 0;
+  const stockTerm = coverX10 < m.targetDays * 10 ? Math.floor(((m.targetDays * 10 - coverX10) * m.stockSlopePermille) / (m.targetDays * 10)) : 0;
+  const raid = Math.max(0, ...Object.values(ctx.s.threats).map((t) => t.untilTick > ctx.tick ? t.intensityPermille : 0));
+  const pos = (id: string) => ctx.content.byId.location.get(id)!.pos;
+  const out: Record<string, number> = {};
+  for (const t of [...gm.market.towns].sort((a, b) => (a.location < b.location ? -1 : 1))) {
+    const [x, y] = pos(t.location);
+    const near = [...g.places].sort((a, b) => { const da = (pos(a.location)[0] - x) ** 2 + (pos(a.location)[1] - y) ** 2, db = (pos(b.location)[0] - x) ** 2 + (pos(b.location)[1] - y) ** 2; return da - db || (a.location < b.location ? -1 : 1); })[0];
+    const days = near.need > 0 ? Math.floor((after[near.location] ?? 0) / near.need) : 99, at = g.bandDays;
+    const band = days >= at[0] ? 0 : days >= at[1] ? 1 : days >= at[2] ? 2 : days >= at[3] ? 3 : 4;
+    const hit = ctx.s.harvestHit[near.location], spoiled = hit && hit.until > ctx.tick ? m.harvestPermille : 0;
+    const term = stockTerm + band * m.bandPermille + spoiled + Math.floor((raid * m.raidPermille) / 1000);
+    out[t.location] = Math.min(m.maxMilli, Math.max(m.minMilli, Math.floor((m.baseMilli * (1000 + term)) / 1000)));
+  }
+  return out;
+}
 const place = (ctx: Ctx, l: string) => ctx.content.scenario.grain!.places.find((p) => p.location === l);
 
 /** The steward's grain order begins: the word has to reach the place (and, if told to, the people there are consulted first). */
 export function startGrainOrder(ctx: Ctx, orderId: number, a: ActionRef, cause: number) {
   const o = ctx.s.orders[String(orderId)].order, g = ctx.content.scenario.grain;
   const source = a.target!, dest = o.constraints.find((c) => c.kind === "deliverTo")?.textKey ?? "";
-  const consult = o.constraints.some((c) => c.kind === "consult" && c.textKey === "yes");
+  const consult = o.constraints.some((c) => c.kind === "consult" && c.textKey === "yes"), market = o.constraints.some((c) => c.kind === "market");
+  if (market) { // buying at a market for a granary of the realm
+    const gm = ctx.content.scenario.goods;
+    if (!g || !gm || a.kind !== "purchase" || !gm.market.towns.some((t) => t.location === source) || !place(ctx, dest)) return finish(ctx, orderId, "abandoned", cause, "noDestination");
+    const p0 = ctx.s.positions[o.recipient], at0 = "at" in p0 ? p0.at : p0.transit.dest, word = ctx.map.path(at0, source, "rider", (r) => ctx.isOpen(r));
+    if (!word) return finish(ctx, orderId, "abandoned", cause, "noRoute");
+    const asked0 = Number(o.constraints.find((c) => c.kind === "units")?.textKey);
+    return void ctx.at(ctx.tick + word.ticks, "grain:ship", { orderId, kind: "purchase", source, dest, consult: false, market: true, cause, ...(asked0 > 0 ? { asked: asked0 } : {}) });
+  }
   if (!g || !place(ctx, source) || !place(ctx, dest) || source === dest) return finish(ctx, orderId, "abandoned", cause, "noDestination");
   const pos = ctx.s.positions[o.recipient];
   const from = "at" in pos ? pos.at : pos.transit.dest;
@@ -37,11 +67,30 @@ export const grain: System = {
       if ((ctx.s.harvestHit[place]?.until ?? 0) > ctx.tick) return; // a spoiled harvest is spoiled once; the next raid after it recovers hits it again
       ctx.emit("HarvestDamaged", [cause], [loc(place)], { place, permille: g.harvestHitPermille, until: ctx.tick + g.harvestHitDays * DAY });
     },
-    "grain:ship": (ctx, { orderId, kind, source, dest, consult, cause, official, asked }) => {
+    "grain:ship": (ctx, { orderId, kind, source, dest, consult, cause, official, asked, market }) => {
       const g = ctx.content.scenario.grain!, o = ctx.s.orders[String(orderId)]?.order;
       if (!official && (!o || ctx.s.orders[String(orderId)].status !== "executing")) return;
       const stop = (reason: string) => { if (!official) finish(ctx, orderId, "abandoned", cause, reason); };
       const by = official ?? o!.recipient;
+      if (market) { // a purchase at a market: paid at once at the market's grain price; the sacks come from the granary with the most to spare
+        const gp = g.market, price = ctx.s.grainPrice?.[source] ?? g.purchase.priceMilliPerSack, gd = place(ctx, dest);
+        if (!gd) return stop("noDestination");
+        const sup = [...g.places].filter((p) => p.location !== dest).map((p) => ({ p, spare: Math.max(0, ctx.s.grain[p.location] - g.purchase.reserveDays * p.need) })).filter((x) => x.spare > 0)
+          .sort((x, y) => y.spare - x.spare || (x.p.location < y.p.location ? -1 : 1))[0];
+        if (!sup) return stop("noSurplus");
+        const sacks = Math.min(asked > 0 ? Math.min(asked, g.purchase.sacks) : g.purchase.sacks, sup.spare, Math.floor(Math.max(0, ctx.s.treasuryMilli[ctx.content.scenario.ruler]) / price));
+        if (sacks <= 0) return stop("funds");
+        const trip = ctx.map.path(source, dest, "foot", (r) => ctx.isOpen(r)) ?? (source === dest ? { ticks: 0 } : null);
+        if (!trip) return stop("noRoute");
+        void gp;
+        const late = delayTicks(ctx, `g${orderId}`, trip.ticks, g.convoy);
+        const sh = ctx.emit("GrainShipped", [cause], [loc(source), loc(dest), loc(sup.p.location), { kind: "order", id: String(orderId) }], { by: o!.recipient, convoyId: ctx.s.nextConvoyId, from: sup.p.location, via: source, to: dest, sacks, departedAt: ctx.tick,
+          arrivesAt: ctx.tick + trip.ticks + late, orderId, how: "purchase", consulted: false, costMilli: sacks * price, payer: ctx.content.scenario.ruler, priceMilli: price, ...(late ? { delayTicks: late } : {}) });
+        observeTreasury(ctx, sh.id);
+        ctx.at(ctx.tick + trip.ticks + late, "grain:arrive", { convoyId: sh.payload.convoyId, cause: sh.id });
+        finish(ctx, orderId, "completed", sh.id);
+        return;
+      }
       const sp = place(ctx, source)!, buy = kind === "purchase", rule = buy ? g.purchase : g.requisition;
       const spare = Math.max(0, ctx.s.grain[source] - rule.reserveDays * sp.need);
       let sacks = Math.min(asked > 0 ? Math.min(asked, rule.sacks) : rule.sacks, spare);
@@ -93,7 +142,8 @@ export const grain: System = {
         changes.push([p.location, produced, consumed, spilled, p.need - consumed]);
         after[p.location] = have - consumed - spilled;
       }
-      const day = ctx.emit("GrainDay", [], changes.map(([l]) => loc(l)), { changes });
+      const prices = grainPrices(ctx, after);
+      const day = ctx.emit("GrainDay", [], changes.map(([l]) => loc(l)), { changes, ...(prices ? { prices } : {}) });
       // a fort whose stores are empty loses men to hunger
       const starving = g.places.filter((p) => after[p.location] === 0 && p.need > 0 && ctx.s.fortifications[p.location] && !ctx.s.fallen[p.location] && ctx.s.fortifications[p.location].garrison > 0)
         .map((p): [string, number] => [p.location, Math.max(1, Math.floor((ctx.s.fortifications[p.location].garrison * g.hungerPermille) / 1000))]);

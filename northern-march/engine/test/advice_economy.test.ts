@@ -62,7 +62,7 @@ test("presentation: the words and the order each piece of advice turns into", ()
   assert.equal(planWords(v, JSON.stringify({ kind: "advise_timber", target: "northwatch" })), "Bring timber to Northwatch");
   assert.equal(planWords(v, JSON.stringify({ kind: "advise_muster", target: "northwatch" })), "Call men to Northwatch");
   const t = adviceAction(v, rec("advise_timber", "northwatch"))!;
-  assert.equal(t.action, "requisition"); assert.equal(t.good, "timber"); assert.equal(t.to, "northwatch"); assert.equal(t.target, "crownwood");
+  assert.equal(t.action, "purchase"); assert.equal(t.market, true); assert.equal(t.good, "timber"); assert.equal(t.to, "northwatch"); assert.ok(["greybridge", "marchend", "ravenport", "saltmere"].includes(t.target!), "a market");
   assert.deepEqual(economyProblems(v, t), []);
   const m = adviceAction(v, rec("advise_muster", "northwatch"))!;
   assert.equal(m.action, "levy"); assert.equal(m.muster, true); assert.equal(m.to, "northwatch"); assert.equal(m.target, "northwatch", "the nearest people");
@@ -83,7 +83,7 @@ test("provisioner: plays whole games without breaking an invariant, sells timber
   for (const seed of [1, 2, 3, 4, 5, 6]) {
     const sim = createSim({ content: CONTENT, seed, policy: "provisioner" }); sim.runDays(150);
     assert.deepEqual(checkRun(sim), [], `seed ${seed}`);
-    sold += sim.log.filter((e) => e.type === "GoodsSold").length; moved += sim.log.filter((e) => e.type === "GoodsShipped" && e.payload.how === "requisition" && e.payload.to !== undefined).length;
+    sold += sim.log.filter((e) => e.type === "GoodsSold").length; moved += sim.log.filter((e) => e.type === "GoodsShipped" && (e.payload.how === "requisition" || e.payload.how === "market") && e.payload.to !== undefined).length;
   }
   assert.ok(sold > 0, "it sold some timber");
   assert.ok(moved > 0, "it moved some timber or sold some");

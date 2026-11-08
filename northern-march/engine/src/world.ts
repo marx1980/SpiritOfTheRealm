@@ -12,7 +12,7 @@ export interface Messenger {
   path: string[]; arrivals: number[]; departedAt: number; redirects: number;
 }
 /** The steward's books: stocks and going prices with his error, each town's price, and what the crown has paid each House. */
-export interface Books { tick: number; stock: Record<string, Record<string, number>>; price: Record<string, number>; town: Record<string, Record<string, number>>; paid: Record<string, number> }
+export interface Books { tick: number; stock: Record<string, Record<string, number>>; price: Record<string, number>; town: Record<string, Record<string, number>>; paid: Record<string, number>; /** What a market charges per unit (D-050) and the grain price at each market. */ buy?: Record<string, Record<string, number>>; grain?: Record<string, number> }
 export interface IssuedRecord { orderId: number; action: string; target: string; recipient: string; tick: number }
 export interface Intention { action: ActionRef; score: number; adoptedAt: number; decisionEventId: number; idle: boolean; orderId?: number }
 export interface AgentState { operational: Intention | null; focus: string | null; experience: Record<string, number>; lastDecision: number | null; answerRate: Record<string, number>; lastActive: number }
@@ -65,6 +65,8 @@ export interface WorldState {
   goods: Record<string, Record<string, number>>; // good -> place -> units
   goodsLedger: Record<string, Record<string, { produced: number; spilled: number; lost: number; seized: number; used: number; sold: number }>>;
   goodsPrice: Record<string, number>;
+  /** Grain price at each market, set each day (D-050). */
+  grainPrice?: Record<string, number>;
   /** The steward's books as last read out to the ruler at the seat: stocks and going prices with the error of his skill (D-044). Read only by the ruler's view. */
   books?: Books;
   /** What the ruler was last told at the seat: the books as they stood then. */
@@ -74,7 +76,7 @@ export interface WorldState {
   /** How glutted a town's market is for a good, in permille off the price (D-045). */
   townGlut?: Record<string, Record<string, number>>;
   houseCoin: Record<string, number>; // coin each House has earned from the crown (D-041)
-  goodsConvoys: Record<string, { id: number; good: string; from: string; to: string; units: number; departedAt: number; arrivesAt: number; orderId: number; how: string }>;
+  goodsConvoys: Record<string, { id: number; good: string; from: string; to: string; units: number; departedAt: number; arrivesAt: number; orderId: number; how: string; via?: string; owedMilli?: number; owedTo?: string }>;
   nextGoodsConvoyId: number;
   hands: Record<string, number>; // men still at home and available to a muster
   musterAway: Record<string, number>;
@@ -283,6 +285,7 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   ReliefSent: (s, p) => { s.treasuryMilli[p.payer] -= p.amountMilli; },
   // grain (Phase 7A)
   GrainDay: (s, p) => {
+    if (p.prices) s.grainPrice = { ...(p.prices as Record<string, number>) };
     for (const [loc, produced, consumed, spilled, unmet] of p.changes as [string, number, number, number, number][]) {
       s.grain[loc] += produced - consumed - spilled;
       const l = s.grainLedger[loc]; l.produced += produced; l.consumed += consumed; l.spilled += spilled; l.unmet += unmet;
@@ -326,7 +329,7 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   HouseRestocked: (s, p) => { s.goods[p.good][p.place] += p.units; s.goodsLedger[p.good][p.place].produced += p.units; s.houseCoin[p.house] -= p.costMilli; },
   GoodsShipped: (s, p) => {
     s.goods[p.good][p.from] -= p.units;
-    s.goodsConvoys[String(p.convoyId)] = { id: p.convoyId, good: p.good, from: p.from, to: p.to, units: p.units, departedAt: p.departedAt, arrivesAt: p.arrivesAt, orderId: p.orderId, how: p.how };
+    s.goodsConvoys[String(p.convoyId)] = { id: p.convoyId, good: p.good, from: p.from, to: p.to, units: p.units, departedAt: p.departedAt, arrivesAt: p.arrivesAt, orderId: p.orderId, how: p.how, ...(p.via ? { via: p.via } : {}), ...(p.owedMilli ? { owedMilli: p.owedMilli, owedTo: p.owedTo } : {}) };
     s.nextGoodsConvoyId = p.convoyId + 1;
     if (p.costMilli) s.treasuryMilli[p.payer] -= p.costMilli;
     if (p.costMilli && p.payee) { s.houseCoin[p.payee] += p.costMilli; (s.housePaid ??= {})[p.payee] = (s.housePaid[p.payee] ?? 0) + p.costMilli; }
@@ -336,7 +339,9 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
     ((s.townGlut ??= {})[p.to] ??= {})[p.good] = p.glut;
     s.goodsLedger[p.good][p.from].sold += p.units; delete s.goodsConvoys[String(p.convoyId)];
   },
-  GoodsDelivered: (s, p) => { s.goods[p.good][p.to] += p.units - p.spilled; s.goodsLedger[p.good][p.to].spilled += p.spilled; delete s.goodsConvoys[String(p.convoyId)]; },
+  GoodsDelivered: (s, p) => {
+    if (p.owedMilli) { if (p.owedTo === "crown") s.treasuryMilli[p.crown] += p.owedMilli; else { s.houseCoin[p.owedTo] += p.owedMilli; (s.housePaid ??= {})[p.owedTo] = (s.housePaid[p.owedTo] ?? 0) + p.owedMilli; } } // the seller is paid when the caravan arrives
+    s.goods[p.good][p.to] += p.units - p.spilled; s.goodsLedger[p.good][p.to].spilled += p.spilled; delete s.goodsConvoys[String(p.convoyId)]; },
   GoodsLost: (s, p) => { s.goodsLedger[p.good][p.from][p.reason === "seized" ? "seized" : "lost"] += p.units; delete s.goodsConvoys[String(p.convoyId)]; },
   // communities (Phase 6)
   CommunityHeard: applyEffects,

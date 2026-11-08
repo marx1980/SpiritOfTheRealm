@@ -53,7 +53,7 @@ export interface View {
   readonly advice: readonly Recommendation[];
   readonly world: WorldKnowledge;
   /** The steward's books as last read out to the ruler at the seat (stocks and going prices, with his error); the ruler's view only. */
-  readonly ledger?: { readonly tick: number; readonly stock: Readonly<Record<string, Readonly<Record<string, number>>>>; readonly price: Readonly<Record<string, number>>; readonly town: Readonly<Record<string, Readonly<Record<string, number>>>>; readonly paid: Readonly<Record<string, number>> };
+  readonly ledger?: { readonly tick: number; readonly stock: Readonly<Record<string, Readonly<Record<string, number>>>>; readonly price: Readonly<Record<string, number>>; readonly town: Readonly<Record<string, Readonly<Record<string, number>>>>; readonly paid: Readonly<Record<string, number>>; readonly buy?: Readonly<Record<string, Readonly<Record<string, number>>>>; readonly grain?: Readonly<Record<string, number>> };
 }
 
 function deepFreeze<T>(o: T): T {

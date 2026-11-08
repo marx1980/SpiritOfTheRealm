@@ -86,7 +86,7 @@ export function adviceAction(v: View, r: Recommendation): PlayerAction | null {
   if (a.kind === "advise_sortie") { const f = fortNear(v, a.target!); return !f ? null : captainSentTo(v, f) ? { action: "advance", target: f, mission: "attack", raid: a.target, followed: r.author } : { action: "advance", target: f, followed: r.author }; }
   if (a.kind === "advise_levy") return { action: "levy", followed: r.author };
   if (a.kind === "advise_relief") return { action: "relief", target: a.target, followed: r.author };
-  if (a.kind === "advise_timber") { const src = timberSource(v, a.target!); return src ? { action: "requisition", target: src, to: a.target, good: "timber", followed: r.author } : null; }
+  if (a.kind === "advise_timber") { const m = marketNear(v, a.target!); return m ? { action: "purchase", market: true, target: m, to: a.target, good: "timber", followed: r.author } : null; }
   if (a.kind === "advise_muster") { const from = nearestPeople(v, a.target!); return from ? { action: "levy", muster: true, target: from, to: a.target, followed: r.author } : null; }
   return null;
 }
@@ -100,7 +100,7 @@ export function openAdvice(v: View): Recommendation[] {
 export function actionText(v: View, a: PlayerAction): string {
   return a.action === "order" ? `Order ${name(v, a.order!.recipient)}: ${a.order!.intent} ${name(v, a.order!.objective.id)}`
     : a.action === "levy" && a.muster ? `Call men from ${name(v, a.target!)} to ${name(v, a.to!)}`
-    : (a.action === "requisition" || a.action === "purchase") && a.to ? `${a.sell ? "Sell" : a.action === "purchase" ? "Buy" : "Move"} ${a.units ? `${a.units} ` : ""}${a.good ?? "grain"} ${a.sell ? `from ${name(v, a.target!)} at ${name(v, a.to)}` : a.action === "purchase" ? `at ${name(v, a.target!)} for ${name(v, a.to)}` : `from ${name(v, a.target!)} to ${name(v, a.to)}`}${a.consult ? ", asking the people first" : ""}`
+    : (a.action === "requisition" || a.action === "purchase") && a.to ? `${a.sell ? "Sell" : a.action === "purchase" ? "Buy" : a.good ? "Move" : "Take"} ${a.units ? `${a.units} ` : ""}${a.good ?? "grain"} ${a.sell ? `from ${name(v, a.target!)} at ${name(v, a.to)}` : a.action === "purchase" ? `at ${name(v, a.target!)} for ${name(v, a.to)}` : `from ${name(v, a.target!)} to ${name(v, a.to)}`}${a.consult ? ", asking the people first" : ""}`
     : a.action === "levy" ? "Raise a levy" : a.action === "relief" ? `Send relief to ${name(v, a.target!)}` : a.action === "travel" ? `Travel to ${name(v, a.target!)}`
     : a.action === "repair" ? `Repair ${name(v, a.target!)}${a.repairMode === "rush" ? " quickly, paying extra, with the captain's men" : a.repairMode === "labour" ? " with the captain's men only (no cost, slower)" : ""}`
     : a.mission === "attack" && a.raid ? `Attack the raiders at ${name(v, a.raid)}` : a.mission === "scout" && a.raid ? `Scout the raiders at ${name(v, a.raid)}` : (fallenAt(v, a.target!) ? `Retake ${name(v, a.target!)}` : `Send the captain to ${name(v, a.target!)}`);
@@ -154,6 +154,15 @@ export const GOOD_LABEL: Record<string, string> = { timber: "Timber", iron: "Iro
 export const storeKnown = (v: View, place: string, good: string): number | undefined => v.ledger?.stock[good]?.[place];
 /** The going price of a good (coin units per unit) as the books give it. */
 export const priceKnown = (v: View, good: string): number | undefined => v.ledger?.price[good];
+/** What a market charges per unit of a good, as the books give it; and the price of a sack of grain there. */
+export const buyKnown = (v: View, market: string, good?: string): number | undefined => good ? v.ledger?.buy?.[market]?.[good] : v.ledger?.grain?.[market];
+/** The market nearest a place on the map: where an adviser would send word to buy for it. */
+export function marketNear(v: View, place: string): string | undefined {
+  const f = v.world.places.find((p) => p.id === place), towns = v.world.goods?.towns ?? [];
+  if (!f) return towns[0]?.id;
+  const d = (id: string) => { const p = v.world.places.find((x) => x.id === id); return p ? (p.pos[0] - f.pos[0]) ** 2 + (p.pos[1] - f.pos[1]) ** 2 : Infinity; };
+  return [...towns].sort((a, b) => d(a.id) - d(b.id) || (a.id < b.id ? -1 : 1))[0]?.id;
+}
 /** The grain in a place, as the newest letter or look gave it. */
 export const grainKnown = (v: View, place: string): { sacks: number; observedAt: number; band: string } | undefined => {
   const b = beliefsAbout(v, place, "grain.stock")[0];
@@ -169,6 +178,10 @@ export function grainCover(v: View, place: string): { days: number; band: number
 export const houseOf = (v: View, place: string): string => v.world.goods?.stores.find((x) => x.id === place)?.house ?? "crown";
 /** A purchase of goods: units an order buys times the going price, dearer by the House's markup when a House holds the store. Grain: sacks times the price. */
 export function purchaseCostKnown(v: View, rules: PublicRules, a: PlayerAction): number | undefined {
+  if (a.market) { // at a market: units times what that market charges, paid at once
+    const size = a.good ? v.world.goods?.unitsPerOrder[a.good] : v.world.grain?.sacks.purchase, price = buyKnown(v, a.target ?? "", a.good);
+    return price === undefined || !size ? undefined : price * Math.min(a.units ?? size, size);
+  }
   if (!a.good) return rules.grainBuy ? Math.min(a.units ?? rules.grainBuy.sacks, rules.grainBuy.sacks) * rules.grainBuy.priceMilliPerSack : undefined;
   const g = v.world.goods, price = priceKnown(v, a.good);
   if (!g || price === undefined || a.sell) return undefined;
@@ -187,6 +200,16 @@ export function economyProblems(v: View, a: PlayerAction): string[] {
     return out;
   }
   if (a.action !== "requisition" && a.action !== "purchase") return out;
+  if (a.market) { // buying at a market for a place of the crown's
+    if (!g?.towns.some((t) => t.id === a.target)) return ["choose a market"];
+    if (a.good) {
+      const dest = g.stores.find((x) => x.id === a.to);
+      if (!g.kinds.includes(a.good)) return ["unknown good"];
+      if (!dest || !dest.kinds.includes(a.good) || dest.house !== "crown") return [`${nm(a.to ?? "")} cannot take ${a.good} from you`];
+      if (v.ledger && g.stores.filter((x) => x.kinds.includes(a.good!) && x.id !== a.to).every((x) => (storeKnown(v, x.id, a.good!) ?? 0) <= 0)) out.push(`no ${a.good} to be had`);
+    } else if (!v.world.grain?.places.some((p) => p.id === a.to)) out.push("choose a place that keeps grain");
+    return out;
+  }
   if (!a.good) { // grain
     const places = v.world.grain?.places.map((p) => p.id) ?? [];
     if (!places.includes(a.target ?? "") || !places.includes(a.to ?? "")) out.push("choose two places that keep grain");
@@ -217,22 +240,15 @@ export function economyActions(v: View, rules: PublicRules): PlayerAction[] {
   const ok = (a: PlayerAction) => economyProblems(v, a).length === 0;
   if (g && v.ledger) {
     for (const good of g.kinds) {
-      const holders = g.stores.filter((x) => x.kinds.includes(good) && (storeKnown(v, x.id, good) ?? 0) > 0).map((x) => x.id).sort();
       const crownStores = g.stores.filter((x) => x.kinds.includes(good) && x.house === "crown").map((x) => x.id).sort();
-      for (const from of holders) {
-        for (const to of crownStores) if (to !== from) {
-          const a: PlayerAction = { action: houseOf(v, from) === "crown" ? "requisition" : "purchase", target: from, to, good };
-          if (ok(a)) out.push(a);
-        }
-        if (houseOf(v, from) === "crown") for (const t of g.towns.map((x) => x.id).sort()) { const a: PlayerAction = { action: "requisition", target: from, to: t, good, sell: true }; if (ok(a)) out.push(a); }
-      }
+      for (const m of g.towns.map((t) => t.id).sort()) for (const to of crownStores) { const a: PlayerAction = { action: "purchase", market: true, target: m, to, good }; if (ok(a)) out.push(a); }
+      for (const from of crownStores) if ((storeKnown(v, from, good) ?? 0) > 0) for (const m of g.towns.map((t) => t.id).sort()) { const a: PlayerAction = { action: "requisition", target: from, to: m, good, sell: true }; if (ok(a)) out.push(a); }
     }
   }
   if (v.world.grain) {
-    const have = v.world.grain.places.map((p) => p.id).filter((id) => grainKnown(v, id)).sort();
-    for (const from of have) for (const to of v.world.grain.places.map((p) => p.id).sort()) if (to !== from) for (const kind of ["requisition", "purchase"] as const) {
-      const a: PlayerAction = { action: kind, target: from, to }; if (ok(a)) out.push(a);
-    }
+    const places = v.world.grain.places.map((p) => p.id).sort();
+    if (g) for (const m of g.towns.map((t) => t.id).sort()) for (const to of places) { const a: PlayerAction = { action: "purchase", market: true, target: m, to }; if (ok(a)) out.push(a); }
+    for (const from of places.filter((id) => grainKnown(v, id))) for (const to of places) if (to !== from) { const a: PlayerAction = { action: "requisition", target: from, to }; if (ok(a)) out.push(a); }
   }
   if (g?.muster) for (const c of g.muster.communities) for (const f of v.world.places.filter((p) => p.fortified).map((p) => p.id).sort()) {
     const a: PlayerAction = { action: "levy", muster: true, target: c, to: f }; if (ok(a)) out.push(a);
