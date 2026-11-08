@@ -63,6 +63,8 @@ export interface WorldState {
   goods: Record<string, Record<string, number>>; // good -> place -> units
   goodsLedger: Record<string, Record<string, { produced: number; spilled: number; lost: number; seized: number; used: number; sold: number }>>;
   goodsPrice: Record<string, number>;
+  /** The steward's books as last read out to the ruler at the seat: stocks and going prices with the error of his skill (D-044). Read only by the ruler's view. */
+  books?: { tick: number; stock: Record<string, Record<string, number>>; price: Record<string, number> };
   houseCoin: Record<string, number>; // coin each House has earned from the crown (D-041)
   goodsConvoys: Record<string, { id: number; good: string; from: string; to: string; units: number; departedAt: number; arrivesAt: number; orderId: number; how: string }>;
   nextGoodsConvoyId: number;
@@ -310,6 +312,7 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   GoodsDay: (s, p) => {
     for (const [place, good, produced, spilled] of p.changes as [string, string, number, number][]) { s.goods[good][place] += produced - spilled; const l = s.goodsLedger[good][place]; l.produced += produced; l.spilled += spilled; }
     s.goodsPrice = { ...(p.prices as Record<string, number>) };
+    if (p.books) s.books = { tick: p.tick as number, ...(p.books as { stock: Record<string, Record<string, number>>; price: Record<string, number> }) };
   },
   GoodsShipped: (s, p) => {
     s.goods[p.good][p.from] -= p.units;

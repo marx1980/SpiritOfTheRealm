@@ -6,7 +6,7 @@ import type { Ctx, System } from "./types.ts";
 import { DAY, HOUR, loc } from "./types.ts";
 import type { ActionRef } from "../agents/model.ts";
 import { finish } from "./orders.ts";
-import { observeTreasury } from "./knowledge.ts";
+import { observeTreasury, skill } from "./knowledge.ts";
 
 const holder = (ctx: Ctx, place: string, good: string) => ctx.content.scenario.goods!.places.find((p) => p.location === place && p.cap[good] !== undefined);
 
@@ -49,7 +49,24 @@ export const goods: System = {
       }
       const prices: Record<string, number> = {};
       for (const k of g.kinds) prices[k] = priceOf(ctx, k, total[k]);
-      ctx.emit("GoodsDay", [], changes.map(([l]) => loc(l)), { changes, prices });
+      // the steward keeps books of the stores and tells the ruler their figures when she is at the seat (no new events: the figures ride on the day's tally)
+      const seat = ctx.content.scenario.regency.seat, rulerPos = ctx.s.positions[ctx.content.scenario.ruler];
+      const steward = [...ctx.content.characters].filter((c) => c.role === "steward").sort((a, b) => (a.id < b.id ? -1 : 1))[0]?.id;
+      let books: { stock: Record<string, Record<string, number>>; price: Record<string, number> } | undefined;
+      if (steward && "at" in rulerPos && rulerPos.at === seat) {
+        const q = skill(ctx, steward, "administration");
+        books = { stock: {}, price: {} };
+        for (const k of g.kinds) {
+          books.stock[k] = {};
+          for (const [l, good, made, spilled] of changes) if (good === k) {
+            const truth = ctx.s.goods[k][l] + made - spilled, err = Math.floor((truth * (1000 - Math.floor(q / 2))) / 1200);
+            books.stock[k][l] = Math.max(0, truth + ctx.keyed(`goods:books:${day}:${l}:${k}`).int(-err, err));
+          }
+          const e = Math.floor((prices[k] * (1000 - q)) / 3000);
+          books.price[k] = Math.max(0, prices[k] + ctx.keyed(`goods:books:${day}:price:${k}`).int(-e, e));
+        }
+      }
+      ctx.emit("GoodsDay", [], changes.map(([l]) => loc(l)), { changes, prices, ...(books ? { books, tick: ctx.tick } : {}) });
       ctx.at(ctx.tick + DAY, "goods:day", {});
     },
     "goods:ship": (ctx, { orderId, kind, source, dest, good, sell, cause }) => {

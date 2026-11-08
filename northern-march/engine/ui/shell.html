@@ -103,6 +103,14 @@ select { border: 1px solid var(--line); background: var(--panel); border-radius:
 .obs td, .obs th { border-bottom: 1px solid var(--line); padding: 2px 4px; text-align: left; }
 .obs .log { max-height: 260px; overflow: auto; white-space: pre; }
 .scroll { overflow-x: auto; }
+.eco-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(260px, 1fr); gap: 14px; margin-top: 10px; }
+@media (max-width: 1000px) { .eco-grid { grid-template-columns: 1fr; } }
+.eco table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+.eco td, .eco th { border-bottom: 1px solid var(--line); padding: 3px 6px; text-align: left; white-space: nowrap; }
+.eco th { color: var(--mute); font-weight: 400; font-size: 13px; }
+.eco td.n, .eco th.n { text-align: right; }
+.eco .dim { color: var(--mute); font-size: 12px; }
+.eco .books { font-size: 13px; color: var(--mute); }
 .status-row { display: flex; gap: 14px; flex-wrap: wrap; align-items: baseline; padding: 8px 0; font-size: 15px; }
 .stat { font-weight: 600; } .stat.old { color: var(--warn); }
 .stat-age { font-size: 12px; color: var(--mute); }

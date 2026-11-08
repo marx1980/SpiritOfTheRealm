@@ -33,6 +33,16 @@ export interface WorldKnowledge {
   areas: Record<string, string>;
   /** What each store feeds each day, and the days of cover that mark the scarcity bands: the stewards know their own needs. */
   grain?: { places: { id: string; need: number }[]; bandDays: number[] };
+  /** What anyone in the realm knows of the wider trade: who holds which store, where goods sell, the usual prices, what a muster takes. Not the stocks. */
+  goods?: {
+    kinds: string[];
+    stores: { id: string; house: string; kinds: string[] }[];
+    towns: { id: string; house: string; spreadPermille: number; cutPermille: number }[];
+    markupPermille: number;
+    price: Record<string, { baseMilli: number; minMilli: number; maxMilli: number }>;
+    unitsPerOrder: Record<string, number>;
+    muster?: { men: number; ironPerMan: number; mountedPermille: number; serviceDays: number; wageMilli: number; communities: string[] };
+  };
 }
 export interface View {
   readonly now: number;
@@ -42,6 +52,8 @@ export interface View {
   /** What advisers told the viewer in person, latest per adviser (DESIGN_PIPELINE §5). */
   readonly advice: readonly Recommendation[];
   readonly world: WorldKnowledge;
+  /** The steward's books as last read out to the ruler at the seat (stocks and going prices, with his error); the ruler's view only. */
+  readonly ledger?: { readonly tick: number; readonly stock: Readonly<Record<string, Readonly<Record<string, number>>>>; readonly price: Readonly<Record<string, number>> };
 }
 
 function deepFreeze<T>(o: T): T {
@@ -67,6 +79,7 @@ export function buildView(s: Readonly<WorldState>, c: Content, who: string, now:
       orders: structuredClone(s.issued[who] ?? []) },
     beliefs,
     reports,
+    ...(who === c.scenario.ruler && s.books ? { ledger: structuredClone(s.books) } : {}),
     advice: Object.values(s.heard[who] ?? {}).filter((r) => now - r.computedAt <= ADVICE_FRESH).map((r) => structuredClone(r))
       .sort((a, b) => (a.author < b.author ? -1 : a.author > b.author ? 1 : b.computedAt - a.computedAt || a.id - b.id)),
     world: {
@@ -74,6 +87,15 @@ export function buildView(s: Readonly<WorldState>, c: Content, who: string, now:
       routes: c.routes.map((r) => ({ from: r.from, to: r.to, ...(r.crossing ? { crossing: r.crossing.kind } : {}) })),
       names: Object.fromEntries([...c.locations.map((l) => [l.id, l.name]), ...[...known].sort().map((id) => [id, c.byId.character.get(id)?.name ?? id])]),
       areas: Object.fromEntries([...known].sort().map((id) => [id, areaOf(c.byId.character.get(id)?.capabilities ?? {})])),
+      ...(c.scenario.goods ? { goods: {
+        kinds: [...c.scenario.goods.kinds],
+        stores: c.scenario.goods.places.map((p) => ({ id: p.location, house: p.house ?? "crown", kinds: Object.keys(p.cap).sort() })),
+        towns: c.scenario.goods.market.towns.map((t) => ({ id: t.location, house: t.house, spreadPermille: t.spreadPermille, cutPermille: t.cutPermille })),
+        markupPermille: c.scenario.goods.market.houseMarkupPermille,
+        price: Object.fromEntries(c.scenario.goods.kinds.map((k) => [k, { baseMilli: c.scenario.goods!.price[k].baseMilli, minMilli: Math.floor(c.scenario.goods!.price[k].baseMilli / 2), maxMilli: 3 * c.scenario.goods!.price[k].baseMilli }])),
+        unitsPerOrder: Object.fromEntries(c.scenario.goods.kinds.map((k) => [k, c.scenario.goods!.buy[k].units])),
+        ...(c.scenario.manpower ? { muster: { men: c.scenario.manpower.musterMen, ironPerMan: c.scenario.manpower.ironPerMan, mountedPermille: c.scenario.manpower.mountedPermille, serviceDays: c.scenario.manpower.serviceDays, wageMilli: c.scenario.manpower.wageMilli, communities: c.communities.communities.map((x) => x.id).sort() } } : {}),
+      } } : {}),
       ...(c.scenario.grain ? { grain: { places: c.scenario.grain.places.map((p) => ({ id: p.location, need: p.need })), bandDays: [...c.scenario.grain.bandDays] } } : {}),
     },
   });
