@@ -379,7 +379,7 @@ function coinStatus(v: View): string {
 }
 
 /** The Economy tab: what the steward's books and the stewards' letters say about stores and prices, and the orders that move them. */
-const ECO_ACTS: [string, string][] = [["move", "Move goods"], ["buy", "Buy goods"], ["sell", "Sell goods"], ["muster", "Call men"], ["gmove", "Move grain"], ["gbuy", "Buy grain"]];
+const ECO_ACTS: [string, string][] = [["buy", "Buy"], ["sell", "Sell"], ["move", "Move"], ["muster", "Recruit"]];
 const houseName = (v: View, id: string) => id === "crown" ? "Crown" : cap1(v.world.names[id] ?? id);
 /** The order the form describes, with the place lists it draws from. Keeps the form's choices valid as the action changes. */
 function ecoForm(v: View) {
@@ -387,22 +387,24 @@ function ecoForm(v: View) {
   const byName = (ids: string[]) => [...ids].sort((a, b) => (name(v, a) < name(v, b) ? -1 : 1));
   const holding = (house: (h: string) => boolean) => byName((g?.stores ?? []).filter((x) => x.kinds.includes(e.good) && house(x.house)).map((x) => x.id));
   const forts = byName(v.world.places.filter((p) => p.fortified).map((p) => p.id));
+  if (e.act === "sell" && e.good === "grain") e.good = g?.kinds[0] ?? "timber";
+  const isGrain = e.good === "grain" && (e.act === "move" || e.act === "buy");
   let from: string[] = [], to: string[] = [];
-  if (e.act === "move") { from = holding((h) => h === "crown"); to = holding((h) => h === "crown"); }
+  if (isGrain) { from = byName(grain); to = byName(grain); }
+  else if (e.act === "move") { from = holding((h) => h === "crown"); to = holding((h) => h === "crown"); }
   else if (e.act === "buy") { from = holding((h) => h !== "crown"); to = holding((h) => h === "crown"); }
   else if (e.act === "sell") { from = holding((h) => h === "crown"); to = byName((g?.towns ?? []).map((t) => t.id)); }
-  else if (e.act === "gmove" || e.act === "gbuy") { from = byName(grain); to = byName(grain); }
   const communities = byName(g?.muster?.communities ?? []);
   const pick = (cur: string, opts: string[], not?: string) => opts.includes(cur) && cur !== not ? cur : opts.find((o) => o !== not) ?? "";
   e.from = pick(e.from, from); e.to = pick(e.to, to, e.act === "sell" ? undefined : e.from); e.community = pick(e.community, communities); e.fort = pick(e.fort, forts);
   const action: PlayerAction | null =
-    e.act === "move" ? { action: "requisition", target: e.from, to: e.to, good: e.good }
+    isGrain && e.act === "move" ? { action: "requisition", target: e.from, to: e.to, ...(e.consult ? { consult: true } : {}) }
+    : isGrain ? { action: "purchase", target: e.from, to: e.to }
+    : e.act === "move" ? { action: "requisition", target: e.from, to: e.to, good: e.good }
     : e.act === "buy" ? { action: "purchase", target: e.from, to: e.to, good: e.good }
     : e.act === "sell" ? { action: "requisition", target: e.from, to: e.to, good: e.good, sell: true }
-    : e.act === "muster" ? { action: "levy", muster: true, target: e.community, to: e.fort }
-    : e.act === "gmove" ? { action: "requisition", target: e.from, to: e.to, ...(e.consult ? { consult: true } : {}) }
-    : e.act === "gbuy" ? { action: "purchase", target: e.from, to: e.to } : null;
-  return { action, from, to, communities, forts };
+    : e.act === "muster" ? { action: "levy", muster: true, target: e.community, to: e.fort } : null;
+  return { action, from, to, communities, forts, isGrain };
 }
 function economyTab(v: View): string {
   const g = v.world.goods, gr = v.world.grain, L = v.ledger, e = st.eco;
@@ -414,18 +416,19 @@ function economyTab(v: View): string {
     return `<td class="n">${n === undefined ? "?" : n}</td>`;
   };
   const grainCell = (place: string) => {
-    if (!gr?.places.some((p) => p.id === place)) return `<td class="n dim">–</td>`;
+    if (!gr?.places.some((p) => p.id === place)) return `<td class="n dim">–</td><td class="n dim">–</td><td class="n dim">–</td>`;
     const k = grainKnown(v, place), c = grainCover(v, place);
-    if (!k || !c) return `<td class="n">?</td>`;
+    if (!k || !c) return `<td class="n">?</td><td class="n">?</td><td class="n">?</td>`;
     const cls = ["", "", "warn", "bad", "bad"][c.band];
-    return `<td class="n">${k.sacks} <span class="${cls}">${c.days} d</span> <span class="dim">${ageTone(dayAgo(v, k.observedAt))}</span></td>`;
+    return `<td class="n">${k.sacks}</td><td class="n ${cls}">${c.days} d</td><td class="n dim">${ageTone(dayAgo(v, k.observedAt))}</td>`;
   };
-  const stores = `<div class="card"><h2>Stores</h2><div class="scroll"><table><tr><th>Place</th><th>House</th><th class="n">Grain</th>${(g?.kinds ?? []).map((k) => `<th class="n">${esc(GOOD_LABEL[k] ?? k)}</th>`).join("")}</tr>
+  const stores = `<div class="card"><h2>Stores</h2><span class="more" hidden>»</span><div class="scroll"><table><tr><th>Place</th><th>House</th><th class="n">Grain</th><th class="n">Days</th><th class="n">Report</th>${(g?.kinds ?? []).map((k) => `<th class="n">${esc(GOOD_LABEL[k] ?? k)}</th>`).join("")}</tr>
     ${rows.map((p) => `<tr><td>${esc(name(v, p))}</td><td>${esc(houseName(v, houseOf(v, p)))}</td>${grainCell(p)}${(g?.kinds ?? []).map((k) => goodCell(p, k)).join("")}</tr>`).join("")}</table></div>
     <div class="books">${L ? `Books · ${ageTone(dayAgo(v, L.tick))}` : "Books · none yet"}</div></div>`;
+  const grainPrice = RULES.grainBuy && gr ? `<tr><td>Grain</td><td class="n">${RULES.grainBuy.priceMilliPerSack}</td><td class="n dim">–</td><td class="n dim">–</td></tr>` : "";
   const prices = g ? `<div class="card"><h2>Prices</h2><table><tr><th>Good</th><th class="n">Now</th><th class="n">Usual</th><th class="n">Range</th></tr>
-    ${g.kinds.map((k) => { const p = priceKnown(v, k), pr = g.price[k]; const cls = p === undefined ? "" : p > pr.baseMilli * 1.2 ? "warn" : p < pr.baseMilli * 0.8 ? "ok" : ""; return `<tr><td>${esc(GOOD_LABEL[k] ?? k)}</td><td class="n ${cls}">${p ?? "?"}</td><td class="n">${pr.baseMilli}</td><td class="n dim">${pr.minMilli}–${pr.maxMilli}</td></tr>`; }).join("")}</table></div>` : "";
-  const markets = g ? `<div class="card"><h2>Markets</h2><div class="scroll"><table><tr><th>Town</th>${g.kinds.map((k) => `<th class="n">${esc(GOOD_LABEL[k] ?? k)}</th>`).join("")}<th class="n">House cut</th></tr>
+    ${g.kinds.map((k) => { const p = priceKnown(v, k), pr = g.price[k]; const cls = p === undefined ? "" : p > pr.baseMilli * 1.2 ? "warn" : p < pr.baseMilli * 0.8 ? "ok" : ""; return `<tr><td>${esc(GOOD_LABEL[k] ?? k)}</td><td class="n ${cls}">${p ?? "?"}</td><td class="n">${pr.baseMilli}</td><td class="n dim">${pr.minMilli}–${pr.maxMilli}</td></tr>`; }).join("")}${grainPrice}</table></div>` : "";
+  const markets = g ? `<div class="card"><h2>Market towns</h2><div class="scroll"><table><tr><th>Town</th>${g.kinds.map((k) => `<th class="n">${esc(GOOD_LABEL[k] ?? k)}</th>`).join("")}<th class="n">House cut</th></tr>
     ${g.towns.map((t) => `<tr><td>${esc(name(v, t.id))}</td>${g.kinds.map((k) => { const n = L?.town[t.id]?.[k], base = L?.price[k], cls = n !== undefined && base ? (n < base * (1000 - t.spreadPermille) / 1000 * 0.9 ? "bad" : "") : ""; return `<td class="n ${cls}">${n ?? "?"}</td>`; }).join("")}<td class="n">${t.cutPermille ? `${esc(houseName(v, t.house))} ${Math.round(t.cutPermille / 10)}%` : "–"}</td></tr>`).join("")}</table></div>
     <div class="books">House markup · ${Math.round(g.markupPermille / 10)}%</div></div>` : "";
   const houses = g ? [...new Set([...g.stores.map((x) => x.house), ...g.towns.map((x) => x.house)])].filter((h) => h !== "crown").sort() : [];
@@ -435,22 +438,22 @@ function economyTab(v: View): string {
   const cost = a && a.action === "purchase" ? purchaseCostKnown(v, RULES, a) : undefined, coins = coinsKnown(v);
   if (cost !== undefined && coins !== undefined && cost > coins) problems.push(`not enough coins: it costs about ${kCoins(cost)} and you have about ${kCoins(coins)}`);
   const opt = (val: string, label: string, cur: string) => `<option value="${esc(val)}"${val === cur ? " selected" : ""}>${esc(label)}</option>`;
-  const isGoods = ["move", "buy", "sell"].includes(e.act), isGrain = e.act === "gmove" || e.act === "gbuy", mu = g?.muster;
+  const isGrain = f.isGrain, mu = g?.muster;
+  const goodKinds = [...(g?.kinds ?? []), ...(gr && e.act !== "sell" ? ["grain"] : [])];
   const fromLabel = e.act === "buy" ? "At" : "From", toLabel = e.act === "sell" ? "At" : e.act === "buy" ? "For" : "To";
   const fortIron = a?.muster ? storeKnown(v, e.fort, "iron") : undefined;
   const info = a?.muster && mu ? `Up to ${mu.men} men · iron ${fortIron === undefined ? "?" : fortIron} · wages ${kCoins(mu.men * mu.wageMilli)} a day for ${mu.serviceDays} days`
     : cost !== undefined ? `Costs about ${kCoins(cost)}${coins === undefined ? "" : `; you have about ${kCoins(coins)}`}`
-    : a && isGoods && g ? `Up to ${g.unitsPerOrder[e.good]} units` : "";
+    : a && a.good && g ? `Up to ${g.unitsPerOrder[e.good]} units` : "";
   const form = `<div class="card"><h2>Order</h2><div class="form">
-      <label for="eco-act">Action</label><select id="eco-act">${ECO_ACTS.filter(([k]) => (k !== "muster" || !!mu) && (!["move", "buy", "sell"].includes(k) || !!g) && (!["gmove", "gbuy"].includes(k) || !!gr)).map(([k, l]) => opt(k, l, e.act)).join("")}</select>
-      ${isGoods && g ? `<label for="eco-good">Good</label><select id="eco-good">${g.kinds.map((k) => opt(k, GOOD_LABEL[k] ?? k, e.good)).join("")}</select>` : ""}
+      <label for="eco-act">Action</label><select id="eco-act">${ECO_ACTS.filter(([k]) => (k !== "muster" || !!mu) && (k === "muster" || !!g || !!gr)).map(([k, l]) => opt(k, l, e.act)).join("")}</select>
+      ${e.act !== "muster" ? `<label for="eco-good">Good</label><select id="eco-good">${goodKinds.map((k) => opt(k, k === "grain" ? "Grain" : GOOD_LABEL[k] ?? k, e.good)).join("")}</select>` : ""}
       ${e.act === "muster" && mu ? `<label for="eco-comm">Men of</label><select id="eco-comm">${f.communities.map((c) => opt(c, name(v, c), e.community)).join("")}</select><label for="eco-fort">To</label><select id="eco-fort">${f.forts.map((x) => opt(x, name(v, x), e.fort)).join("")}</select>`
         : `<label for="eco-from">${fromLabel}</label><select id="eco-from">${f.from.map((x) => opt(x, name(v, x), e.from)).join("")}</select><label for="eco-to">${toLabel}</label><select id="eco-to">${f.to.map((x) => opt(x, name(v, x), e.to)).join("")}</select>`}
-      ${e.act === "gmove" ? `<span></span><label class="check"><input type="checkbox" id="eco-consult" ${e.consult ? "checked" : ""}> Ask the people first</label>` : ""}
+      ${isGrain && e.act === "move" ? `<span></span><label class="check"><input type="checkbox" id="eco-consult" ${e.consult ? "checked" : ""}> Ask the people first</label>` : ""}
       ${info ? `<span></span><span class="cost">${esc(info)}</span>` : ""}
       <span></span><button id="eco-add" ${st.paused && a && !problems.length ? "" : "disabled"}>Make an order</button>
     </div>${problems.length ? `<div class="err">${esc(problems.join("; "))}</div>` : ""}</div>`;
-  void isGrain;
   const mine = v.self.orders.filter((o) => o.action === "requisition" || o.action === "negotiate" || (o.action === "levy" && o.target !== v.self.id));
   const road = mine.length ? `<div class="card"><h2>Orders given</h2><div class="letters">${[...mine].reverse().slice(0, 12).map((o) => {
     const b = v.beliefs[Object.keys(v.beliefs).find((k) => v.beliefs[k].predicate === "order.status" && v.beliefs[k].subject.id === String(o.orderId)) ?? ""];
@@ -471,6 +474,12 @@ function settingsTab(): string {
     </div></div>`;
 }
 
+/** Shows » on a table card while there is more to scroll to on the right. */
+function syncMore() {
+  document.querySelectorAll<HTMLElement>(".eco .scroll").forEach((s) => { const m = s.parentElement?.querySelector<HTMLElement>(".more"); if (m) m.hidden = !(s.scrollWidth - s.clientWidth - s.scrollLeft > 4); });
+}
+document.addEventListener("scroll", (ev) => { if ((ev.target as HTMLElement)?.classList?.contains("scroll")) syncMore(); }, true);
+window.addEventListener("resize", syncMore);
 function render() {
   const v = st.sim.viewOf("player");
   const o = st.sim.objectiveStatus();
@@ -505,6 +514,7 @@ function render() {
   ${st.tab === "economy" ? economyTab(v) : `<div class="grid">${court(v)}${map(v)}${side(v)}</div>`}
   ${st.observer ? observer() : ""}`}`;
   void o;
+  syncMore();
   if (newPause) document.querySelector(".pause")?.scrollIntoView({ block: "start" });
 }
 

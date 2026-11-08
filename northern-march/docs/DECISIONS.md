@@ -215,3 +215,6 @@ Same protocol as D-042, on fresh blocks, once each, calibration changed by D-045
 - G-12 advisers: block 240000. G-13 communities: block 250000.
 - Tune seeds (not sealed): G-06 knife-edge (1-150), G-01 node and bun, G-02, Phase 1 invariant batch, lab quick playtest.
 - If a gate that passed in D-043 now fails: report and stop, no tuning, no band moved. AMBER gets one extension on a fresh block, then counts as FAIL. Fun and balance are not claimed.
+
+## D-047 — Economy tab, after Marko's phone review (8 Nov)
+Page only, no engine change. Grain is treated as a good in the order form: one Action menu (Buy, Sell, Move, Recruit) and a Good menu (timber, iron, horses, grain; no grain under Sell, since grain cannot be sold). Grain price row added to Prices (sack price; no usual or range, it is fixed). Stores splits grain into Grain, Days (cover at current use) and Report (age of the letter), with a » mark that shows while the table has more to scroll to. "Markets" renamed "Market towns" (stores and market towns are different sets: only Greybridge is both). Gates in D-046 are unaffected (no engine change).

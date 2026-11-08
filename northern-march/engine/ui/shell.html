@@ -111,6 +111,8 @@ select { border: 1px solid var(--line); background: var(--panel); border-radius:
 .obs td, .obs th { border-bottom: 1px solid var(--line); padding: 2px 4px; text-align: left; }
 .obs .log { max-height: 260px; overflow: auto; white-space: pre; }
 .scroll { overflow-x: auto; }
+.eco .card { position: relative; }
+.eco .more { position: absolute; right: 12px; top: 8px; color: var(--mute); font-size: 20px; line-height: 1; }
 .eco-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(260px, 1fr); gap: 14px; margin-top: 10px; }
 @media (max-width: 1000px) { .eco-grid { grid-template-columns: 1fr; } }
 .eco table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
