@@ -1,6 +1,6 @@
 # STATE
 
-Updated: 7 Nov 2026, Phase 7A stages 1-4 built and gated (march-0.8); earlier: Phase 6 (6A) built; Agent Playtest Lab L0-L7 built (Opus 5.5). Plan in force: `docs/IMPLEMENTATION_PLAN.md` v4; lab: `docs/playtest/` (v4 + V4_1_AMENDMENTS, D-022).
+Updated: 8 Nov 2026, Phase 7A extended (advisers on communities, petition repetition, D-036..D-038) and the wider economy built, stages 1-3 (D-039..D-043), all gated on march-0.8; earlier: Phase 6 (6A) built; Agent Playtest Lab L0-L7 built (Opus 5.5). Plan in force: `docs/IMPLEMENTATION_PLAN.md` v4; lab: `docs/playtest/` (v4 + V4_1_AMENDMENTS, D-022).
 
 ## Built
 **Engine (`engine/`, TypeScript on Node 22, no build step).** `npm test`: 160 tests passed at the L0 baseline; since then `test/saveload.test.ts` (+1) and `test/playtest.test.ts` (10) pass on their own; full suite re-run pending. `npx tsc -p .` is clean.
@@ -15,6 +15,10 @@ L8 (D-024): first adversarial search run, findings for review only. Levy-spam ex
 Gate status after the KI-01 fix and the upkeep change (content march-0.7): G-12 and G-13 PASS on sealed block 110000 (D-023). The regression batch (phase1 gates) and the pre-fix results remain pre-fix evidence.
 
 **Phase 7A (D-025..D-034), content march-0.8: stages 1-4 built, gates run.** Grain core, requisition with refusal (standing 30 days), purchase, convoys with loss and seizure, castellans who consult first, Varos courting, Greyfen support rule (supportAt 480), outcome classifier. Sealed results: G-12 PASS (150000), G-13 PASS (160000), G-03 aggressive PASS, delegating AMBER (5.8%, override 3), passive FAIL (1.0%, override 1), G-04/G-05 PASS, outcome caution 2.4% (override 2), G-06 PASS (1 knife-edge: greyfen.supportAt), G-01/G-02 PASS, 0 invariant violations. Lab L0 on march-0.8 (results/lab_L0_march08.json): tests 191/191, typecheck clean, quick 100/100 games. Still open: H-01/H-02 human playtests, G-11 re-run, and the design question of why delegating stays near the 5% edge (7B or adviser step).
+
+**Advisers on communities and petition repetition (D-035..D-038).** Advisers hear petitions at court, so they advise relief or a lighter levy for a community with a fresh request (reasons `reason.community_eased` / `reason.community_resents`). A grievance is petitioned again after 30 days only if it has grown by at least `regrowth` since the last petition, or after 90 days. Sealed: delegating G-03 6.6% PASS (block 140000), G-12 PASS (180000), G-13 PASS (190000). This was earlier mislabelled "7B"; it is part of 7A.
+
+**Wider economy, stages 1-3 (D-039..D-043; the old "7B").** Goods (timber, iron, horses) held at named places, a realm price from total stock (clamped to half to triple the base), convoys with loss and seizure; timber at a fort covers 35% of a repair's coin cost. Muster: a levy order with a `men` constraint takes men from a community's hands to a fort, armed from the fort's iron and horses, paid daily, with a smaller harvest at home and a levy grievance. House control: Varos holds iron, Veyr some timber, Caron the horses; the crown can only buy from them, at a 15% markup that credits the House; the crown can sell at four market towns. Orders reuse `requisition`, `purchase` and `levy` with constraints `good`, `deliverTo`, `sell`, `men`. Additive: with nothing ordered, behaviour is as in 7A. Sealed re-run (D-043): 7A gates block 200000 (delegating 7.7% PASS, aggressive 25.4% PASS, passive and caution-share overrides stand), G-12 PASS (210000), G-13 PASS (220000), G-06 PASS (0 knife-edge), G-01/G-02 PASS, 0 invariant violations. Suite 220/220.
 
 Phase 6 (6A) added (DECISIONS D-021):
 - `src/systems/communities.ts` and `content/march/communities.json` (content march-0.6): Northwatch (no named leader), Greyfen (Mara; the crown promised to consult before a levy), Eastmarch (Varos), Coldmere (Wenna; the Blackwood settlement).
@@ -46,7 +50,8 @@ Phases 0-4: see DECISIONS D-001 to D-014.
 
 ## Known gaps
 - G-11 open (D-016). Standing instruction: tell Marko if a re-run passes.
-- Advisers do not yet advise on communities (relief, the promise to Greyfen); see BACKLOG.
+- The wider economy is unused by scripted policies, advisers and the page: no screen for goods, selling or mustering, and stocks and House accounts are not shown to the player as beliefs. Prices are realm-wide, not per town. Iron and horses are used only by muster. Houses collect coin but do not spend it. Battle counts the garrison only.
+- Advisers advise on relief and levy for communities (D-036) but not on goods, trade or mustering.
 - The crown cannot yet keep the promise to consult Greyfen (7A).
 - Under the aggressive scripted policy (a levy every 30 days) Eastmarch and Coldmere usually end up declaring for Varos; under passive and delegating rulers communities mostly petition at most.
 - An aggressive 240-day run takes about 4 s (communities and letters); within the G-14 wall-clock limit but worth watching.
@@ -57,4 +62,5 @@ Phases 0-4: see DECISIONS D-001 to D-014.
 - Optional: run `node src/cli.ts g01 --seeds 1..100` in `engine/` on your own computer; it must end with the combined hash above.
 
 ## Next phase
+(Updated 8 Nov.) The plan's Phase 7B is now built (stages 1-3) and gated. Next is Phase 8, minimal battle slice, Opus 5.5, high; after it the plan says to choose the timber/Blackwood loop or the Grey Hill battlefield laboratory from the evidence. Marko plays first. Older text follows.
 Phase 7 (7A): grain only and the Grain Crisis, gated by G-03/04/05/06 with the end state "Varos acts on Greyfen's grievance", outcome shares, and the second-grievance check; then the first serious human playtests. Opus 5.5, high effort.

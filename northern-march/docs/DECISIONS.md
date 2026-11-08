@@ -177,3 +177,14 @@ Stages 1-3 (D-039, D-040, D-041) are built and tested. They add no behaviour a s
 - Tune seeds (not sealed): G-06 knife-edge (1-150), G-01 cross-engine and G-02 stream independence, Phase 1 invariant batch, lab L0 (tests, typecheck, quick playtest). KI-01 hash re-recorded.
 - New invariants checked in the suite: store conservation for every good (with sold), hands + away = base, House coin equals what was paid.
 A verdict is whatever comes out: no rerun, no tuning, no band moved. If a gate that passed in D-038 fails, report and stop. Fun and balance are not claimed; the new economy is not yet used by any scripted policy, adviser or the page, so it is unplayed.
+
+## D-043 — Wider economy: sealed verdicts (stages 1-3, content march-0.8, calibration c0c1dd2050b9+129368f90f29)
+Run exactly as pre-registered in D-042, once each, no tuning, no band moved.
+- 7A gates, block 200000, 1,000 seeds: G-03 aggressive PASS (25.4%, CI 22.5-28.1), delegating PASS (7.7%, CI 6.1-9.5), passive FAIL (1.4%, override 1 stands). G-04 PASS in all three policies. G-05 PASS (600 link seeds; delegating 7.5%, aggressive 26.3%; every link cut takes the rate to 0). Outcome shares pooled: cooperative support 15.2%, material success with political damage 23.8%, misinformation failure 6.6% all pass; political_caution_military_danger 2.3% fails the 5% floor (override 2 stands). 0 invariant violations.
+- G-12 advisers, block 210000: PASS. Follow-best 89.8%, follow-worst 33.3%, gap 56.5 points (CI 53.2-59.7). On D-038's block 180000 the gap was 61.9; it is narrower here and still well inside the gate. Not investigated or tuned.
+- G-13 communities, block 220000, 1,000 seeds each: PASS under passive, delegating and aggressive, 0 revolts, 0 unsupported escalations, 0 invariant violations.
+- G-06 knife-edge (tune seeds 1-150, 8 parameters, ±25%): PASS, 0 knife-edge parameters. greyfen.supportAt, the one knife-edge in D-038, no longer is.
+- G-01: node and bun give the same combined hash 3dfb2f6bcdf82f77ce5b978f92300fd244d79de835604336e7c4269a1d50c342 (100 seeds). G-02 PASS.
+- Phase 1 invariant batch, 1,000 seeds per arm, 240 days: 0 violations.
+- Lab L0 quick playtest (100 games): integrity, boundary, persona distinctness, performance (1.65 s a game) and coverage PASS. The H-01 proxy is automated evidence, not a human result. G-11 not evaluated.
+Result: nothing that passed in D-038 failed. The same two recorded overrides stand (passive G-03, caution share). Nothing in the new economy is used by a scripted policy, adviser or the page, so these runs show only that stages 1-3 broke nothing; they say nothing about whether the economy is fun or balanced.

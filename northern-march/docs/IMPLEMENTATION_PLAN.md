@@ -344,7 +344,7 @@ Rebellion is a mobilisation state with structural gates plus a continuous score.
 **Tests:** T06 and T07 (grain versions), I01, I02 (shipment), a log classifier for the four outcomes (cooperative support; material success with political damage; political caution with military danger; misinformation failure).
 **Gate:** G-03, G-04, G-05, G-06 on a sealed seed block with the end state "Varos acts on Greyfen's grievance"; each Grain Crisis outcome at least 5% of 1,000 seeds; the second-grievance test (misconduct) passes on the same community architecture; first serious human playtests.
 
-## Phase 7B - Wider economy (deferred)
+## Phase 7B - Wider economy (built 8 Nov 2026, stages 1-3, DECISIONS D-039..D-043)
 Timber, iron, horses, prices and markets, House control of resources, full levy system and manpower. Then choose the timber/Blackwood loop or the Grey Hill battlefield laboratory from the evidence.
 
 ## Phase 8 - Minimal battle slice
