@@ -100,7 +100,7 @@ export function openAdvice(v: View): Recommendation[] {
 export function actionText(v: View, a: PlayerAction): string {
   return a.action === "order" ? `Order ${name(v, a.order!.recipient)}: ${a.order!.intent} ${name(v, a.order!.objective.id)}`
     : a.action === "levy" && a.muster ? `Call men from ${name(v, a.target!)} to ${name(v, a.to!)}`
-    : (a.action === "requisition" || a.action === "purchase") && a.to ? `${a.sell ? "Sell" : a.action === "purchase" ? "Buy" : "Move"} ${a.good ?? "grain"} ${a.sell ? `from ${name(v, a.target!)} at ${name(v, a.to)}` : a.action === "purchase" ? `at ${name(v, a.target!)} for ${name(v, a.to)}` : `from ${name(v, a.target!)} to ${name(v, a.to)}`}${a.consult ? ", asking the people first" : ""}`
+    : (a.action === "requisition" || a.action === "purchase") && a.to ? `${a.sell ? "Sell" : a.action === "purchase" ? "Buy" : "Move"} ${a.units ? `${a.units} ` : ""}${a.good ?? "grain"} ${a.sell ? `from ${name(v, a.target!)} at ${name(v, a.to)}` : a.action === "purchase" ? `at ${name(v, a.target!)} for ${name(v, a.to)}` : `from ${name(v, a.target!)} to ${name(v, a.to)}`}${a.consult ? ", asking the people first" : ""}`
     : a.action === "levy" ? "Raise a levy" : a.action === "relief" ? `Send relief to ${name(v, a.target!)}` : a.action === "travel" ? `Travel to ${name(v, a.target!)}`
     : a.action === "repair" ? `Repair ${name(v, a.target!)}${a.repairMode === "rush" ? " quickly, paying extra, with the captain's men" : a.repairMode === "labour" ? " with the captain's men only (no cost, slower)" : ""}`
     : a.mission === "attack" && a.raid ? `Attack the raiders at ${name(v, a.raid)}` : a.mission === "scout" && a.raid ? `Scout the raiders at ${name(v, a.raid)}` : (fallenAt(v, a.target!) ? `Retake ${name(v, a.target!)}` : `Send the captain to ${name(v, a.target!)}`);
@@ -169,11 +169,11 @@ export function grainCover(v: View, place: string): { days: number; band: number
 export const houseOf = (v: View, place: string): string => v.world.goods?.stores.find((x) => x.id === place)?.house ?? "crown";
 /** A purchase of goods: units an order buys times the going price, dearer by the House's markup when a House holds the store. Grain: sacks times the price. */
 export function purchaseCostKnown(v: View, rules: PublicRules, a: PlayerAction): number | undefined {
-  if (!a.good) return rules.grainBuy ? rules.grainBuy.sacks * rules.grainBuy.priceMilliPerSack : undefined;
+  if (!a.good) return rules.grainBuy ? Math.min(a.units ?? rules.grainBuy.sacks, rules.grainBuy.sacks) * rules.grainBuy.priceMilliPerSack : undefined;
   const g = v.world.goods, price = priceKnown(v, a.good);
   if (!g || price === undefined || a.sell) return undefined;
   const per = houseOf(v, a.target ?? "") !== "crown" ? Math.floor((price * (1000 + g.markupPermille)) / 1000) : price;
-  return per * (g.unitsPerOrder[a.good] ?? 0);
+  return per * Math.min(a.units ?? Infinity, g.unitsPerOrder[a.good] ?? 0);
 }
 
 /** Why an economy order cannot work, as far as the ruler knows. Empty: nothing known against it. */

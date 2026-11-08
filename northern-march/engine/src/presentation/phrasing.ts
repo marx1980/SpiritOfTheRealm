@@ -117,6 +117,10 @@ function letterParts(v: View, r: LetterLike): { rank: number; text: string }[] {
   const fought = new Map(r.claims.filter((c) => c.predicate === "battle.result").map((c) => [c.subject.id, String(c.believedValue)]));
   const incident = new Map(r.claims.filter((c) => c.predicate === "fortification.incident").map((c) => [c.subject.id, ({ storm: "a storm", fire: "a fire", earthquake: "an earthquake" } as Record<string, string>)[String(c.believedValue)] ?? String(c.believedValue)]));
   const fighting = [...fought.values()].some((x) => x !== "nobody");
+  // where the writer is and how many men are with them, said once: a captain's company, or a castellan's garrison
+  const selfTroops = r.claims.find((c) => c.predicate === "character.troops" && c.subject.id === r.author);
+  const garrisonHere = r.claims.find((c) => c.predicate === "fortification.garrison" && c.subject.id === home);
+  const withMen: number | undefined = selfTroops ? (earlier(v, r, selfTroops) === undefined ? Number(selfTroops.believedValue) : undefined) : garrisonHere && earlier(v, r, garrisonHere) === undefined ? Number(garrisonHere.believedValue) : undefined;
   for (const c of r.claims) {
     const s = nameOf(v, c.subject.id), val = c.believedValue, me = c.subject.id === r.author, prev = earlier(v, r, c);
     const here = c.subject.id === home;
@@ -141,16 +145,25 @@ function letterParts(v: View, r: LetterLike): { rank: number; text: string }[] {
         out.push({ rank: 2, text: `${cap(raiderWords(val as number))} at ${s}.` }); break;
       case "fortification.garrison":
         if (prev === val) break;
+        if (here && prev === undefined && !selfTroops && withMen !== undefined) break; // told with where the writer is
         { const t = prev === undefined ? `${here ? "the fort has" : `the fort at ${s} has`} ${val} men` : `${here ? "the fort now has" : `the fort at ${s} now has`} ${val} men${(val as number) < (prev as number) ? (fighting ? ", after the fighting" : "") : ", as the garrison recovers"}`;
           if (here) fort.push(t); else out.push({ rank: 1, text: cap(t) + "." }); }
         break;
       case "character.troops":
         if (prev === val) break;
+        if (me && prev === undefined && withMen !== undefined) break; // told with where the writer is
         out.push({ rank: 1, text: me ? (prev === undefined ? `I have ${val} men with me.` : `I now have ${val} men with me${(val as number) < (prev as number) ? (fighting ? ", after the fighting" : "") : ", as my men return"}.`)
           : (prev === undefined ? `${s} has ${val} men with them.` : `${s} now has ${val} men with them.`) });
         break;
       // people speak of themselves in the first person
-      case "character.location": out.push({ rank: 4, text: me ? `I am at ${nameOf(v, String(val))}.` : `${s} is at ${nameOf(v, String(val))}.` }); break;
+      case "grain.stock": {
+        const need = v.world.grain?.places.find((x) => x.id === c.subject.id)?.need;
+        if (!need) { out.push({ rank: 5, text: `${s}: grain stock ${String(val)}.` }); break; }
+        const days = Math.floor(Number(val) / need), t = `food for ${days} ${days === 1 ? "day" : "days"}`;
+        if (here) fort.push(`we have ${t}`); else out.push({ rank: 2, text: `${s} has ${t}.` });
+        break;
+      }
+      case "character.location": out.push({ rank: 4, text: me ? `I am at ${nameOf(v, String(val))}${withMen !== undefined ? ` with ${withMen} men` : ""}.` : `${s} is at ${nameOf(v, String(val))}.` }); break;
       case "treasury.balance": out.push({ rank: 3, text: `The treasury is ${(val as number) < 60000 ? "low" : "adequate"}.` }); break;
       case "order.status": {
         // the subject is the order's number: say what the order was, not its number
@@ -162,7 +175,7 @@ function letterParts(v: View, r: LetterLike): { rank: number; text: string }[] {
       default: out.push({ rank: 5, text: `${s}: ${c.predicate.replace(/\./g, " ")} ${String(val)}.` });
     }
   }
-  if (fort.length) out.push({ rank: 1, text: cap(fort.join(" and ")) + "." });
+  if (fort.length) out.push({ rank: 1, text: cap(fort.length > 1 ? `${fort.slice(0, -1).join(", ")} and ${fort[fort.length - 1]}` : fort[0]) + "." });
   return out;
 }
 /** A letter's content as plain sentences, in words only: what the writer tells the reader, as the writer believes it. */

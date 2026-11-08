@@ -20,7 +20,8 @@ export function startGrainOrder(ctx: Ctx, orderId: number, a: ActionRef, cause: 
   const from = "at" in pos ? pos.at : pos.transit.dest;
   const there = ctx.map.path(from, source, "rider", (r) => ctx.isOpen(r));
   if (!there) return finish(ctx, orderId, "abandoned", cause, "noRoute");
-  ctx.at(ctx.tick + there.ticks + (consult ? g.requisition.consultDays * DAY : 0), "grain:ship", { orderId, kind: a.kind, source, dest, consult, cause });
+  const asked = Number(o.constraints.find((c) => c.kind === "units")?.textKey);
+  ctx.at(ctx.tick + there.ticks + (consult ? g.requisition.consultDays * DAY : 0), "grain:ship", { orderId, kind: a.kind, source, dest, consult, cause, ...(asked > 0 ? { asked } : {}) });
 }
 
 export const grain: System = {
@@ -36,14 +37,14 @@ export const grain: System = {
       if ((ctx.s.harvestHit[place]?.until ?? 0) > ctx.tick) return; // a spoiled harvest is spoiled once; the next raid after it recovers hits it again
       ctx.emit("HarvestDamaged", [cause], [loc(place)], { place, permille: g.harvestHitPermille, until: ctx.tick + g.harvestHitDays * DAY });
     },
-    "grain:ship": (ctx, { orderId, kind, source, dest, consult, cause, official }) => {
+    "grain:ship": (ctx, { orderId, kind, source, dest, consult, cause, official, asked }) => {
       const g = ctx.content.scenario.grain!, o = ctx.s.orders[String(orderId)]?.order;
       if (!official && (!o || ctx.s.orders[String(orderId)].status !== "executing")) return;
       const stop = (reason: string) => { if (!official) finish(ctx, orderId, "abandoned", cause, reason); };
       const by = official ?? o!.recipient;
       const sp = place(ctx, source)!, buy = kind === "purchase", rule = buy ? g.purchase : g.requisition;
       const spare = Math.max(0, ctx.s.grain[source] - rule.reserveDays * sp.need);
-      let sacks = Math.min(rule.sacks, spare);
+      let sacks = Math.min(asked > 0 ? Math.min(asked, rule.sacks) : rule.sacks, spare);
       if (buy) sacks = Math.min(sacks, Math.floor(Math.max(0, ctx.s.treasuryMilli[ctx.content.scenario.ruler]) / g.purchase.priceMilliPerSack));
       else sacks = Math.floor((sacks * contribution(ctx, "levy", source)) / 1000); // a community that refuses gives nothing
       if (sacks <= 0) return stop(spare <= 0 ? "noSurplus" : buy ? "funds" : "refused");

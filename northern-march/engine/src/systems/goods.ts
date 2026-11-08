@@ -30,7 +30,8 @@ export function startGoodsOrder(ctx: Ctx, orderId: number, a: ActionRef, cause: 
   const from = "at" in pos ? pos.at : pos.transit.dest;
   const there = ctx.map.path(from, source, "rider", (r) => ctx.isOpen(r));
   if (!there) return finish(ctx, orderId, "abandoned", cause, "noRoute");
-  ctx.at(ctx.tick + there.ticks, "goods:ship", { orderId, kind: a.kind, source, dest, good, sell, cause });
+  const asked = Number(o.constraints.find((c) => c.kind === "units")?.textKey);
+  ctx.at(ctx.tick + there.ticks, "goods:ship", { orderId, kind: a.kind, source, dest, good, sell, cause, ...(asked > 0 ? { asked } : {}) });
 }
 
 export const goods: System = {
@@ -85,14 +86,14 @@ export const goods: System = {
       }
       ctx.at(ctx.tick + DAY, "goods:day", {});
     },
-    "goods:ship": (ctx, { orderId, kind, source, dest, good, sell, cause }) => {
+    "goods:ship": (ctx, { orderId, kind, source, dest, good, sell, cause, asked }) => {
       const g = ctx.content.scenario.goods!, o = ctx.s.orders[String(orderId)]?.order;
       if (!o || ctx.s.orders[String(orderId)].status !== "executing") return;
       const stop = (reason: string) => finish(ctx, orderId, "abandoned", cause, reason);
       const rule = g.buy[good], buy = kind === "purchase" && !sell, house = holder(ctx, source, good)!.house ?? "crown";
       const price = buy && house !== "crown" ? Math.floor((ctx.s.goodsPrice[good] * (1000 + g.market.houseMarkupPermille)) / 1000) : ctx.s.goodsPrice[good]; // a House sells dearer
       const spare = Math.max(0, ctx.s.goods[good][source] - rule.reserveUnits);
-      let units = Math.min(rule.units, spare);
+      let units = Math.min(asked > 0 ? Math.min(asked, rule.units) : rule.units, spare);
       if (buy) units = Math.min(units, Math.floor(Math.max(0, ctx.s.treasuryMilli[ctx.content.scenario.ruler]) / price));
       if (units <= 0) return stop(spare <= 0 ? "noSurplus" : "funds");
       const trip = ctx.map.path(source, dest, "foot", (r) => ctx.isOpen(r)); // carts walk

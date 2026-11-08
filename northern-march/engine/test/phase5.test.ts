@@ -184,7 +184,7 @@ test("letters say walls and men only when they changed, in natural words, naming
   const bren = [...v.reports].filter((r) => r.author === "bren" && r.claims.some((c) => c.predicate === "character.location")).sort((a, b) => a.composedAt - b.composedAt);
   assert.ok(bren.length >= 3, "several letters from Bren");
   const texts = bren.map((r) => letterSentences(v, r).join(" "));
-  assert.match(texts[0], /^I am at Northwatch\. The walls are \w+( after an? \w+)? and the fort has \d+ men\./);
+  assert.match(texts[0], /^I am at Northwatch with \d+ men\. The walls are \w+( after an? \w+)? and we have food for \d+ days?\./);
   for (const t of texts) assert.ok(!/at Northwatch.*at Northwatch/.test(t) && !/There are \d+ men in the fort/.test(t), t);
   for (let i = 1; i < bren.length; i++) {
     const prev = bren[i - 1].claims.find((c) => c.predicate === "fortification.garrison")?.believedValue, cur = bren[i].claims.find((c) => c.predicate === "fortification.garrison")?.believedValue;

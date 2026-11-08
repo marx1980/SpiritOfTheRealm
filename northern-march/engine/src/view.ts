@@ -32,7 +32,7 @@ export interface WorldKnowledge {
   /** What each known person is known for: their strongest skill, in words (the area they advise on). */
   areas: Record<string, string>;
   /** What each store feeds each day, and the days of cover that mark the scarcity bands: the stewards know their own needs. */
-  grain?: { places: { id: string; need: number }[]; bandDays: number[] };
+  grain?: { places: { id: string; need: number }[]; bandDays: number[]; sacks: { requisition: number; purchase: number } };
   /** What anyone in the realm knows of the wider trade: who holds which store, where goods sell, the usual prices, what a muster takes. Not the stocks. */
   goods?: {
     kinds: string[];
@@ -96,7 +96,7 @@ export function buildView(s: Readonly<WorldState>, c: Content, who: string, now:
         unitsPerOrder: Object.fromEntries(c.scenario.goods.kinds.map((k) => [k, c.scenario.goods!.buy[k].units])),
         ...(c.scenario.manpower ? { muster: { men: c.scenario.manpower.musterMen, ironPerMan: c.scenario.manpower.ironPerMan, mountedPermille: c.scenario.manpower.mountedPermille, serviceDays: c.scenario.manpower.serviceDays, wageMilli: c.scenario.manpower.wageMilli, communities: c.communities.communities.map((x) => x.id).sort() } } : {}),
       } } : {}),
-      ...(c.scenario.grain ? { grain: { places: c.scenario.grain.places.map((p) => ({ id: p.location, need: p.need })), bandDays: [...c.scenario.grain.bandDays] } } : {}),
+      ...(c.scenario.grain ? { grain: { places: c.scenario.grain.places.map((p) => ({ id: p.location, need: p.need })), bandDays: [...c.scenario.grain.bandDays], sacks: { requisition: c.scenario.grain.requisition.sacks, purchase: c.scenario.grain.purchase.sacks } } } : {}),
     },
   });
 }
