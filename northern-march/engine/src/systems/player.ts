@@ -4,6 +4,7 @@ import type { Ctx, System } from "./types.ts";
 import { chr, loc, sorted } from "./types.ts";
 import { issue } from "./orders.ts";
 import { travel } from "./movement.ts";
+import { giveBattleOrder } from "./battle.ts";
 import { DAY, HOUR } from "./types.ts";
 
 /** Who receives an action: for a repair, whoever holds the place and reports on it to the ruler; for a levy, the steward. */
@@ -33,7 +34,8 @@ export function makePlayer(decide: (ctx: Ctx, cause: number | null, reason: stri
         for (const a of decide(ctx, why, reason ?? "report")) {
           const input = ctx.emit("PlayerInput", why ? [why] : [], [chr(ruler)], { player: ruler, action: a.action, target: a.target ?? null, decision: a.decision!,
             ...(a.order ? { order: a.order } : {}), ...(a.followed ? { followed: a.followed } : {}),
-            ...(a.mission ? { mission: a.mission } : {}), ...(a.to ? { to: a.to } : {}), ...(a.consult ? { consult: true } : {}), ...(a.muster ? { muster: true } : {}), ...(a.sell ? { sell: true } : {}), ...(a.good ? { good: a.good } : {}), ...(a.units ? { units: a.units } : {}), ...(a.market ? { market: true } : {}), ...(a.raid ? { raid: a.raid } : {}), ...(a.repairMode ? { repairMode: a.repairMode } : {}) });
+            ...(a.mission ? { mission: a.mission } : {}), ...(a.to ? { to: a.to } : {}), ...(a.consult ? { consult: true } : {}), ...(a.muster ? { muster: true } : {}), ...(a.sell ? { sell: true } : {}), ...(a.good ? { good: a.good } : {}), ...(a.units ? { units: a.units } : {}), ...(a.market ? { market: true } : {}), ...(a.raid ? { raid: a.raid } : {}), ...(a.repairMode ? { repairMode: a.repairMode } : {}), ...(a.battle ? { battle: a.battle } : {}) });
+          if (a.action === "battle") { if (a.battle) giveBattleOrder(ctx, input.id, a.battle); continue; }
           if (a.action === "travel") { travel(ctx, ruler, a.target!, "rider", false, input.id); continue; }
           if (a.action === "order") {
             const d = a.order!;

@@ -142,6 +142,13 @@ export const EVENT_TYPES: Readonly<Record<string, EventTypeDef>> = Object.freeze
   SortieLaunched: T("battle", "military", 2),
   SortieResolved: T("battle", "military", 3),
   LossesTaken: T("battle", "military", 2),
+  // Phase 8 battles (D-060)
+  BattleBegan: T("battle", "military", 3),
+  BattleOrderGiven: T("battle", "military", 2),
+  BattleEnded: T("battle", "military", 3),
+  ThreatWeakened: T("battle", "military", 2),
+  PrestigeChanged: T("battle", "political", 2),
+  BattleConduct: T("battle", "military", 1),
   DetachmentSent: T("agents", "military", 1),
   DetachmentArrived: T("agents", "military", 1),
 });

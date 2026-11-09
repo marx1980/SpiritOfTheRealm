@@ -15,6 +15,7 @@ import { byScore, chooseFocus, generateEconomy, plan, score, type PlanResult } f
 import type { Ctx, System } from "./types.ts";
 import { DAY, HOUR, chr, loc, sorted } from "./types.ts";
 import { battleLoss, raiderMen } from "../battle.ts";
+import { beginBattle } from "./battle.ts";
 import { best, learn, observe, seedKnowledge } from "./knowledge.ts";
 import { travel } from "./movement.ts";
 
@@ -417,8 +418,42 @@ export function battleClaims(ctx: Ctx, who: string, from: string, site: string, 
     learn(ctx, who, { subject: chr(who), predicate: "captain.query", value: from, observedAt: ctx.tick, band: "certain" }, { kind: "observation", eventId: cause, source: who }, [cause]);
   // word that the fort is lost is not told again by the captain; and a fort the raiders hold has no garrison to count
   const holder = best(ctx, who, site, "fortification.holder"), lost = holder?.believedValue === "raiders";
-  return [best(ctx, who, who, "captain.query"), best(ctx, who, who, "captain.heading"), best(ctx, who, site, "battle.result"), lost ? null : holder, lost ? null : best(ctx, who, from, "fortification.garrison"), best(ctx, who, who, "character.troops"), best(ctx, who, site, "threat.intensity")]
+  return [best(ctx, who, who, "captain.query"), best(ctx, who, who, "captain.heading"), best(ctx, who, site, "battle.result"), best(ctx, who, who, "battle.ownLosses"), best(ctx, who, site, "battle.enemyLosses"), lost ? null : holder, lost ? null : best(ctx, who, from, "fortification.garrison"), best(ctx, who, who, "character.troops"), best(ctx, who, site, "threat.intensity")]
     .filter((x): x is NonNullable<typeof x> => !!x).map(({ band, ...rest }) => ({ ...rest, reliabilityBand: band as "certain" }));
+}
+
+/** The end of a sortie, rolled or fought (D-060): the outcome event, losses, the raiders ended if beaten, experience, what
+ *  those present now know, and the letters home. A fought battle also sends each commander's debrief to his superior. */
+export function concludeSortie(ctx: Ctx, o: { commander: string; from: string; site: string; launchedEventId: number; cause: number; found: boolean; success: boolean; pPermille: number;
+  men: number; ambushed: boolean; enemy: number; garrisonLost: number; troopsLost: Record<string, number>; battleId?: number; debriefs?: string[] }) {
+  const { commander, from, site } = o;
+  const res = ctx.emit("SortieResolved", [o.cause], [chr(commander), loc(site)], { commander, site, from, found: o.found, success: o.success, pPermille: o.pPermille, men: o.men, ambushed: o.ambushed, enemy: o.enemy, ...(o.battleId !== undefined ? { battleId: o.battleId } : {}) });
+  if (o.found) {
+    if (o.garrisonLost || Object.keys(o.troopsLost).length) ctx.emit("LossesTaken", [res.id], [loc(from)], { location: from, garrisonLost: o.garrisonLost, troopsLost: o.troopsLost, cause: o.battleId !== undefined ? "battle" : "sortie" });
+    if (o.success && ctx.s.threats[site]) ctx.emit("ThreatEnded", [res.id], [loc(site)], { site, endedBy: o.battleId !== undefined ? "battle" : "sortie" });
+  }
+  const exp = ctx.content.scenario.agents.experience;
+  if (ctx.s.agents[commander]) ctx.emit("ExperienceGained", [res.id], [chr(commander)], { agent: commander, domain: "military", amount: exp.perTaskPermille, cap: exp.capPermille });
+  for (const who of present(ctx.s, from).filter((x) => ctx.s.tiers[x] !== "C")) {
+    if (!o.found || o.success) learn(ctx, who, { subject: loc(site), predicate: "threat.intensity", value: 0, observedAt: ctx.tick, band: "certain" },
+      { kind: "observation", eventId: res.id, source: who }, [res.id]);
+    else observe(ctx, who, loc(site), "threat.intensity", res.id);
+  }
+  // what happened, as the commander knows it (a battle's commanders already hold their own account), and a letter to his superior
+  if (o.battleId === undefined) learn(ctx, commander, { subject: loc(site), predicate: "battle.result", value: !o.found ? "nobody" : o.success ? "won" : "lost", observedAt: ctx.tick, band: "certain" },
+    { kind: "observation", eventId: res.id, source: commander }, [res.id]);
+  const superior = ctx.content.byId.character.get(commander)?.reportsTo;
+  const ordered = (ctx.s.ordersInForce[commander] ?? []).some((id) => { const x = ctx.s.orders[String(id)]; return x.status === "executing" && x.order.intent === "attack" && x.order.objective.id === site; });
+  if (superior && !ordered) ctx.at(ctx.tick, "messenger:compose", { author: commander, recipient: superior, claims: battleClaims(ctx, commander, from, site, res.id), cause: res.id, purpose: `battle:${site}` });
+  // the other commanders' debriefs: each writes to his own superior what he believes happened (§22)
+  for (const who of (o.debriefs ?? []).filter((x) => x !== commander)) {
+    const up = ctx.content.byId.character.get(who)?.reportsTo;
+    if (!up) continue;
+    const claims = [best(ctx, who, site, "battle.result"), best(ctx, who, who, "battle.ownLosses"), best(ctx, who, site, "battle.enemyLosses")]
+      .filter((x): x is NonNullable<typeof x> => !!x).map(({ band, ...rest }) => ({ ...rest, reliabilityBand: band as "certain" }));
+    if (claims.length) ctx.at(ctx.tick, "messenger:compose", { author: who, recipient: up, claims, cause: res.id, purpose: `debrief:${o.battleId}` });
+  }
+  ctx.at(ctx.tick, "orders:sortieDone", { commander, site, resolvedEventId: res.id });
 }
 
 function present(s: Readonly<WorldState>, where: string) {
@@ -487,13 +522,15 @@ export const agents: System = {
       // going after raiders in their own ground can meet a second band: the fight is then against a larger force
       const ambushed = !!threat && r.int(0, 999) < Math.floor((threat.intensityPermille * sp.ambushPermilleAtFull) / 1000);
       const enemy = threat ? Math.floor((raiderMen(ctx.content.scenario.battle, threat.intensityPermille) * (ambushed ? sp.ambushFactorPermille : 1000)) / 1000) : 0;
+      // Phase 8 (D-060): with a battlefield in content, meeting raiders who are there is a battle, not a roll
+      if (threat && enemy > 0 && ctx.content.scenario.battle.field) { beginBattle(ctx, { commander, from, site, launchedEventId, enemy, ambushed, men }); return; }
       const S = Math.floor((men * (sp.skillBasePermille + skill)) / 1000), I = threat ? Math.floor((Math.floor((threat.intensityPermille * sp.intensityFactorPermille) / 1000) * (ambushed ? sp.ambushFactorPermille : 1000)) / 1000) : 0;
       const p = threat ? Math.floor((1000 * S) / Math.max(1, S + I)) : 1000;
       const success = threat ? r.int(0, 999) < p : false;
-      const res = ctx.emit("SortieResolved", [launchedEventId], [chr(commander), loc(site)], { commander, site, from, found: !!threat, success, pPermille: p, men, ambushed, enemy });
+      const troopsLost: Record<string, number> = {};
+      let garrisonLost = 0;
       if (threat) {
         const lost = battleLoss(ctx.content.scenario.battle, men, enemy, success);
-        const troopsLost: Record<string, number> = {};
         let left = lost;
         for (const who of present(ctx.s, from)) {
           const t = ctx.s.troops[who] ?? 0;
@@ -501,24 +538,9 @@ export const agents: System = {
           const n = Math.min(t, Math.floor((lost * t) / Math.max(1, men)));
           if (n) { troopsLost[who] = n; left -= n; }
         }
-        const garrisonLost = Math.min(ctx.s.fortifications[from]?.garrison ?? 0, left);
-        if (lost) ctx.emit("LossesTaken", [res.id], [loc(from)], { location: from, garrisonLost, troopsLost, cause: "sortie" });
-        if (success) ctx.emit("ThreatEnded", [res.id], [loc(site)], { site, endedBy: "sortie" });
+        garrisonLost = Math.min(ctx.s.fortifications[from]?.garrison ?? 0, left);
       }
-      const exp = ctx.content.scenario.agents.experience;
-      if (ctx.s.agents[commander]) ctx.emit("ExperienceGained", [res.id], [chr(commander)], { agent: commander, domain: "military", amount: exp.perTaskPermille, cap: exp.capPermille });
-      for (const who of present(ctx.s, from).filter((x) => ctx.s.tiers[x] !== "C")) {
-        if (!threat || success) learn(ctx, who, { subject: loc(site), predicate: "threat.intensity", value: 0, observedAt: ctx.tick, band: "certain" },
-          { kind: "observation", eventId: res.id, source: who }, [res.id]);
-        else observe(ctx, who, loc(site), "threat.intensity", res.id);
-      }
-      // what happened, as the commander knows it, and a letter to his superior (an ordered attack reports through the order instead)
-      learn(ctx, commander, { subject: loc(site), predicate: "battle.result", value: !threat ? "nobody" : success ? "won" : "lost", observedAt: ctx.tick, band: "certain" },
-        { kind: "observation", eventId: res.id, source: commander }, [res.id]);
-      const superior = ctx.content.byId.character.get(commander)?.reportsTo;
-      const ordered = (ctx.s.ordersInForce[commander] ?? []).some((id) => { const o = ctx.s.orders[String(id)]; return o.status === "executing" && o.order.intent === "attack" && o.order.objective.id === site; });
-      if (superior && !ordered) ctx.at(ctx.tick, "messenger:compose", { author: commander, recipient: superior, claims: battleClaims(ctx, commander, from, site, res.id), cause: res.id, purpose: `battle:${site}` });
-      ctx.at(ctx.tick, "orders:sortieDone", { commander, site, resolvedEventId: res.id });
+      concludeSortie(ctx, { commander, from, site, launchedEventId, cause: launchedEventId, found: !!threat, success, pPermille: p, men, ambushed, enemy, garrisonLost, troopsLost });
     },
     // Was a request answered? The asker sees it for themselves: work started on the wall, or the help arrived.
     "agents:assess": (ctx, { agent, of, fort, kind, sentAt, decisionEventId }) => {

@@ -166,5 +166,21 @@
     "domain": "economic",
     "wakeSignificance": 1,
     "materialDelta": 100
+  },
+  {
+    "id": "battle.ownLosses",
+    "subjectKind": "character",
+    "halfLifeTicks": 864000,
+    "domain": "military",
+    "wakeSignificance": 1,
+    "materialDelta": 1
+  },
+  {
+    "id": "battle.enemyLosses",
+    "subjectKind": "location",
+    "halfLifeTicks": 864000,
+    "domain": "military",
+    "wakeSignificance": 1,
+    "materialDelta": 1
   }
 ]

@@ -13,6 +13,15 @@ export interface ForcesParams {
   posts: Record<"rear" | "centre" | "forward", string>;
 }
 export interface Person { id: string; name: string; traits: TraitP[]; skill: number; loyalty: Record<string, number> }
+
+/** A character as a commander: traits, military skill (content plus experience, if given) and loyalty or trust towards others. */
+export function personOf(c: import("../content.ts").Content, id: string, skill?: number): Person {
+  const ch = c.byId.character.get(id)!;
+  const traits = ch.traits.map((t) => c.byId.trait.get(t) as unknown as TraitP);
+  const loyalty: Record<string, number> = {};
+  for (const r of ch.relationships ?? []) if (r.kind === "loyalty" || r.kind === "trust") loyalty[r.to] = Math.max(loyalty[r.to] ?? 0, r.value);
+  return { id, name: ch.name ?? id, traits, skill: skill ?? ch.capabilities.military ?? 0, loyalty };
+}
 export interface BattleInputs {
   battleId: number; seed: number; site: string; place: string; endT: number; weather: "clear" | "rain";
   field: FieldSpec; params: BattleParams; forces: ForcesParams; obedience: ObedienceParams;

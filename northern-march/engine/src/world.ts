@@ -6,6 +6,12 @@ import type { ActionRef, Recommendation, Report, StructuredOrder } from "./schem
 
 export type Position = { at: string } | { transit: { from: string; dest: string; path: string[]; arrivals: number[]; departedAt: number; mode: Mode } };
 export type ReportStatus = "composed" | "in_transit" | "delivered" | "lost" | "intercepted" | "undeliverable";
+export interface BattleState {
+  setup: import("./battlefield/core.ts").BattleSetup; orders: import("./battlefield/core.ts").BattleOrder[];
+  startTick: number; status: "running" | "ended"; launchedEventId: number; commander: string; from: string; site: string;
+  enemy: number; men: number; ambushed: boolean; beganEventId: number;
+  result?: { winner: string; reason: string; endT: number; ruler: string };
+}
 export interface Messenger {
   id: number; kind: "report" | "order" | "captured"; ref: number; sender: string; recipient: string;
   carries?: "report" | "order"; // what a captured messenger carries back to the interceptor
@@ -39,6 +45,11 @@ export interface WorldState {
   lastRepairStart: Record<string, number>;
   lastArrival: Record<string, Record<string, number>>;
   sortieOpen: Record<string, number>; // commander -> tick of the sortie still being fought
+  /** Phase 8 battles (D-060): the setup and the ruler's battle orders; the record is recomputed from them. */
+  battles: Record<string, BattleState>;
+  /** Battlefield prestige and the record of how each commander answered battle orders (BATTLEFIELD §20). */
+  prestige: Record<string, number>;
+  conduct: Record<string, { obey: number; adapt: number; keep: number }>;
   lastStorm: Record<string, number>;
   fallen: Record<string, true>; // forts held by the raiders
   threats: Record<string, { intensityPermille: number; untilTick: number; eventId: number; since: number }>;
@@ -105,7 +116,7 @@ export function initialState(c: Content): WorldState {
     if (ch.id !== c.scenario.ruler && ch.tier !== "C") agents[ch.id] = newAgent();
   }
   return {
-    treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, tiers, history: {}, agents, recommendations: {}, heard: {}, campaign: { ended: null, lastDanger: -1 }, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, sortieOpen: {}, lastStorm: {}, fallen: {}, threats: {}, routesClosed: {},
+    treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, tiers, history: {}, agents, recommendations: {}, heard: {}, campaign: { ended: null, lastDanger: -1 }, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, sortieOpen: {}, battles: {}, prestige: {}, conduct: {}, lastStorm: {}, fallen: {}, threats: {}, routesClosed: {},
     positions, departures: {}, beliefs: {}, nextPropId: 1, reports: {}, nextReportId: 1, messengers: {}, nextMessengerId: 1,
     orders: {}, nextOrderId: 1, advisePending: {}, dayEndDay: -1, ordersInForce: {}, issued: {}, repairs: {}, communities: initialCommunities(c), ...initialGrain(c), ...initialGoods(c), hands: Object.fromEntries(c.communities.communities.map((x) => [x.id, x.hands ?? 0])), musterAway: {}, musters: {}, nextMusterId: 1,
   };
@@ -378,6 +389,12 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   ExperienceGained: (s, p) => { const x = s.agents[p.agent].experience; x[p.domain] = Math.min(p.cap, (x[p.domain] ?? 0) + p.amount); },
   SortieLaunched: (s, p, e) => { s.sortieOpen[p.commander] = e.tick; },
   SortieResolved: (s, p) => { delete s.sortieOpen[p.commander]; },
+  BattleBegan: (s, p, e) => { s.battles[String(p.battleId)] = { setup: p.setup, orders: [], startTick: e.tick, status: "running", launchedEventId: p.launchedEventId, commander: p.commander, from: p.from, site: p.site, enemy: p.enemy, men: p.men, ambushed: p.ambushed, beganEventId: e.id }; },
+  BattleOrderGiven: (s, p) => { s.battles[String(p.battleId)].orders.push(p.order); },
+  BattleEnded: (s, p) => { const b = s.battles[String(p.battleId)]; b.status = "ended"; b.result = { winner: p.winner, reason: p.reason, endT: p.endT, ruler: p.ruler }; },
+  ThreatWeakened: (s, p) => { if (s.threats[p.site]) s.threats[p.site].intensityPermille = p.intensityPermille; },
+  PrestigeChanged: (s, p) => { s.prestige[p.who] = (s.prestige[p.who] ?? 0) + p.delta; },
+  BattleConduct: (s, p) => { const c = (s.conduct[p.commander] ??= { obey: 0, adapt: 0, keep: 0 }); c[p.decision as "obey" | "adapt" | "keep"]++; },
   LossesTaken: (s, p) => {
     if (p.garrisonLost) s.fortifications[p.location].garrison -= p.garrisonLost;
     for (const [who, n] of Object.entries(p.troopsLost as Record<string, number>)) s.troops[who] -= n;

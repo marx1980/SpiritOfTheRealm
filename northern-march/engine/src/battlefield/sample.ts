@@ -1,19 +1,13 @@
 // A battle at Northwatch from the scenario's own content, for tests and the lab: Bren's garrison with Edda's archers,
 // Caron's company, the raiders of the Blackwood, and Anna with her guard if asked for. Reads content from disk (Node only).
 import { loadContent, type Content } from "../content.ts";
-import type { BattleSetup, TraitP } from "./core.ts";
-import { buildSetup, type Person } from "./setup.ts";
+import type { BattleSetup } from "./core.ts";
+import { buildSetup, personOf } from "./setup.ts";
 
 let cached: Content | undefined;
 const content = () => (cached ??= loadContent(new URL("../../content/march/", import.meta.url).pathname));
 
-export function person(c: Content, id: string): Person {
-  const ch = c.byId.character.get(id)!;
-  const traits: TraitP[] = ch.traits.map((t) => c.byId.trait.get(t) as unknown as TraitP);
-  const loyalty: Record<string, number> = {};
-  for (const r of ch.relationships ?? []) if (r.kind === "loyalty" || r.kind === "trust") loyalty[r.to] = Math.max(loyalty[r.to] ?? 0, r.value);
-  return { id, name: ch.name ?? id, traits, skill: ch.capabilities.military ?? 0, loyalty };
-}
+export const person = personOf;
 
 export function sampleSetup(o: { seed: number; anna?: "rear" | "centre" | "forward"; raiders?: number; weather?: "clear" | "rain"; noCaron?: boolean; content?: Content }): BattleSetup {
   const c = o.content ?? content(), b = c.scenario.battle;

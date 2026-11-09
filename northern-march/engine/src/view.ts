@@ -1,6 +1,9 @@
 // A7: ViewOf(agent | player). The only window UI, planners and policies get onto the world: the viewer's own
 // beliefs (with staleness applied on read), reports delivered to them, their own orders and position, and the clock.
 import { BANDS, effectiveBand, type BeliefProposition, type EffectiveBand } from "./beliefs.ts";
+import type { BattleOrder, FieldSpec, HqFrame, Note, Task } from "./battlefield/core.ts";
+import { battleRecord } from "./battlefield/record.ts";
+const DAY_TICKS = 86400;
 import type { Content } from "./content.ts";
 import { INTENTS, type Constraint, type Contingency, type IntentKind, type Recommendation, type ReportingPolicy, type StructuredOrder } from "./schemas.ts";
 import type { IssuedRecord, Position, WorldState } from "./world.ts";
@@ -54,7 +57,55 @@ export interface View {
   readonly advice: readonly Recommendation[];
   readonly world: WorldKnowledge;
   /** The steward's books as last read out to the ruler at the seat (stocks and going prices, with his error); the ruler's view only. */
+  /** The battle the ruler is fighting in (or has just fought): headquarters' picture only, never the field as it is (D-060). */
+  readonly battle?: BattleView;
   readonly ledger?: { readonly tick: number; readonly stock: Readonly<Record<string, Readonly<Record<string, number>>>>; readonly price: Readonly<Record<string, number>>; readonly town: Readonly<Record<string, Readonly<Record<string, number>>>>; readonly paid: Readonly<Record<string, number>>; readonly buy?: Readonly<Record<string, Readonly<Record<string, number>>>>; readonly grain?: Readonly<Record<string, number>> };
+}
+
+export interface BattleView {
+  readonly id: number; readonly place: string; readonly site: string; readonly startTick: number; readonly t: number; readonly endsBy: number;
+  readonly field: FieldSpec; readonly hq: HqFrame; readonly history: readonly HqFrame[];
+  /** What headquarters knows happened: her orders going out, reports coming in, warnings, the end. */
+  readonly notes: readonly Note[];
+  readonly myOrders: readonly BattleOrder[];
+  readonly commanders: readonly { readonly id: string; readonly name: string; readonly formations: readonly string[] }[];
+  readonly signals: readonly { readonly id: string; readonly task: Task }[];
+  readonly ended?: { readonly winner: string; readonly reason: string };
+}
+const HQ_NOTES = new Set(["report_received", "danger", "end"]);
+function battleView(s: Readonly<WorldState>, c: Content, who: string, now: number): BattleView | undefined {
+  if (who !== c.scenario.ruler) return undefined;
+  const st = Object.values(s.battles).filter((b) => b.setup.ruler.present && (b.status === "running" || now - (b.startTick + (b.result?.endT ?? 0)) < DAY_TICKS)).sort((a, b) => b.startTick - a.startTick)[0];
+  if (!st) return undefined;
+  const t = Math.max(0, Math.min(now - st.startTick, st.result?.endT ?? st.setup.endT));
+  const r = battleRecord(st, st.status === "running" ? t : undefined);
+  const hist = r.hq.filter((h) => h.t <= t);
+  const mine = new Set(st.orders.map((o) => o.id));
+  return {
+    id: st.setup.battleId, place: st.setup.place, site: st.site, startTick: st.startTick, t, endsBy: st.setup.endT, field: structuredClone(st.setup.field),
+    hq: structuredClone(hist[hist.length - 1] ?? r.hq[0]), history: structuredClone(hist),
+    notes: structuredClone(r.notes.filter((n) => n.t <= t && ((n.kind === "order_sent" && mine.has(n.orderId ?? -1)) || (HQ_NOTES.has(n.kind) && (n.kind !== "end" || st.status === "ended"))))),
+    myOrders: structuredClone(st.orders),
+    commanders: st.setup.commanders.filter((x) => x.side === "crown" && x.id !== who).map((x) => ({ id: x.id, name: x.name, formations: [...x.formations] })),
+    signals: structuredClone(st.setup.signals),
+    ...(st.status === "ended" && st.result ? { ended: { winner: st.result.winner, reason: st.result.reason } } : {}),
+  };
+}
+
+/** A battle order is valid against what headquarters knows: a commander in this battle (or herself), places on the
+ *  field, a formation headquarters has seen, a signal only for a meaning agreed before the fight. */
+export function validateBattleDraft(v: View, d: { to: string; task: Task; via: string; signal?: string } | undefined): string[] {
+  const b = v.battle, out: string[] = [];
+  if (!b || b.ended) return ["there is no battle in progress here"];
+  if (!d) return ["no battle order"];
+  if (d.to !== v.self.id && !b.commanders.some((c) => c.id === d.to)) out.push(`${d.to} is not in this battle`);
+  if (!["hold", "advance", "attack", "withdraw", "give_ground", "protect"].includes(d.task.kind)) out.push(`unknown task ${d.task.kind}`);
+  if (d.task.place && !b.field.places.some((p) => p.id === d.task.place)) out.push(`no place ${d.task.place} on this field`);
+  if (d.task.limit && !b.field.lines.some((l) => l.id === d.task.limit)) out.push(`no line ${d.task.limit} on this field`);
+  if (d.task.target && !b.hq.marks.some((m) => m.id === d.task.target)) out.push(`headquarters knows of no ${d.task.target}`);
+  if (!["runner", "signal", "voice"].includes(d.via)) out.push(`cannot send by ${d.via}`);
+  if (d.via === "signal" && !b.signals.some((s) => s.id === d.signal)) out.push("a signal must be one agreed before the battle");
+  return out;
 }
 
 function deepFreeze<T>(o: T): T {
@@ -81,6 +132,7 @@ export function buildView(s: Readonly<WorldState>, c: Content, who: string, now:
     beliefs,
     reports,
     ...(who === c.scenario.ruler && s.ledger ? { ledger: structuredClone(s.ledger) } : {}),
+    ...((): { battle?: BattleView } => { const bv = battleView(s, c, who, now); return bv ? { battle: bv } : {}; })(),
     advice: Object.values(s.heard[who] ?? {}).filter((r) => now - r.computedAt <= ADVICE_FRESH).map((r) => structuredClone(r))
       .sort((a, b) => (a.author < b.author ? -1 : a.author > b.author ? 1 : b.computedAt - a.computedAt || a.id - b.id)),
     world: {

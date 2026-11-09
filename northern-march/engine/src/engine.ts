@@ -16,11 +16,12 @@ import { communities } from "./systems/communities.ts";
 import { grain } from "./systems/grain.ts";
 import { goods } from "./systems/goods.ts";
 import { manpower } from "./systems/manpower.ts";
+import { battle } from "./systems/battle.ts";
 import { makePlayer } from "./systems/player.ts";
 import { MapGraph } from "./map.ts";
 import { beliefsAbout } from "./view.ts";
 import { DAY, type Ctx, type SimParams, type System } from "./systems/types.ts";
-import { buildView, validateDraft, type View } from "./view.ts";
+import { buildView, validateBattleDraft, validateDraft, type View } from "./view.ts";
 import { applyEvent, initialState, type WorldState } from "./world.ts";
 
 export { SAVE_SCHEMA_VERSION };
@@ -79,7 +80,7 @@ export class Sim {
     this.state = initialState(cfg.content);
     this.map = new MapGraph(cfg.content);
     this.ctx = this.makeCtx();
-    for (const s of [economy, weather, threat, movement, knowledge, messenger, orders, agents, communities, grain, goods, manpower, makePlayer((ctx, d, r) => this.decide(ctx, d, r))]) this.systems.set(s.id, s);
+    for (const s of [economy, weather, threat, movement, knowledge, messenger, orders, agents, communities, grain, goods, manpower, battle, makePlayer((ctx, d, r) => this.decide(ctx, d, r))]) this.systems.set(s.id, s);
     this.emit("ScenarioStarted", [], [], { contentVersion: cfg.content.version, seed: cfg.seed });
     for (const s of this.systems.values()) if (!this.disabled.has(s.id)) s.start(this.ctx);
   }
@@ -159,6 +160,12 @@ export class Sim {
         if (problems.length) throw new Error(`cannot order: ${problems.join("; ")}`);
       }
       if (a.action === "travel" && !this.content.scenario.presence.travelTo.includes(a.target!)) throw new Error(`cannot travel to ${a.target}`);
+      if (a.action === "battle") {
+        const problems = validateBattleDraft(view, a.battle);
+        if (problems.length) throw new Error(`cannot order: ${problems.join("; ")}`);
+        const sig = a.battle!.via === "signal" ? view.battle!.signals.find((x) => x.id === a.battle!.signal) : undefined;
+        if (sig) a.battle = { ...a.battle!, task: structuredClone(sig.task) as NonNullable<PlayerAction["battle"]>["task"] };
+      }
     }
     const item = this.pendingDecision;
     this.pendingDecision = null;
@@ -212,6 +219,7 @@ export class Sim {
       ...(e.payload.repairMode ? { repairMode: e.payload.repairMode as InputRecord["repairMode"] } : {}),
       ...(e.payload.to ? { to: e.payload.to as string } : {}), ...(e.payload.consult ? { consult: true } : {}),
       ...(e.payload.muster ? { muster: true } : {}), ...(e.payload.sell ? { sell: true } : {}), ...(e.payload.good ? { good: e.payload.good as string } : {}), ...(e.payload.units ? { units: e.payload.units as number } : {}), ...(e.payload.market ? { market: true } : {}),
+      ...(e.payload.battle ? { battle: e.payload.battle as InputRecord["battle"] } : {}),
     }));
     const rngStates: SaveFile["rngStates"] = {};
     for (const [n, r] of [...this.streams].sort(([a], [b]) => (a < b ? -1 : 1))) rngStates[n] = { state: r.getState(), draws: r.draws };
@@ -245,9 +253,11 @@ export class Sim {
       actions = recs.map((r) => ({ action: r.action, ...(r.target ? { target: r.target } : {}), ...(r.order ? { order: r.order } : {}), ...(r.followed ? { followed: r.followed } : {}),
         ...(r.mission ? { mission: r.mission } : {}), ...(r.raid ? { raid: r.raid } : {}), ...(r.repairMode ? { repairMode: r.repairMode } : {}),
         ...(r.to ? { to: r.to } : {}), ...(r.consult ? { consult: true } : {}),
-        ...(r.muster ? { muster: true } : {}), ...(r.sell ? { sell: true } : {}), ...(r.good ? { good: r.good } : {}), ...(r.units ? { units: r.units } : {}), ...(r.market ? { market: true } : {}) }));
+        ...(r.muster ? { muster: true } : {}), ...(r.sell ? { sell: true } : {}), ...(r.good ? { good: r.good } : {}), ...(r.units ? { units: r.units } : {}), ...(r.market ? { market: true } : {}), ...(r.battle ? { battle: r.battle } : {}) }));
     } else if ((rp ? this.resumePolicy : this.cfg.policy) === "external") {
       actions = this.pendingAnswer ?? [];
+    } else if (reason === "battle") {
+      actions = []; // scripted rulers leave a battle to its plan and her commanders (D-060)
     } else {
       const pol = rp ? this.resumePolicy! : this.cfg.policy;
       const fn = policyFn(pol, this.cfg.policyAliases)!;
