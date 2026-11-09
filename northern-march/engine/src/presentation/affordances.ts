@@ -100,7 +100,7 @@ export function openAdvice(v: View): Recommendation[] {
 export function actionText(v: View, a: PlayerAction): string {
   return a.action === "order" ? `Order ${name(v, a.order!.recipient)}: ${a.order!.intent} ${name(v, a.order!.objective.id)}`
     : a.action === "levy" && a.muster ? `Call men from ${name(v, a.target!)} to ${name(v, a.to!)}`
-    : (a.action === "requisition" || a.action === "purchase") && a.to ? `${a.sell ? "Sell" : a.action === "purchase" ? "Buy" : a.good ? "Move" : "Take"} ${a.units ? `${a.units} ` : ""}${a.good ?? "grain"} ${a.sell ? `from ${name(v, a.target!)} at ${name(v, a.to)}` : a.action === "purchase" ? `at ${name(v, a.target!)} for ${name(v, a.to)}` : `from ${name(v, a.target!)} to ${name(v, a.to)}`}${a.consult ? ", asking the people first" : ""}`
+    : (a.action === "requisition" || a.action === "purchase") && a.to ? `${a.sell ? "Sell" : a.action === "purchase" ? "Buy" : a.good ? "Send" : "Take"} ${a.units ? `${a.units} ` : ""}${a.good ?? "grain"} ${a.sell ? `from ${name(v, a.target!)} at ${name(v, a.to)}` : a.action === "purchase" ? `at ${name(v, a.target!)} for ${name(v, a.to)}` : `from ${name(v, a.target!)} to ${name(v, a.to)}`}${a.consult ? ", asking the people first" : ""}`
     : a.action === "levy" ? "Raise a levy" : a.action === "relief" ? `Send relief to ${name(v, a.target!)}` : a.action === "travel" ? `Travel to ${name(v, a.target!)}`
     : a.action === "repair" ? `Repair ${name(v, a.target!)}${a.repairMode === "rush" ? " quickly, paying extra, with the captain's men" : a.repairMode === "labour" ? " with the captain's men only (no cost, slower)" : ""}`
     : a.mission === "attack" && a.raid ? `Attack the raiders at ${name(v, a.raid)}` : a.mission === "scout" && a.raid ? `Scout the raiders at ${name(v, a.raid)}` : (fallenAt(v, a.target!) ? `Retake ${name(v, a.target!)}` : `Send the captain to ${name(v, a.target!)}`);
@@ -243,6 +243,7 @@ export function economyActions(v: View, rules: PublicRules): PlayerAction[] {
       const crownStores = g.stores.filter((x) => x.kinds.includes(good) && x.house === "crown").map((x) => x.id).sort();
       for (const m of g.towns.map((t) => t.id).sort()) for (const to of crownStores) { const a: PlayerAction = { action: "purchase", market: true, target: m, to, good }; if (ok(a)) out.push(a); }
       for (const from of crownStores) if ((storeKnown(v, from, good) ?? 0) > 0) for (const m of g.towns.map((t) => t.id).sort()) { const a: PlayerAction = { action: "requisition", target: from, to: m, good, sell: true }; if (ok(a)) out.push(a); }
+      for (const from of crownStores) if ((storeKnown(v, from, good) ?? 0) > 0) for (const to of crownStores) if (to !== from) { const a: PlayerAction = { action: "requisition", target: from, to, good }; if (ok(a)) out.push(a); }
     }
   }
   if (v.world.grain) {

@@ -92,6 +92,8 @@ test("the page offers market purchases and sales, grain taking, and no moving go
   assert.ok(acts.some((a) => a.action === "purchase" && a.market && a.good === "timber"));
   assert.ok(acts.some((a) => a.action === "purchase" && a.market && !a.good), "grain at a market");
   assert.ok(acts.some((a) => a.action === "requisition" && !a.good && !a.sell), "grain taken from a people");
-  assert.ok(!acts.some((a) => a.good && (a.action === "requisition" && !a.sell || a.action === "purchase" && !a.market)), "no goods moved store to store");
+  const houses = new Set((v.world.goods?.stores ?? []).filter((x) => x.house !== "crown").map((x) => x.id));
+  assert.ok(!acts.some((a) => a.good && (a.action === "requisition" && !a.sell && (houses.has(a.target!) || houses.has(a.to!)) || a.action === "purchase" && !a.market)), "no goods moved to or from a House's store, and no buying straight from a store");
+  assert.ok(acts.some((a) => a.action === "requisition" && !a.sell && !!a.good), "send between the crown's stores");
   void adviceAction;
 });

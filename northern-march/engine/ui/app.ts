@@ -397,7 +397,7 @@ function coinStatus(v: View): string {
 }
 
 /** The Economy tab: what the steward's books and the stewards' letters say about stores and prices, and the orders that move them. */
-const ECO_ACTS: [string, string][] = [["buy", "Buy"], ["sell", "Sell"], ["take", "Take"], ["muster", "Recruit"]];
+const ECO_ACTS: [string, string][] = [["buy", "Buy"], ["sell", "Sell"], ["send", "Send"], ["take", "Take"], ["muster", "Recruit"]];
 const houseName = (v: View, id: string) => id === "crown" ? "Crown" : cap1(v.world.names[id] ?? id);
 /** The order the form describes, with the place lists it draws from. Keeps the form's choices valid as the action changes. */
 function ecoForm(v: View) {
@@ -406,24 +406,28 @@ function ecoForm(v: View) {
   const crownHolding = byName((g?.stores ?? []).filter((x) => x.kinds.includes(e.good) && x.house === "crown").map((x) => x.id));
   const forts = byName(v.world.places.filter((p) => p.fortified).map((p) => p.id));
   const markets = byName((g?.towns ?? []).map((t) => t.id));
-  if (e.act === "take") e.good = "grain"; else if (e.act === "sell" && e.good === "grain") e.good = g?.kinds[0] ?? "timber";
+  if (e.act === "take") e.good = "grain"; else if ((e.act === "sell" || e.act === "send") && e.good === "grain") e.good = g?.kinds[0] ?? "timber";
   const isGrain = e.good === "grain" && (e.act === "buy" || e.act === "take");
   let from: string[] = [], to: string[] = [];
   if (e.act === "buy") { from = markets; to = isGrain ? byName(grain) : crownHolding; }
   else if (e.act === "sell") { from = crownHolding; to = markets; }
+  else if (e.act === "send") { from = crownHolding; to = crownHolding; }
   else if (e.act === "take") { from = byName(grain); to = byName(grain); }
-  const max = isGrain ? (e.act === "buy" ? v.world.grain?.sacks.purchase : v.world.grain?.sacks.requisition) ?? 0 : g?.unitsPerOrder[e.good] ?? 0;
-  const step = [1, 2, 5, 10, 20, 25, 50, 100].find((x) => x >= max / 6) ?? max, amounts = max > 0 ? [...new Set([...Array.from({ length: Math.floor(max / step) }, (_, i) => (i + 1) * step), max])] : [];
-  if (!amounts.includes(e.qty)) e.qty = amounts[amounts.length - 1] ?? 0;
   const communities = byName(g?.muster?.communities ?? []);
   const pick = (cur: string, opts: string[], not?: string) => opts.includes(cur) && cur !== not ? cur : opts.find((o) => o !== not) ?? "";
-  e.from = pick(e.from, from); e.to = pick(e.to, to, e.act === "take" ? e.from : undefined); e.community = pick(e.community, communities); e.fort = pick(e.fort, forts);
+  e.from = pick(e.from, from); e.to = pick(e.to, to, e.act === "take" || e.act === "send" ? e.from : undefined); e.community = pick(e.community, communities); e.fort = pick(e.fort, forts);
+  // Sell and Send: any amount the books show above the store's reserve. Buy and Take: the usual size.
+  const spare = Math.max(0, (storeKnown(v, e.from, e.good) ?? 0) - (g?.reserveUnits[e.good] ?? 0));
+  const max = isGrain ? (e.act === "buy" ? v.world.grain?.sacks.purchase : v.world.grain?.sacks.requisition) ?? 0 : e.act === "sell" || e.act === "send" ? spare : g?.unitsPerOrder[e.good] ?? 0;
+  const step = [1, 2, 5, 10, 20, 25, 50, 100].find((x) => x >= max / 6) ?? max, amounts = max > 0 ? [...new Set([...Array.from({ length: Math.floor(max / step) }, (_, i) => (i + 1) * step), max])] : [];
+  if (!amounts.includes(e.qty)) e.qty = amounts[amounts.length - 1] ?? 0;
   const action: PlayerAction | null =
     e.act === "take" ? { action: "requisition", target: e.from, to: e.to, units: e.qty, ...(e.consult ? { consult: true } : {}) }
     : e.act === "buy" ? { action: "purchase", market: true, target: e.from, to: e.to, units: e.qty, ...(isGrain ? {} : { good: e.good }) }
     : e.act === "sell" ? { action: "requisition", target: e.from, to: e.to, good: e.good, units: e.qty, sell: true }
+    : e.act === "send" ? { action: "requisition", target: e.from, to: e.to, good: e.good, units: e.qty }
     : e.act === "muster" ? { action: "levy", muster: true, target: e.community, to: e.fort } : null;
-  return { action, from, to, communities, forts, isGrain, amounts };
+  return { action, from, to: e.act === "send" ? to.filter((x) => x !== e.from) : to, communities, forts, isGrain, amounts };
 }
 function economyTab(v: View): string {
   const g = v.world.goods, gr = v.world.grain, L = v.ledger, e = st.eco;
@@ -454,14 +458,14 @@ function economyTab(v: View): string {
   const opt = (val: string, label: string, cur: string) => `<option value="${esc(val)}"${val === cur ? " selected" : ""}>${esc(label)}</option>`;
   const isGrain = f.isGrain, mu = g?.muster;
   const goodKinds = e.act === "take" ? ["grain"] : [...(g?.kinds ?? []), ...(gr && e.act === "buy" ? ["grain"] : [])];
-  const fromLabel = e.act === "buy" ? "At" : "From", toLabel = e.act === "sell" ? "At" : "For";
+  const fromLabel = e.act === "buy" ? "At" : "From", toLabel = e.act === "sell" ? "At" : e.act === "send" ? "To" : "For";
   const fortIron = a?.muster ? storeKnown(v, e.fort, "iron") : undefined;
-  const trade = (e.act === "buy" || e.act === "sell") && a && a.target && a.to ? (() => {
-    const mk = e.act === "buy" ? a.target! : a.to!, place = e.act === "buy" ? a.to! : a.target!;
-    const price = e.act === "buy" ? buyKnown(v, mk, a.good) : a.good ? v.ledger?.town?.[mk]?.[a.good] : undefined, days = roadDays(mk, place), n = a.units ?? e.qty;
+  const trade = (e.act === "buy" || e.act === "sell" || e.act === "send") && a && a.target && a.to ? (() => {
+    const mk = e.act === "buy" ? a.target! : e.act === "sell" ? a.to! : a.target!, place = e.act === "buy" ? a.to! : e.act === "sell" ? a.target! : a.to!;
+    const price = e.act === "buy" ? buyKnown(v, mk, a.good) : e.act === "sell" && a.good ? v.ledger?.town?.[mk]?.[a.good] : undefined, days = roadDays(mk, place), n = a.units ?? e.qty;
     if (price === undefined && days === undefined) return "";
     const sum = price === undefined ? "" : `${e.act === "buy" ? "You pay" : "You receive"} ${priceK(price * n)}`;
-    const when = days === undefined ? "" : `${e.act === "buy" ? "delivered in" : "paid after"} about ${dayTone(days)}`;
+    const when = days === undefined ? "" : `${e.act === "buy" ? "delivered in" : e.act === "sell" ? "paid after" : "arrives in"} about ${dayTone(days)}`;
     return [sum, when].filter(Boolean).join(", ");
   })() : "";
   const info = a?.muster && mu ? `Up to ${mu.men} men · iron ${fortIron === undefined ? "?" : fortIron} · wages ${kCoins(mu.men * mu.wageMilli)} a day for ${mu.serviceDays} days`

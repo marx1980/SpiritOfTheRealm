@@ -68,11 +68,11 @@ test("books: the public rules show who holds each store and where goods sell, bu
 test("actions: what the page offers follows ownership: take from the crown's stores, buy from a House's, sell only the crown's", () => {
   const v = play(2, 12, undefined, 5, ARMED).viewOf("player"), acts = economyActions(v, RULES), has = (a: PlayerAction) => acts.some((x) => JSON.stringify(x) === JSON.stringify(a));
   assert.ok(has({ action: "purchase", market: true, target: "marchend", to: "greybridge", good: "timber" }), "buy at a market for a crown store");
-  assert.ok(!acts.some((a) => a.action === "requisition" && !a.sell && !!a.good), "no goods are moved between stores");
   assert.ok(!acts.some((a) => a.action === "purchase" && !a.market && !!a.good), "no buying straight from a store");
   assert.ok(has({ action: "requisition", target: "crownwood", to: "marchend", good: "timber", sell: true }));
   assert.ok(!acts.some((a) => a.sell && a.target === "pinegate"), "cannot sell a House's timber");
   assert.ok(!acts.some((a) => a.good && a.to === "pinegate"), "cannot send into a House's store");
+  assert.ok(acts.some((a) => a.action === "requisition" && !a.sell && !!a.good && a.target === "crownwood"), "send goods between the crown's stores");
   assert.ok(acts.some((a) => a.action === "levy" && a.muster && a.target === "northwatch" && a.to === "greybridge"));
   assert.ok(acts.some((a) => !a.good && a.action === "purchase" && a.market), "grain can be bought at a market");
   assert.ok(playerActions(v, RULES).length > acts.length - 1);
@@ -80,7 +80,7 @@ test("actions: what the page offers follows ownership: take from the crown's sto
 
 test("actions: words and costs", () => {
   const v = play(2, 12).viewOf("player");
-  assert.equal(actionText(v, { action: "requisition", target: "crownwood", to: "greybridge", good: "timber" }), "Move timber from Crownwood to Greybridge");
+  assert.equal(actionText(v, { action: "requisition", target: "crownwood", to: "greybridge", good: "timber" }), "Send timber from Crownwood to Greybridge");
   assert.equal(actionText(v, { action: "purchase", target: "pinegate", to: "greybridge", good: "timber" }), "Buy timber at Pinegate for Greybridge");
   assert.equal(actionText(v, { action: "requisition", target: "crownwood", to: "saltmere", good: "timber", sell: true }), "Sell timber from Crownwood at Saltmere");
   assert.equal(actionText(v, { action: "levy", muster: true, target: "northwatch", to: "greybridge" }), "Call men from Northwatch to Greybridge");

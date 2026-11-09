@@ -134,7 +134,7 @@ export const goods: System = {
       const rule = g.buy[good], buy = kind === "purchase" && !sell, house = holder(ctx, source, good)!.house ?? "crown";
       const price = buy && house !== "crown" ? Math.floor((ctx.s.goodsPrice[good] * (1000 + g.market.houseMarkupPermille)) / 1000) : ctx.s.goodsPrice[good]; // a House sells dearer
       const spare = Math.max(0, ctx.s.goods[good][source] - rule.reserveUnits);
-      let units = Math.min(asked > 0 ? Math.min(asked, rule.units) : rule.units, spare);
+      let units = Math.min(asked > 0 ? (kind === "requisition" ? asked : Math.min(asked, rule.units)) : rule.units, spare); // a sale or send takes the amount given, up to the spare
       if (buy) units = Math.min(units, Math.floor(Math.max(0, ctx.s.treasuryMilli[ctx.content.scenario.ruler]) / price));
       if (units <= 0) return stop(spare <= 0 ? "noSurplus" : "funds");
       const trip = ctx.map.path(source, dest, "foot", (r) => ctx.isOpen(r)); // carts walk

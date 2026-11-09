@@ -254,3 +254,16 @@ Same protocol as D-042/D-046, fresh blocks, once each, calibration changed by D-
 - Tune seeds (not sealed): G-06 knife-edge (1-150), G-01 node and bun, G-02, Phase 1 invariant batch, lab quick playtest.
 - Equivalence to the previous commit is not applicable: the rebuild changes behaviour (new event fields, delay draws, grain price, advice that buys at markets).
 - If a gate that passed in D-050 now fails: report and stop, no tuning, no band moved. AMBER gets one extension on a fresh block, then counts as FAIL. Fun and balance are not claimed.
+
+## D-053 — Sell with an amount, Send, and the price display (9 Nov)
+Marko's review: a sale takes the amount the player picks, up to the stock above the store's reserve (the usual order size no longer caps page sales). Send is an action again: move goods the crown already holds from one crown store to another, with an amount, on the same convoy rules (delay, loss); no price, no sum. The reserve is now public with the other goods rules (`reserveUnits`), so the page can offer exactly the spare stock. The order sentence shows the sum (price × amount) and the delivery days, coloured green up to 2 days, amber 3 to 4, red from 5. Prices on the page: divided by 100; under 10 two decimals, 10 to 99.9 one decimal, from 100 whole.
+- Scope of the engine change: a goods order with an amount and kind "requisition" (sale or send) takes that amount up to the spare. Purchases keep the usual-size cap; scripted policies that give no amount are unchanged.
+- Tests: economy and playtest tests pass (48/48 on the economy and lab files); the full suite was run after this change (see results below).
+- Earlier plan (D-052) is superseded: block 260000 was started on the previous calibration and never evaluated (no claim in the gate log), so it is not used.
+
+## D-054 — Gate plan for the calibration after D-053 (written before any run)
+Fresh blocks, once each:
+- 7A gates (G-03/G-04/G-05, outcome shares, invariants, 600 link seeds): block 270000, 1,000 seeds. Overrides 1-3 stand.
+- G-12 advisers: block 280000. G-13 communities: block 290000.
+- Tune seeds (not sealed): G-06 knife-edge (1-150), G-01 node and bun, G-02, Phase 1 invariants, lab quick playtest.
+- If a gate that passed in D-050 now fails: report and stop, no tuning. AMBER gets one extension on a fresh block, then counts as FAIL. Balance and fun are not claimed.

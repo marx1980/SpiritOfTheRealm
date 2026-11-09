@@ -41,6 +41,7 @@ export interface WorldKnowledge {
     markupPermille: number;
     price: Record<string, { baseMilli: number; minMilli: number; maxMilli: number }>;
     unitsPerOrder: Record<string, number>;
+    reserveUnits: Record<string, number>;
     muster?: { men: number; ironPerMan: number; mountedPermille: number; serviceDays: number; wageMilli: number; communities: string[] };
   };
 }
@@ -94,6 +95,7 @@ export function buildView(s: Readonly<WorldState>, c: Content, who: string, now:
         markupPermille: c.scenario.goods.market.houseMarkupPermille,
         price: Object.fromEntries(c.scenario.goods.kinds.map((k) => [k, { baseMilli: c.scenario.goods!.price[k].baseMilli, minMilli: Math.floor(c.scenario.goods!.price[k].baseMilli / 2), maxMilli: 3 * c.scenario.goods!.price[k].baseMilli }])),
         unitsPerOrder: Object.fromEntries(c.scenario.goods.kinds.map((k) => [k, c.scenario.goods!.buy[k].units])),
+        reserveUnits: Object.fromEntries(c.scenario.goods.kinds.map((k) => [k, c.scenario.goods!.buy[k].reserveUnits])),
         ...(c.scenario.manpower ? { muster: { men: c.scenario.manpower.musterMen, ironPerMan: c.scenario.manpower.ironPerMan, mountedPermille: c.scenario.manpower.mountedPermille, serviceDays: c.scenario.manpower.serviceDays, wageMilli: c.scenario.manpower.wageMilli, communities: c.communities.communities.map((x) => x.id).sort() } } : {}),
       } } : {}),
       ...(c.scenario.grain ? { grain: { places: c.scenario.grain.places.map((p) => ({ id: p.location, need: p.need })), bandDays: [...c.scenario.grain.bandDays], sacks: { requisition: c.scenario.grain.requisition.sacks, purchase: c.scenario.grain.purchase.sacks } } } : {}),
