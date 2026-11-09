@@ -4,6 +4,7 @@ import type { MapModel, MapPlace } from "../src/presentation/map.ts";
 
 const INK = "#2b2117", PAPER = "#ecdcaa", SEA = "#cfe0d6", WAVE = "#7fa3a6", RIVER = "#8fb3bd";
 const FLAG: Record<string, string> = { sound: "#4f7a3a", worn: "#9aa83c", damaged: "#d08a14", bad: "#a8322a", none: "#9a9080" };
+const CAPTAIN = "#1f56c4";
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
 function rng(seed: number) { let a = seed >>> 0; return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -108,6 +109,15 @@ const HORSEMAN = [
   `<path d="M-1-8L19-17" fill="none" stroke-width="1.8"/><path d="M19-17l8 1-5 4z"/>`,         // lance and pennant
 ].join("");
 
+/** A knight in plate with a plume and a cross on his shield, drawn to the same size as the horseman, centred on the origin. */
+const KNIGHT = [
+  `<path d="M-7 8V-4c0-7 3.5-11 7-11s7 4 7 11V8z"/>`,                                         // helm
+  `<path d="M-7-3h14M0-3v11" fill="none" stroke-width="1.6"/>`,                                // visor and ridge
+  `<path d="M1-14c3-6 10-6 13-1-4-1-8 0-13 1z"/>`,                                             // plume
+  `<path d="M-1 5h13v8c0 4-4 7-6.500 8-2.500-1-6.500-4-6.500-8z" fill="#f3e8c4"/>`,                // shield
+  `<path d="M5.500 7v12M1 11h9" fill="none" stroke-width="2.200"/>`,                             // cross
+].join("");
+
 export interface MapArtInput { model: MapModel; selected: string; kinds: Map<string, string>; terrains: Map<string, string> }
 const wcls = (w?: string) => !w ? "none" : w === "sound" ? "sound" : w === "worn" ? "worn" : w === "damaged" ? "damaged" : "bad";
 
@@ -118,13 +128,16 @@ export function mapSvg({ model: m, selected, kinds, terrains }: MapArtInput): st
     const flag = p.fortified ? `<path d="M0 ${k.top}v-12" stroke="${INK}" stroke-width="1.5"/><path d="M0 ${k.top - 12}l12 4-12 4z" fill="${FLAG[wcls(p.wall?.words)]}" stroke="${INK}" stroke-width="1.2" stroke-linejoin="round"/>` : "";
     const raided = !!p.raiders && p.raiders.words !== "no raiders";
     const rc = p.raiders?.words.includes("small") ? "#e5483a" : p.raiders?.words.includes("large") ? "#b3100c" : "#d71f18";
-    const raid = raided ? `<g class="raider" transform="translate(${p.x + 44} ${p.y - 40}) scale(1.5)"><circle class="raider-halo" r="30" fill="url(#raider-glow)"/><circle class="raider-disc" r="17" fill="${PAPER}" fill-opacity=".92" stroke="${rc}" stroke-width="2.2"/><g class="raider-body" transform="translate(-1 3) scale(.8)" fill="${rc}" stroke="${INK}" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round">${HORSEMAN}</g></g>` : "";
+    // A believed position wears a ring that is strongest the day its news arrived and fades as the news ages.
+    const ring = (s: number, colour: string) => s > 0.02 ? `<circle class="pos-ring" r="26" fill="none" stroke="${colour}" stroke-width="3.2" opacity="${s.toFixed(2)}"/>` : "";
+    const raid = raided ? `<g class="raider" transform="translate(${p.x + 44} ${p.y - 40}) scale(1.5)"><g opacity="${(0.15 + 0.85 * p.raiders!.strength).toFixed(2)}"><circle class="raider-halo" r="30" fill="url(#raider-glow)"/></g>${ring(p.raiders!.strength, rc)}<circle class="raider-disc" r="17" fill="${PAPER}" fill-opacity=".92" stroke="${rc}" stroke-width="2.2"/><g class="raider-body" transform="translate(-1 3) scale(.8)" fill="${rc}" stroke="${INK}" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round">${HORSEMAN}</g></g>` : "";
+    const knights = m.captains.filter((c) => c.at === p.id).map((c, i) => `<g class="captain" transform="translate(${p.x - 44 - i * 54} ${p.y - 40}) scale(1.5)">${ring(c.strength, CAPTAIN)}<circle r="17" fill="${PAPER}" fill-opacity=".92" stroke="${CAPTAIN}" stroke-width="2.2"/><g transform="translate(0 0) scale(.95)" fill="${CAPTAIN}" stroke="${INK}" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round">${KNIGHT}</g></g>`).join("");
     const you = p.you ? `<circle cx="${p.x}" cy="${p.y}" r="27" fill="none" stroke="#a0381c" stroke-width="3" stroke-dasharray="5 4"/>` : "";
     const sel = p.id === selected ? `<circle cx="${p.x}" cy="${p.y}" r="31" fill="#a0381c" fill-opacity=".12" stroke="#a0381c" stroke-width="2"/>` : "";
     const sub = p.fortified ? (p.wall ? p.wall.words : "unknown") : raided ? p.raiders!.words : "";
     const parts = p.troops ? [...(p.troops.fort ? [`${p.troops.fort.exact ? "" : "~"}${p.troops.fort.count} in fort`] : []), ...p.troops.captains.map((c) => `${esc(c.name)} ${c.exact ? "" : "~"}${c.count}`)] : [];
     const txt = (s: string, dy: number, cls: string) => `<text class="${cls}" x="${p.x + 27}" y="${p.y + dy}">${s}</text>`;
-    return `${sel}${you}<g transform="translate(${p.x} ${p.y}) scale(1.3)"><use href="#${k.id}"/>${flag}</g>${raid}${txt(esc(p.name), 5, "nm")}${sub ? txt(esc(sub), 20, "sb") : ""}${parts.length ? txt(parts.join(" · "), sub ? 34 : 20, "sb") : ""}<circle class="hit" fill="transparent" cx="${p.x}" cy="${p.y}" r="28" data-place="${p.id}"/>`;
+    return `${sel}${you}<g transform="translate(${p.x} ${p.y}) scale(1.3)"><use href="#${k.id}"/>${flag}</g>${raid}${knights}${txt(esc(p.name), 5, "nm")}${sub ? txt(esc(sub), 20, "sb") : ""}${parts.length ? txt(parts.join(" · "), sub ? 34 : 20, "sb") : ""}<circle class="hit" fill="transparent" cx="${p.x}" cy="${p.y}" r="28" data-place="${p.id}"/>`;
   }).join("");
   return `<svg viewBox="-120 -20 1160 1010" role="img" aria-label="Map of the realm"><defs><radialGradient id="raider-glow"><stop offset="0" stop-color="#ff2a1a" stop-opacity=".9"/><stop offset=".55" stop-color="#ff2a1a" stop-opacity=".4"/><stop offset="1" stop-color="#ff2a1a" stop-opacity="0"/></radialGradient></defs>${art}${places}</svg>`;
 }

@@ -8,11 +8,23 @@ export interface MapPlace {
   id: string; name: string; x: number; y: number; fortified: boolean;
   wall?: { words: string; age: string; source: string; certainty: string };
   troops?: { fort?: { count: number; exact: boolean; day: number }; captains: { name: string; count: number; exact: boolean; day: number }[] };
-  raiders?: { words: string; age: string; source: string; certainty: string };
+  raiders?: { words: string; age: string; source: string; certainty: string; strength: number };
   people: { name: string; age: string; certainty: string }[];
   you: boolean;
 }
-export interface MapModel { places: MapPlace[]; routes: { from: string; to: string; crossing?: string }[]; orders: { to: string; what: string; where: string; sent: string }[] }
+/** A captain's company as the player believes it: where, how many, and how fresh the word is (strength 1 on the day the news arrived, 0 after FADE_DAYS). */
+export interface MapCaptain { id: string; name: string; at: string; count: number; exact: boolean; strength: number }
+export interface MapModel { captains: MapCaptain[]; places: MapPlace[]; routes: { from: string; to: string; crossing?: string }[]; orders: { to: string; what: string; where: string; sent: string }[] }
+
+/** Days over which the ring round a believed position fades from full to nothing. */
+export const FADE_DAYS = 12;
+/** The tick the news behind a belief reached the player: the latest report carrying that very claim, else when it was seen. */
+function arrivedAt(v: View, subject: string, predicate: string, observedAt: number): number {
+  let at = observedAt;
+  for (const r of v.reports) if (r.claims.some((c) => c.subject.id === subject && c.predicate === predicate && c.observedAt === observedAt)) at = Math.max(at, r.deliveredAt);
+  return at;
+}
+const strengthOf = (now: number, arrived: number) => Math.round(Math.max(0, Math.min(1, 1 - (dayOf(now) - dayOf(arrived)) / FADE_DAYS)) * 100) / 100;
 
 export function buildMap(v: View): MapModel {
   const pos = v.self.position;
@@ -24,12 +36,19 @@ export function buildMap(v: View): MapModel {
     people.get(at)!.push({ name: nameOf(v, b.subject.id), age: ago(v.now, b.observedAt), certainty: certainty[b.effectiveBand] });
   }
   // captains' companies, placed where the player believes each captain is
-  const companies = new Map<string, NonNullable<MapPlace["troops"]>["captains"]>();
+  const companies = new Map<string, (NonNullable<MapPlace["troops"]>["captains"][number] & { id: string })[]>();
   for (const id of [...new Set(Object.values(v.beliefs).filter((b) => b.predicate === "character.troops").map((b) => b.subject.id))].sort()) {
     const t = beliefsAbout(v, id, "character.troops")[0], at = beliefsAbout(v, id, "character.location")[0]?.believedValue as string | undefined;
     if (!t || !at) continue;
     if (!companies.has(at)) companies.set(at, []);
-    companies.get(at)!.push({ name: nameOf(v, id), count: t.believedValue as number, exact: t.effectiveBand === "certain", day: dayOf(t.observedAt) });
+    companies.get(at)!.push({ id, name: nameOf(v, id), count: t.believedValue as number, exact: t.effectiveBand === "certain", day: dayOf(t.observedAt) });
+  }
+  // captains with a company: placed where the news last put them; gone from the map once the word is that no men are left
+  const captains: MapCaptain[] = [];
+  for (const [at, list] of companies) for (const c of list) {
+    const loc = beliefsAbout(v, c.id, "character.location")[0];
+    if (c.count <= 0 || !loc) continue;
+    captains.push({ id: c.id, name: c.name, at, count: c.count, exact: c.exact, strength: strengthOf(v.now, arrivedAt(v, c.id, "character.location", loc.observedAt)) });
   }
   const places = v.world.places.map((p) => {
     const w = beliefsAbout(v, p.id, "fortification.condition")[0], r = beliefsAbout(v, p.id, "threat.intensity")[0];
@@ -40,12 +59,12 @@ export function buildMap(v: View): MapModel {
       id: p.id, name: p.name, x: p.pos[0], y: p.pos[1], fortified: p.fortified, you: here === p.id,
       ...(troops ? { troops } : {}),
       ...(w ? { wall: { words: wallWords(w.believedValue as number), age: ago(v.now, w.observedAt), source: sourceOf(v, w), certainty: certainty[w.effectiveBand] } } : {}),
-      ...(r ? { raiders: { words: raiderWords(r.believedValue as number), age: ago(v.now, r.observedAt), source: sourceOf(v, r), certainty: certainty[r.effectiveBand] } } : {}),
+      ...(r ? { raiders: { words: raiderWords(r.believedValue as number), age: ago(v.now, r.observedAt), source: sourceOf(v, r), certainty: certainty[r.effectiveBand], strength: strengthOf(v.now, arrivedAt(v, p.id, "threat.intensity", r.observedAt)) } } : {}),
       people: (people.get(p.id) ?? []).sort((a, b) => (a.name < b.name ? -1 : 1)),
     };
   });
   return {
-    places, routes: v.world.routes.map((r) => ({ ...r })),
+    captains, places, routes: v.world.routes.map((r) => ({ ...r })),
     orders: v.self.orders.map((o) => ({ to: nameOf(v, o.recipient), what: o.action, where: nameOf(v, o.target), sent: ago(v.now, o.tick) })),
   };
 }
