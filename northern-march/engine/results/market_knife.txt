@@ -5,3 +5,118 @@ requisition.consultedPermille {"-25%":{"delegating":4,"aggressive":25.3},"+25%":
 refuse.chancePerG {"-25%":{"delegating":6.7,"aggressive":36},"+25%":{"delegating":4,"aggressive":26.7},"base":1000,"knifeEdge":false}
 official.consultCover {"-25%":{"delegating":7.3,"aggressive":25.3},"+25%":{"delegating":8,"aggressive":27.3},"base":6,"knifeEdge":false}
 greyfen.supportAt {"-25%":{"delegating":12,"aggressive":43.3},"+25%":{"delegating":1.3,"aggressive":4.7},"base":480,"knifeEdge":false}
+narrative.trustPerDay {"-25%":{"delegating":4.7,"aggressive":22},"+25%":{"delegating":3.3,"aggressive":26.7},"base":45,"knifeEdge":false}
+{
+ "seeds": [
+  1,
+  150
+ ],
+ "policies": [
+  "delegating",
+  "aggressive"
+ ],
+ "baseline": {
+  "delegating": 4.7,
+  "aggressive": 30.7
+ },
+ "params": {
+  "harvestHitPermille": {
+   "-25%": {
+    "delegating": 2.7,
+    "aggressive": 18.7
+   },
+   "+25%": {
+    "delegating": 10.7,
+    "aggressive": 30
+   },
+   "base": 400,
+   "knifeEdge": false
+  },
+  "harvestHitDays": {
+   "-25%": {
+    "delegating": 6.7,
+    "aggressive": 22.7
+   },
+   "+25%": {
+    "delegating": 12.7,
+    "aggressive": 28.7
+   },
+   "base": 25,
+   "knifeEdge": false
+  },
+  "requisition.grievance": {
+   "-25%": {
+    "delegating": 2.7,
+    "aggressive": 20.7
+   },
+   "+25%": {
+    "delegating": 6,
+    "aggressive": 38
+   },
+   "base": 260,
+   "knifeEdge": false
+  },
+  "requisition.consultedPermille": {
+   "-25%": {
+    "delegating": 4,
+    "aggressive": 25.3
+   },
+   "+25%": {
+    "delegating": 5.3,
+    "aggressive": 33.3
+   },
+   "base": 600,
+   "knifeEdge": false
+  },
+  "refuse.chancePerG": {
+   "-25%": {
+    "delegating": 6.7,
+    "aggressive": 36
+   },
+   "+25%": {
+    "delegating": 4,
+    "aggressive": 26.7
+   },
+   "base": 1000,
+   "knifeEdge": false
+  },
+  "official.consultCover": {
+   "-25%": {
+    "delegating": 7.3,
+    "aggressive": 25.3
+   },
+   "+25%": {
+    "delegating": 8,
+    "aggressive": 27.3
+   },
+   "base": 6,
+   "knifeEdge": false
+  },
+  "greyfen.supportAt": {
+   "-25%": {
+    "delegating": 12,
+    "aggressive": 43.3
+   },
+   "+25%": {
+    "delegating": 1.3,
+    "aggressive": 4.7
+   },
+   "base": 480,
+   "knifeEdge": false
+  },
+  "narrative.trustPerDay": {
+   "-25%": {
+    "delegating": 4.7,
+    "aggressive": 22
+   },
+   "+25%": {
+    "delegating": 3.3,
+    "aggressive": 26.7
+   },
+   "base": 45,
+   "knifeEdge": false
+  }
+ },
+ "knifeEdgeCount": 0,
+ "G06": "PASS"
+}
