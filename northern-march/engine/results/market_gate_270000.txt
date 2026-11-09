@@ -1,0 +1,207 @@
+{
+ "gate": "phase7A",
+ "seedBlock": 270000,
+ "n": 1000,
+ "calibrationHash": "6b768acd01da+b6020d0378a4",
+ "contentVersion": "march-0.8",
+ "perPolicy": {
+  "passive": {
+   "n": 1000,
+   "rOn": 0.012,
+   "rOff": 0,
+   "A": 0.012,
+   "A_ci": [
+    0.006,
+    0.019
+   ],
+   "lift": null,
+   "liftCiLow": null,
+   "G03": "FAIL",
+   "G04": "PASS"
+  },
+  "delegating": {
+   "n": 1000,
+   "rOn": 0.062,
+   "rOff": 0,
+   "A": 0.062,
+   "A_ci": [
+    0.047,
+    0.077
+   ],
+   "lift": null,
+   "liftCiLow": null,
+   "G03": "AMBER",
+   "G04": "PASS"
+  },
+  "aggressive": {
+   "n": 1000,
+   "rOn": 0.244,
+   "rOff": 0,
+   "A": 0.244,
+   "A_ci": [
+    0.217,
+    0.271
+   ],
+   "lift": null,
+   "liftCiLow": null,
+   "G03": "PASS",
+   "G04": "PASS"
+  }
+ },
+ "G03": {
+  "verdict": "FAIL",
+  "distinctPolicies": 3,
+  "groups": {
+   "aggressive": "aggressive",
+   "delegating": "delegating",
+   "passive": "passive"
+  }
+ },
+ "G04": {
+  "verdict": "PASS",
+  "distinctPolicies": 3,
+  "groups": {
+   "aggressive": "aggressive",
+   "delegating": "delegating",
+   "passive": "passive"
+  }
+ },
+ "outcomeShares": {
+  "passive": {
+   "cooperative_support": 5.8,
+   "material_success_political_damage": 2.6,
+   "political_caution_military_danger": 4.8,
+   "misinformation_failure": 6.5,
+   "unresolved": 8.4,
+   "no_crisis": 71.9
+  },
+  "delegating": {
+   "cooperative_support": 42,
+   "material_success_political_damage": 19.8,
+   "political_caution_military_danger": 0.6,
+   "misinformation_failure": 5.3,
+   "unresolved": 16.8,
+   "no_crisis": 15.5
+  },
+  "aggressive": {
+   "cooperative_support": 0,
+   "material_success_political_damage": 50.8,
+   "political_caution_military_danger": 2.6,
+   "misinformation_failure": 7,
+   "unresolved": 23.4,
+   "no_crisis": 16.2
+  }
+ },
+ "outcomePooled": {
+  "cooperative_support": 15.9,
+  "material_success_political_damage": 24.4,
+  "political_caution_military_danger": 2.7,
+  "misinformation_failure": 6.3,
+  "unresolved": 16.2,
+  "no_crisis": 34.5
+ },
+ "outcomeGate": [
+  {
+   "outcome": "cooperative_support",
+   "pooledPct": 15.9,
+   "pass": true
+  },
+  {
+   "outcome": "material_success_political_damage",
+   "pooledPct": 24.4,
+   "pass": true
+  },
+  {
+   "outcome": "political_caution_military_danger",
+   "pooledPct": 2.7,
+   "pass": false
+  },
+  {
+   "outcome": "misinformation_failure",
+   "pooledPct": 6.3,
+   "pass": true
+  }
+ ],
+ "outcomeVerdict": "FAIL",
+ "G05": {
+  "perPolicy": {
+   "delegating": {
+    "seeds": 600,
+    "rOn": 0.06333333333333334,
+    "rOff": 0,
+    "A": 0.06333333333333334,
+    "links": {
+     "messenger": {
+      "rate": 0,
+      "aWithout": 0,
+      "cut": 1,
+      "pass": true
+     },
+     "communities": {
+      "rate": 0,
+      "aWithout": 0,
+      "cut": 1,
+      "pass": true
+     },
+     "requisition": {
+      "rate": 0,
+      "aWithout": 0,
+      "cut": 1,
+      "pass": true
+     },
+     "courting": {
+      "rate": 0,
+      "aWithout": 0,
+      "cut": 1,
+      "pass": true
+     }
+    },
+    "threat": {
+     "cut": 1,
+     "pass": true,
+     "note": "the OFF arm"
+    }
+   },
+   "aggressive": {
+    "seeds": 600,
+    "rOn": 0.25,
+    "rOff": 0,
+    "A": 0.25,
+    "links": {
+     "messenger": {
+      "rate": 0,
+      "aWithout": 0,
+      "cut": 1,
+      "pass": true
+     },
+     "communities": {
+      "rate": 0,
+      "aWithout": 0,
+      "cut": 1,
+      "pass": true
+     },
+     "requisition": {
+      "rate": 0,
+      "aWithout": 0,
+      "cut": 1,
+      "pass": true
+     },
+     "courting": {
+      "rate": 0,
+      "aWithout": 0,
+      "cut": 1,
+      "pass": true
+     }
+    },
+    "threat": {
+     "cut": 1,
+     "pass": true,
+     "note": "the OFF arm"
+    }
+   }
+  },
+  "verdict": "PASS"
+ },
+ "invariantViolations": 0,
+ "t": "2026-11-09T02:06:47.738Z"
+}
