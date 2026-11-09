@@ -122,7 +122,7 @@ export interface MapArtInput { model: MapModel; selected: string; kinds: Map<str
 const wcls = (w?: string) => !w ? "none" : w === "sound" ? "sound" : w === "worn" ? "worn" : w === "damaged" ? "damaged" : "bad";
 
 export function mapSvg({ model: m, selected, kinds, terrains }: MapArtInput): string {
-  const art = artwork(m, kinds, terrains);
+  const art = artwork(m, kinds, terrains), byId = new Map(m.places.map((q) => [q.id, q]));
   const places = m.places.map((p: MapPlace) => {
     const k = ICON[kinds.get(p.id) ?? "village"] ?? ICON.village;
     const flag = p.fortified ? `<path d="M0 ${k.top}v-12" stroke="${INK}" stroke-width="1.5"/><path d="M0 ${k.top - 12}l12 4-12 4z" fill="${FLAG[wcls(p.wall?.words)]}" stroke="${INK}" stroke-width="1.2" stroke-linejoin="round"/>` : "";
@@ -131,7 +131,12 @@ export function mapSvg({ model: m, selected, kinds, terrains }: MapArtInput): st
     // A believed position wears a ring that is strongest the day its news arrived and fades as the news ages.
     const ring = (s: number, colour: string) => s > 0.02 ? `<circle class="pos-ring" r="26" fill="none" stroke="${colour}" stroke-width="3.2" opacity="${s.toFixed(2)}"/>` : "";
     const raid = raided ? `<g class="raider" transform="translate(${p.x + 44} ${p.y - 40}) scale(1.5)"><g opacity="${(0.15 + 0.85 * p.raiders!.strength).toFixed(2)}"><circle class="raider-halo" r="30" fill="url(#raider-glow)"/></g>${ring(p.raiders!.strength, rc)}<circle class="raider-disc" r="17" fill="${PAPER}" fill-opacity=".92" stroke="${rc}" stroke-width="2.2"/><g class="raider-body" transform="translate(-1 3) scale(.8)" fill="${rc}" stroke="${INK}" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round">${HORSEMAN}</g></g>` : "";
-    const knights = m.captains.filter((c) => c.at === p.id).map((c, i) => `<g class="captain" transform="translate(${p.x - 44 - i * 54} ${p.y - 40}) scale(1.5)">${ring(c.strength, CAPTAIN)}<circle r="17" fill="${PAPER}" fill-opacity=".92" stroke="${CAPTAIN}" stroke-width="2.2"/><g transform="translate(0 0) scale(.95)" fill="${CAPTAIN}" stroke="${INK}" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round">${KNIGHT}</g></g>`).join("");
+    const knights = m.captains.filter((c) => c.at === p.id).map((c, i) => {
+      // An order given after the last word of him puts the icon a little way out along the road he was sent down.
+      const dest = c.heading?.projected ? byId.get(c.heading.to) : undefined, d = dest ? Math.hypot(dest.x - p.x, dest.y - p.y) : 0;
+      const cx = dest && d > 0 ? p.x + ((dest.x - p.x) / d) * Math.min(130, d / 2) : p.x - 44 - i * 54, cy = dest && d > 0 ? p.y + ((dest.y - p.y) / d) * Math.min(130, d / 2) : p.y - 40;
+      const cap = c.heading ? `<text class="cap" x="${cx.toFixed(0)}" y="${(cy + 46).toFixed(0)}" text-anchor="middle" font-size="14" font-weight="600" fill="${CAPTAIN}" stroke="${PAPER}" stroke-width="4" paint-order="stroke" stroke-linejoin="round">${esc(c.heading.words)}</text>` : "";
+      return `<g class="captain" transform="translate(${cx.toFixed(0)} ${cy.toFixed(0)}) scale(1.5)">${ring(c.strength, CAPTAIN)}<circle r="17" fill="${PAPER}" fill-opacity=".92" stroke="${CAPTAIN}" stroke-width="2.2"/><g transform="translate(0 0) scale(.95)" fill="${CAPTAIN}" stroke="${INK}" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round">${KNIGHT}</g></g>${cap}`; }).join("");
     const you = p.you ? `<circle cx="${p.x}" cy="${p.y}" r="27" fill="none" stroke="#a0381c" stroke-width="3" stroke-dasharray="5 4"/>` : "";
     const sel = p.id === selected ? `<circle cx="${p.x}" cy="${p.y}" r="31" fill="#a0381c" fill-opacity=".12" stroke="#a0381c" stroke-width="2"/>` : "";
     const sub = p.fortified ? (p.wall ? p.wall.words : "unknown") : raided ? p.raiders!.words : "";

@@ -13,7 +13,9 @@ export interface MapPlace {
   you: boolean;
 }
 /** A captain's company as the player believes it: where, how many, and how fresh the word is (strength 1 on the day the news arrived, 0 after FADE_DAYS). */
-export interface MapCaptain { id: string; name: string; at: string; count: number; exact: boolean; strength: number }
+export interface MapCaptain { id: string; name: string; at: string; count: number; exact: boolean; strength: number;
+  /** What his last order says he is doing, as far as the player knows; `projected` when the order is newer than the news of where he is. */
+  heading?: { words: string; to: string; projected: boolean } }
 export interface MapModel { captains: MapCaptain[]; places: MapPlace[]; routes: { from: string; to: string; crossing?: string }[]; orders: { to: string; what: string; where: string; sent: string }[] }
 
 /** Days over which the ring round a believed position fades from full to nothing. */
@@ -48,7 +50,13 @@ export function buildMap(v: View): MapModel {
   for (const [at, list] of companies) for (const c of list) {
     const loc = beliefsAbout(v, c.id, "character.location")[0];
     if (c.count <= 0 || !loc) continue;
-    captains.push({ id: c.id, name: c.name, at, count: c.count, exact: c.exact, strength: strengthOf(v.now, arrivedAt(v, c.id, "character.location", loc.observedAt)) });
+    const locNews = arrivedAt(v, c.id, "character.location", loc.observedAt);
+    // His latest order of movement or fight, while the player has no word that it is over; from the day after it was given it counts as being carried out.
+    const o = v.self.orders.filter((x) => x.recipient === c.id && (x.action === "advance" || x.action === "attack" || x.action === "investigate")).sort((a, b) => b.tick - a.tick || b.orderId - a.orderId)[0];
+    const status = o ? beliefsAbout(v, String(o.orderId), "order.status").sort((a, b) => b.observedAt - a.observedAt)[0]?.believedValue : undefined;
+    const running = !!o && (status === undefined || status === "issued") && dayOf(v.now) > dayOf(o.tick) && !(o.action === "advance" && o.target === at);
+    const heading = running ? { words: o!.action === "advance" ? `En route to ${nameOf(v, o!.target)}` : o!.action === "attack" ? `Attacking the raiders at ${nameOf(v, o!.target)}` : `Scouting the raiders at ${nameOf(v, o!.target)}`, to: o!.target, projected: o!.tick > locNews } : undefined;
+    captains.push({ id: c.id, name: c.name, at, count: c.count, exact: c.exact, strength: strengthOf(v.now, locNews), ...(heading ? { heading } : {}) });
   }
   const places = v.world.places.map((p) => {
     const w = beliefsAbout(v, p.id, "fortification.condition")[0], r = beliefsAbout(v, p.id, "threat.intensity")[0];
