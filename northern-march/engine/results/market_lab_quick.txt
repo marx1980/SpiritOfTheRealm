@@ -1,0 +1,10 @@
+50/100 games, 143 s   100/100 games, 307 s   
+market-d059: 100 games, complete (100 games); 328 s
+  PASS                   Integrity (invariants, replay, lifecycles): 100 games, no invariant failure
+  PASS                   Boundary (validation chain): probe: 57.4 malformed answers per game, all rejected, no crash
+  PASS                   Persona distinctness (C0.5: logs differ on ≥10% of seeds): all 45 pairs differ on ≥10% of seeds
+  REVIEW                 H-01 proxy (a): acting decisions citing shown evidence (automated, not a human result): random-valid 0%, cautious-administrator 100%, impulsive-war-ruler 100%, adviser-dependent 91%, community-protector 100%, literal-novice 100%, miscalibrated-ruler 97.5%, delegating-strategist 100%, adversarial-probe 0%
+  NOT EVALUATED          G-11 (information ecology): G-11 is a sealed phase gate; this lab does not re-run it (open since D-013)
+  PASS                   Performance (wall time per game): 3065 ms per game on this machine
+  PASS                   Coverage: 100 of 100 games
+dashboard: /home/claude/spiritoftherealm/northern-march/engine/results/playtest/market-d059/dashboard.html

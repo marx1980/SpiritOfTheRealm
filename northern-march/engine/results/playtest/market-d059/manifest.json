@@ -1,0 +1,37 @@
+{
+ "schemaVersion": 1,
+ "runSetId": "market-d059",
+ "mode": "quick",
+ "partition": "dev",
+ "commit": "19cb0f8",
+ "engineHash": "2e500c2c1ebd",
+ "contentVersion": "march-0.8",
+ "contentHash": "be6da36022c7f0b6b72f95d4a8c8c7b543f58948198f3665b03b6ab82581186b",
+ "scenario": "march",
+ "days": 150,
+ "seeds": {
+  "first": 1,
+  "count": 10
+ },
+ "personas": [
+  "passive",
+  "random-valid",
+  "cautious-administrator",
+  "impulsive-war-ruler",
+  "adviser-dependent",
+  "community-protector",
+  "literal-novice",
+  "miscalibrated-ruler",
+  "delegating-strategist",
+  "adversarial-probe"
+ ],
+ "params": {},
+ "budgets": {
+  "maxGames": 100,
+  "workers": 4,
+  "wallMs": 14400000,
+  "artifactBytes": 419430400,
+  "llmCalls": 0
+ },
+ "manifestHash": "3ddefcabe23b58ea"
+}

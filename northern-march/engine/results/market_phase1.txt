@@ -1,0 +1,3 @@
+G-02 {"perSystem":{"economy":{"seeds":100,"firstDivergenceOwn":100,"perturbedChanged":100,"otherDrawnEventsIdentical":48,"firstForeign":[]},"weather":{"seeds":100,"firstDivergenceOwn":100,"perturbedChanged":100,"otherDrawnEventsIdentical":21,"firstForeign":[]},"threat":{"seeds":100,"firstDivergenceOwn":100,"perturbedChanged":100,"otherDrawnEventsIdentical":28,"firstForeign":[]}},"verdict":"PASS"}
+batch {"seedsPerArm":1000,"days":240,"wallClockSeconds":2531.8,"invariantViolations":0,"firstViolations":[],"breachedOn":0.414,"breachedOff":0.271,"meanEvents":12652,"meanDecisions":15.588,"staleOrWrongShare":0.11861688478316654,"meanWallClockPerSimYearMs":1854}
+exit 0
