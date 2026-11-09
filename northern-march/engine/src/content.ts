@@ -43,6 +43,11 @@ export interface AgentParams {
 export interface BattleParams {
   sortie: { skillBasePermille: number; intensityFactorPermille: number; lossOnSuccessPermille: number; lossOnFailurePermille: number; hours: number; raiderMenAtFull: number; ambushPermilleAtFull: number; ambushFactorPermille: number };
   raidMitigationPerManPermille: number;
+  /** Phase 8 battles (D-060): with these, a sortie that meets raiders fights a battle; without them, the single roll above. */
+  field?: import("./battlefield/core.ts").FieldSpec;
+  tactics?: import("./battlefield/core.ts").BattleParams;
+  forces?: import("./battlefield/setup.ts").ForcesParams;
+  nightfallHour?: number; dawnHour?: number;
 }
 export interface GrainPlace { location: string; store: number; production: number; need: number; cap: number }
 /** Phase 7A grain: whole sacks, whole days. Raid damage at a place cuts its harvest for a while (the shortage is caused by the raids). */

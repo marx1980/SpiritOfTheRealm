@@ -205,7 +205,355 @@
    "ambushPermilleAtFull": 300,
    "ambushFactorPermille": 1800
   },
-  "raidMitigationPerManPermille": 8
+  "raidMitigationPerManPermille": 8,
+  "field": {
+   "width": 2400,
+   "height": 1600,
+   "places": [
+    {
+     "id": "gate",
+     "name": "the gate",
+     "x": 1200,
+     "y": 1480
+    },
+    {
+     "id": "ridge",
+     "name": "the ridge",
+     "x": 1200,
+     "y": 1040
+    },
+    {
+     "id": "ford",
+     "name": "the ford",
+     "x": 1200,
+     "y": 740
+    },
+    {
+     "id": "woodedge",
+     "name": "the wood's edge",
+     "x": 1750,
+     "y": 1040
+    },
+    {
+     "id": "camp",
+     "name": "the raiders' camp",
+     "x": 1200,
+     "y": 160
+    }
+   ],
+   "woods": [
+    {
+     "id": "wood",
+     "x0": 1560,
+     "y0": 460,
+     "x1": 2160,
+     "y1": 980
+    }
+   ],
+   "ridges": [
+    {
+     "id": "ridge",
+     "x0": 820,
+     "y0": 980,
+     "x1": 1560,
+     "y1": 1110
+    }
+   ],
+   "lines": [
+    {
+     "id": "stream",
+     "name": "the stream",
+     "y": 700
+    }
+   ],
+   "edge": {
+    "crown": 1600,
+    "raiders": 0
+   }
+  },
+  "tactics": {
+   "step": 10,
+   "frameEvery": 30,
+   "staleAfter": 300,
+   "capSeconds": 14400,
+   "sight": {
+    "clear": 1300,
+    "rain": 800,
+    "wood": 150,
+    "ridgeBonusPermille": 250,
+    "dustRange": 250,
+    "dustPermille": 500
+   },
+   "runner": {
+    "speed": 5,
+    "dangerRange": 160,
+    "dangerPermille": 80,
+    "findRadius": 120,
+    "searchSeconds": 600
+   },
+   "signal": {
+    "range": 1500,
+    "missPermille": {
+     "base": 50,
+     "rain": 150,
+     "dust": 300
+    }
+   },
+   "voiceRange": 150,
+   "reportEvery": 900,
+   "reportLossPermille": 150,
+   "cohesion": {
+    "start": 800,
+    "rout": 150,
+    "retreat": 300,
+    "disorganised": 450,
+    "rallied": 520,
+    "perLossPercent": 10,
+    "losing": 4,
+    "winning": 2,
+    "underFire": 1,
+    "outnumbered": 2,
+    "neighbourRout": 6,
+    "neighbourRetreat": 4,
+    "unannouncedWithdrawal": 3,
+    "commanderBase": 2,
+    "rulerNear": 1,
+    "recover": 3,
+    "tired": 2
+   },
+   "rates": {
+    "routTarget": 2500,
+    "retreatTarget": 1500,
+    "disorganisedTarget": 1300,
+    "ridgeDefence": 700,
+    "woodCover": 500,
+    "mountedVsDisordered": 2000,
+    "noise": [
+     700,
+     1300
+    ]
+   },
+   "kinds": {
+    "foot": {
+     "speed": 1,
+     "meleeRange": 40,
+     "missileRange": 0,
+     "meleeRate": 250,
+     "missileRate": 0,
+     "discipline": 600,
+     "mounted": false
+    },
+    "archers": {
+     "speed": 1,
+     "meleeRange": 40,
+     "missileRange": 200,
+     "meleeRate": 120,
+     "missileRate": 90,
+     "discipline": 550,
+     "mounted": false
+    },
+    "horse": {
+     "speed": 3,
+     "meleeRange": 40,
+     "missileRange": 0,
+     "meleeRate": 320,
+     "missileRate": 0,
+     "discipline": 650,
+     "mounted": true
+    },
+    "guard": {
+     "speed": 1,
+     "meleeRange": 40,
+     "missileRange": 0,
+     "meleeRate": 330,
+     "missileRate": 0,
+     "discipline": 900,
+     "mounted": false
+    },
+    "warband": {
+     "speed": 1,
+     "meleeRange": 40,
+     "missileRange": 0,
+     "meleeRate": 240,
+     "missileRate": 0,
+     "discipline": 450,
+     "mounted": false
+    },
+    "bowmen": {
+     "speed": 1,
+     "meleeRange": 40,
+     "missileRange": 180,
+     "meleeRate": 100,
+     "missileRate": 80,
+     "discipline": 450,
+     "mounted": false
+    },
+    "riders": {
+     "speed": 3,
+     "meleeRange": 40,
+     "missileRange": 0,
+     "meleeRate": 280,
+     "missileRate": 0,
+     "discipline": 500,
+     "mounted": true
+    }
+   },
+   "clarity": {
+    "base": 600,
+    "named": 100,
+    "limit": 100,
+    "condition": 100,
+    "signal": 100,
+    "literalBelow": 450
+   },
+   "raiders": {
+    "withdrawLossPermille": 450,
+    "replanEvery": 60
+   },
+   "ruler": {
+    "dangerNear": 400,
+    "formsUpAt": 200,
+    "meleePermille": 10,
+    "missilePermille": 1,
+    "deathPermille": 300,
+    "repeatEvery": 300
+   },
+   "goneBelowPermille": 120
+  },
+  "forces": {
+   "garrison": [
+    {
+     "kind": "foot",
+     "sharePermille": 700,
+     "by": "castellan"
+    },
+    {
+     "kind": "archers",
+     "sharePermille": 300,
+     "by": "sergeant"
+    }
+   ],
+   "company": [
+    {
+     "kind": "foot",
+     "sharePermille": 500
+    },
+    {
+     "kind": "horse",
+     "sharePermille": 250
+    },
+    {
+     "kind": "archers",
+     "sharePermille": 250
+    }
+   ],
+   "guardMen": 30,
+   "raiders": [
+    {
+     "minMen": 240,
+     "parts": [
+      {
+       "kind": "riders",
+       "sharePermille": 120
+      },
+      {
+       "kind": "warband",
+       "sharePermille": 250
+      },
+      {
+       "kind": "bowmen",
+       "sharePermille": 160
+      },
+      {
+       "kind": "warband",
+       "sharePermille": 230
+      },
+      {
+       "kind": "riders",
+       "sharePermille": 120
+      },
+      {
+       "kind": "warband",
+       "sharePermille": 120
+      }
+     ]
+    },
+    {
+     "minMen": 120,
+     "parts": [
+      {
+       "kind": "riders",
+       "sharePermille": 150
+      },
+      {
+       "kind": "warband",
+       "sharePermille": 350
+      },
+      {
+       "kind": "bowmen",
+       "sharePermille": 150
+      },
+      {
+       "kind": "warband",
+       "sharePermille": 350
+      }
+     ]
+    },
+    {
+     "minMen": 0,
+     "parts": [
+      {
+       "kind": "warband",
+       "sharePermille": 500
+      },
+      {
+       "kind": "warband",
+       "sharePermille": 500
+      }
+     ]
+    }
+   ],
+   "start": {
+    "crownY": 1380,
+    "raidersY": 220,
+    "spacing": 170
+   },
+   "signals": [
+    {
+     "id": "advance",
+     "task": {
+      "kind": "advance",
+      "place": "ford"
+     }
+    },
+    {
+     "id": "hold",
+     "task": {
+      "kind": "hold"
+     }
+    },
+    {
+     "id": "withdraw",
+     "task": {
+      "kind": "withdraw",
+      "place": "gate"
+     }
+    },
+    {
+     "id": "reserve",
+     "task": {
+      "kind": "attack"
+     }
+    }
+   ],
+   "posts": {
+    "rear": "gate",
+    "centre": "ridge",
+    "forward": "ford"
+   }
+  },
+  "nightfallHour": 19,
+  "dawnHour": 6
  },
  "regency": {
   "regent": "elara",
