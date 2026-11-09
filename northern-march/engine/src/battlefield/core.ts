@@ -41,13 +41,15 @@ export interface BattleParams {
   runner: { speed: number; dangerRange: number; dangerPermille: number; findRadius: number; searchSeconds: number };
   signal: { range: number; missPermille: { base: number; rain: number; dust: number } };
   voiceRange: number; reportEvery: number; reportLossPermille: number;
+  /** Ground a formation takes up: the least distance kept from a friendly formation, and from an enemy it is fighting. */
+  spacing: { friends: number; enemies: number };
   cohesion: { start: number; rout: number; retreat: number; disorganised: number; rallied: number; perLossPercent: number; losing: number; winning: number; underFire: number; outnumbered: number;
     neighbourRout: number; neighbourRetreat: number; unannouncedWithdrawal: number; commanderBase: number; rulerNear: number; recover: number; tired: number };
   rates: { routTarget: number; retreatTarget: number; disorganisedTarget: number; ridgeDefence: number; woodCover: number; mountedVsDisordered: number; noise: [number, number] };
   kinds: Record<Kind, KindP>;
   clarity: { base: number; named: number; limit: number; condition: number; signal: number; literalBelow: number };
   raiders: { withdrawLossPermille: number; replanEvery: number };
-  ruler: { dangerNear: number; formsUpAt: number; meleePermille: number; missilePermille: number; deathPermille: number; repeatEvery: number };
+  ruler: { dangerNear: number; formsUpAt: number; meleePermille: number; missilePermille: number; deathPermille: number; repeatEvery: number; wallsRange: number };
   goneBelowPermille: number;
 }
 export interface FormationSetup { id: string; side: Side; kind: Kind; label: string; men: number; commander: string; x: number; y: number }
@@ -437,6 +439,23 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
     f.fatigue = Math.max(0, Math.min(1000, f.fatigue + (moved ? 2 : f.engaged ? 3 : -2)));
   };
 
+  // ---- formations take up ground: friends keep their intervals, enemies meet face to face rather than inside each other ----
+  const separate = () => {
+    const ls = order.map((id) => fs.get(id)!).filter(live);
+    for (let i = 0; i < ls.length; i++) for (let j = i + 1; j < ls.length; j++) {
+      const a = ls[i], b = ls[j];
+      const want = a.side === b.side ? P.spacing.friends : P.spacing.enemies;
+      let dx = b.x - a.x, dy = b.y - a.y;
+      const d = dist(a.x, a.y, b.x, b.y);
+      if (d >= want) continue;
+      if (d === 0) { dx = a.id < b.id ? 1 : -1; dy = 0; }
+      const push = Math.ceil((want - d) / 2), n = Math.max(1, d);
+      const ux = Math.trunc((dx * push) / n) || (d === 0 ? dx * push : 0), uy = Math.trunc((dy * push) / n);
+      a.x = Math.max(0, Math.min(field.width, a.x - ux)); a.y = Math.max(0, Math.min(field.height, a.y - uy));
+      b.x = Math.max(0, Math.min(field.width, b.x + ux)); b.y = Math.max(0, Math.min(field.height, b.y + uy));
+    }
+  };
+
   // ---- fighting ----
   const fight = (t: number) => {
     const losses = new Map<string, number>(), dealt = new Map<string, number>();
@@ -495,7 +514,8 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
       if (f.underFire && !f.engaged) d -= C.underFire;
       let ownNear = 0, enemyNear = 0;
       for (const g of order.map((x) => fs.get(x)!)) if (live(g) && g.behaviour !== "rout" && dist(f.x, f.y, g.x, g.y) < 300) { if (g.side === f.side) ownNear += g.men; else enemyNear += g.men; }
-      if (enemyNear * 10 > ownNear * 15) d -= C.outnumbered;
+      // outnumbered where they stand: the worse the odds, the faster their nerve goes
+      if (enemyNear * 10 > ownNear * 15) d -= C.outnumbered * Math.min(5, Math.floor(enemyNear / Math.max(1, ownNear)));
       // what neighbours appear to be doing (§14)
       for (const g of order.map((x) => fs.get(x)!)) {
         if (g.id === f.id || g.side !== f.side || !live(g) || dist(f.x, f.y, g.x, g.y) > 400) continue;
@@ -505,8 +525,9 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
         else if (b === "withdrawing" && g.commander !== f.commander && t - withdrawSignalAt > 300) d -= C.unannouncedWithdrawal;
       }
       const c = cs.get(f.commander);
-      const near = !!c && dist(c.x, c.y, f.x, f.y) <= P.voiceRange;
-      if (near) d += C.commanderBase + Math.floor(c!.skill / 250);
+      // each raider band follows its own war leader; the crown's formations depend on their commander being near
+      const near = f.side === "raiders" || (!!c && dist(c.x, c.y, f.x, f.y) <= P.voiceRange);
+      if (near) d += C.commanderBase + (f.side === "crown" && c ? Math.floor(c.skill / 250) : 0);
       if (f.side === "crown" && guard && live(guard) && guard.id !== f.id && dist(guard.x, guard.y, f.x, f.y) < 600) d += C.rulerNear;
       if (!f.engaged && !f.underFire && f.cohesion < P.kinds[f.kind].discipline) d += C.recover;
       if (f.fatigue > 700) d -= C.tired;
@@ -592,15 +613,16 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
     const nearest = foes.map((f) => ({ f, d: dist(f.x, f.y, guard.x, guard.y) })).sort((a, b) => a.d - b.d)[0];
     if (foes.some((f) => P.kinds[f.kind].missileRange > 0 && dist(f.x, f.y, guard.x, guard.y) <= P.kinds[f.kind].missileRange + 80)) say("arrows", "arrows are falling near the command post");
     if (nearest && nearest.d < R.dangerNear) { say("aides", "her aides urge her to withdraw"); warnedAt ??= t; } else if (!nearest || nearest.d > R.dangerNear * 2) warnedAt = undefined;
-    if (nearest && nearest.d < R.formsUpAt) {
-      say("guard", "the guard captain forms up the guard");
-      // unless she chose where to stand after her aides warned her, the guard closes round her and falls back towards the gate
-      if (rulerOrderedAt < (warnedAt ?? t) && guard.task.kind !== "withdraw" && t > 0) { guard.task = { kind: "withdraw", place: "gate" }; notes.push({ t, kind: "danger", why: "guard_falls_back", text: "the guard closes round the queen and falls back" }); }
-    }
+    if (nearest && nearest.d < R.formsUpAt) say("guard", "the guard captain forms up the guard");
+    // unless she chose where to stand after her aides warned her, the guard closes round her and falls back towards the gate
+    if (nearest && nearest.d < R.dangerNear && rulerOrderedAt < (warnedAt ?? t) && guard.task.kind !== "withdraw" && t > 0) { guard.task = { kind: "withdraw", place: "gate" }; notes.push({ t, kind: "danger", why: "guard_falls_back", text: "the guard closes round the queen and falls back" }); }
     const front = crown().filter((f) => live(f) && f.id !== guard.id && dist(f.x, f.y, guard.x, guard.y) < 400);
     if (front.some((f) => f.behaviour === "disorganised" || f.behaviour === "retreat" || f.behaviour === "rout")) say("wavering", "the line before her wavers");
-    // harm only once a real threat is in contact with her guard, and never before she was warned
+    // harm only once a real threat is in contact with her guard, and never before she was warned; under the walls at the
+    // gate she is in the fort, where the campaign's own rules for a raided fort apply, not the field's
     if (dangerFirst < 0 || dangerFirst >= t) return false;
+    const gate = place("gate");
+    if (gate && dist(guard.x, guard.y, gate.x, gate.y) <= R.wallsRange) return false;
     const inMelee = foes.some((f) => dist(f.x, f.y, guard.x, guard.y) <= P.kinds[f.kind].meleeRange);
     const shot = foes.some((f) => P.kinds[f.kind].missileRange > 0 && dist(f.x, f.y, guard.x, guard.y) <= P.kinds[f.kind].missileRange);
     const exposed = !live(guard) || guard.behaviour === "rout";
@@ -662,6 +684,7 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
     for (let i = pendingAssign.length - 1; i >= 0; i--) if (pendingAssign[i].at <= t) pendingAssign.splice(i, 1);
     raiders(t);
     for (const id of order) move(fs.get(id)!);
+    separate();
     fight(t);
     behave(t);
     observeAll(t);

@@ -416,9 +416,14 @@
     "meleePermille": 10,
     "missilePermille": 1,
     "deathPermille": 300,
-    "repeatEvery": 300
+    "repeatEvery": 300,
+    "wallsRange": 180
    },
-   "goneBelowPermille": 120
+   "goneBelowPermille": 120,
+   "spacing": {
+    "friends": 150,
+    "enemies": 36
+   }
   },
   "forces": {
    "garrison": [

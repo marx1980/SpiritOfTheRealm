@@ -1,0 +1,36 @@
+<title>Battle Clips</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus+SC&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+:root {
+  --bg: #eceeea; --panel: #f7f8f5; --ink: #1f2a2e; --mute: #5f6b6c; --line: #c9cfca;
+  --accent: #2f5d7c; --accent-ink: #ffffff; --ok: #3c7a4a; --warn: #a8701a; --bad: #a3312b; --land: #e3e6dc; --ptr: #d99a1e;
+  --f-display: "Marcellus SC", Georgia, serif; --f-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12171a; --panel: #1a2125; --ink: #dde3e0; --mute: #93a09f; --line: #2e383c; --accent: #7fa9c9; --accent-ink: #0d1316;
+  --ok: #79b48a; --warn: #d9a54a; --bad: #e07a70; --land: #1d2629; --ptr: #f0b84a; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12171a; --panel: #1a2125; --ink: #dde3e0; --mute: #93a09f; --line: #2e383c; --accent: #7fa9c9; --accent-ink: #0d1316;
+  --ok: #79b48a; --warn: #d9a54a; --bad: #e07a70; --land: #1d2629; --ptr: #f0b84a; color-scheme: dark }
+body { background: var(--bg); color: var(--ink); font: 16px/1.45 var(--f-body); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 14px; }
+#app { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+header { display: flex; align-items: baseline; gap: 14px; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+h1, h2 { font-family: var(--f-display); font-weight: 400; margin: 0; letter-spacing: .04em; }
+h1 { font-size: 22px; } h2 { font-size: 17px; }
+.prog { margin-left: auto; color: var(--mute); font-variant-numeric: tabular-nums; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px; display: grid; gap: 12px; min-width: 0; }
+.q { font-size: 17px; text-wrap: balance; }
+.stage .field { max-height: 62vh; }
+.field .ptr { fill: var(--ptr); stroke: var(--ink); stroke-width: 4; }
+.answers { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+button { font: inherit; color: inherit; border: 1px solid var(--line); background: var(--bg); border-radius: 6px; padding: 10px 12px; cursor: pointer; text-align: left; }
+button:hover { border-color: var(--accent); } button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; } button:disabled { opacity: .5; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); }
+th { font-weight: 600; } tr.sub th { font-weight: 400; color: var(--mute); padding-left: 20px; }
+textarea { width: 100%; min-height: 140px; font: 12px ui-monospace, monospace; background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; }
+.ok { color: var(--ok); font-weight: 600; } .bad { color: var(--bad); font-weight: 600; } .dim { color: var(--mute); }
+</style>
+<div id="app"></div>
+<script>/*APP*/</script>
