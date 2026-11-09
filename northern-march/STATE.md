@@ -1,6 +1,6 @@
 # STATE
 
-Updated: 9 Nov 2026, marketplace gate round closed (D-059); sell amounts, Send, captain on the map (D-053, D-055, D-056); economy gaps filled (D-045); Economy tab on the page (D-044); Phase 7A extended (advisers on communities, petition repetition, D-036..D-038) and the wider economy built, stages 1-3 (D-039..D-043), all gated on march-0.8; earlier: Phase 6 (6A) built; Agent Playtest Lab L0-L7 built (Opus 5.5). Plan in force: `docs/IMPLEMENTATION_PLAN.md` v4; lab: `docs/playtest/` (v4 + V4_1_AMENDMENTS, D-022).
+Updated: 9 Nov 2026, Phase 8 minimal battle slice built (D-060..D-062), regression gates running, H-03 waits for testers; marketplace gate round closed (D-059); sell amounts, Send, captain on the map (D-053, D-055, D-056); economy gaps filled (D-045); Economy tab on the page (D-044); Phase 7A extended (advisers on communities, petition repetition, D-036..D-038) and the wider economy built, stages 1-3 (D-039..D-043), all gated on march-0.8; earlier: Phase 6 (6A) built; Agent Playtest Lab L0-L7 built (Opus 5.5). Plan in force: `docs/IMPLEMENTATION_PLAN.md` v4; lab: `docs/playtest/` (v4 + V4_1_AMENDMENTS, D-022).
 
 ## Built
 **Engine (`engine/`, TypeScript on Node 22, no build step).** `npm test`: 160 tests passed at the L0 baseline; since then `test/saveload.test.ts` (+1) and `test/playtest.test.ts` (10) pass on their own; full suite re-run pending. `npx tsc -p .` is clean.
@@ -43,6 +43,8 @@ Phases 0-4: see DECISIONS D-001 to D-014.
 
 **Debug page:** `node ui/build.ts` writes `ui/dist/northern-march.html`; published as a private artifact (version 62).
 
+**Phase 8, minimal battle slice (D-060..D-062, built 9 Nov).** A sortie that meets raiders who are there fights a battle (`src/battlefield/core.ts`, pure and deterministic, 10-second steps): about 6 formations a side from the garrison, every captain's company present and the raiders' numbers; up to three commanders (captain, castellan, sergeant present) and Anna with her guard if she is at that fort. Reality and headquarters' beliefs apart (observed / reported / inferred / stale, with age). Orders travel by runner (to where headquarters believes the commander is; runners can be taken or fail to find him) or by pre-agreed signal (can be missed); a formation keeps its instruction until a new one is received and accepted. Receipt, interpretation (low comprehension reads literally, dropping limits and conditions) and obedience (obey / adapt / keep, scored from his beliefs and traits with the campaign's margins, traced, no draws) are separate. One behaviour model, seven visible behaviours. The queen's danger is signalled before it can harm her; her guard falls back to the gate unless she chose her ground after the warning; under the walls the field cannot harm her. Results flow back: losses, raiders ended or weakened, prestige, the record of obedience, community memory, debrief letters slanted by traits. With Anna present the campaign pauses for battle orders (menu; saved and replayed); scripted rulers leave battles to the plan. Page: battle screen during battle pauses, `#battle` opens the first battle; H-03 clip page published separately (answers per tester, owner reads `#results`). Tests: `battle_core` 14, `battle_campaign` 7. Not claimed: balance (the crown at Northwatch beats 360 raiders 19 times in 20 and 520 never; in campaigns raiders win most battles because castellans sally with the garrison alone), fun, readability (H-03 is human).
+
 ## Result
 - Phase 1: G-01, G-02 PASS (D-009). Phase 2: built (D-010).
 - Phase 3: G-10 PASS, G-11 FAIL, overridden (D-013, D-016).
@@ -56,14 +58,16 @@ Phases 0-4: see DECISIONS D-001 to D-014.
 
 ## Known gaps
 - G-11 open (D-016). Standing instruction: tell Marko if a re-run passes.
-- The economy is still unplayed by a human. Muster still needs iron at the fort first (buy it at Highcairn, which is Varos's), and advisers do not recommend it. Iron and horses are used only by muster. Houses spend only on restocking (an invented sink, not calibrated). Town prices change only when the crown sells. Battle counts the garrison only. Sealed gates for D-045 are pending (D-046).
+- The economy is still unplayed by a human. Muster still needs iron at the fort first (buy it at Highcairn, which is Varos's), and advisers do not recommend it. Iron and horses are used only by muster. Houses spend only on restocking (an invented sink, not calibrated). Town prices change only when the crown sells. Sealed gates for D-045 closed (D-050).
 - Advisers advise on relief and levy for communities (D-036) but not on goods, trade or mustering.
 - The crown cannot yet keep the promise to consult Greyfen (7A).
 - Under the aggressive scripted policy (a levy every 30 days) Eastmarch and Coldmere usually end up declaring for Varos; under passive and delegating rulers communities mostly petition at most.
 - An aggressive 240-day run takes about 4 s (communities and letters); within the G-14 wall-clock limit but worth watching.
 - Placeholder physical systems; route closures have no trigger (Phase 10).
+- Battles (Phase 8): no audio signatures; the enemy does not read signals; no commander death or succession; no sector delegation; weather is rain or clear only (from a storm in the last day); agents still decide sorties with the old roll's estimate of their chances, not the battle; a captain's company wiped out is not marked on the map (troops stay above zero).
 
 ## Needs a human
+- H-03 battle readability: at least 5 testers on the Battle Clips page, shared as Contributors (`docs/H03_PROTOCOL.md`). Phase 8 completes only on its PASS or your override.
 - Testers for H-01/H-02 at 7A (`docs/H01_PROTOCOL.md`, now with C11-C12 and the handover worksheet).
 - Optional: run `node src/cli.ts g01 --seeds 1..100` in `engine/` on your own computer; it must end with the combined hash above.
 
