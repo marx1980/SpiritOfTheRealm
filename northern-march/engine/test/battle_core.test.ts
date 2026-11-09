@@ -5,7 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { canonicalJson } from "../src/canonical.ts";
 import { BEHAVIOURS, decideBattleObedience, runBattle, type BattleOrder, type BattleSetup } from "../src/battlefield/core.ts";
-import { sampleSetup } from "../src/battlefield/sample.ts";
+import { sampleSetup } from "./battle_sample.ts";
 
 const order = (o: Partial<BattleOrder> & Pick<BattleOrder, "to" | "task" | "t">): BattleOrder => ({ schemaVersion: 1, id: 1, from: "anna", via: "runner", ...o });
 

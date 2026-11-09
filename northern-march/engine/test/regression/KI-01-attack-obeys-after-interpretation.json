@@ -1,36 +1,37 @@
 {
- "schemaVersion": 1,
- "id": "KI-01-attack-obeys-after-interpretation",
- "title": "Attack orders are interpreted and obeyed before execution (fixed 6 Nov)",
- "knownIssue": null,
- "seed": 9,
- "days": 90,
- "params": {},
- "inputs": [
-  {
-   "tick": 7430398,
-   "actions": [
+  "schemaVersion": 1,
+  "id": "KI-01-attack-obeys-after-interpretation",
+  "title": "Attack orders are interpreted and obeyed before execution (fixed 6 Nov)",
+  "knownIssue": null,
+  "seed": 9,
+  "days": 120,
+  "params": {},
+  "inputs": [
     {
-     "action": "advance",
-     "target": "northwatch",
-     "mission": "attack",
-     "raid": "blackwood"
+      "tick": 7430398,
+      "actions": [
+        {
+          "action": "advance",
+          "target": "northwatch",
+          "mission": "attack",
+          "raid": "blackwood"
+        }
+      ]
     }
-   ]
-  }
- ],
- "predicate": {
-  "kind": "invariant",
-  "match": "order \\d+: ExecutionStarted after OrderReceived"
- },
- "from": "game 81 (seed 9, random-valid)",
- "shrinkSteps": 26,
- "original": {
-  "days": 150,
-  "inputs": 282,
-  "actions": 282
- },
- "logHash": "20ace0cd3593663f9b13975c39d2085d163d467ef87123bac62a39bd79aef3e9",
- "fixedIn": "6 Nov 2026 (KI-01, D-022)",
- "expect": "passes"
+  ],
+  "predicate": {
+    "kind": "invariant",
+    "match": "order \\d+: ExecutionStarted after OrderReceived"
+  },
+  "from": "game 81 (seed 9, random-valid)",
+  "shrinkSteps": 26,
+  "original": {
+    "days": 150,
+    "inputs": 282,
+    "actions": 282
+  },
+  "logHash": "47d7ce23d2455af5cfc5a143372f4ad0fbc73ee4be3c70ab56920b7690c5fae7",
+  "fixedIn": "6 Nov 2026 (KI-01, D-022)",
+  "expect": "passes",
+  "note": "Phase 8 (D-062): battles add debrief letters, which delay the messenger; at 90 days the order was only dispatched, so the case runs 120 days to keep the attack order going through receipt, interpretation, obedience and execution."
 }

@@ -3,7 +3,7 @@
 //   node tools/phase8_clips.ts [perBehaviour=4] [markers=12] -> ui/h03/clips.json
 import { mkdirSync, writeFileSync } from "node:fs";
 import { BEHAVIOURS, runBattle, type Behaviour, type BattleOrder, type Frame } from "../src/battlefield/core.ts";
-import { sampleSetup } from "../src/battlefield/sample.ts";
+import { sampleSetup } from "../test/battle_sample.ts";
 
 const per = Number(process.argv[2] ?? 4), markerCount = Number(process.argv[3] ?? 12);
 const W = 1000, H = 640, LEN = 6; // window in metres, frames per clip (30 s apart)

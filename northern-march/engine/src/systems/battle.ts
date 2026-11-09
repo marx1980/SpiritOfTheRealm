@@ -49,7 +49,7 @@ export const battle: System = {
       const captains = chars.filter((c) => c!.role === "captain" && (ctx.s.troops[c!.id] ?? 0) > 0).map((c) => c!.id).sort();
       if (captains.includes(commander)) captains.splice(captains.indexOf(commander), 1), captains.unshift(commander);
       const rulerHere = here.includes(ruler);
-      const seed = ctx.keyed(`battle:seed:${launchedEventId}`).int(1, 2147483646);
+      const seed = ctx.keyed(`battle:seed:${from}:${site}:${ctx.tick}`).int(1, 2147483646); // where and when, not event ids: a bigger cast must not reshuffle the fight
       const rainy = (ctx.s.lastStorm[from] ?? -1e9) > ctx.tick - DAY;
       const setup: BattleSetup = buildSetup({
         battleId: launchedEventId, seed, site, place: ctx.content.byId.location.get(from)?.name ?? from,

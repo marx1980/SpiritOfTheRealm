@@ -21,7 +21,7 @@ export interface Task {
   kind: TaskKind; place?: string; target?: string; limit?: string;
   when?: { kind: "enemy_engaged" | "enemy_horse_seen"; then: Omit<Task, "when"> };
 }
-/** A battle order (new contract, schema 1). `to` is a commander, or the ruler herself ("anna") to move her command post. */
+/** A battle order (new contract, schema 1). `to` is a commander, or the ruler herself (her own id) to move her command post. */
 export interface BattleOrder { schemaVersion: 1; id: number; t: number; from: string; to: string; task: Task; via: "runner" | "signal" | "voice"; signal?: string }
 
 export interface TraitP { riskPermille: number; obedienceWhenDisagreeingPermille: number; lossResponsePermille: number; commitmentPermille: number; badNewsReportingPermille?: number }
@@ -192,7 +192,7 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
   const P = setup.params, field = setup.field, step = P.step;
   const until = Math.min(setup.endT, opts.until ?? setup.endT);
   let draws = 0;
-  const roll = (key: string, lo = 0, hi = 999) => { draws++; return Rng.fromSeed(setup.seed, `battle:${setup.battleId}:${key}`).int(lo, hi); };
+  const roll = (key: string, lo = 0, hi = 999) => { draws++; return Rng.fromSeed(setup.seed, `battle:${key}`).int(lo, hi); };
   const place = (id?: string) => field.places.find((p) => p.id === id);
   const line = (id?: string) => field.lines.find((l) => l.id === id);
 

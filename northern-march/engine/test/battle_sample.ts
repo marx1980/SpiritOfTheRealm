@@ -1,11 +1,11 @@
 // A battle at Northwatch from the scenario's own content, for tests and the lab: Bren's garrison with Edda's archers,
 // Caron's company, the raiders of the Blackwood, and Anna with her guard if asked for. Reads content from disk (Node only).
-import { loadContent, type Content } from "../content.ts";
-import type { BattleSetup } from "./core.ts";
-import { buildSetup, personOf } from "./setup.ts";
+import { loadContent, type Content } from "../src/content.ts";
+import type { BattleSetup } from "../src/battlefield/core.ts";
+import { buildSetup, personOf } from "../src/battlefield/setup.ts";
 
 let cached: Content | undefined;
-const content = () => (cached ??= loadContent(new URL("../../content/march/", import.meta.url).pathname));
+const content = () => (cached ??= loadContent(new URL("../content/march/", import.meta.url).pathname));
 
 export const person = personOf;
 
