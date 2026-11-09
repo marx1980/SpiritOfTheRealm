@@ -313,3 +313,12 @@ Scope from the plan (Phase 8) and BATTLEFIELD §2A-§24. Decisions:
 - **Reports** from commanders who dislike bad news (bad-news reporting below 450) soften their own men's state and report half as often; debriefs scale own losses by (400 + frankness)/1000 and the enemy's by (700 + 0.6 x risk)/1000.
 - **The page.** Battle pauses show the field with headquarters' marks (solid: seen now; hollow and dashed: reported, with age; dotted: inferred; faded: stale), the commanders' orders as headquarters believes them with status and last word, reports and warnings, and a menu order form (runner, signal, or voice before the fight). `#battle` plays the opening silently to the first battle (not saved). H-03 clip page published separately (`docs/H03_PROTOCOL.md`).
 - **Campaign effect** (10 seeds x 160 days, after tuning): aggressive 48 battles, raiders won 27; delegating 56 battles, raiders won 33, one drawn. Most sorties are castellans going out with the garrison alone against a larger band, chosen by the agents' own (pre-battle) estimate of a sortie's chances. Earlier sealed gates are expected to move; they are re-run on fresh blocks after the suite (D-062).
+
+## D-062 — Phase 8 regression gate plan (written before any run on these blocks)
+Sorties now fight battles, so the sealed gates of earlier phases are re-run on fresh blocks, once each, on the code of the commit that starts them (no edits under `src/` while they run):
+- 7A (G-03/G-04/G-05, outcome shares, invariants, 600 link seeds): block 310000, 1,000 seeds. Overrides 1-3 stand.
+- G-12 advisers: block 320000. G-13 communities: block 330000.
+- Tune seeds: G-06 knife-edge (1-150), G-01 node and bun, G-02 and the Phase 1 batch, lab quick playtest.
+- Phase 8's own gate is H-03 (human, `docs/H03_PROTOCOL.md`); nothing here stands in for it.
+- If a gate that passed in D-058/D-059 now fails: report it with numbers and stop; no tuning inside the round. AMBER gets one extension on a fresh block, then counts as FAIL.
+Also fixed before the round: the battle's random seed is keyed on place and time, not event ids (a doubled background cast changed Tier A work by 24%, now 2%); the sample battle builder moved to `test/` (A5); KI-01 runs 120 days (debrief letters delay its order's messenger past day 90).
