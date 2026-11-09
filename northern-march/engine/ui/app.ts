@@ -6,6 +6,8 @@ import { adviceSettled, buildCourt, latestAdviceOf, type AdviceLine } from "../s
 import { buildMap } from "../src/presentation/map.ts";
 import { MapGraph } from "../src/map.ts";
 import { mapSvg } from "./maparts.ts";
+import { BATTLE_CSS, battleSvg, glyphOf, mins } from "./battleart.ts";
+import type { Task } from "../src/battlefield/core.ts";
 import { actionText, adviceAction, adviceChoices, affordable as affordableR, coinsKnown as coinsKnownR, buyKnown, economyProblems, GOOD_LABEL, grainCover, grainKnown, houseOf, openAdvice, priceKnown, publicRules, purchaseCostKnown, raidNear, repairCostKnown as repairCostKnownR, storeKnown, type AdviceChoice } from "../src/presentation/affordances.ts";
 import { captainSentTo, fallenAt, lettersFall, planOf, certainty, letterSentences, letterGist, planWords, reasonWords, sourceOf } from "../src/presentation/phrasing.ts";
 import { beliefsAbout, validateDraft, type OrderDraft, type View } from "../src/view.ts";
@@ -46,6 +48,7 @@ const st = {
   batch: [] as number[], queue: [] as PlayerAction[], autoPause: new Set<string>(REASONS), selected: "northwatch",
   draft: { recipient: "", action: "p:repair", objective: "northwatch", discretion: "bounded", mission: "defend", repairMode: "standard" } as { recipient: string; action: string; objective: string; discretion: string; mission: string; repairMode: string },
   eco: { act: "move", good: "timber", from: "", to: "", community: "", fort: "", consult: false, qty: 0 } as { act: string; good: string; from: string; to: string; community: string; fort: string; consult: boolean; qty: number },
+  bo: { to: "", kind: "hold", place: "ridge", target: "", limit: false, when: "", via: "runner", signal: "hold" } as { to: string; kind: string; place: string; target: string; limit: boolean; when: string; via: string; signal: string },
   error: "", observer: location.hash === "#observer", answered: 0, openLetter: null as number | null, openIssue: null as string | null,
 };
 
@@ -57,7 +60,22 @@ const LOG_KEY = (seed: number) => `northern-march-log-${seed}`;
 function loadLog(seed: number): PlayerAction[][] {
   try { const raw = localStorage.getItem(LOG_KEY(seed)); return raw ? (JSON.parse(raw) as PlayerAction[][]) : []; } catch { return []; }
 }
-function saveLog() { try { localStorage.setItem(LOG_KEY(st.seed), JSON.stringify(st.log)); } catch { /* storage may be blocked: the game still plays */ } }
+/** #battle: play the opening silently (Anna rides to Northwatch, Caron is sent against the Blackwood) and stop at the first battle. Not saved. */
+const DEMO = location.hash === "#battle";
+function saveLog() { if (DEMO) return; try { localStorage.setItem(LOG_KEY(st.seed), JSON.stringify(st.log)); } catch { /* storage may be blocked: the game still plays */ } }
+function demoToBattle() {
+  let travelled = false, ordered = false;
+  for (let guard = 0; guard < 20000; guard++) {
+    const r = st.sim.next(END);
+    if (!r.paused || r.ended) return;
+    if (r.reason === "battle") { st.paused = "battle"; return; }
+    const v = r.view!, acts: PlayerAction[] = [];
+    if (!travelled) { acts.push({ action: "travel", target: "northwatch" }); travelled = true; }
+    const b = beliefsAbout(v, "blackwood", "threat.intensity")[0], here = "at" in v.self.position && v.self.position.at === "northwatch";
+    if (here && !ordered && b && (b.believedValue as number) > 0) { acts.push({ action: "advance", target: "northwatch", mission: "attack", raid: "blackwood" }); ordered = true; }
+    answer(acts);
+  }
+}
 function clearLog(seed: number) { try { localStorage.removeItem(LOG_KEY(seed)); } catch { /* ignore */ } }
 
 /** Give the engine one answer and remember it. */
@@ -83,7 +101,7 @@ function triage(r: ReturnType<Sim["next"]>, batch: number[], batchDay: number): 
     const day = Math.floor(st.sim.viewOf("player").now / DAY);
     if (batchDay === -1 || batchDay === day) return "gather";
   }
-  return batch.length || st.autoPause.has(r.reason!) || r.reason === "danger" ? "show" : "pass";
+  return batch.length || st.autoPause.has(r.reason!) || r.reason === "danger" || r.reason === "battle" ? "show" : "pass";
 }
 function start(seed: number, restore = true) {
   st.sim = createSim({ content, seed, policy: "external", params: { dayEnd: true } });
@@ -92,6 +110,7 @@ function start(seed: number, restore = true) {
   // the silent prelude, up to the first day of play
   for (let guard = 0; guard < 5000; guard++) { const r = st.sim.next(PRE); if (!r.paused) break; st.sim.answer([]); }
   if (!restore) clearLog(seed);
+  if (DEMO) { demoToBattle(); st.answered = st.log.length; if (st.paused === "battle") return render(); return advance(); }
   const saved = restore ? loadLog(seed) : [];
   let tail: number[] = [], tailDay = -1; // letters gathered for a pause that was still showing when the page was left
   try {
@@ -122,7 +141,7 @@ function advance(resumed: number[] = []) {
     if (t === "pass") { answer([]); continue; }
     if (t === "gather") { batchDay = Math.floor(st.sim.viewOf("player").now / DAY); batch.push(r.letterId!); answer([]); continue; }
     {
-      st.paused = batch.length && !st.autoPause.has(r.reason!) && r.reason !== "danger" ? "report" : r.reason!;
+      st.paused = batch.length && !st.autoPause.has(r.reason!) && r.reason !== "danger" && r.reason !== "battle" ? "report" : r.reason!;
       st.letter = r.letterId ?? batch[batch.length - 1] ?? null; st.advice = r.adviceId ?? null; st.batch = batch; st.openLetter = st.letter;
       return render();
     }
@@ -142,11 +161,13 @@ const sized = (a: PlayerAction): PlayerAction => {
   const w = st.sim.viewOf("player").world, size = a.good ? w.goods?.unitsPerOrder[a.good] : a.action === "purchase" ? w.grain?.sacks.purchase : w.grain?.sacks.requisition;
   return size ? { ...a, units: size } : a;
 };
+const textOf = (v: View, a: PlayerAction) => (a.action === "battle" ? battleText(v, a) : actionText(v, a));
 const queue = (a: PlayerAction) => {
   if (!st.paused) return;
   a = sized(a);
   // the same action from two advisers (e.g. raiders and captain both mean "send the captain to Northwatch") is queued once
-  if (st.queue.some((q) => JSON.stringify(q) === JSON.stringify(a))) { st.error = `${actionText(st.sim.viewOf("player"), a)} is already queued`; return render(); }
+  if (st.queue.some((q) => JSON.stringify(q) === JSON.stringify(a))) { st.error = `${textOf(st.sim.viewOf("player"), a)} is already queued`; return render(); }
+  if (a.action === "battle") { st.queue.push(a); st.error = ""; return render(); }
   if (!affordable(st.sim.viewOf("player"), a)) { st.error = `${actionText(st.sim.viewOf("player"), a)}: not enough coins`; return render(); }
   st.queue.push(a); st.error = ""; render();
 };
@@ -218,6 +239,10 @@ function pauseText(v: View): string {
     return o.ended ? (o.ended === "killed" ? `Anna is dead` : `Anna is captured`) : `Day ${__H01__.days}: ${o.met ? "the forts hold" : "fallen: " + o.fortsBelowBreach.map((f) => name(v, f)).join(", ")}`;
   }
   const r = st.paused;
+  if (r === "battle" && v.battle) {
+    const d = [...v.battle.notes].reverse().find((n) => n.kind === "danger" && v.battle!.t - n.t < 90);
+    return `Battle at ${v.battle.place} · ${clock(v.battle.t)}${d ? ` · ${d.text}` : ""}`;
+  }
   if (r === "report") {
     const l = v.reports.find((x) => x.reportId === st.letter);
     return l ? `Letter from ${name(v, l.author)}: ${letterSentences(v, l).join(" ")}` : "Letter";
@@ -509,6 +534,64 @@ function syncMore() {
 }
 document.addEventListener("scroll", (ev) => { if ((ev.target as HTMLElement)?.classList?.contains("scroll")) syncMore(); }, true);
 window.addEventListener("resize", syncMore);
+const clock = (t: number) => `${Math.floor(t / 3600)}:${String(Math.floor((t % 3600) / 60)).padStart(2, "0")}`;
+const TASK: Record<string, string> = { hold: "Hold", advance: "Advance", attack: "Attack", withdraw: "Withdraw", give_ground: "Give ground", protect: "Protect" };
+const STATUS: Record<string, string> = { none: "–", dispatched: "on its way", "presumed delivered": "should have arrived", confirmed: "confirmed", lost: "unknown" };
+function taskWords(v: View, t: Task | null): string {
+  if (!t) return "–";
+  const b = v.battle!, place = b.field.places.find((p) => p.id === t.place)?.name, mark = b.hq.marks.find((m) => m.id === t.target)?.label;
+  const where = t.kind === "attack" || t.kind === "protect" ? mark ?? place : place;
+  return [`${TASK[t.kind]}${where ? ` ${t.kind === "advance" || t.kind === "withdraw" ? "to " : ""}${where}` : ""}`, ...(t.limit ? ["not past the stream"] : []), ...(t.when ? [`${t.when.kind === "enemy_horse_seen" ? "on seeing horse" : "when engaged"}: ${TASK[t.when.then.kind].toLowerCase()}`] : [])].join(" · ");
+}
+const battleName = (v: View, id: string) => (id === v.self.id ? "Command post" : v.battle?.commanders.find((c) => c.id === id)?.name ?? name(v, id));
+function battleText(v: View, a: PlayerAction): string {
+  const d = a.battle!;
+  if (d.via === "signal") return `Signal ${d.signal} to ${battleName(v, d.to)}`;
+  return `${battleName(v, d.to)}: ${taskWords(v, d.task)}${d.via === "runner" ? " (runner)" : ""}`;
+}
+function battleForm(v: View): { html: string; action: PlayerAction | null } {
+  const b = v.battle!, f = st.bo;
+  const tos = [...b.commanders.map((c) => c.id), v.self.id];
+  if (!tos.includes(f.to)) f.to = tos[0];
+  const self = f.to === v.self.id;
+  if (self && !["hold", "withdraw"].includes(f.kind)) f.kind = "hold";
+  const kinds = self ? ["hold", "withdraw"] : Object.keys(TASK);
+  const needsPlace = ["hold", "advance", "withdraw", "give_ground"].includes(f.kind);
+  const targets = f.kind === "attack" ? b.hq.marks.filter((m) => m.side !== "crown" && m.behaviour !== "gone") : f.kind === "protect" ? b.hq.marks.filter((m) => m.side === "crown" && m.kind !== "guard") : [];
+  if (targets.length && !targets.some((m) => m.id === f.target)) f.target = targets[0].id;
+  const signal = !self && b.t > 0 && f.via === "signal";
+  const task: Task = { kind: f.kind as Task["kind"], ...(needsPlace || (f.kind === "attack" && !targets.length) ? { place: f.place } : {}), ...(targets.length ? { target: f.target } : {}),
+    ...(f.limit && f.kind === "attack" ? { limit: "stream" } : {}), ...(f.when && f.kind !== "attack" ? { when: { kind: f.when as "enemy_engaged" | "enemy_horse_seen", then: { kind: "attack" as const } } } : {}) };
+  const action: PlayerAction = { action: "battle", battle: { to: f.to, task: signal ? { kind: "hold" } : task, via: self || b.t === 0 ? "voice" : (f.via as "runner" | "signal"), ...(signal ? { signal: f.signal } : {}) } };
+  const opt = (val: string, label: string, cur: string) => `<option value="${esc(val)}" ${val === cur ? "selected" : ""}>${esc(label)}</option>`;
+  const html = `<div class="form">
+    <label for="bo-to">To</label><select id="bo-to">${tos.map((id) => opt(id, battleName(v, id), f.to)).join("")}</select>
+    ${!self && b.t > 0 ? `<label for="bo-via">By</label><select id="bo-via">${opt("runner", "Runner", f.via)}${opt("signal", "Signal", f.via)}</select>` : ""}
+    ${signal ? `<label for="bo-signal">Signal</label><select id="bo-signal">${b.signals.map((s) => opt(s.id, s.id[0].toUpperCase() + s.id.slice(1), f.signal)).join("")}</select>` : `
+    <label for="bo-kind">Task</label><select id="bo-kind">${kinds.map((k) => opt(k, TASK[k], f.kind)).join("")}</select>
+    ${needsPlace || (f.kind === "attack" && !targets.length) ? `<label for="bo-place">Where</label><select id="bo-place">${b.field.places.map((p) => opt(p.id, p.name, f.place)).join("")}</select>` : ""}
+    ${targets.length ? `<label for="bo-target">${f.kind === "attack" ? "Enemy" : "Formation"}</label><select id="bo-target">${targets.map((m) => opt(m.id, m.label, f.target)).join("")}</select>` : ""}
+    ${f.kind === "attack" ? `<span></span><label class="check"><input type="checkbox" id="bo-limit" ${f.limit ? "checked" : ""}> Not past the stream</label>` : ""}
+    ${!self && f.kind !== "attack" ? `<label for="bo-when">Then</label><select id="bo-when">${opt("", "–", f.when)}${opt("enemy_engaged", "Attack when engaged", f.when)}${opt("enemy_horse_seen", "Attack on seeing horse", f.when)}</select>` : ""}`}
+    <span></span><button id="bo-add">Add order</button></div>`;
+  return { html, action };
+}
+function battleScreen(v: View): string {
+  const b = v.battle!;
+  const glyphs = b.hq.marks.map(glyphOf);
+  const net = b.hq.network.map((n) => `<tr><td>${esc(battleName(v, n.commander))}</td><td>${esc(taskWords(v, n.task))}</td><td>${esc(STATUS[n.status] ?? n.status)}</td><td class="n">${n.lastContact >= b.t ? "–" : mins(n.lastContact)}</td></tr>`).join("");
+  const noteText = (n: (typeof b.notes)[number]) => n.kind === "report_received" ? `Report from ${battleName(v, n.from!)}` : n.kind === "danger" ? n.text! : n.kind === "order_sent" ? `Order to ${battleName(v, n.commander!)} sent${n.via === "signal" ? " by signal" : " by runner"}` : n.kind === "end" ? n.why! : n.kind;
+  const notes = [...b.notes].reverse().slice(0, 14).map((n) => `<div class="letter${n.kind === "danger" ? " alarm" : ""}"><span class="when">${clock(n.t)}</span> ${esc(noteText(n))}</div>`).join("");
+  const form = battleForm(v);
+  return `<div class="eco-grid battle eco">
+    <div class="card map">${battleSvg(b.field, glyphs, { hq: { x: b.hq.x, y: b.hq.y } })}</div>
+    <div class="col">
+      <div class="card"><h2>Commanders</h2><div class="scroll"><table class="net"><tr><th>Commander</th><th>Orders</th><th>Status</th><th class="n">Last word</th></tr>${net}</table></div></div>
+      <div class="card"><h2>Order</h2>${form.html}</div>
+      <div class="card"><h2>Reports</h2><div class="letters">${notes || "–"}</div></div>
+    </div></div>`;
+}
+
 function render() {
   const v = st.sim.viewOf("player");
   grainBands = v.world.grain?.bandDays ?? [];
@@ -538,10 +621,10 @@ function render() {
   <div class="status-row" aria-label="Realm status">${coinStatus(v)}</div>
   ${st.tab === "settings" ? settingsTab() : `
   <div class="pause ${cls}">${batchBlock(v)}${(st.paused === "report" && batchBlock(v)) || (st.paused === "advice" && choices(v).length) ? "" : `<span class="what">${tone(pauseText(v))}</span>`}${why ? `<span class="why-line">${esc(why)}</span>` : ""}
-    ${st.paused ? choicesBlock(v) : ""}
-    <span class="queue">${st.queue.map((a, i) => ({ a, i })).filter(({ a }) => !isShown(a)).map(({ a, i }) => `<span class="chip">${esc(actionText(v, a))} <button data-unq="${i}" aria-label="Remove">×</button></span>`).join("")}</span>
+    ${st.paused && st.paused !== "battle" ? choicesBlock(v) : ""}
+    <span class="queue">${st.queue.map((a, i) => ({ a, i })).filter(({ a }) => !isShown(a)).map(({ a, i }) => `<span class="chip">${esc(textOf(v, a))} <button data-unq="${i}" aria-label="Remove">×</button></span>`).join("")}</span>
     ${st.error ? `<span class="err">${esc(st.error)}</span>` : ""}</div>
-  ${st.tab === "economy" ? economyTab(v) : `<div class="grid">${court(v)}${map(v)}${side(v)}</div>`}
+  ${st.tab === "economy" ? economyTab(v) : st.paused === "battle" && v.battle ? battleScreen(v) : `<div class="grid">${court(v)}${map(v)}${side(v)}</div>`}
   ${st.observer ? observer() : ""}`}`;
   void o;
   syncMore();
@@ -550,7 +633,7 @@ function render() {
 
 document.addEventListener("click", (e) => {
   const t = e.target as HTMLElement;
-  const el = t.closest("[data-act],[data-toggle],[data-mission],[data-place],[data-q],[data-unq],[data-letter],[data-issue],[data-close-letter],[data-use-levy],#go,#restart,#settings-tab,#economy-tab,#o-add,#eco-add,#copy-log") as HTMLElement | null;
+  const el = t.closest("#bo-add,[data-act],[data-toggle],[data-mission],[data-place],[data-q],[data-unq],[data-letter],[data-issue],[data-close-letter],[data-use-levy],#go,#restart,#settings-tab,#economy-tab,#o-add,#eco-add,#copy-log") as HTMLElement | null;
   if (!el) return;
   if (el.dataset.useLevy !== undefined) { st.draft.action = "p:levy"; return render(); }
   if (el.dataset.letter) { const id = Number(el.dataset.letter); st.openLetter = st.openLetter === id ? null : id; return render(); }
@@ -579,6 +662,7 @@ document.addEventListener("click", (e) => {
   if (el.id === "restart") return start(st.seed, false);
   if (el.id === "settings-tab") { st.tab = st.tab === "settings" ? "game" : "settings"; return render(); }
   if (el.id === "economy-tab") { st.tab = st.tab === "economy" ? "game" : "economy"; return render(); }
+  if (el.id === "bo-add") { const a = battleForm(st.sim.viewOf("player")).action; if (a) queue(a); return; }
   if (el.id === "eco-add") { const a = ecoForm(st.sim.viewOf("player")).action; if (a) queue(a); return; }
   if (el.id === "o-add") {
     const pa = st.draft.action.slice(2);
@@ -597,6 +681,9 @@ document.addEventListener("change", (e) => {
   const t = e.target as HTMLInputElement | HTMLSelectElement;
   if (t.id === "observer-toggle") { st.observer = (t as HTMLInputElement).checked; return render(); }
   if (t.id === "eco-qty") { st.eco.qty = Number(t.value); return render(); }
+  const bo = ({ "bo-to": "to", "bo-kind": "kind", "bo-place": "place", "bo-target": "target", "bo-when": "when", "bo-via": "via", "bo-signal": "signal" } as Record<string, "to" | "kind" | "place" | "target" | "when" | "via" | "signal">)[t.id];
+  if (bo) { st.bo[bo] = t.value; return render(); }
+  if (t.id === "bo-limit") { st.bo.limit = (t as HTMLInputElement).checked; return render(); }
   const eco = ({ "eco-act": "act", "eco-good": "good", "eco-from": "from", "eco-to": "to", "eco-comm": "community", "eco-fort": "fort" } as Record<string, "act" | "good" | "from" | "to" | "community" | "fort">)[t.id];
   if (eco) { st.eco[eco] = t.value; if (eco === "act" || eco === "good") { st.eco.from = ""; st.eco.to = ""; } return render(); }
   if (t.id === "eco-consult") { st.eco.consult = (t as HTMLInputElement).checked; return render(); }
@@ -614,4 +701,7 @@ document.addEventListener("change", (e) => {
   }
 });
 document.addEventListener("keydown", (e) => { if (e.key === "O" && e.shiftKey) { st.observer = !st.observer; render(); } });
+document.head.insertAdjacentHTML("beforeend", `<style>${BATTLE_CSS}
+.battle { align-items: start; } .battle .net td { white-space: normal; } .battle .letters { max-height: 260px; }
+</style>`);
 start(st.seed);
