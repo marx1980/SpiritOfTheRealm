@@ -576,6 +576,18 @@ function battleForm(v: View): { html: string; action: PlayerAction | null } {
     <span></span><button id="bo-add">Add order</button></div>`;
   return { html, action };
 }
+/** The battle view keeps its frame while what is seen stays inside it, so the field does not jump about between steps. */
+let lastBattleBox: { key: string; box: string } | undefined;
+function battleView(field: Parameters<typeof frameBox>[1], pts: { x: number; y: number }[]): string {
+  const key = `${field.width}x${field.height}:${window.innerWidth < 600 ? 1 : 1.5}`;
+  if (lastBattleBox?.key === key) {
+    const [x, y, w, h] = lastBattleBox.box.split(" ").map(Number), m = 90;
+    if (pts.every((p) => p.x >= x + m && p.x <= x + w - m && p.y >= y + m && p.y <= y + h - m)) return lastBattleBox.box;
+  }
+  const box = frameBox(pts, field, window.innerWidth < 600 ? 1 : 1.5, 1400);
+  lastBattleBox = { key, box };
+  return box;
+}
 function battleScreen(v: View): string {
   const b = v.battle!;
   const glyphs = b.hq.marks.map(glyphOf);
@@ -584,7 +596,7 @@ function battleScreen(v: View): string {
   const notes = [...b.notes].reverse().slice(0, 14).map((n) => `<div class="letter${n.kind === "danger" ? " alarm" : ""}"><span class="when">${clock(n.t)}</span> ${esc(noteText(n))}</div>`).join("");
   const form = battleForm(v);
   return `<div class="eco-grid battle eco">
-    <div class="card map">${battleSvg(b.field, glyphs, { hq: { x: b.hq.x, y: b.hq.y }, viewBox: frameBox([...framePoints(glyphs), b.hq], b.field, window.innerWidth < 600 ? 1 : 1.5, 1400) })}</div>
+    <div class="card map">${battleSvg(b.field, glyphs, { hq: { x: b.hq.x, y: b.hq.y }, viewBox: battleView(b.field, [...framePoints(glyphs), b.hq]) })}</div>
     <div class="col">
       <div class="card"><h2>Commanders</h2><div class="scroll"><table class="net"><tr><th>Commander</th><th>Orders</th><th>Status</th><th class="n">Last word</th></tr>${net}</table></div></div>
       <div class="card"><h2>Order</h2>${form.html}</div>

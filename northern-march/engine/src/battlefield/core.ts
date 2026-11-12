@@ -42,7 +42,7 @@ export interface BattleParams {
   signal: { range: number; missPermille: { base: number; rain: number; dust: number } };
   voiceRange: number; reportEvery: number; reportLossPermille: number;
   /** Ground a formation takes up: the least distance kept from a friendly formation, and from an enemy it is fighting. */
-  spacing: { friends: number; enemies: number };
+  spacing: { friends: number; enemies: number; overlap: number; frontage: number };
   cohesion: { start: number; rout: number; retreat: number; disorganised: number; rallied: number; perLossPercent: number; losing: number; winning: number; underFire: number; outnumbered: number;
     neighbourRout: number; neighbourRetreat: number; unannouncedWithdrawal: number; commanderBase: number; rulerNear: number; recover: number; tired: number };
   rates: { routTarget: number; retreatTarget: number; disorganisedTarget: number; ridgeDefence: number; woodCover: number; mountedVsDisordered: number; noise: [number, number] };
@@ -73,9 +73,9 @@ export interface BattleSetup {
 }
 
 // ---- record ---------------------------------------------------------------------------------------------------------
-export interface FrameFormation { id: string; side: Side; kind: Kind; label: string; commander: string; men: number; x: number; y: number; behaviour: Behaviour; task: Task }
+export interface FrameFormation { id: string; side: Side; kind: Kind; label: string; commander: string; men: number; x: number; y: number; behaviour: Behaviour; task: Task; shooting?: string }
 export interface Frame { t: number; formations: FrameFormation[]; ruler?: { x: number; y: number } }
-export interface Mark { id: string; side: Side; kind: Kind; label: string; x: number; y: number; behaviour: Behaviour; menBand: "few" | "some" | "many"; category: "observed" | "reported" | "inferred"; source: string; age: number; stale: boolean }
+export interface Mark { id: string; side: Side; kind: Kind; label: string; x: number; y: number; behaviour: Behaviour; menBand: "few" | "some" | "many"; category: "observed" | "reported" | "inferred"; source: string; age: number; stale: boolean; shooting?: string }
 export interface NetworkRow { commander: string; task: Task | null; status: "none" | "dispatched" | "presumed delivered" | "confirmed" | "lost"; lastContact: number }
 export interface HqFrame { t: number; x: number; y: number; marks: Mark[]; network: NetworkRow[] }
 export interface Note {
@@ -191,11 +191,13 @@ export function wouldPursue(x: PursuitInput): { pursue: boolean; urge: number; r
 
 // ---- the battle -----------------------------------------------------------------------------------------------------
 interface Sighting { id: string; x: number; y: number; behaviour: Behaviour; men: number; t: number; source: string; how: "observed" | "reported" }
-interface F extends FormationSetup { start: number; cohesion: number; fatigue: number; behaviour: Behaviour; task: Task; acc: number; lostSteps: number[]; doneSteps: number[]; engaged: boolean; underFire: boolean; risingFrom: number; slot: number; chase: string }
+interface F extends FormationSetup { shotAt: string; start: number; cohesion: number; fatigue: number; behaviour: Behaviour; task: Task; acc: number; lostSteps: number[]; doneSteps: number[]; engaged: boolean; underFire: boolean; risingFrom: number; slot: number; chase: string }
 interface C extends CommanderSetup { x: number; y: number; task: Task; sight: Map<string, Sighting>; lastReport: number; menAtReport: number; contact: boolean; orderIds: number[]; reportedDecisions: number[] }
 interface Runner { id: number; kind: "order" | "report"; orderId?: number; from: string; to: string; x: number; y: number; tx: number; ty: number; searching: number; done: boolean; payload?: Sighting[]; decisions?: { orderId: number; decision: string; task: Task }[] }
 
 const dist = (ax: number, ay: number, bx: number, by: number) => Math.floor(Math.sqrt((ax - bx) * (ax - bx) + (ay - by) * (ay - by)));
+/** How far apart two formations' fronts are: a formation is a line, so men across a frontage can reach men beside the one opposite. */
+const reachDist = (ax: number, ay: number, bx: number, by: number, frontage: number) => { const dx = Math.max(0, Math.abs(ax - bx) - frontage), dy = ay - by; return Math.floor(Math.sqrt(dx * dx + dy * dy)); };
 const inside = (r: Rect, x: number, y: number) => x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1;
 /** Does the segment a-b pass through the rectangle (beyond its end points' own cover)? Liang-Barsky clip. */
 function crosses(r: Rect, ax: number, ay: number, bx: number, by: number): boolean {
@@ -221,7 +223,7 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
   const fs = new Map<string, F>(), order: string[] = [];
   for (const s of setup.formations) {
     const k = P.kinds[s.kind];
-    fs.set(s.id, { ...s, start: s.men, cohesion: Math.min(P.cohesion.start, 400 + k.discipline / 2), fatigue: 0, behaviour: "good_order", task: { kind: "hold" }, acc: 0, lostSteps: [], doneSteps: [], engaged: false, underFire: false, risingFrom: 0, slot: 0, chase: "" });
+    fs.set(s.id, { ...s, start: s.men, cohesion: Math.min(P.cohesion.start, 400 + k.discipline / 2), fatigue: 0, behaviour: "good_order", task: { kind: "hold" }, acc: 0, lostSteps: [], doneSteps: [], engaged: false, underFire: false, risingFrom: 0, slot: 0, chase: "", shotAt: "" });
     order.push(s.id);
   }
   const cs = new Map<string, C>();
@@ -414,6 +416,11 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
   const enemiesOf = (f: F) => order.map((id) => fs.get(id)!).filter((g) => live(g) && g.side !== f.side);
   const nearestEnemy = (f: F) => enemiesOf(f).sort((a, b) => dist(f.x, f.y, a.x, a.y) - dist(f.x, f.y, b.x, b.y) || (a.id < b.id ? -1 : 1))[0];
   const sightOf = (f: F) => cs.get(f.commander)?.sight;
+  // every formation faces the enemy's side of the field: the crown pushes up the field, the raiders down it
+  const fwd = (f: F) => (f.side === "crown" ? -1 : 1);
+  const ahead = (f: F, e: F) => (e.y - f.y) * fwd(f) >= -40;
+  /** The spot in front of an enemy at a given reach, on this formation's own side of it. */
+  const frontOf = (f: F, e: { x: number; y: number }, reach: number) => ({ x: e.x, y: e.y - fwd(f) * reach });
   const moveToward = (f: F, tx: number, ty: number, speed: number, stopAt = 0) => {
     const d = dist(f.x, f.y, tx, ty);
     if (d <= stopAt + 2) return false;
@@ -434,15 +441,17 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
       case "rout": moved = moveToward(f, f.x, edge, Math.floor(k.speed * 18 / 10)); break;
       case "retreat": moved = moveToward(f, f.x, edge, Math.floor(k.speed * 13 / 10)); break;
       case "withdrawing": { const p = place(f.task.place) ?? { x: f.x, y: edge }; moved = moveToward(f, slotOf(f, p).x, slotOf(f, p).y, Math.max(1, Math.floor(k.speed * 8 / 10))); break; }
-      case "yielding": { const e = nearestEnemy(f); if (e) { const d = Math.max(1, dist(f.x, f.y, e.x, e.y)); moved = moveToward(f, f.x + Math.trunc(((f.x - e.x) * 40) / d), f.y + Math.trunc(((f.y - e.y) * 40) / d), 1); } break; }
+      case "yielding": { if (nearestEnemy(f)) moved = moveToward(f, f.x, edge, 1); break; } // giving ground straight back, still facing the enemy
       case "pursuing": {
         // after the men they saw break, at their own pace, never past a line they were told not to cross
         const e = fs.get(f.chase);
         if (!e || !live(e)) break;
-        let ty = e.y;
+        // from behind the fleeing men; archers keep at bowshot and shoot into them
+        const fr = frontOf(f, e, k.missileRange > 0 ? k.missileRange - 30 : k.meleeRange - 5);
+        let ty = fr.y;
         const lim = line(f.task.limit);
         if (lim) ty = f.side === "crown" ? Math.max(ty, lim.y + 20) : Math.min(ty, lim.y - 20);
-        moved = moveToward(f, e.x, ty, k.speed, ty === e.y ? k.meleeRange - 5 : 0);
+        moved = moveToward(f, fr.x, ty, k.speed);
         break;
       }
       case "good_order": {
@@ -454,16 +463,23 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
           // the target as his commander believes it to be, or as the men see it; nearest seen enemy if none named
           const sight = sightOf(f);
           let tgt = t.target ? fs.get(t.target) : undefined;
-          if (!tgt || !live(tgt) || tgt.behaviour === "gone") tgt = enemiesOf(f).filter((e) => sees(f.x, f.y, e.x, e.y) || sight?.has(e.id)).sort((a, b) => dist(f.x, f.y, a.x, a.y) - dist(f.x, f.y, b.x, b.y) || (a.id < b.id ? -1 : 1))[0];
+          if (!tgt || !live(tgt) || tgt.behaviour === "gone") {
+            // the nearest enemy ahead of them; one off to the side or behind only if none is ahead
+            const known = enemiesOf(f).filter((e) => sees(f.x, f.y, e.x, e.y) || sight?.has(e.id));
+            const pool = known.some((e) => ahead(f, e)) ? known.filter((e) => ahead(f, e)) : known;
+            tgt = pool.sort((a, b) => dist(f.x, f.y, a.x, a.y) - dist(f.x, f.y, b.x, b.y) || (a.id < b.id ? -1 : 1))[0];
+          }
           const p = place(t.place);
           if (!tgt && p) { moved = moveToward(f, p.x, p.y, k.speed); break; }
           if (!tgt) break;
           const seen = sees(f.x, f.y, tgt.x, tgt.y) ? { x: tgt.x, y: tgt.y } : sight?.get(tgt.id) ?? { x: tgt.x, y: tgt.y };
-          let ty = seen.y;
+          // they come at the enemy face on, from their own side: up the field for the crown, down it for the raiders
+          const reach = k.missileRange > 0 && (f.kind === "archers" || f.kind === "bowmen") ? k.missileRange - 30 : k.meleeRange - 5;
+          const fr = frontOf(f, seen, reach);
+          let ty = fr.y;
           const lim = line(t.limit);
           if (lim) ty = f.side === "crown" ? Math.max(ty, lim.y + 20) : Math.min(ty, lim.y - 20);
-          const reach = k.missileRange > 0 && (f.kind === "archers" || f.kind === "bowmen") ? k.missileRange - 30 : k.meleeRange - 5;
-          moved = moveToward(f, seen.x, ty, k.speed, ty === seen.y ? reach : 0);
+          moved = moveToward(f, fr.x, ty, k.speed);
           break;
         }
       }
@@ -476,7 +492,8 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
     const ls = order.map((id) => fs.get(id)!).filter(live);
     for (let i = 0; i < ls.length; i++) for (let j = i + 1; j < ls.length; j++) {
       const a = ls[i], b = ls[j];
-      const want = a.side === b.side ? P.spacing.friends : P.spacing.enemies;
+      if (a.side !== b.side) continue;
+      const want = P.spacing.friends;
       let dx = b.x - a.x, dy = b.y - a.y;
       const d = dist(a.x, a.y, b.x, b.y);
       if (d >= want) continue;
@@ -487,6 +504,20 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
       b.x = Math.max(0, Math.min(field.width, b.x + ux)); b.y = Math.max(0, Math.min(field.height, b.y + uy));
       keepLimit(a); keepLimit(b);
     }
+    // then the fronts, last, so the press of friends cannot shove a man through the enemy line
+    for (let pass = 0; pass < 4; pass++) for (let i = 0; i < ls.length; i++) for (let j = i + 1; j < ls.length; j++) if (ls[i].side !== ls[j].side) front(ls[i], ls[j]);
+  };
+  // enemies that meet stay face to face, each on its own side: the crown's men below, the raiders above. Formations close
+  // enough to touch never pass through or round each other; if one has got level with or past the other, both are put back.
+  const front = (a: F, b: F) => {
+    if (Math.abs(a.x - b.x) >= P.spacing.overlap || Math.abs(a.y - b.y) >= P.spacing.overlap) return;
+    const c = a.side === "crown" ? a : b, r = a.side === "crown" ? b : a;
+    // directly opposite they stand a pace apart; off to the side they may come level, but never past
+    const short = r.y + (Math.abs(a.x - b.x) < P.spacing.enemies * 2 ? P.spacing.enemies : 0) - c.y;
+    if (short <= 0) return;
+    const down = Math.ceil(short / 2);
+    c.y = Math.min(field.height, c.y + down); r.y = Math.max(0, r.y - (short - down));
+    keepLimit(c); keepLimit(r);
   };
   // men told not to cross a line are not shoved across it by the press of other formations
   const keepLimit = (f: F) => {
@@ -497,16 +528,16 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
   // ---- fighting ----
   const fight = (t: number) => {
     const losses = new Map<string, number>(), dealt = new Map<string, number>();
-    for (const id of order) { const f = fs.get(id)!; f.engaged = false; f.underFire = false; }
+    for (const id of order) { const f = fs.get(id)!; f.engaged = false; f.underFire = false; f.shotAt = ""; }
     for (const id of order) {
       const a = fs.get(id)!;
       if (!live(a) || a.behaviour === "rout" || a.men <= 0) continue;
       const ka = P.kinds[a.kind];
       const foes = enemiesOf(a).map((e) => ({ e, d: dist(a.x, a.y, e.x, e.y) })).sort((x, y) => x.d - y.d || (x.e.id < y.e.id ? -1 : 1));
-      const melee = foes.find((x) => x.d <= ka.meleeRange);
+      const melee = foes.find((x) => reachDist(a.x, a.y, x.e.x, x.e.y, P.spacing.frontage) <= ka.meleeRange);
       let tgt: F | undefined, rate = 0;
       if (melee) { tgt = melee.e; rate = ka.meleeRate; a.engaged = true; tgt.engaged = true; }
-      else if (ka.missileRange > 0 && a.behaviour !== "retreat") { const m = foes.find((x) => x.d <= ka.missileRange && sees(a.x, a.y, x.e.x, x.e.y)); if (m) { tgt = m.e; rate = ka.missileRate; tgt.underFire = true; } }
+      else if (ka.missileRange > 0 && a.behaviour !== "retreat") { const m = foes.find((x) => x.d <= ka.missileRange && sees(a.x, a.y, x.e.x, x.e.y)); if (m) { tgt = m.e; rate = ka.missileRate; tgt.underFire = true; a.shotAt = tgt.id; } }
       if (!tgt || rate === 0) continue;
       if (melee && !notes.some((n) => n.kind === "contact" && n.formation === a.id && n.to === tgt!.id && t - n.t < 600)) notes.push({ t, kind: "contact", formation: a.id, to: tgt.id });
       // men lost by the target this step, in thousandths of a man
@@ -647,7 +678,8 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
     for (const f of rs) {
       if (!live(f)) continue;
       // riders look for a soft target (archers, the shaken, the guard); the rest go for the nearest
-      const pool = crownLive.filter((g) => sees(f.x, f.y, g.x, g.y) || dist(f.x, f.y, g.x, g.y) < 1600);
+      const near = crownLive.filter((g) => sees(f.x, f.y, g.x, g.y) || dist(f.x, f.y, g.x, g.y) < 1600);
+      const pool = near.some((g) => ahead(f, g)) ? near.filter((g) => ahead(f, g)) : near; // down the field first, as the crown pushes up it
       const soft = P.kinds[f.kind].mounted ? pool.filter((g) => g.kind === "archers" || (g.behaviour !== "good_order" && g.kind !== "guard")) : [];
       const pick = (soft.length ? soft : pool).sort((a, b) => dist(f.x, f.y, a.x, a.y) - dist(f.x, f.y, b.x, b.y) || (a.id < b.id ? -1 : 1))[0];
       f.task = pick ? { kind: "attack", target: pick.id } : { kind: "advance", place: "gate" };
@@ -678,7 +710,7 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
     if (dangerFirst < 0 || dangerFirst >= t) return false;
     const gate = place("gate");
     if (gate && dist(guard.x, guard.y, gate.x, gate.y) <= R.wallsRange) return false;
-    const inMelee = foes.some((f) => dist(f.x, f.y, guard.x, guard.y) <= P.kinds[f.kind].meleeRange);
+    const inMelee = foes.some((f) => reachDist(f.x, f.y, guard.x, guard.y, P.spacing.frontage) <= P.kinds[f.kind].meleeRange);
     const shot = foes.some((f) => P.kinds[f.kind].missileRange > 0 && dist(f.x, f.y, guard.x, guard.y) <= P.kinds[f.kind].missileRange);
     const exposed = !live(guard) || guard.behaviour === "rout";
     const p = inMelee ? Math.floor((R.meleePermille * (1000 - guard.cohesion + (exposed ? 500 : 0))) / 1000) : shot ? R.missilePermille : 0;
@@ -705,7 +737,7 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
 
   // ---- recording ----
   const frame = (t: number) => {
-    frames.push({ t, formations: order.map((id) => { const f = fs.get(id)!; return { id, side: f.side, kind: f.kind, label: f.label, commander: f.commander, men: f.men, x: f.x, y: f.y, behaviour: f.behaviour, task: { ...f.task } }; }), ...(guard ? { ruler: { x: guard.x, y: guard.y } } : {}) });
+    frames.push({ t, formations: order.map((id) => { const f = fs.get(id)!; return { id, side: f.side, kind: f.kind, label: f.label, commander: f.commander, men: f.men, x: f.x, y: f.y, behaviour: f.behaviour, task: { ...f.task }, ...(f.shotAt && f.behaviour !== "retreat" && f.behaviour !== "rout" ? { shooting: f.shotAt } : {}) }; }), ...(guard ? { ruler: { x: guard.x, y: guard.y } } : {}) });
     const h = hqPos(), marks: Mark[] = [];
     for (const id of order) {
       const f = fs.get(id)!, s = hqSight.get(id);
@@ -718,7 +750,7 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
         const p = place(e.task.place);
         if (p) { const d = dist(x, y, p.x, p.y), go = Math.min(d, P.kinds[f.kind].speed * (t - e.eta)); if (d > 0) { x += Math.trunc(((p.x - x) * go) / d); y += Math.trunc(((p.y - y) * go) / d); } category = "inferred"; if (e.status === "dispatched") e.status = "presumed delivered"; }
       }
-      marks.push({ id, side: f.side, kind: f.kind, label: f.label, x, y, behaviour: s.behaviour, menBand: band(s.men), category, source: s.source, age, stale: age > P.staleAfter });
+      marks.push({ id, side: f.side, kind: f.kind, label: f.label, x, y, behaviour: s.behaviour, menBand: band(s.men), category, source: s.source, age, stale: age > P.staleAfter, ...(observed && f.shotAt && f.behaviour !== "retreat" && f.behaviour !== "rout" && hqSight.get(f.shotAt) ? { shooting: f.shotAt } : {}) });
     }
     const network: NetworkRow[] = [...cs.values()].filter((c) => c.side === "crown" && c.id !== setup.hq).map((c) => { const e = hqOrders.get(c.id); return { commander: c.id, task: e ? e.task : null, status: e ? e.status : "none", lastContact: e?.lastContact ? t - e.lastContact : t }; });
     hqFrames.push({ t, x: h.x, y: h.y, marks, network });

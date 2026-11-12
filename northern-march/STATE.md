@@ -1,6 +1,6 @@
 # STATE
 
-Updated: 12 Nov 2026, Phase 8: pursuit added as an eighth behaviour, state words on units, framed battle view, H-03 rewritten as a playability test (D-063); regression round restarts on fresh blocks (D-064), H-03 waits for testers; Phase 8 minimal battle slice built 9 Nov (D-060..D-062); marketplace gate round closed (D-059); sell amounts, Send, captain on the map (D-053, D-055, D-056); economy gaps filled (D-045); Economy tab on the page (D-044); Phase 7A extended (advisers on communities, petition repetition, D-036..D-038) and the wider economy built, stages 1-3 (D-039..D-043), all gated on march-0.8; earlier: Phase 6 (6A) built; Agent Playtest Lab L0-L7 built (Opus 5.5). Plan in force: `docs/IMPLEMENTATION_PLAN.md` v4; lab: `docs/playtest/` (v4 + V4_1_AMENDMENTS, D-022).
+Updated: 13 Nov 2026, Phase 8: fronts (each side faces the other, no passing through), frontage melee, volleys recorded and drawn, smaller units with finer emblems, a drawn landscape (D-065); earlier: pursuit added as an eighth behaviour, state words on units, framed battle view, H-03 rewritten as a playability test (D-063); regression round restarts on fresh blocks (D-064), H-03 waits for testers; Phase 8 minimal battle slice built 9 Nov (D-060..D-062); marketplace gate round closed (D-059); sell amounts, Send, captain on the map (D-053, D-055, D-056); economy gaps filled (D-045); Economy tab on the page (D-044); Phase 7A extended (advisers on communities, petition repetition, D-036..D-038) and the wider economy built, stages 1-3 (D-039..D-043), all gated on march-0.8; earlier: Phase 6 (6A) built; Agent Playtest Lab L0-L7 built (Opus 5.5). Plan in force: `docs/IMPLEMENTATION_PLAN.md` v4; lab: `docs/playtest/` (v4 + V4_1_AMENDMENTS, D-022).
 
 ## Built
 **Engine (`engine/`, TypeScript on Node 22, no build step).** `npm test`: 160 tests passed at the L0 baseline; since then `test/saveload.test.ts` (+1) and `test/playtest.test.ts` (10) pass on their own; full suite re-run pending. `npx tsc -p .` is clean.
@@ -68,7 +68,7 @@ Phases 0-4: see DECISIONS D-001 to D-014.
 
 ## Needs a human
 - H-03 battle screen playability (version 2): at least 5 testers, two on a phone, on the Battle Clips page, shared as Contributors (`docs/H03_PROTOCOL.md`); it also picks the flash style. The bars are proposals (D-063) for you to confirm. Phase 8 completes only on its PASS or your override.
-- Regression round after pursuit (D-064): 7A 340000, G-12 350000, G-13 360000, tune-seed checks.
+- Regression round after pursuit and fronts (D-064, D-065): 7A 340000, G-12 350000, G-13 360000, tune-seed checks, on the D-065 code.
 - Testers for H-01/H-02 at 7A (`docs/H01_PROTOCOL.md`, now with C11-C12 and the handover worksheet).
 - Optional: run `node src/cli.ts g01 --seeds 1..100` in `engine/` on your own computer; it must end with the combined hash above.
 

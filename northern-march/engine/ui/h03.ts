@@ -50,10 +50,10 @@ function plan(seed: string): Doc {
 }
 
 const outline = (g: Glyph) => {
-  const w = g.width + 70, top = g.side === "raiders" ? g.y - 75 : g.y - 105, h = 185;
+  const w = g.width + 56, top = g.side === "raiders" ? g.y - 52 : g.y - 80, h = 140;
   return `<rect class="outline" x="${g.x - w / 2}" y="${top}" width="${w}" height="${h}" rx="18"/>`;
 };
-const hits = (gs: Glyph[]) => gs.map((g) => `<rect class="hit" data-hit="${esc(g.id)}" x="${g.x - g.width / 2 - 40}" y="${g.side === "raiders" ? g.y - 70 : g.y - 100}" width="${g.width + 80}" height="180"/>`).join("");
+const hits = (gs: Glyph[]) => gs.map((g) => `<rect class="hit" data-hit="${esc(g.id)}" x="${g.x - g.width / 2 - 30}" y="${g.side === "raiders" ? g.y - 50 : g.y - 78}" width="${g.width + 60}" height="136"/>`).join("");
 
 function picture(step: string): string {
   const [kind, id, style] = step.split(":"), it = items.get(id)!;

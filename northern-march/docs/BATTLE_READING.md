@@ -14,6 +14,8 @@ For testers and for anyone checking the battle drawings (D-063). The screen show
 
 Each block carries its type inside it: a sword for foot and warbands, an arrow for archers and bowmen, a horse for cavalry and riders, a crown for the queen's guard. A captain's own company also has a small knight at the left end of the block. The small flag above a block is its standard: upright when the men obey, leaning when control slips, absent in a rout. It adds nothing beyond the state word.
 
+Archers and bowmen shooting are drawn as a dashed arc from them to their target, with arrows falling on it. The field shows meadow, our farmland and the fort wall at the bottom, the raiders' tents at the top, the ridge as a low hill, the wood as trees and the stream with its ford. The crown always faces up the field and the raiders down it; where the two meet they stand face to face.
+
 | Behaviour | Word | What it looks like | What it means in the battle |
 |---|---|---|---|
 | In good order | none | One solid, unbroken block, banner upright. | Men are together and obeying orders. |

@@ -229,3 +229,36 @@ test("by default her guard falls back with her; if she insists on standing after
   assert.ok(harmed > 0, "standing in the way of a stronger enemy can cost her dearly");
   assert.ok(defaultHarmed < harmed, "the guard's own caution protects her when she leaves it to them");
 });
+
+test("the two sides keep their fronts: where they touch, the crown's men are below the raiders, never through or behind them", () => {
+  let checked = 0;
+  for (let seed = 1; seed <= 12; seed++) for (const raiders of [180, 360, 520]) {
+    const r = runBattle(sampleSetup({ seed, raiders }), []);
+    for (const f of r.frames) {
+      const live = f.formations.filter((x) => x.behaviour !== "gone");
+      for (const c of live.filter((x) => x.side === "crown")) for (const e of live.filter((x) => x.side === "raiders")) {
+        if (Math.abs(c.x - e.x) >= 220 || Math.abs(c.y - e.y) >= 220) continue;
+        checked++;
+        assert.ok(c.y >= e.y, `seed ${seed} raiders ${raiders} t ${f.t}: ${c.id} (${c.x},${c.y}) is past ${e.id} (${e.x},${e.y})`);
+      }
+    }
+  }
+  assert.ok(checked > 1000, "the sides do meet");
+});
+
+test("archers and bowmen shoot at an enemy in range, and the record says at whom; men running away do not shoot", () => {
+  let shots = 0;
+  for (let seed = 1; seed <= 6; seed++) {
+    const r = runBattle(sampleSetup({ seed, raiders: 360 }), []);
+    for (const f of r.frames) for (const x of f.formations) {
+      if (!x.shooting) continue;
+      shots++;
+      assert.ok(x.kind === "archers" || x.kind === "bowmen", `${x.id} ${x.kind} shoots`);
+      assert.ok(x.behaviour !== "rout" && x.behaviour !== "retreat", `${x.id} shoots while ${x.behaviour}`);
+      const t = f.formations.find((y) => y.id === x.shooting)!;
+      assert.ok(t.side !== x.side && Math.hypot(t.x - x.x, t.y - x.y) <= 201, `${x.id} shoots at ${t.id} in range: ${Math.round(Math.hypot(t.x - x.x, t.y - x.y))} m, ${x.behaviour}, target ${t.behaviour}`);
+    }
+    for (const h of r.hq) for (const m of h.marks) if (m.shooting) assert.equal(m.category, "observed", "headquarters draws arrows only where it sees them");
+  }
+  assert.ok(shots > 50);
+});

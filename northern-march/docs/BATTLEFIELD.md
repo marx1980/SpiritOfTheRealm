@@ -198,6 +198,7 @@ No player-facing morale bars. The player sees behaviours:
 - uncontrolled retreat;
 - rout;
 - pursuing (D-063): men who see the enemy break run after them out of formation, unless discipline, a commander close by or an order to keep their ground holds them. A limit ("do not pursue beyond the stream") stops them at the line. Pursuers are out of formation: they take harm as if disorganised, tire faster, leave a gap and are harder for runners to find.
+- fronts (D-065): each side faces the other's edge. Attackers take the nearest enemy ahead and meet it face on; where enemies are close, the crown's men are never above the raiders'. A formation fights across its frontage, not from a point.
 
 Each behaviour has a distinct visual and audio signature so it can be read without numbers. Every state but good order also carries its word on the unit, taken from headquarters' belief and drawn as observed or reported like the unit itself (D-063). How units seen breaking are made to stand out (no flash, a light pink flash, or a pale flash of their own colour) is decided by the Phase 8 test (H-03).
 

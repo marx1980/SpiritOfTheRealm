@@ -432,7 +432,9 @@
    "goneBelowPermille": 120,
    "spacing": {
     "friends": 150,
-    "enemies": 36
+    "enemies": 36,
+    "overlap": 220,
+    "frontage": 60
    }
   },
   "forces": {

@@ -28,7 +28,7 @@ for (let seed = 1; seed <= 30; seed++) for (const raiders of [180, 360, 520]) fo
 const pic = (f: HqFrame): Pic => ({ t: f.t, hq: { x: f.x, y: f.y }, glyphs: f.marks.filter((m) => m.behaviour !== "gone").map(glyphOf) });
 const seenBreaking = (m: Mark) => m.category === "observed" && !m.stale && (m.behaviour === "rout" || m.behaviour === "retreat");
 /** No other unit within this many metres: an outline round it holds one unit only. */
-const alone = (f: HqFrame, m: Mark, room = 170) => f.marks.every((x) => x.id === m.id || x.behaviour === "gone" || Math.hypot(x.x - m.x, x.y - m.y) > room);
+const alone = (f: HqFrame, m: Mark, room = 140) => f.marks.every((x) => x.id === m.id || x.behaviour === "gone" || Math.hypot(x.x - m.x, x.y - m.y) > room);
 const crownTrouble = (f: HqFrame) => f.marks.filter((m) => m.side === "crown" && seenBreaking(m)).map((m) => m.id);
 const items: Item[] = [];
 
