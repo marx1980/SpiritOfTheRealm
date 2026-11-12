@@ -110,7 +110,7 @@ const HORSEMAN = [
 ].join("");
 
 /** A knight in plate with a plume and a cross on his shield, drawn to the same size as the horseman, centred on the origin. */
-const KNIGHT = [
+export const KNIGHT = [
   `<path d="M-7 8V-4c0-7 3.5-11 7-11s7 4 7 11V8z"/>`,                                         // helm
   `<path d="M-7-3h14M0-3v11" fill="none" stroke-width="1.6"/>`,                                // visor and ridge
   `<path d="M1-14c3-6 10-6 13-1-4-1-8 0-13 1z"/>`,                                             // plume

@@ -3,6 +3,7 @@
 // (observed, reported, inferred, stale) changes the line and the fill, never the shape. An optional flash marks units seen
 // breaking. Pure: shared by the game and the clip page.
 import type { Behaviour, FieldSpec, Kind, Mark, Side } from "../src/battlefield/core.ts";
+import { KNIGHT } from "./maparts.ts";
 
 /** The word shown on a formation for its state; good order is the default and has none. */
 export const STATE_WORD: Record<Behaviour, string> = { good_order: "", yielding: "Yielding", disorganised: "Disorganised", rallying: "Rallying", withdrawing: "Withdrawing", retreat: "Retreat", rout: "Rout", pursuing: "Pursuing", gone: "" };
@@ -22,9 +23,24 @@ function jit(id: string, i: number, span: number) {
   return ((h >>> 0) % (2 * span + 1)) - span;
 }
 
+/** The type on the block: sword (foot, warband), arrow (archers, bowmen), horse (horse, riders), crown (guard); a knight beside a captain's own foot. */
+const ICONS: Record<string, string> = {
+  sword: `<path d="M0 -14 L3.5 -9 V3 H-3.5 V-9z"/><path d="M-9 4 H9 M0 4 V12" fill="none" stroke-width="3"/>`,
+  arrow: `<path d="M-11 9 L11 -9 M11 -9 h-8 M11 -9 v8 M-11 9 l-4 -1 M-11 9 l1 4 M-7 5 l-4 -1 M-7 5 l1 4" fill="none"/>`,
+  horse: `<path d="M-9 11 V1 C-9 -5 -4 -9 1 -9 L4 -13 L6 -9 L11 -3 L8 -1 L4 -2 L0 3 V11z"/>`,
+  crown: `<path d="M-10 8 L-12 -6 L-5 0 L0 -9 L5 0 L12 -6 L10 8z"/>`,
+};
+const ICON_OF: Record<string, string> = { foot: "sword", warband: "sword", archers: "arrow", bowmen: "arrow", horse: "horse", riders: "horse", guard: "crown" };
+const isCaptain = (g: Glyph) => g.side === "crown" && g.kind === "foot" && /^\S+'s /.test(g.label); // a captain's company is named for him
+function icon(g: Glyph): string {
+  const t = `<g class="ic" transform="scale(1.45)">${ICONS[ICON_OF[g.kind] ?? "sword"]}</g>`;
+  const k = isCaptain(g) ? `<g class="ic-k" transform="translate(${-g.width / 2 + 24} 0) scale(1)">${KNIGHT}</g>` : "";
+  return t + k;
+}
+
 /** One formation, centred on the origin, facing up (crown) or down (raiders: the caller flips it). */
 function body(g: Glyph): string {
-  const w = g.width, d = 34, hw = w / 2, banner = (tilt = 0) => `<g class="bn" transform="rotate(${tilt})"><line x1="0" y1="${-d / 2}" x2="0" y2="${-d / 2 - 34}"/><path d="M0 ${-d / 2 - 34} h22 l-6 7 l6 7 h-22z"/></g>`;
+  const w = g.width, d = 50, hw = w / 2, banner = (tilt = 0) => `<g class="bn" transform="rotate(${tilt})"><line x1="0" y1="${-d / 2}" x2="0" y2="${-d / 2 - 34}"/><path d="M0 ${-d / 2 - 34} h22 l-6 7 l6 7 h-22z"/></g>`;
   switch (g.behaviour) {
     case "good_order":
       return `<rect class="blk" x="${-hw}" y="${-d / 2}" width="${w}" height="${d}" rx="2"/>${banner()}`;
@@ -77,7 +93,7 @@ export function battleSvg(field: FieldSpec, glyphs: Glyph[], o: { hq?: { x: numb
   const lines = field.lines.map((l) => `<path class="stream" d="M0 ${l.y} C ${field.width * 0.25} ${l.y - 30}, ${field.width * 0.5} ${l.y + 30}, ${field.width} ${l.y - 10}"/><text class="lbl" x="40" y="${l.y - 14}">${esc(l.name)}</text>`).join("");
   const places = field.places.map((p) => `<text class="lbl pl" x="${p.x + 70}" y="${p.y + 6}">${esc(p.name)}</text>`).join("");
   // three layers: the units, then their names, then the state words on top (the words matter most when units crowd)
-  const bodies: string[] = [], names: string[] = [], states: string[] = [];
+  const bodies: string[] = [], names: string[] = [], states: string[] = [], icons: string[] = [];
   for (const g of glyphs.filter((g) => g.behaviour !== "gone")) {
     const known = g.category === "observed" && !g.stale ? "obs" : g.category === "inferred" ? "inf" : "rep";
     const flashing = o.flash && o.flash !== "none" && known === "obs" && BROKEN.includes(g.behaviour);
@@ -87,11 +103,14 @@ export function battleSvg(field: FieldSpec, glyphs: Glyph[], o: { hq?: { x: numb
     const at = `transform="translate(${g.x} ${g.y})"`, tone = `${g.side} ${known}${g.stale ? " stale" : ""}`;
     bodies.push(`<g class="${cls}" data-id="${esc(g.id)}" ${at}><g transform="${flip}">${body(g)}</g></g>`);
     // the name on the side away from the enemy, the state word on the side towards it
-    if (o.showLabels !== false) names.push(`<g class="tag ${tone}" ${at}><text class="lbl fl" y="${g.side === "raiders" ? -40 : 60}">${esc(g.label)}${esc(age)}</text></g>`);
+    // names are off unless asked for; what stays is the age of a report, so an old sighting is never read as fresh
+    const name = o.showLabels === true ? esc(g.label) : "";
+    if (name || age) names.push(`<g class="tag ${tone}" ${at}><text class="lbl fl" y="${g.side === "raiders" ? -40 : 60}">${name}${esc(age)}</text></g>`);
+    if (g.behaviour !== "rout") icons.push(`<g class="tag ${tone}" ${at}>${icon(g)}</g>`);
     const word = o.states === false ? "" : STATE_WORD[g.behaviour];
-    if (word) states.push(`<g class="tag ${tone}" ${at}><text class="lbl st" y="${g.side === "raiders" ? 100 : -78}">${esc(word)}${esc(o.showLabels === false ? age : "")}</text></g>`);
+    if (word) states.push(`<g class="tag ${tone}" ${at}><text class="lbl st" y="${g.side === "raiders" ? 100 : -78}">${esc(word)}</text></g>`);
   }
-  const fs = bodies.join("") + names.join("") + states.join("");
+  const fs = bodies.join("") + icons.join("") + names.join("") + states.join("");
   const hq = o.hq ? `<g class="hq" transform="translate(${o.hq.x} ${o.hq.y})"><circle r="16"/><path d="M-9 4 l3 -11 l6 6 l6 -6 l3 11 z"/></g>` : "";
   return `<svg class="field" viewBox="${o.viewBox ?? `0 0 ${field.width} ${field.height}`}" role="img" aria-label="Battlefield">${ridge}${wood}${lines}${places}${fs}${hq}${o.extra ?? ""}</svg>`;
 }
@@ -102,6 +121,8 @@ export const BATTLE_CSS = `
 .field .ridge { fill: color-mix(in srgb, var(--warn) 18%, var(--land)); stroke: color-mix(in srgb, var(--warn) 45%, var(--land)); stroke-width: 5; stroke-dasharray: 18 10; }
 .field .stream { fill: none; stroke: #6f9fbf; stroke-width: 16; opacity: .7; }
 .field .lbl { font: 600 34px var(--f-body); fill: var(--mute); paint-order: stroke; stroke: var(--land); stroke-width: 8px; }
+.field .ic { fill: #fff; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.field .ic-k { fill: #fff; stroke: #1f2a2e; stroke-width: 1.2; }
 .field .lbl.fl { font-size: 28px; text-anchor: middle; fill: var(--ink); font-weight: 400; }
 .field { --raid: #a0241c; --flash-pink: #ffb6d9; }
 .field .f.crown { --c: var(--accent); } .field .f.raiders { --c: var(--raid); }

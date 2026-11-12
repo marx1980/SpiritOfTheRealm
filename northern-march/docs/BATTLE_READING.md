@@ -12,6 +12,8 @@ For testers and for anyone checking the battle drawings (D-063). The screen show
 
 ## The eight behaviours
 
+Each block carries its type inside it: a sword for foot and warbands, an arrow for archers and bowmen, a horse for cavalry and riders, a crown for the queen's guard. A captain's own company also has a small knight at the left end of the block. The small flag above a block is its standard: upright when the men obey, leaning when control slips, absent in a rout. It adds nothing beyond the state word.
+
 | Behaviour | Word | What it looks like | What it means in the battle |
 |---|---|---|---|
 | In good order | none | One solid, unbroken block, banner upright. | Men are together and obeying orders. |
