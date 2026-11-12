@@ -6,7 +6,7 @@
 
 **Clips:** 28 behaviour clips (4 per behaviour, each from a different battle, both sides and several kinds of formation) and 12 marker items (6 seen now, 6 reported), cut from simulated battles by `tools/phase8_clips.ts` (seeds 1-24 at Northwatch, 180/360/520 raiders, with and without the queen, some with a withdrawal order). Each clip loops 6 frames, 30 battle seconds apart. The marked formation has a pointer; neighbours may be doing something else. Order is shuffled per tester (behaviour clips first, then markers).
 
-**Before:** testers are told only the seven behaviour names as they appear on the buttons, and that a formation "seen now" is drawn solid and one "reported" is drawn hollow with a dashed edge. No training clips, no feedback during the test.
+**Before:** from 2026-11-12 the page opens with a reading guide (the seven behaviours, what each looks like and means, the pointer, solid vs dashed), and the same reference is shown under every clip. No answer is revealed and no feedback is given. **Note:** with the reference visible, a run measures reading the guide, not unaided reading. Results from that version are a usability check, not the H-03 verdict. The verdict needs an unaided run (the earlier wording: only the seven names, no reference), or the user's explicit override.
 
 **Run:** at least 5 testers, one sitting each, no help. A tester who stops can reopen the page and resume.
 

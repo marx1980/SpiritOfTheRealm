@@ -8,10 +8,28 @@ declare const __CLIPS__: { version: number; items: Item[] };
 declare const __FIELD__: FieldSpec;
 type CF = { formations: { id: string; side: "crown" | "raiders"; kind: Glyph["kind"]; label: string; x: number; y: number; behaviour: Behaviour; men: number }[] };
 type Item = { id: string; kind: "behaviour"; truth: Behaviour; target: string; box: number[]; frames: CF[] } | { id: string; kind: "marker"; truth: "observed" | "reported"; target: string; box: number[]; frame: CF };
-interface Doc { order: string[]; answers: Record<string, string>; startedAt: number; finishedAt?: number }
+interface Doc { order: string[]; answers: Record<string, string>; startedAt: number; finishedAt?: number; guideSeenAt?: number }
 
 const LABEL: Record<Behaviour, string> = { good_order: "In good order", yielding: "Yielding ground", disorganised: "Becoming disorganised", rallying: "Officers rallying men", withdrawing: "Withdrawing in order", retreat: "Uncontrolled retreat", rout: "Rout", gone: "" };
 const BEH: Behaviour[] = ["good_order", "yielding", "disorganised", "rallying", "withdrawing", "retreat", "rout"];
+// what each behaviour should look like and mean (same text as docs/BATTLE_READING.md)
+const GUIDE: Record<string, { look: string; means: string }> = {
+  good_order: { look: "One solid, unbroken block, banner upright, men in a line.", means: "Men are together and obeying orders." },
+  yielding: { look: "Solid block, slightly shorter, banner tilted back, small chevrons (V shapes) under it.", means: "In contact with the enemy, losing men, still holding a line but giving ground slowly." },
+  disorganised: { look: "The block breaks into several uneven pieces, banner leaning.", means: "Men are still there but control is slipping. Usually not running." },
+  rallying: { look: "Men gathered in a tight cluster round an upright banner, with a dashed ring turning around them.", means: "A formation that had broken is being pulled back together by nearby officers." },
+  withdrawing: { look: "Intact solid block with one straight arrow pointing back toward its own side.", means: "An ordered pull-back on orders. Men stay together." },
+  retreat: { look: "Stretched, ragged outline with a jagged arrow streaming back toward its own side.", means: "The line has broken and is falling back without control, but some shape remains." },
+  rout: { look: "No block and no banner. Scattered dots running away.", means: "Men are fleeing and have lost all control." },
+};
+const SIMILAR = [
+  "Withdrawing or retreat: withdrawing is intact with a neat arrow. Retreat is ragged and loose.",
+  "Retreat or rout: retreat still has a shape, however ragged. Rout has no shape at all.",
+  "Yielding or disorganised: yielding is one block getting shorter. Disorganised is the block broken into pieces, usually standing still.",
+  "Yielding or withdrawing: yielding is still facing the enemy in contact. Withdrawing is moving away.",
+  "Rallying: the dashed ring and the cluster round the banner are the cue. The ring is not the marker.",
+];
+const guideList = () => `<ul class="guide">${BEH.map((b) => `<li><b>${LABEL[b]}</b><span>${esc(GUIDE[b].look)} <i>${esc(GUIDE[b].means)}</i></span></li>`).join("")}</ul>`;
 const items = new Map(__CLIPS__.items.map((i) => [i.id, i]));
 const app = document.getElementById("app")!;
 const esc = (s: unknown) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -42,6 +60,16 @@ function render() {
   if (!doc) { app.innerHTML = `<header><h1>Battle clips</h1></header><p class="dim">Loading…</p>`; return; }
   const done = doc.order.filter((id) => id in doc!.answers).length, cur = doc.order.find((id) => !(id in doc!.answers));
   const head = `<header><h1>Battle clips</h1><span class="prog">${done} / ${doc.order.length}</span></header>`;
+  if (!doc.guideSeenAt && done === 0) {
+    app.innerHTML = `${head}<section class="card guide-card"><h2>How to read a clip</h2>
+      <p>Each clip shows one marked formation. The <b class="ptr-key">yellow pointer</b> above it marks which formation is meant. Other formations nearby may be doing something else. A clip loops six frames, 30 battle seconds apart, so watch the whole loop.</p>
+      <p>A <b>solid block</b> is a formation seen now. A <b>dashed or hollow outline</b> is a formation as it was reported, so it may be out of date or wrong.</p>
+      <h2>The seven behaviours</h2>${guideList()}
+      <h2>Telling similar ones apart</h2><ul class="guide">${SIMILAR.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>
+      <p class="dim">No sound: every cue is visual. Pick the behaviour from the seven buttons, and the reference stays under each clip while you answer.</p>
+      <button class="start" data-a="start">Start</button></section>`;
+    return;
+  }
   if (!cur) {
     app.innerHTML = `${head}<section class="card"><h2>Done</h2>${db ? `<p>${saveError ? `<span class="bad">${esc(saveError)}</span>` : "Saved."}</p>` : `<p>Copy this and send it back:</p><textarea readonly>${esc(JSON.stringify(doc))}</textarea>`}</section>`;
     return;
@@ -50,21 +78,26 @@ function render() {
   const choices = it.kind === "behaviour" ? BEH.map((b) => [b, LABEL[b]]) : [["observed", "Seen now"], ["reported", "Reported"]];
   app.innerHTML = `${head}<section class="card clip"><div class="q">${it.kind === "behaviour" ? "What is the marked formation doing?" : "Is the marked formation seen now, or reported?"}</div>
     <div class="stage">${view(it)}</div>
+    <details class="ref" open><summary>Reference: what each behaviour looks like</summary>${it.kind === "behaviour" ? guideList() : `<ul class="guide"><li><b>Seen now</b><span>Drawn solid.</span></li><li><b>Reported</b><span>Drawn with a dashed or hollow outline.</span></li></ul>`}</details>
     <div class="answers">${choices.map(([k, l]) => `<button data-a="${k}" ${saving ? "disabled" : ""}>${esc(l)}</button>`).join("")}</div>
     ${saveError ? `<p class="bad">${esc(saveError)}</p>` : ""}</section>`;
 }
 
+async function save() {
+  if (!db || !uid) return;
+  saving = true; render();
+  try { await db.doc(`h03/${uid}`).set(structuredClone(doc)); saveError = ""; } catch (e) { saveError = `Not saved: ${(e as { message?: string }).message ?? e}`; }
+  saving = false;
+}
+
 async function answer(a: string) {
+  if (a === "start") { doc!.guideSeenAt = Date.now(); await save(); return render(); }
   const cur = doc!.order.find((id) => !(id in doc!.answers));
   if (!cur) return;
   doc!.answers[cur] = a;
   frame = 0;
   if (!doc!.order.some((id) => !(id in doc!.answers))) doc!.finishedAt = Date.now();
-  if (db && uid) {
-    saving = true; render();
-    try { await db.doc(`h03/${uid}`).set(structuredClone(doc)); saveError = ""; } catch (e) { saveError = `Not saved: ${(e as { message?: string }).message ?? e}`; }
-    saving = false;
-  }
+  await save();
   render();
 }
 
