@@ -30,7 +30,7 @@
     "inputs": 282,
     "actions": 282
   },
-  "logHash": "47d7ce23d2455af5cfc5a143372f4ad0fbc73ee4be3c70ab56920b7690c5fae7",
+  "logHash": "6fe1b67771cc7db932a1fb958980fa05dfbeac7b9efe0b1c14b3023f69f4862b",
   "fixedIn": "6 Nov 2026 (KI-01, D-022)",
   "expect": "passes",
   "note": "Phase 8 (D-062): battles add debrief letters, which delay the messenger; at 90 days the order was only dispatched, so the case runs 120 days to keep the attack order going through receipt, interpretation, obedience and execution."
