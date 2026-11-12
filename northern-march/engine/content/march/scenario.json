@@ -419,6 +419,16 @@
     "repeatEvery": 300,
     "wallsRange": 180
    },
+   "pursuit": {
+    "triggerRange": 300,
+    "loseRange": 600,
+    "startMargin": 100,
+    "mountedUrge": 200,
+    "holdRestraint": 300,
+    "skillRestraintPermille": 500,
+    "fatigueRestraintPermille": 1000,
+    "caughtCohesion": 6
+   },
    "goneBelowPermille": 120,
    "spacing": {
     "friends": 150,

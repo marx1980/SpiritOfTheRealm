@@ -1,73 +1,82 @@
-// H-03 clip set (Phase 8, plan C2): short clips of formations in each of the seven behaviours, cut from real battles,
-// plus marker items (the same formation drawn as seen now, or as reported). Lab tool: reads reality, which the game never does.
-//   node tools/phase8_clips.ts [perBehaviour=4] [markers=12] -> ui/h03/clips.json
+// H-03 clip set, version 2 (D-063): whole-field moments as headquarters sees them (the player's own view, with names,
+// state words and report ages), cut from simulated battles at Northwatch. Three kinds of item:
+//   spot  - a moment where some of the crown's units are seen breaking: the tester taps one ("which unit is in trouble?");
+//   side  - one unit seen breaking, outlined: "whose unit is this?" (checks that a flash does not hide the side's colour);
+//   known - one unit outlined in a single picture: seen now, or a report?
+// Lab tool: reads the simulation's record; nothing here changes the game.
+//   node tools/phase8_clips.ts -> ui/h03/clips.json
 import { mkdirSync, writeFileSync } from "node:fs";
-import { BEHAVIOURS, runBattle, type Behaviour, type BattleOrder, type Frame } from "../src/battlefield/core.ts";
+import { runBattle, type BattleOrder, type HqFrame, type Mark } from "../src/battlefield/core.ts";
+import { glyphOf, type Glyph } from "../ui/battleart.ts";
 import { sampleSetup } from "../test/battle_sample.ts";
 
-const per = Number(process.argv[2] ?? 4), markerCount = Number(process.argv[3] ?? 12);
-const W = 1000, H = 640, LEN = 6; // window in metres, frames per clip (30 s apart)
-interface ClipFrame { formations: { id: string; side: string; kind: string; label: string; x: number; y: number; behaviour: Behaviour; men: number }[] }
-interface Clip { id: string; kind: "behaviour"; truth: Behaviour; target: string; box: [number, number, number, number]; frames: ClipFrame[]; source: string }
-interface MarkerItem { id: string; kind: "marker"; truth: "observed" | "reported"; target: string; box: [number, number, number, number]; frame: ClipFrame; source: string }
+const LEN = 6, SPOT = 18, SIDE = 12, KNOWN = 12;
+interface Pic { t: number; hq: { x: number; y: number }; glyphs: Glyph[] }
+type Item =
+  | { id: string; kind: "spot"; frames: Pic[]; trouble: string[]; source: string }
+  | { id: string; kind: "side"; frames: Pic[]; target: string; truth: "crown" | "raiders"; source: string }
+  | { id: string; kind: "known"; frame: Pic; target: string; truth: "observed" | "reported"; source: string };
 
-const withdraw = (t: number, to: string): BattleOrder => ({ schemaVersion: 1, id: 900, t, from: "anna", to, task: { kind: "withdraw", place: "gate" }, via: "voice" });
-const runs: { name: string; seed: number; frames: Frame[] }[] = [];
-for (let seed = 1; seed <= 24; seed++) for (const raiders of [180, 360, 520]) for (const v of [0, 1]) {
-  const s = sampleSetup({ seed, raiders, ...(v ? { anna: "rear" as const } : {}) });
-  const orders = v && seed % 2 ? [withdraw(1200 + (seed % 5) * 300, seed % 4 === 1 ? "bren" : "caron")] : [];
-  runs.push({ seed, name: `seed ${seed} raiders ${raiders}${v ? " anna" : ""}${orders.length ? " withdraw" : ""}`, frames: runBattle(s, orders).frames });
+const attack = (id: number, t: number, to: string, limit?: string): BattleOrder => ({ schemaVersion: 1, id, t, from: "anna", to, via: "runner", task: { kind: "attack", ...(limit ? { limit } : {}) } });
+const runs: { name: string; seed: number; hq: HqFrame[] }[] = [];
+for (let seed = 1; seed <= 30; seed++) for (const raiders of [180, 360, 520]) for (const v of [0, 1]) {
+  const s = sampleSetup({ seed, raiders, anna: v ? "centre" : "rear" });
+  const orders = v ? [attack(1, 900, "caron", seed % 2 ? "stream" : undefined), attack(2, 900, "bren")] : [];
+  runs.push({ seed, name: `seed ${seed} raiders ${raiders} anna ${v ? "centre, attack ordered" : "rear"}`, hq: runBattle(s, orders).hq });
 }
 
-const box = (fs: { x: number; y: number }[]): [number, number, number, number] => {
-  const cx = Math.round(fs.reduce((n, f) => n + f.x, 0) / fs.length), cy = Math.round(fs.reduce((n, f) => n + f.y, 0) / fs.length);
-  return [Math.max(0, Math.min(2400 - W, cx - W / 2)), Math.max(0, Math.min(1600 - H, cy - H / 2)), W, H];
-};
-const inBox = (b: number[], f: { x: number; y: number }) => f.x > b[0] - 100 && f.x < b[0] + b[2] + 100 && f.y > b[1] - 100 && f.y < b[1] + b[3] + 100;
-const strip = (f: Frame, b: number[]): ClipFrame => ({ formations: f.formations.filter((x) => x.behaviour !== "gone" && inBox(b, x)).map(({ id, side, kind, label, x, y, behaviour, men }) => ({ id, side, kind, label, x, y, behaviour, men })) });
+const pic = (f: HqFrame): Pic => ({ t: f.t, hq: { x: f.x, y: f.y }, glyphs: f.marks.filter((m) => m.behaviour !== "gone").map(glyphOf) });
+const seenBreaking = (m: Mark) => m.category === "observed" && !m.stale && (m.behaviour === "rout" || m.behaviour === "retreat");
+/** No other unit within this many metres: an outline round it holds one unit only. */
+const alone = (f: HqFrame, m: Mark, room = 170) => f.marks.every((x) => x.id === m.id || x.behaviour === "gone" || Math.hypot(x.x - m.x, x.y - m.y) > room);
+const crownTrouble = (f: HqFrame) => f.marks.filter((m) => m.side === "crown" && seenBreaking(m)).map((m) => m.id);
+const items: Item[] = [];
 
-// candidates: a formation that shows one behaviour for the middle frames of a clip
-const cands: Record<string, { run: number; start: number; id: string; side: string; kind: string }[]> = {};
-runs.forEach((r, ri) => {
-  const ids = r.frames[0].formations.map((f) => f.id);
-  for (const id of ids) for (let i = 0; i + LEN <= r.frames.length; i += LEN) {
-    const bs = r.frames.slice(i, i + LEN).map((f) => f.formations.find((x) => x.id === id)!.behaviour);
-    const mid = bs.slice(1, LEN - 1);
-    if (mid.every((b) => b === mid[0]) && mid[0] !== "gone" && bs.filter((b) => b === mid[0]).length >= LEN - 1) {
-      const f = r.frames[i].formations.find((x) => x.id === id)!;
-      (cands[mid[0]] ??= []).push({ run: ri, start: i, id, side: f.side, kind: f.kind });
+// spot: the last three pictures all show one or two of the crown's units seen breaking, on a busy field
+const usedSeed = new Set<number>();
+for (const pass of [0, 1]) for (const r of runs) {
+  if (items.filter((i) => i.kind === "spot").length >= SPOT) break;
+  if (pass === 0 && usedSeed.has(r.seed)) continue;
+  for (let i = LEN; i + LEN <= r.hq.length; i += LEN) {
+    const w = r.hq.slice(i, i + LEN), tail = w.slice(-3);
+    const last = crownTrouble(w[LEN - 1]);
+    if (!tail.every((f) => crownTrouble(f).length > 0) || last.length > 2 || w[LEN - 1].marks.length < 8) continue;
+    if (items.some((x) => x.source.startsWith(r.name))) continue;
+    items.push({ id: `spot-${items.filter((x) => x.kind === "spot").length + 1}`, kind: "spot", frames: w.map(pic), trouble: [...new Set(w.flatMap(crownTrouble))], source: `${r.name}, from ${w[0].t} s` });
+    usedSeed.add(r.seed);
+    break;
+  }
+}
+// side: one unit seen breaking through the whole clip, half of them the crown's, half the raiders'
+for (const side of ["crown", "raiders"] as const) {
+  let n = 0;
+  for (const r of runs) {
+    if (n >= SIDE / 2) break;
+    if (items.some((x) => x.kind === "side" && x.source.startsWith(r.name))) continue;
+    found: for (let i = 0; i + LEN <= r.hq.length; i += LEN) {
+      const w = r.hq.slice(i, i + LEN);
+      for (const m of w[0].marks.filter((m) => m.side === side && seenBreaking(m))) {
+        if (!w.every((f) => f.marks.some((x) => x.id === m.id && seenBreaking(x) && alone(f, x)))) continue;
+        items.push({ id: `side-${side}-${++n}`, kind: "side", frames: w.map(pic), target: m.id, truth: side, source: `${r.name}, ${m.id} from ${w[0].t} s` });
+        break found;
+      }
     }
   }
-});
-// pick spread over runs, sides and kinds
-const clips: Clip[] = [];
-for (const b of BEHAVIOURS) {
-  const pool = cands[b] ?? [];
-  const chosen: typeof pool = [], used = new Set<string>();
-  for (const pass of [0, 1, 2]) for (const c of pool) {
-    if (chosen.length >= per) break;
-    const key = pass === 0 ? `${c.side}:${c.kind}` : pass === 1 ? `${c.run}` : `${c.run}:${c.id}:${c.start}`;
-    if (used.has(key) || chosen.includes(c)) continue;
-    if (chosen.some((x) => runs[x.run].seed === runs[c.run].seed)) continue; // different battles, not the same one twice
-    used.add(key); chosen.push(c);
-  }
-  for (const [k, c] of chosen.entries()) {
-    const fr = runs[c.run].frames.slice(c.start, c.start + LEN);
-    const bx = box(fr.map((f) => f.formations.find((x) => x.id === c.id)!));
-    clips.push({ id: `${b}-${k + 1}`, kind: "behaviour", truth: b, target: c.id, box: bx, frames: fr.map((f) => strip(f, bx)), source: `${runs[c.run].name}, ${c.id} from ${fr[0].t} s` });
-  }
-  console.log(b, "candidates", pool.length, "chosen", chosen.length);
 }
-// marker items: a formation in good order, drawn as seen now or as reported
-const markers: MarkerItem[] = [];
-for (let i = 0; markers.length < markerCount && i < runs.length; i += 3) {
-  const r = runs[i], f = r.frames[Math.min(r.frames.length - 1, 20)];
-  const t = f.formations.find((x) => x.behaviour === "good_order" && x.side === (markers.length % 2 ? "raiders" : "crown"));
-  if (!t) continue;
-  const bx = box([t]);
-  markers.push({ id: `marker-${markers.length + 1}`, kind: "marker", truth: markers.length % 3 === 1 || markers.length % 4 === 0 ? "reported" : "observed", target: t.id, box: bx, frame: strip(f, bx), source: `${r.name}, ${t.id} at ${f.t} s` });
+// known: a single picture with one unit outlined, seen now or reported (at least three minutes old)
+for (const truth of ["observed", "reported"] as const) {
+  let n = 0;
+  for (const r of runs.filter((_, i) => i % 3 === (truth === "observed" ? 0 : 1))) {
+    if (n >= KNOWN / 2) break;
+    const f = r.hq[Math.min(r.hq.length - 1, 40 + (r.seed % 5) * 6)];
+    const m = f.marks.find((x) => x.behaviour !== "gone" && x.kind !== "guard" && alone(f, x) && (truth === "observed" ? x.category === "observed" && x.age === 0 : x.category === "reported" && x.age >= 180 && !x.stale));
+    if (!m) continue;
+    items.push({ id: `known-${truth}-${++n}`, kind: "known", frame: pic(f), target: m.id, truth, source: `${r.name}, ${m.id} at ${f.t} s` });
+  }
 }
+
 const out = new URL("../ui/h03/", import.meta.url).pathname;
 mkdirSync(out, { recursive: true });
-writeFileSync(out + "clips.json", JSON.stringify({ version: 1, items: [...clips, ...markers] }));
-console.log("clips", clips.length, "markers", markers.length, "(observed", markers.filter((m) => m.truth === "observed").length + ")");
+writeFileSync(out + "clips.json", JSON.stringify({ version: 2, items }));
+const count = (k: string) => items.filter((i) => i.kind === k).length;
+console.log("spot", count("spot"), "side", count("side"), "known", count("known"), "(reported", items.filter((i) => i.kind === "known" && i.truth === "reported").length + ")");

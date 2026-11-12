@@ -6,7 +6,7 @@ import { adviceSettled, buildCourt, latestAdviceOf, type AdviceLine } from "../s
 import { buildMap } from "../src/presentation/map.ts";
 import { MapGraph } from "../src/map.ts";
 import { mapSvg } from "./maparts.ts";
-import { BATTLE_CSS, battleSvg, glyphOf, mins } from "./battleart.ts";
+import { BATTLE_CSS, battleSvg, frameBox, framePoints, glyphOf, mins } from "./battleart.ts";
 import type { Task } from "../src/battlefield/core.ts";
 import { actionText, adviceAction, adviceChoices, affordable as affordableR, coinsKnown as coinsKnownR, buyKnown, economyProblems, GOOD_LABEL, grainCover, grainKnown, houseOf, openAdvice, priceKnown, publicRules, purchaseCostKnown, raidNear, repairCostKnown as repairCostKnownR, storeKnown, type AdviceChoice } from "../src/presentation/affordances.ts";
 import { captainSentTo, fallenAt, lettersFall, planOf, certainty, letterSentences, letterGist, planWords, reasonWords, sourceOf } from "../src/presentation/phrasing.ts";
@@ -584,7 +584,7 @@ function battleScreen(v: View): string {
   const notes = [...b.notes].reverse().slice(0, 14).map((n) => `<div class="letter${n.kind === "danger" ? " alarm" : ""}"><span class="when">${clock(n.t)}</span> ${esc(noteText(n))}</div>`).join("");
   const form = battleForm(v);
   return `<div class="eco-grid battle eco">
-    <div class="card map">${battleSvg(b.field, glyphs, { hq: { x: b.hq.x, y: b.hq.y } })}</div>
+    <div class="card map">${battleSvg(b.field, glyphs, { hq: { x: b.hq.x, y: b.hq.y }, viewBox: frameBox([...framePoints(glyphs), b.hq], b.field, window.innerWidth < 600 ? 1 : 1.5, 1400) })}</div>
     <div class="col">
       <div class="card"><h2>Commanders</h2><div class="scroll"><table class="net"><tr><th>Commander</th><th>Orders</th><th>Status</th><th class="n">Last word</th></tr>${net}</table></div></div>
       <div class="card"><h2>Order</h2>${form.html}</div>

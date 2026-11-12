@@ -4,7 +4,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { canonicalJson } from "../src/canonical.ts";
-import { BEHAVIOURS, decideBattleObedience, runBattle, type BattleOrder, type BattleSetup } from "../src/battlefield/core.ts";
+import { BEHAVIOURS, decideBattleObedience, runBattle, wouldPursue, type BattleOrder, type BattleSetup } from "../src/battlefield/core.ts";
 import { sampleSetup } from "./battle_sample.ts";
 
 const order = (o: Partial<BattleOrder> & Pick<BattleOrder, "to" | "task" | "t">): BattleOrder => ({ schemaVersion: 1, id: 1, from: "anna", via: "runner", ...o });
@@ -133,13 +133,64 @@ test("with Anna absent there is no guard, no danger and she is safe", () => {
   assert.ok(!r.notes.some((n) => n.kind === "danger"));
 });
 
-test("the seven behaviours all occur across battles", () => {
+test("every behaviour occurs across battles", () => {
   const seen = new Set<string>();
-  for (let seed = 1; seed <= 30 && seen.size < 7; seed++) for (const raiders of [180, 360, 520]) {
+  for (let seed = 1; seed <= 30 && seen.size < BEHAVIOURS.length; seed++) for (const raiders of [180, 360, 520]) {
     const r = runBattle(sampleSetup({ seed, raiders }), seed % 3 === 0 ? [order({ t: 1200, to: "bren", task: { kind: "withdraw", place: "gate" } })] : []);
     for (const f of r.frames) for (const x of f.formations) seen.add(x.behaviour);
   }
   for (const b of BEHAVIOURS) assert.ok(seen.has(b), `never saw ${b}`);
+});
+
+// ---- pursuit (D-063): men who see the enemy break may run after them, out of formation ----
+const PURSUIT = { triggerRange: 300, loseRange: 600, startMargin: 100, mountedUrge: 200, holdRestraint: 300, skillRestraintPermille: 500, fatigueRestraintPermille: 1000, caughtCohesion: 6 };
+const urgeBase = { discipline: 450, riskPermille: 800, mounted: false, commanderNear: true, skill: 500, fatigue: 0, holding: false, already: false, isGuard: false, params: PURSUIT };
+
+test("whether men pursue is decided from discipline, their leader and their orders, the same way every time", () => {
+  assert.deepEqual(wouldPursue(urgeBase), wouldPursue(urgeBase), "no dice");
+  assert.equal(wouldPursue(urgeBase).pursue, true, "a bold war leader's loose warband runs after a broken enemy");
+  assert.equal(wouldPursue({ ...urgeBase, isGuard: true }).pursue, false, "the guard never leaves the queen");
+  assert.equal(wouldPursue({ ...urgeBase, discipline: 900, riskPermille: 400 }).pursue, false, "disciplined men under a cautious leader stay");
+  const foot = { ...urgeBase, discipline: 600, riskPermille: 450, skill: 600, holding: true };
+  assert.equal(wouldPursue(foot).pursue, false, "foot told to hold, their commander with them, keep their ground");
+  assert.equal(wouldPursue({ ...foot, commanderNear: false }).pursue, true, "without him there, they go");
+  const horse = { ...foot, discipline: 650, mounted: true, riskPermille: 700 };
+  assert.ok(wouldPursue(horse).urge > wouldPursue({ ...horse, mounted: false }).urge, "horsemen are the readiest to chase");
+  // once running, a smaller margin keeps them going (they do not stop and start each step)
+  const edge = { ...urgeBase, skill: 2 * (wouldPursue(urgeBase).urge - 50) };
+  assert.equal(wouldPursue(edge).pursue, false);
+  assert.equal(wouldPursue({ ...edge, already: true }).pursue, true);
+  assert.equal(wouldPursue({ ...urgeBase, fatigue: 800 }).pursue, false, "winded men give up the chase");
+});
+
+test("pursuit happens in real battles, never by the guard, and only after a broken enemy", () => {
+  let pursuing = 0;
+  for (let seed = 1; seed <= 12; seed++) for (const raiders of [180, 360, 520]) {
+    const r = runBattle(sampleSetup({ seed, raiders, anna: "centre" }), []);
+    for (const f of r.frames) for (const x of f.formations) if (x.behaviour === "pursuing") { pursuing++; assert.notEqual(x.kind, "guard", `seed ${seed}: the guard pursued`); }
+    // frames are only every 30 s, so judge from the behaviour notes: some enemy had broken (and not recovered) before
+    const sideOf = new Map(r.frames[0].formations.map((x) => [x.id, x.side]));
+    for (const n of r.notes.filter((n) => n.kind === "behaviour" && n.to === "pursuing")) {
+      const last = new Map<string, string>();
+      for (const m of r.notes) if (m.kind === "behaviour" && m.t < n.t && sideOf.get(m.formation!) !== sideOf.get(n.formation!)) last.set(m.formation!, m.to!);
+      assert.ok([...last.values()].some((b) => b === "retreat" || b === "rout"), `seed ${seed}: ${n.formation} pursued no broken enemy`);
+    }
+  }
+  assert.ok(pursuing > 0, "someone pursued");
+});
+
+test("men told not to pursue beyond the stream stop at it", () => {
+  const stream = 700;
+  let crownPursued = 0;
+  for (let seed = 1; seed <= 20; seed++) for (const raiders of [180, 360]) {
+    const s = sampleSetup({ seed, raiders });
+    const r = runBattle(s, [order({ t: 600, to: "caron", task: { kind: "attack", limit: "stream" } }), order({ id: 2, t: 600, to: "bren", task: { kind: "attack", limit: "stream" } })]);
+    for (const f of r.frames) for (const x of f.formations) if (x.side === "crown" && x.behaviour === "pursuing") {
+      crownPursued++;
+      if (x.task.limit === "stream") assert.ok(x.y >= stream, `seed ${seed}: ${x.id} pursued beyond the stream (y ${x.y})`);
+    }
+  }
+  assert.ok(crownPursued > 0, "the crown's men pursued at all");
 });
 
 test("a battle ends, with a winner, losses on both sides and a debrief from each commander", () => {

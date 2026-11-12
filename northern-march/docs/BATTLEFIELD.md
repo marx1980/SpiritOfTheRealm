@@ -196,9 +196,10 @@ No player-facing morale bars. The player sees behaviours:
 - officers rallying men;
 - withdrawing in order;
 - uncontrolled retreat;
-- rout.
+- rout;
+- pursuing (D-063): men who see the enemy break run after them out of formation, unless discipline, a commander close by or an order to keep their ground holds them. A limit ("do not pursue beyond the stream") stops them at the line. Pursuers are out of formation: they take harm as if disorganised, tire faster, leave a gap and are harder for runners to find.
 
-Each behaviour has a distinct visual and audio signature so testers can read state without numbers. This is part of the Phase 8 test.
+Each behaviour has a distinct visual and audio signature so it can be read without numbers. Every state but good order also carries its word on the unit, taken from headquarters' belief and drawn as observed or reported like the unit itself (D-063). How units seen breaking are made to stand out (no flash, a light pink flash, or a pale flash of their own colour) is decided by the Phase 8 test (H-03).
 
 ## 14. Panic and misunderstanding
 Troops observe other troops, not objective state. An ordered withdrawal may look like a rout to a neighbouring formation. A poor command chain can turn it into a real rout; a capable nearby commander can stabilise it. Pre-agreed signals for planned withdrawals reduce this risk.

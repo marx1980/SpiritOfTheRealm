@@ -9,7 +9,7 @@ import { decideObedience } from "../agents/obedience.ts";
 import type { Reason } from "../schemas.ts";
 
 export const BATTLE_SCHEMA_VERSION = 1;
-export const BEHAVIOURS = ["good_order", "yielding", "disorganised", "rallying", "withdrawing", "retreat", "rout"] as const;
+export const BEHAVIOURS = ["good_order", "yielding", "disorganised", "rallying", "withdrawing", "retreat", "rout", "pursuing"] as const;
 export type Behaviour = (typeof BEHAVIOURS)[number] | "gone";
 export type Side = "crown" | "raiders";
 export type Kind = "foot" | "archers" | "horse" | "guard" | "warband" | "bowmen" | "riders";
@@ -50,8 +50,11 @@ export interface BattleParams {
   clarity: { base: number; named: number; limit: number; condition: number; signal: number; literalBelow: number };
   raiders: { withdrawLossPermille: number; replanEvery: number };
   ruler: { dangerNear: number; formsUpAt: number; meleePermille: number; missilePermille: number; deathPermille: number; repeatEvery: number; wallsRange: number };
+  /** Men who see the enemy break may run after them, out of formation (D-063). Ranges in metres. */
+  pursuit: PursuitParams;
   goneBelowPermille: number;
 }
+export interface PursuitParams { triggerRange: number; loseRange: number; startMargin: number; mountedUrge: number; holdRestraint: number; skillRestraintPermille: number; fatigueRestraintPermille: number; caughtCohesion: number }
 export interface FormationSetup { id: string; side: Side; kind: Kind; label: string; men: number; commander: string; x: number; y: number }
 export interface CommanderSetup { id: string; name: string; side: Side; formations: string[]; traits: TraitP[]; skill: number; loyalty: Record<string, number>; superior?: string }
 export interface ObedienceParams { adaptMarginMilli: number; refuseMarginMilli: number; changedCircumstancesPermille: number; dutyMilli: number; legitimacyRulerPermille: number }
@@ -167,9 +170,28 @@ export function decideBattleObedience(x: ObedienceInput) {
   return { ...it, candidates, decision, by: d.by, margins, chosen: decision === "obey" ? obey.task : decision === "adapt" ? adapt.task : keep.task };
 }
 
+// ---- pursuit (pure, no dice) ----------------------------------------------------------------------------------------
+export interface PursuitInput {
+  discipline: number; riskPermille: number; mounted: boolean; commanderNear: boolean; skill: number;
+  /** 0-1000: tired men give up the chase. */
+  fatigue: number;
+  /** Their task tells them to keep ground (hold, protect, give ground). */
+  holding: boolean;
+  /** Already running after the enemy: a smaller margin keeps them going. */
+  already: boolean; isGuard: boolean; params: PursuitParams;
+}
+/** The urge to run after a broken enemy (loose discipline, a bold leader, horses) against what holds men back (their
+ *  commander near them and his skill, an order to keep their ground, being winded). The guard never leaves the ruler. */
+export function wouldPursue(x: PursuitInput): { pursue: boolean; urge: number; restraint: number } {
+  const p = x.params;
+  const urge = (1000 - x.discipline) + Math.floor(x.riskPermille / 2) + (x.mounted ? p.mountedUrge : 0);
+  const restraint = (x.commanderNear ? Math.floor((x.skill * p.skillRestraintPermille) / 1000) : 0) + (x.holding ? p.holdRestraint : 0) + Math.floor((x.fatigue * p.fatigueRestraintPermille) / 1000);
+  return { pursue: !x.isGuard && urge > restraint + (x.already ? 0 : p.startMargin), urge, restraint };
+}
+
 // ---- the battle -----------------------------------------------------------------------------------------------------
 interface Sighting { id: string; x: number; y: number; behaviour: Behaviour; men: number; t: number; source: string; how: "observed" | "reported" }
-interface F extends FormationSetup { start: number; cohesion: number; fatigue: number; behaviour: Behaviour; task: Task; acc: number; lostSteps: number[]; doneSteps: number[]; engaged: boolean; underFire: boolean; risingFrom: number; slot: number }
+interface F extends FormationSetup { start: number; cohesion: number; fatigue: number; behaviour: Behaviour; task: Task; acc: number; lostSteps: number[]; doneSteps: number[]; engaged: boolean; underFire: boolean; risingFrom: number; slot: number; chase: string }
 interface C extends CommanderSetup { x: number; y: number; task: Task; sight: Map<string, Sighting>; lastReport: number; menAtReport: number; contact: boolean; orderIds: number[]; reportedDecisions: number[] }
 interface Runner { id: number; kind: "order" | "report"; orderId?: number; from: string; to: string; x: number; y: number; tx: number; ty: number; searching: number; done: boolean; payload?: Sighting[]; decisions?: { orderId: number; decision: string; task: Task }[] }
 
@@ -199,7 +221,7 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
   const fs = new Map<string, F>(), order: string[] = [];
   for (const s of setup.formations) {
     const k = P.kinds[s.kind];
-    fs.set(s.id, { ...s, start: s.men, cohesion: Math.min(P.cohesion.start, 400 + k.discipline / 2), fatigue: 0, behaviour: "good_order", task: { kind: "hold" }, acc: 0, lostSteps: [], doneSteps: [], engaged: false, underFire: false, risingFrom: 0, slot: 0 });
+    fs.set(s.id, { ...s, start: s.men, cohesion: Math.min(P.cohesion.start, 400 + k.discipline / 2), fatigue: 0, behaviour: "good_order", task: { kind: "hold" }, acc: 0, lostSteps: [], doneSteps: [], engaged: false, underFire: false, risingFrom: 0, slot: 0, chase: "" });
     order.push(s.id);
   }
   const cs = new Map<string, C>();
@@ -413,6 +435,16 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
       case "retreat": moved = moveToward(f, f.x, edge, Math.floor(k.speed * 13 / 10)); break;
       case "withdrawing": { const p = place(f.task.place) ?? { x: f.x, y: edge }; moved = moveToward(f, slotOf(f, p).x, slotOf(f, p).y, Math.max(1, Math.floor(k.speed * 8 / 10))); break; }
       case "yielding": { const e = nearestEnemy(f); if (e) { const d = Math.max(1, dist(f.x, f.y, e.x, e.y)); moved = moveToward(f, f.x + Math.trunc(((f.x - e.x) * 40) / d), f.y + Math.trunc(((f.y - e.y) * 40) / d), 1); } break; }
+      case "pursuing": {
+        // after the men they saw break, at their own pace, never past a line they were told not to cross
+        const e = fs.get(f.chase);
+        if (!e || !live(e)) break;
+        let ty = e.y;
+        const lim = line(f.task.limit);
+        if (lim) ty = f.side === "crown" ? Math.max(ty, lim.y + 20) : Math.min(ty, lim.y - 20);
+        moved = moveToward(f, e.x, ty, k.speed, ty === e.y ? k.meleeRange - 5 : 0);
+        break;
+      }
       case "good_order": {
         const t = f.task;
         if (t.kind === "hold" || t.kind === "advance" || t.kind === "give_ground") { const p = place(t.place); if (p) { const s = slotOf(f, p); moved = moveToward(f, s.x, s.y, k.speed); } break; }
@@ -436,7 +468,7 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
         }
       }
     }
-    f.fatigue = Math.max(0, Math.min(1000, f.fatigue + (moved ? 2 : f.engaged ? 3 : -2)));
+    f.fatigue = Math.max(0, Math.min(1000, f.fatigue + (moved ? (f.behaviour === "pursuing" ? 4 : 2) : f.engaged ? 3 : -2)));
   };
 
   // ---- formations take up ground: friends keep their intervals, enemies meet face to face rather than inside each other ----
@@ -453,7 +485,13 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
       const ux = Math.trunc((dx * push) / n) || (d === 0 ? dx * push : 0), uy = Math.trunc((dy * push) / n);
       a.x = Math.max(0, Math.min(field.width, a.x - ux)); a.y = Math.max(0, Math.min(field.height, a.y - uy));
       b.x = Math.max(0, Math.min(field.width, b.x + ux)); b.y = Math.max(0, Math.min(field.height, b.y + uy));
+      keepLimit(a); keepLimit(b);
     }
+  };
+  // men told not to cross a line are not shoved across it by the press of other formations
+  const keepLimit = (f: F) => {
+    const lim = line(f.task.limit);
+    if (lim && f.behaviour !== "rout" && f.behaviour !== "retreat") f.y = f.side === "crown" ? Math.max(f.y, lim.y) : Math.min(f.y, lim.y);
   };
 
   // ---- fighting ----
@@ -479,7 +517,7 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
       const r = P.rates;
       if (tgt.behaviour === "rout") v = Math.floor((v * r.routTarget) / 1000);
       else if (tgt.behaviour === "retreat") v = Math.floor((v * r.retreatTarget) / 1000);
-      else if (tgt.behaviour === "disorganised" || tgt.behaviour === "rallying") v = Math.floor((v * r.disorganisedTarget) / 1000);
+      else if (tgt.behaviour === "disorganised" || tgt.behaviour === "rallying" || tgt.behaviour === "pursuing") v = Math.floor((v * r.disorganisedTarget) / 1000);
       if (ka.mounted && melee && tgt.behaviour !== "good_order" && tgt.behaviour !== "withdrawing") v = Math.floor((v * r.mountedVsDisordered) / 1000);
       if (field.ridges.some((g) => inside(g, tgt!.x, tgt!.y)) && !field.ridges.some((g) => inside(g, a.x, a.y))) v = Math.floor((v * r.ridgeDefence) / 1000);
       if (!melee && field.woods.some((w) => inside(w, tgt!.x, tgt!.y))) v = Math.floor((v * r.woodCover) / 1000);
@@ -503,10 +541,20 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
   const behave = (t: number) => {
     const C = P.cohesion;
     const prev = new Map(order.map((id) => [id, fs.get(id)!.behaviour]));
+    // the nearest enemy seen to break (as it was at the start of this step), on this side of any line they must not cross
+    // once running, they keep after the same men until those reform, get away, cross the line or are gone
+    const chaseTarget = (f: F, already: boolean): F | undefined => {
+      const lim = line(f.task.limit), range = already ? P.pursuit.loseRange : P.pursuit.triggerRange;
+      const ok = (e: F, broken: readonly Behaviour[]) => live(e) && e.side !== f.side && broken.includes(prev.get(e.id)!) && dist(f.x, f.y, e.x, e.y) <= range && (!lim || (f.side === "crown" ? e.y >= lim.y : e.y <= lim.y));
+      const same = already ? fs.get(f.chase) : undefined;
+      if (same && ok(same, ["retreat", "rout", "rallying", "disorganised"])) return same;
+      return order.map((x) => fs.get(x)!).filter((e) => ok(e, ["retreat", "rout"]))
+        .sort((a, b) => dist(f.x, f.y, a.x, a.y) - dist(f.x, f.y, b.x, b.y) || (a.id < b.id ? -1 : 1))[0];
+    };
     for (const id of order) {
       const f = fs.get(id)!;
       if (!live(f)) continue;
-      let d = 0;
+      let d = 0, chased: F | undefined;
       const lost = f.lostSteps[f.lostSteps.length - 1] ?? 0;
       d -= Math.floor((lost * 100 * C.perLossPercent) / Math.max(1, f.start));
       const lostR = f.lostSteps.reduce((n, x) => n + x, 0), doneR = f.doneSteps.reduce((n, x) => n + x, 0);
@@ -531,6 +579,8 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
       if (f.side === "crown" && guard && live(guard) && guard.id !== f.id && dist(guard.x, guard.y, f.x, f.y) < 600) d += C.rulerNear;
       if (!f.engaged && !f.underFire && f.cohesion < P.kinds[f.kind].discipline) d += C.recover;
       if (f.fatigue > 700) d -= C.tired;
+      // caught out of formation: pursuers who are shot at or losing the fight lose heart fast
+      if (f.behaviour === "pursuing" && (f.underFire || (f.engaged && lostR * 10 > doneR * 12))) d -= P.pursuit.caughtCohesion;
       if (f.task.kind === "give_ground" && d < 0) d = Math.trunc(d / 2);
       const before = f.cohesion;
       f.cohesion = Math.max(0, Math.min(1000, f.cohesion + d));
@@ -544,8 +594,13 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
       else if (k < C.disorganised) b = near && rising ? "rallying" : p === "rout" || p === "retreat" ? (near ? "rallying" : "retreat") : "disorganised";
       else if ((p === "rallying" || p === "disorganised" || p === "retreat" || p === "rout") && k < C.rallied) b = near ? "rallying" : "disorganised";
       else if (f.task.kind === "withdraw") b = "withdrawing";
+      else if (k >= C.rallied && (chased = chaseTarget(f, p === "pursuing")) && wouldPursue({
+        discipline: P.kinds[f.kind].discipline, riskPermille: avg(c?.traits ?? [], "riskPermille"), mounted: P.kinds[f.kind].mounted, commanderNear: near, skill: c?.skill ?? 0, fatigue: f.fatigue,
+        holding: f.task.kind === "hold" || f.task.kind === "protect" || f.task.kind === "give_ground", already: p === "pursuing", isGuard: f.id === guard?.id, params: P.pursuit,
+      }).pursue) b = "pursuing";
       else if (f.engaged && lostR * 10 > doneR * 12 && (f.task.kind === "hold" || f.task.kind === "give_ground" || f.task.kind === "protect") && k < 700) b = "yielding";
       else b = "good_order";
+      f.chase = b === "pursuing" && chased ? chased.id : "";
       if (b !== p) {
         f.behaviour = b;
         if (b === "gone" && f.id === guard?.id && rulerFate === "safe") {/* the guard is gone: the ruler is alone */}

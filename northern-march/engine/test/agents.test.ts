@@ -142,10 +142,14 @@ test("no agent flips between plans and back on successive minor events", () => {
     }
     // Dithering = going back to A while B was still possible, having chosen B while A was still possible. Returning because B is done or impossible is not,
     // and neither is holding because A was impossible for a while (a rider on the road to court a people can sortie from nowhere).
+    // A sortie is done once it is fought (since Phase 8 a battle can settle it within hours): going back to A after it is not dithering.
+    const sortieDone = (agent: string, from: number, to: number) => sim.log.some((e) => e.type === "SortieResolved" && e.payload.commander === agent && e.tick > from && e.tick <= to);
     for (const [agent, xs] of byAgent)
       for (let i = 2; i < xs.length; i++)
-        if (xs[i].sel === xs[i - 2].sel && xs[i].sel !== xs[i - 1].sel && xs[i].tick - xs[i - 2].tick < 3 * DAY && xs[i - 1].options.includes(xs[i].sel))
+        if (xs[i].sel === xs[i - 2].sel && xs[i].sel !== xs[i - 1].sel && xs[i].tick - xs[i - 2].tick < 3 * DAY && xs[i - 1].options.includes(xs[i].sel)) {
+          if (JSON.parse(xs[i - 1].sel).kind === "sortie" && sortieDone(agent, xs[i - 1].tick, xs[i].tick)) continue;
           assert.ok(!xs[i].options.includes(xs[i - 1].sel), `${agent} flipped A-B-A within 3 days at ${xs[i].tick} (seed ${seed})`);
+        }
   }
 });
 

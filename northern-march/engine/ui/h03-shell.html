@@ -31,9 +31,16 @@ h1 { font-size: 22px; } h2 { font-size: 17px; }
 .guide li i { color: var(--mute); }
 .guide-card p { margin: 0; max-width: 68ch; }
 .guide-card .start { justify-self: start; text-align: center; background: var(--accent); color: var(--accent-ink); border-color: var(--accent); min-width: 140px; }
-details.ref { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; background: var(--bg); }
-details.ref summary { cursor: pointer; color: var(--mute); }
-details.ref .guide { margin-top: 8px; }
+.crown-key { color: var(--accent); } .raid-key { color: #a0241c; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .raid-key { color: #e07a70; } } :root[data-theme="dark"] .raid-key { color: #e07a70; }
+.field .outline { fill: none; stroke: var(--ptr); stroke-width: 8; stroke-dasharray: 22 12; }
+.field .hit { fill: transparent; pointer-events: all; cursor: pointer; }
+.spot .stage .field { max-height: 74vh; }
+.scale { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.scale button { text-align: center; font-variant-numeric: tabular-nums; }
+.scale-ends { display: flex; justify-content: space-between; color: var(--mute); font-size: 14px; }
+.note-l { color: var(--mute); font-size: 14px; }
+textarea.note { min-height: 70px; font: 15px var(--f-body); padding: 8px; }
 .answers { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
 button { font: inherit; color: inherit; border: 1px solid var(--line); background: var(--bg); border-radius: 6px; padding: 10px 12px; cursor: pointer; text-align: left; }
 button:hover { border-color: var(--accent); } button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; } button:disabled { opacity: .5; }
