@@ -33,7 +33,8 @@ export interface CommunityState {
 }
 export interface WorldState {
   treasuryMilli: Record<string, number>;
-  fortifications: Record<string, { conditionMilli: number; lastChangeEvent: number; garrison: number; establishment: number }>;
+  /** garrison: all men in the fort; archers and horse: how many of them are bowmen and riders, the rest foot (D-067). */
+  fortifications: Record<string, { conditionMilli: number; lastChangeEvent: number; garrison: number; establishment: number; archers: number; horse: number; estArchers: number }>;
   troops: Record<string, number>;
   tiers: Record<string, Tier>;
   history: Record<string, HistoryEntry[]>;
@@ -91,7 +92,7 @@ export interface WorldState {
   nextGoodsConvoyId: number;
   hands: Record<string, number>; // men still at home and available to a muster
   musterAway: Record<string, number>;
-  musters: Record<string, { id: number; community: string; fort: string; men: number; mounted: number; until: number; arrived: boolean }>;
+  musters: Record<string, { id: number; community: string; fort: string; men: number; mounted: number; horse: number; archers: number; until: number; arrived: boolean }>;
   nextMusterId: number;
   grainAsked: Record<string, number>; // place -> tick its castellan last sent for grain himself
   grainRefusedAt: Record<string, number>; // community -> tick it last refused to give grain
@@ -101,12 +102,29 @@ export interface WorldState {
 }
 
 export const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+type Fort = WorldState["fortifications"][string];
+/** Men leave a fort: bowmen and riders go in their share of the garrison, unless the kinds lost are known. */
+export function loseMen(f: Fort, n: number, kinds?: { archers?: number; horse?: number }) {
+  n = Math.max(0, Math.min(n, f.garrison));
+  if (!n) return;
+  const a = kinds ? Math.min(f.archers, kinds.archers ?? 0) : Math.floor((n * f.archers) / Math.max(1, f.garrison));
+  const h = kinds ? Math.min(f.horse, kinds.horse ?? 0) : Math.floor((n * f.horse) / Math.max(1, f.garrison));
+  f.archers -= a; f.horse -= h; f.garrison -= n;
+  // never more bowmen and riders than men
+  const over = f.archers + f.horse - f.garrison;
+  if (over > 0) { const da = Math.min(f.archers, Math.ceil((over * f.archers) / Math.max(1, f.archers + f.horse))); f.archers -= da; f.horse -= Math.min(f.horse, over - da); }
+}
+/** Men join a fort: local recruits are trained to the bow until the fort has its usual bowmen, the rest stand as foot. */
+function recruit(f: Fort, n: number) { if (n <= 0) return; f.garrison += n; f.archers += Math.max(0, Math.min(n, f.estArchers - f.archers)); }
 export const newAgent = (): AgentState => ({ operational: null, focus: null, experience: {}, lastDecision: null, answerRate: {}, lastActive: 0 });
 
 export function initialState(c: Content): WorldState {
   const fortifications: WorldState["fortifications"] = {};
-  for (const l of [...c.locations].sort((a, b) => cmp(a.id, b.id)))
-    if (l.fortification) fortifications[l.id] = { conditionMilli: l.fortification.conditionMilli, lastChangeEvent: 1, garrison: l.fortification.garrison, establishment: l.fortification.garrison };
+  const archShare = c.scenario.battle?.forces?.garrison.find((g) => g.kind === "archers")?.sharePermille ?? 0;
+  for (const l of [...c.locations].sort((a, b) => cmp(a.id, b.id))) if (l.fortification) {
+    const g = l.fortification.garrison, archers = l.fortification.archers ?? Math.floor((g * archShare) / 1000), horse = l.fortification.horse ?? 0;
+    fortifications[l.id] = { conditionMilli: l.fortification.conditionMilli, lastChangeEvent: 1, garrison: g, establishment: g, archers, horse, estArchers: archers };
+  }
   const positions: WorldState["positions"] = {};
   const troops: WorldState["troops"] = {}, agents: WorldState["agents"] = {}, tiers: WorldState["tiers"] = {};
   for (const ch of [...c.characters].sort((a, b) => cmp(a.id, b.id))) {
@@ -209,7 +227,7 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   ScenarioStarted: noop,
   TreasuryCollected: (s, p) => { s.treasuryMilli[p.holder] = (s.treasuryMilli[p.holder] ?? 0) + p.amountMilli; },
   UpkeepPaid: (s, p) => { s.treasuryMilli[p.holder] -= p.amountMilli; }, // includes any muster wages (p.musterMen)
-  GarrisonRecovered: (s, p) => { for (const [loc, n] of p.changes as [string, number][]) { const f = s.fortifications[loc]; f.garrison = Math.min(f.establishment, f.garrison + n); } },
+  GarrisonRecovered: (s, p) => { for (const [loc, n] of p.changes as [string, number][]) { const f = s.fortifications[loc]; recruit(f, Math.min(f.establishment, f.garrison + n) - f.garrison); } },
   CompanyRecovered: (s, p) => { for (const [who, n] of p.changes as [string, number][]) s.troops[who] += n; },
   FortificationsWeathered: (s, p, e) => {
     for (const [loc, d] of p.changes as [string, number][]) { const f = s.fortifications[loc]; f.conditionMilli = clampCond(f.conditionMilli - d); f.lastChangeEvent = e.id; }
@@ -224,9 +242,9 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   ThreatScripted: noop,
   ThreatEnded: (s, p) => { delete s.threats[p.site]; },
   // the raiders take the fort: its men scatter and nothing is repaired or recovered while they hold it
-  FortFell: (s, p) => { s.fallen[p.fort] = true; s.fortifications[p.fort].garrison = 0; },
+  FortFell: (s, p) => { s.fallen[p.fort] = true; const f = s.fortifications[p.fort]; f.garrison = 0; f.archers = 0; f.horse = 0; },
   FortAssaulted: noop,
-  FortRetaken: (s, p) => { delete s.fallen[p.fort]; const f = s.fortifications[p.fort]; f.conditionMilli = Math.max(f.conditionMilli, p.conditionMilli); f.garrison = p.garrison; },
+  FortRetaken: (s, p) => { delete s.fallen[p.fort]; const f = s.fortifications[p.fort]; f.conditionMilli = Math.max(f.conditionMilli, p.conditionMilli); f.garrison = 0; f.archers = 0; f.horse = 0; recruit(f, p.garrison); },
 
   TravelScripted: noop,
   Departed: (s, p, e) => {
@@ -303,7 +321,7 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
     }
   },
   HarvestDamaged: (s, p, e) => { s.harvestHit[p.place] = { permille: p.permille, until: p.until, eventId: e.id }; },
-  GarrisonStarved: (s, p) => { for (const [loc, n] of p.changes as [string, number][]) { const f = s.fortifications[loc]; f.garrison = Math.max(0, f.garrison - n); } },
+  GarrisonStarved: (s, p) => { for (const [loc, n] of p.changes as [string, number][]) loseMen(s.fortifications[loc], n); },
   GrainAsked: (s, p, e) => { s.grainAsked[p.place + (p.consult ? "" : "!")] = e.tick; }, // a consulted ask and an emergency take have their own cooldowns
   GrainConsulted: noop,
   GrainRefused: (s, p, e) => { if (!p.stood) s.grainRefusedAt[p.community] = e.tick; },
@@ -321,14 +339,18 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
     s.hands[p.community] -= p.men; s.musterAway[p.community] = (s.musterAway[p.community] ?? 0) + p.men;
     if (p.ironUsed) { s.goods.iron[p.fort] -= p.ironUsed; s.goodsLedger.iron[p.fort].used += p.ironUsed; }
     if (p.mounted) { s.goods.horses[p.fort] -= p.mounted; s.goodsLedger.horses[p.fort].used += p.mounted; }
-    s.musters[String(p.musterId)] = { id: p.musterId, community: p.community, fort: p.fort, men: p.men, mounted: p.mounted, until: p.until, arrived: false };
+    if (p.timberUsed) { s.goods.timber[p.fort] -= p.timberUsed; s.goodsLedger.timber[p.fort].used += p.timberUsed; }
+    // before D-067 the payload had no kinds: the riders were the mounted men
+    s.musters[String(p.musterId)] = { id: p.musterId, community: p.community, fort: p.fort, men: p.men, mounted: p.mounted, horse: p.horse ?? p.mounted, archers: p.archers ?? 0, until: p.until, arrived: false };
     s.nextMusterId = p.musterId + 1;
   },
-  MusterArrived: (s, p) => { const m = s.musters[String(p.musterId)]; if (m) { m.arrived = true; s.fortifications[m.fort].garrison += m.men + m.mounted; } },
+  // the riders are among the men called (D-067: before, they were counted twice)
+  MusterArrived: (s, p) => { const m = s.musters[String(p.musterId)]; if (m) { m.arrived = true; const f = s.fortifications[m.fort]; f.garrison += m.men; f.archers += m.archers; f.horse += m.horse; } },
   MusterEnded: (s, p) => {
     const m = s.musters[String(p.musterId)]; if (!m) return;
-    const f = s.fortifications[m.fort], surplus = Math.min(m.arrived ? m.men + m.mounted : 0, Math.max(0, f.garrison - f.establishment));
-    f.garrison -= surplus; s.hands[m.community] += m.men; s.musterAway[m.community] -= m.men; delete s.musters[String(p.musterId)];
+    // the called men go home, as many as the fort holds above its establishment, their own kinds first
+    const f = s.fortifications[m.fort], surplus = Math.min(m.arrived ? m.men : 0, Math.max(0, f.garrison - f.establishment));
+    if (surplus) loseMen(f, surplus, { horse: Math.floor((surplus * m.horse) / Math.max(1, m.men)), archers: Math.floor((surplus * m.archers) / Math.max(1, m.men)) }); s.hands[m.community] += m.men; s.musterAway[m.community] -= m.men; delete s.musters[String(p.musterId)];
   },
   // wider economy (D-039)
   GoodsDay: (s, p, e) => {
@@ -396,7 +418,7 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   PrestigeChanged: (s, p) => { s.prestige[p.who] = (s.prestige[p.who] ?? 0) + p.delta; },
   BattleConduct: (s, p) => { const c = (s.conduct[p.commander] ??= { obey: 0, adapt: 0, keep: 0 }); c[p.decision as "obey" | "adapt" | "keep"]++; },
   LossesTaken: (s, p) => {
-    if (p.garrisonLost) s.fortifications[p.location].garrison -= p.garrisonLost;
+    if (p.garrisonLost) loseMen(s.fortifications[p.location], p.garrisonLost, p.garrisonKinds);
     for (const [who, n] of Object.entries(p.troopsLost as Record<string, number>)) s.troops[who] -= n;
   },
   DetachmentSent: (s, p) => { s.troops[p.commander] -= p.men; },

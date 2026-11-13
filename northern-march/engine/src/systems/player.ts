@@ -34,7 +34,7 @@ export function makePlayer(decide: (ctx: Ctx, cause: number | null, reason: stri
         for (const a of decide(ctx, why, reason ?? "report")) {
           const input = ctx.emit("PlayerInput", why ? [why] : [], [chr(ruler)], { player: ruler, action: a.action, target: a.target ?? null, decision: a.decision!,
             ...(a.order ? { order: a.order } : {}), ...(a.followed ? { followed: a.followed } : {}),
-            ...(a.mission ? { mission: a.mission } : {}), ...(a.to ? { to: a.to } : {}), ...(a.consult ? { consult: true } : {}), ...(a.muster ? { muster: true } : {}), ...(a.sell ? { sell: true } : {}), ...(a.good ? { good: a.good } : {}), ...(a.units ? { units: a.units } : {}), ...(a.market ? { market: true } : {}), ...(a.raid ? { raid: a.raid } : {}), ...(a.repairMode ? { repairMode: a.repairMode } : {}), ...(a.battle ? { battle: a.battle } : {}) });
+            ...(a.mission ? { mission: a.mission } : {}), ...(a.to ? { to: a.to } : {}), ...(a.consult ? { consult: true } : {}), ...(a.muster ? { muster: true } : {}), ...(a.arm ? { arm: a.arm } : {}), ...(a.sell ? { sell: true } : {}), ...(a.good ? { good: a.good } : {}), ...(a.units ? { units: a.units } : {}), ...(a.market ? { market: true } : {}), ...(a.raid ? { raid: a.raid } : {}), ...(a.repairMode ? { repairMode: a.repairMode } : {}), ...(a.battle ? { battle: a.battle } : {}) });
           if (a.action === "battle") { if (a.battle) giveBattleOrder(ctx, input.id, a.battle); continue; }
           if (a.action === "travel") { travel(ctx, ruler, a.target!, "rider", false, input.id); continue; }
           if (a.action === "order") {
@@ -52,7 +52,7 @@ export function makePlayer(decide: (ctx: Ctx, cause: number | null, reason: stri
           }
  
           if (a.action === "levy" && a.muster) {
-            issue(ctx, ruler, to, "levy", loc(a.target!), input.id, false, { constraints: [{ kind: "men", textKey: "yes" }, { kind: "deliverTo", textKey: a.to ?? "" }] });
+            issue(ctx, ruler, to, "levy", loc(a.target!), input.id, false, { constraints: [{ kind: "men", textKey: "yes" }, { kind: "deliverTo", textKey: a.to ?? "" }, ...(a.arm ? [{ kind: "arm", textKey: a.arm }] : [])] });
             continue;
           }
           if (a.action === "requisition" || a.action === "purchase") {

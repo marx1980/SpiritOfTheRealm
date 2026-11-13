@@ -18,7 +18,7 @@ export interface Trait { id: string; riskPermille: number; obedienceWhenDisagree
   lossResponsePermille: number; badNewsReportingPermille: number; commitmentPermille: number }
 export interface Province { id: string; name: string; seat: string }
 export interface River { id: string; name: string }
-export interface Location { id: string; name: string; province: string; kind: string; terrain: string; exposurePermille: number; fortification?: { conditionMilli: number; garrison: number }; pos: [number, number] }
+export interface Location { id: string; name: string; province: string; kind: string; terrain: string; exposurePermille: number; fortification?: { conditionMilli: number; garrison: number; archers?: number; horse?: number }; pos: [number, number] }
 export interface Route { id: string; from: string; to: string; km: number; terrain: string; crossing?: { river: string; kind: string } }
 export interface Predicate { id: string; subjectKind: SubjectRefC["kind"]; halfLifeTicks: number; domain: string; wakeSignificance: 0 | 1 | 2 | 3; materialDelta: number }
 export interface Relationship { to: string; kind: string; value: number }
@@ -41,7 +41,9 @@ export interface AgentParams {
   demoteAfterDays: number; recommendationTrustMin: number;
 }
 export interface BattleParams {
-  sortie: { skillBasePermille: number; intensityFactorPermille: number; lossOnSuccessPermille: number; lossOnFailurePermille: number; hours: number; raiderMenAtFull: number; ambushPermilleAtFull: number; ambushFactorPermille: number };
+  sortie: { skillBasePermille: number; intensityFactorPermille: number; lossOnSuccessPermille: number; lossOnFailurePermille: number; hours: number; raiderMenAtFull: number; ambushPermilleAtFull: number; ambushFactorPermille: number;
+    /** How commanders judge their chances when a sortie means a battle (D-068), fitted to battle results on TUNE seeds. */
+    estimate?: { sharpness: number; skillBasePermille: number; raiderWeightPermille: number; lossOnWinPermille: number; lossOnDefeatPermille: number } };
   raidMitigationPerManPermille: number;
   /** Phase 8 battles (D-060): with these, a sortie that meets raiders fights a battle; without them, the single roll above. */
   field?: import("./battlefield/core.ts").FieldSpec;
@@ -64,7 +66,10 @@ export interface GoodsParams {
   convoy: { lossPermillePerDay: number; seizurePermilleAtFull: number; /** A caravan may be held up by weather or flooded roads: chance per day on the road, and how many days it loses (D-050). */ delayPermillePerDay?: number; delayDays?: [number, number] };
 }
 /** Wider economy, stage 2 (D-040): men called from a community's hands, armed from a fort's iron, paid for a season. */
-export interface ManpowerParams { musterMen: number; ironPerMan: number; mountedPermille: number; serviceDays: number; wageMilli: number; handsReservePermille: number; harvestPermille: number; grievanceAtFullPermille: number }
+export type Arm = "foot" | "archers" | "horse";
+/** What it takes to arm one man of each kind (D-067): iron for blades and mail, timber for bows, a horse for a rider. */
+export type ArmCost = { iron: number; timber: number; horses: number };
+export interface ManpowerParams { arms?: Record<Arm, ArmCost>; musterMen: number; ironPerMan: number; mountedPermille: number; serviceDays: number; wageMilli: number; handsReservePermille: number; harvestPermille: number; grievanceAtFullPermille: number }
 export interface GrainParams {
   places: GrainPlace[];
   harvestHitPermille: number; harvestHitDays: number;

@@ -22,6 +22,16 @@ const lossOver = (sit: Situation, i: number, d: number, ticks: number) => Math.f
 
 export function sortieP(sit: Situation, men: number, skill: number, intensity: number) {
   if (intensity <= 0) return 1000;
+  const est = sit.p.battle.sortie.estimate;
+  if (est && sit.p.battle.field) {
+    // a battle is far less of a lottery than the old roll: the larger side usually wins (D-068). S^k / (S^k + R^k),
+    // by repeated multiplication so every engine gives the same number
+    // a careful commander also weighs the chance of meeting a second band in the raiders' own ground
+    const sp = sit.p.battle.sortie, S = Math.floor((men * (est.skillBasePermille + skill)) / 1000), R = Math.floor((raiderMen(sit.p.battle, intensity) * est.raiderWeightPermille) / 1000);
+    const odds = (r: number) => { let a = 1, b = 1; for (let i = 0; i < est.sharpness; i++) { a *= S; b *= r; } return a + b > 0 ? Math.floor((1000 * a) / (a + b)) : 500; };
+    const amb = Math.floor((Math.min(1000, intensity) * sp.ambushPermilleAtFull) / 1000);
+    return Math.floor(((1000 - amb) * odds(R) + amb * odds(Math.floor((R * sp.ambushFactorPermille) / 1000))) / 1000);
+  }
   const S = Math.floor((men * (sit.p.battle.sortie.skillBasePermille + skill)) / 1000);
   const I = Math.floor((intensity * sit.p.battle.sortie.intensityFactorPermille) / 1000);
   return Math.floor((1000 * S) / Math.max(1, S + I));
@@ -96,7 +106,10 @@ export function expect(sit: Situation, per: Perceiver, a: ActionRef): Expectatio
       e.successP = sortieP(sit, men, sit.cap.military ?? 0, intensity);
       const s = e.successP, sp = sit.p.battle.sortie;
       loss[fort] = Math.floor((s * lossOver(sit, intensity, men, DAY) + (1000 - s) * lossOver(sit, p.intensity, Math.floor((men * (1000 - sp.lossOnFailurePermille)) / 1000), H)) / 1000);
-      e.menLost = Math.floor((men * (s * sp.lossOnSuccessPermille + (1000 - s) * sp.lossOnFailurePermille)) / 1_000_000);
+      if (sp.estimate && sit.p.battle.field) {
+        const foe = raiderMen(sit.p.battle, intensity);
+        e.menLost = Math.floor((s * battleLoss(sit.p.battle, men, foe, true) + (1000 - s) * battleLoss(sit.p.battle, men, foe, false)) / 1000);
+      } else e.menLost = Math.floor((men * (s * sp.lossOnSuccessPermille + (1000 - s) * sp.lossOnFailurePermille)) / 1_000_000);
       e.renownPermille = s;
       break;
     }

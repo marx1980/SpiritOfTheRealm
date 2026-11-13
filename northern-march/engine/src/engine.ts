@@ -218,7 +218,7 @@ export class Sim {
       ...(e.payload.mission ? { mission: e.payload.mission as InputRecord["mission"] } : {}), ...(e.payload.raid ? { raid: e.payload.raid as string } : {}),
       ...(e.payload.repairMode ? { repairMode: e.payload.repairMode as InputRecord["repairMode"] } : {}),
       ...(e.payload.to ? { to: e.payload.to as string } : {}), ...(e.payload.consult ? { consult: true } : {}),
-      ...(e.payload.muster ? { muster: true } : {}), ...(e.payload.sell ? { sell: true } : {}), ...(e.payload.good ? { good: e.payload.good as string } : {}), ...(e.payload.units ? { units: e.payload.units as number } : {}), ...(e.payload.market ? { market: true } : {}),
+      ...(e.payload.muster ? { muster: true } : {}), ...(e.payload.arm ? { arm: e.payload.arm as "foot" } : {}), ...(e.payload.sell ? { sell: true } : {}), ...(e.payload.good ? { good: e.payload.good as string } : {}), ...(e.payload.units ? { units: e.payload.units as number } : {}), ...(e.payload.market ? { market: true } : {}),
       ...(e.payload.battle ? { battle: e.payload.battle as InputRecord["battle"] } : {}),
     }));
     const rngStates: SaveFile["rngStates"] = {};
@@ -253,7 +253,7 @@ export class Sim {
       actions = recs.map((r) => ({ action: r.action, ...(r.target ? { target: r.target } : {}), ...(r.order ? { order: r.order } : {}), ...(r.followed ? { followed: r.followed } : {}),
         ...(r.mission ? { mission: r.mission } : {}), ...(r.raid ? { raid: r.raid } : {}), ...(r.repairMode ? { repairMode: r.repairMode } : {}),
         ...(r.to ? { to: r.to } : {}), ...(r.consult ? { consult: true } : {}),
-        ...(r.muster ? { muster: true } : {}), ...(r.sell ? { sell: true } : {}), ...(r.good ? { good: r.good } : {}), ...(r.units ? { units: r.units } : {}), ...(r.market ? { market: true } : {}), ...(r.battle ? { battle: r.battle } : {}) }));
+        ...(r.muster ? { muster: true } : {}), ...(r.arm ? { arm: r.arm } : {}), ...(r.sell ? { sell: true } : {}), ...(r.good ? { good: r.good } : {}), ...(r.units ? { units: r.units } : {}), ...(r.market ? { market: true } : {}), ...(r.battle ? { battle: r.battle } : {}) }));
     } else if ((rp ? this.resumePolicy : this.cfg.policy) === "external") {
       actions = this.pendingAnswer ?? [];
     } else if (reason === "battle") {

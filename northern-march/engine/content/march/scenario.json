@@ -203,7 +203,14 @@
    "hours": 12,
    "raiderMenAtFull": 400,
    "ambushPermilleAtFull": 300,
-   "ambushFactorPermille": 1800
+   "ambushFactorPermille": 1800,
+   "estimate": {
+    "sharpness": 5,
+    "skillBasePermille": 1000,
+    "raiderWeightPermille": 1200,
+    "lossOnWinPermille": 125,
+    "lossOnDefeatPermille": 180
+   }
   },
   "raidMitigationPerManPermille": 8,
   "field": {
@@ -448,6 +455,11 @@
      "kind": "archers",
      "sharePermille": 300,
      "by": "sergeant"
+    },
+    {
+     "kind": "horse",
+     "sharePermille": 0,
+     "by": "castellan"
     }
    ],
    "company": [
@@ -872,6 +884,23 @@
   }
  },
  "manpower": {
+  "arms": {
+   "foot": {
+    "iron": 1,
+    "timber": 0,
+    "horses": 0
+   },
+   "archers": {
+    "iron": 0,
+    "timber": 1,
+    "horses": 0
+   },
+   "horse": {
+    "iron": 1,
+    "timber": 0,
+    "horses": 1
+   }
+  },
   "musterMen": 40,
   "ironPerMan": 1,
   "mountedPermille": 250,

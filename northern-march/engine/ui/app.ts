@@ -8,7 +8,7 @@ import { MapGraph } from "../src/map.ts";
 import { mapSvg } from "./maparts.ts";
 import { BATTLE_CSS, battleSvg, frameBox, framePoints, glyphOf, mins } from "./battleart.ts";
 import type { Task } from "../src/battlefield/core.ts";
-import { actionText, adviceAction, adviceChoices, affordable as affordableR, coinsKnown as coinsKnownR, buyKnown, economyProblems, GOOD_LABEL, grainCover, grainKnown, houseOf, openAdvice, priceKnown, publicRules, purchaseCostKnown, raidNear, repairCostKnown as repairCostKnownR, storeKnown, type AdviceChoice } from "../src/presentation/affordances.ts";
+import { actionText, ARM_WORD, adviceAction, adviceChoices, affordable as affordableR, coinsKnown as coinsKnownR, buyKnown, economyProblems, GOOD_LABEL, grainCover, grainKnown, houseOf, openAdvice, priceKnown, publicRules, purchaseCostKnown, raidNear, repairCostKnown as repairCostKnownR, storeKnown, type AdviceChoice } from "../src/presentation/affordances.ts";
 import { captainSentTo, fallenAt, lettersFall, planOf, certainty, letterSentences, letterGist, planWords, reasonWords, sourceOf } from "../src/presentation/phrasing.ts";
 import { beliefsAbout, validateDraft, type OrderDraft, type View } from "../src/view.ts";
 import { INTENTS, type Recommendation } from "../src/schemas.ts";
@@ -47,7 +47,7 @@ const st = {
   sim: null as unknown as Sim, log: [] as PlayerAction[][], shownPause: null as string | null, advSeen: {} as Record<string, number>, windfall: null as null | { day: number; milli: number }, advDay: -1, seed: __H01__.seed, paused: null as null | string, over: false, letter: null as number | null, advice: null as number | null, tab: "game" as "game" | "settings" | "economy",
   batch: [] as number[], queue: [] as PlayerAction[], autoPause: new Set<string>(REASONS), selected: "northwatch",
   draft: { recipient: "", action: "p:repair", objective: "northwatch", discretion: "bounded", mission: "defend", repairMode: "standard" } as { recipient: string; action: string; objective: string; discretion: string; mission: string; repairMode: string },
-  eco: { act: "move", good: "timber", from: "", to: "", community: "", fort: "", consult: false, qty: 0 } as { act: string; good: string; from: string; to: string; community: string; fort: string; consult: boolean; qty: number },
+  eco: { act: "move", good: "timber", from: "", to: "", community: "", fort: "", arm: "foot", consult: false, qty: 0 } as { act: string; good: string; from: string; to: string; community: string; fort: string; arm: string; consult: boolean; qty: number },
   bo: { to: "", kind: "hold", place: "ridge", target: "", limit: false, when: "", via: "runner", signal: "hold" } as { to: string; kind: string; place: string; target: string; limit: boolean; when: string; via: string; signal: string },
   error: "", observer: location.hash === "#observer", answered: 0, openLetter: null as number | null, openIssue: null as string | null,
 };
@@ -451,7 +451,7 @@ function ecoForm(v: View) {
     : e.act === "buy" ? { action: "purchase", market: true, target: e.from, to: e.to, units: e.qty, ...(isGrain ? {} : { good: e.good }) }
     : e.act === "sell" ? { action: "requisition", target: e.from, to: e.to, good: e.good, units: e.qty, sell: true }
     : e.act === "send" ? { action: "requisition", target: e.from, to: e.to, good: e.good, units: e.qty }
-    : e.act === "muster" ? { action: "levy", muster: true, target: e.community, to: e.fort } : null;
+    : e.act === "muster" ? { action: "levy", muster: true, target: e.community, to: e.fort, ...(g?.muster?.arms ? { arm: e.arm as "foot" } : {}) } : null;
   return { action, from, to: e.act === "send" ? to.filter((x) => x !== e.from) : to, communities, forts, isGrain, amounts };
 }
 function economyTab(v: View): string {
@@ -484,7 +484,9 @@ function economyTab(v: View): string {
   const isGrain = f.isGrain, mu = g?.muster;
   const goodKinds = e.act === "take" ? ["grain"] : [...(g?.kinds ?? []), ...(gr && e.act === "buy" ? ["grain"] : [])];
   const fromLabel = e.act === "buy" ? "At" : "From", toLabel = e.act === "sell" ? "At" : e.act === "send" ? "To" : "For";
-  const fortIron = a?.muster ? storeKnown(v, e.fort, "iron") : undefined;
+  const armCost = a?.muster && a.arm ? mu?.arms?.[a.arm] : undefined;
+  const stock = (k: string) => { const n = storeKnown(v, e.fort, k); return n === undefined ? "?" : String(n); };
+  const fortStock = a?.muster ? (armCost ? (["iron", "timber", "horses"] as const).filter((k) => armCost[k] > 0).map((k) => `${(GOOD_LABEL[k] ?? k).toLowerCase()} ${stock(k)}`).join(" · ") : `iron ${stock("iron")}`) : "";
   const trade = (e.act === "buy" || e.act === "sell" || e.act === "send") && a && a.target && a.to ? (() => {
     const mk = e.act === "buy" ? a.target! : e.act === "sell" ? a.to! : a.target!, place = e.act === "buy" ? a.to! : e.act === "sell" ? a.target! : a.to!;
     const price = e.act === "buy" ? buyKnown(v, mk, a.good) : e.act === "sell" && a.good ? v.ledger?.town?.[mk]?.[a.good] : undefined, days = roadDays(mk, place), n = a.units ?? e.qty;
@@ -493,14 +495,14 @@ function economyTab(v: View): string {
     const when = days === undefined ? "" : `${e.act === "buy" ? "delivered in" : e.act === "sell" ? "paid after" : "arrives in"} about ${dayTone(days)}`;
     return [sum, when].filter(Boolean).join(", ");
   })() : "";
-  const info = a?.muster && mu ? `Up to ${mu.men} men · iron ${fortIron === undefined ? "?" : fortIron} · wages ${kCoins(mu.men * mu.wageMilli)} a day for ${mu.serviceDays} days`
+  const info = a?.muster && mu ? `Up to ${mu.men} men · ${fortStock} · wages ${kCoins(mu.men * mu.wageMilli)} a day for ${mu.serviceDays} days`
     : cost !== undefined ? `Costs about ${kCoins(cost)}${coins === undefined ? "" : `; you have about ${kCoins(coins)}`}`
     : "";
   const form = `<div class="card"><h2>Order</h2><div class="form">
       <label for="eco-act">Action</label><select id="eco-act">${ECO_ACTS.filter(([k]) => (k !== "muster" || !!mu) && (k === "muster" || !!g || !!gr)).map(([k, l]) => opt(k, l, e.act)).join("")}</select>
       ${e.act !== "muster" && e.act !== "take" ? `<label for="eco-good">Good</label><select id="eco-good">${goodKinds.map((k) => opt(k, k === "grain" ? "Grain" : GOOD_LABEL[k] ?? k, e.good)).join("")}</select>` : ""}
       ${e.act !== "muster" && f.amounts.length ? `<label for="eco-qty">Quantity</label><select id="eco-qty">${f.amounts.map((n) => opt(String(n), String(n), String(e.qty))).join("")}</select>` : ""}
-      ${e.act === "muster" && mu ? `<label for="eco-comm">Men of</label><select id="eco-comm">${f.communities.map((c) => opt(c, name(v, c), e.community)).join("")}</select><label for="eco-fort">To</label><select id="eco-fort">${f.forts.map((x) => opt(x, name(v, x), e.fort)).join("")}</select>`
+      ${e.act === "muster" && mu ? `<label for="eco-comm">Men of</label><select id="eco-comm">${f.communities.map((c) => opt(c, name(v, c), e.community)).join("")}</select><label for="eco-fort">To</label><select id="eco-fort">${f.forts.map((x) => opt(x, name(v, x), e.fort)).join("")}</select>${mu.arms ? `<label for="eco-arm">As</label><select id="eco-arm">${(["foot", "archers", "horse"] as const).map((k) => opt(k, cap1(ARM_WORD[k]), e.arm)).join("")}</select>` : ""}`
         : `<label for="eco-from">${fromLabel}</label><select id="eco-from">${f.from.map((x) => opt(x, name(v, x), e.from)).join("")}</select><label for="eco-to">${toLabel}</label><select id="eco-to">${f.to.map((x) => opt(x, name(v, x), e.to)).join("")}</select>`}
       ${e.act === "take" ? `<span></span><label class="check"><input type="checkbox" id="eco-consult" ${e.consult ? "checked" : ""}> Ask the people first</label>` : ""}
       ${trade ? `<span></span><span class="cost">${trade}</span>` : info ? `<span></span><span class="cost">${esc(info)}</span>` : ""}
@@ -696,7 +698,7 @@ document.addEventListener("change", (e) => {
   const bo = ({ "bo-to": "to", "bo-kind": "kind", "bo-place": "place", "bo-target": "target", "bo-when": "when", "bo-via": "via", "bo-signal": "signal" } as Record<string, "to" | "kind" | "place" | "target" | "when" | "via" | "signal">)[t.id];
   if (bo) { st.bo[bo] = t.value; return render(); }
   if (t.id === "bo-limit") { st.bo.limit = (t as HTMLInputElement).checked; return render(); }
-  const eco = ({ "eco-act": "act", "eco-good": "good", "eco-from": "from", "eco-to": "to", "eco-comm": "community", "eco-fort": "fort" } as Record<string, "act" | "good" | "from" | "to" | "community" | "fort">)[t.id];
+  const eco = ({ "eco-act": "act", "eco-good": "good", "eco-from": "from", "eco-to": "to", "eco-comm": "community", "eco-fort": "fort", "eco-arm": "arm" } as Record<string, "act" | "good" | "from" | "to" | "community" | "fort" | "arm">)[t.id];
   if (eco) { st.eco[eco] = t.value; if (eco === "act" || eco === "good") { st.eco.from = ""; st.eco.to = ""; } return render(); }
   if (t.id === "eco-consult") { st.eco.consult = (t as HTMLInputElement).checked; return render(); }
   if (t.dataset.pause) { (t as HTMLInputElement).checked ? st.autoPause.add(t.dataset.pause) : st.autoPause.delete(t.dataset.pause); return; }

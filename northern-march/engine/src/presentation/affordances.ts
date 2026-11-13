@@ -96,10 +96,11 @@ export function openAdvice(v: View): Recommendation[] {
   return latestAdviceOf(v).filter((r) => !adviceSettled(v, r.id));
 }
 
+export const ARM_WORD: Record<"foot" | "archers" | "horse", string> = { foot: "foot", archers: "archers", horse: "horse" };
 /** The words for an action, as the page shows them. */
 export function actionText(v: View, a: PlayerAction): string {
   return a.action === "order" ? `Order ${name(v, a.order!.recipient)}: ${a.order!.intent} ${name(v, a.order!.objective.id)}`
-    : a.action === "levy" && a.muster ? `Call men from ${name(v, a.target!)} to ${name(v, a.to!)}`
+    : a.action === "levy" && a.muster ? `Call ${a.arm ? ARM_WORD[a.arm] : "men"} from ${name(v, a.target!)} to ${name(v, a.to!)}`
     : (a.action === "requisition" || a.action === "purchase") && a.to ? `${a.sell ? "Sell" : a.action === "purchase" ? "Buy" : a.good ? "Send" : "Take"} ${a.units ? `${a.units} ` : ""}${a.good ?? "grain"} ${a.sell ? `from ${name(v, a.target!)} at ${name(v, a.to)}` : a.action === "purchase" ? `at ${name(v, a.target!)} for ${name(v, a.to)}` : `from ${name(v, a.target!)} to ${name(v, a.to)}`}${a.consult ? ", asking the people first" : ""}`
     : a.action === "levy" ? "Raise a levy" : a.action === "relief" ? `Send relief to ${name(v, a.target!)}` : a.action === "travel" ? `Travel to ${name(v, a.target!)}`
     : a.action === "repair" ? `Repair ${name(v, a.target!)}${a.repairMode === "rush" ? " quickly, paying extra, with the captain's men" : a.repairMode === "labour" ? " with the captain's men only (no cost, slower)" : ""}`
@@ -196,7 +197,14 @@ export function economyProblems(v: View, a: PlayerAction): string[] {
     if (!g?.muster) return ["no muster in this realm"];
     if (!g.muster.communities.includes(a.target ?? "")) out.push("choose a people to call men from");
     if (!v.world.places.find((p) => p.id === a.to)?.fortified) out.push("choose a fort for the men to go to");
-    else { const iron = storeKnown(v, a.to!, "iron"); if (iron !== undefined && iron < g.muster.ironPerMan) out.push(`${nm(a.to!)} has no iron to arm men`); }
+    else if (a.arm) {
+      const cost = g.muster.arms?.[a.arm];
+      if (!cost) out.push("men cannot be armed so here");
+      else for (const [good, per, what] of [["iron", cost.iron, "iron"], ["timber", cost.timber, "timber for bows"], ["horses", cost.horses, "horses"]] as const) {
+        const have = per > 0 ? storeKnown(v, a.to!, good) : undefined;
+        if (have !== undefined && have < per) out.push(`${nm(a.to!)} has no ${what}`);
+      }
+    } else { const iron = storeKnown(v, a.to!, "iron"); if (iron !== undefined && iron < g.muster.ironPerMan) out.push(`${nm(a.to!)} has no iron to arm men`); }
     return out;
   }
   if (a.action !== "requisition" && a.action !== "purchase") return out;
@@ -252,7 +260,7 @@ export function economyActions(v: View, rules: PublicRules): PlayerAction[] {
     for (const from of places.filter((id) => grainKnown(v, id))) for (const to of places) if (to !== from) { const a: PlayerAction = { action: "requisition", target: from, to }; if (ok(a)) out.push(a); }
   }
   if (g?.muster) for (const c of g.muster.communities) for (const f of v.world.places.filter((p) => p.fortified).map((p) => p.id).sort()) {
-    const a: PlayerAction = { action: "levy", muster: true, target: c, to: f }; if (ok(a)) out.push(a);
+    for (const arm of [undefined, ...(g.muster.arms ? (["foot", "archers", "horse"] as const) : [])]) { const a: PlayerAction = { action: "levy", muster: true, target: c, to: f, ...(arm ? { arm } : {}) }; if (ok(a)) out.push(a); }
   }
   return out.filter((a) => affordable(v, rules, a));
 }

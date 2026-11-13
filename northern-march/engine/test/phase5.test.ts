@@ -230,7 +230,9 @@ test("an attack order sends the captain to the fort that answers the site, he so
     r.scenario.scripts = [{ day: 2, kind: "threat", site: "blackwood", intensityPermille: 700, durationDays: 80 }];
     r.scenario.messenger.lossPermillePerDay = 0; r.scenario.interception = [];
   });
-  const sim = createSim({ content: c, seed: 51, policy: "external", params: { dayEnd: true } });
+  // seed 52: on seed 51 Caron now marches to Northwatch on his own before the order catches him (D-068: he judges the
+  // sortie by the battle), and the messenger rightly gives up after the redirect limit
+  const sim = createSim({ content: c, seed: 52, policy: "external", params: { dayEnd: true } });
   let sent = false;
   for (let g = 0; g < 4000; g++) {
     const r = sim.next(40 * DAY);

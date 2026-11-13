@@ -55,7 +55,7 @@ export const battle: System = {
         battleId: launchedEventId, seed, site, place: ctx.content.byId.location.get(from)?.name ?? from,
         endT: Math.max(600, dusk - ctx.tick), weather: rainy ? "rain" : "clear",
         field: b.field!, params: b.tactics!, forces: b.forces!, obedience: sc.agents.obedience,
-        garrison: { men: ctx.s.fortifications[from]?.garrison ?? 0, ...(castellan ? { castellan: who(ctx, castellan.id) } : {}), ...(sergeant ? { sergeant: who(ctx, sergeant.id) } : {}) },
+        garrison: { men: ctx.s.fortifications[from]?.garrison ?? 0, archers: ctx.s.fortifications[from]?.archers ?? 0, horse: ctx.s.fortifications[from]?.horse ?? 0, ...(castellan ? { castellan: who(ctx, castellan.id) } : {}), ...(sergeant ? { sergeant: who(ctx, sergeant.id) } : {}) },
         companies: captains.map((id) => ({ captain: who(ctx, id), men: ctx.s.troops[id] ?? 0 })),
         raiderMen: enemy,
         ruler: { ...who(ctx, ruler), present: rulerHere, post: "rear" },
@@ -121,11 +121,16 @@ function concludeBattle(ctx: Ctx, st: BattleState) {
   // losses to the garrison and to each company (the guard is not counted on the campaign map)
   const troopsLost: Record<string, number> = {};
   let garrisonLost = 0;
+  const garrisonKinds = { archers: 0, horse: 0 };
   for (const c of setup.commanders.filter((c) => c.side === "crown" && c.id !== ruler)) {
     const n = res.lostBy[c.id] ?? 0;
     if (!n) continue;
     if ((ctx.s.troops[c.id] ?? 0) > 0 && ctx.content.byId.character.get(c.id)?.role === "captain") troopsLost[c.id] = Math.min(ctx.s.troops[c.id], n);
-    else garrisonLost += n;
+    else {
+      garrisonLost += n;
+      // which of the fort's men fell, by kind (D-067)
+      for (const f of setup.formations.filter((f) => f.commander === c.id)) { const k = f.kind === "archers" ? "archers" : f.kind === "horse" ? "horse" : null; if (k) garrisonKinds[k] += res.lostByFormation[f.id] ?? 0; }
+    }
   }
   garrisonLost = Math.min(garrisonLost, ctx.s.fortifications[st.from]?.garrison ?? 0);
   // the raiders: broken if beaten, weakened by what they lost if not
@@ -146,7 +151,7 @@ function concludeBattle(ctx: Ctx, st: BattleState) {
   if (setup.ruler.present) learn(ctx, ruler, { subject: loc(st.site), predicate: "battle.result", value: res.winner === "crown" ? "won" : res.winner === "raiders" ? "lost" : "drawn", observedAt: ctx.tick, band: "certain" }, { kind: "observation", eventId: ev.id, source: ruler }, [ev.id]);
   concludeSortie(ctx, {
     commander: st.commander, from: st.from, site: st.site, launchedEventId: st.launchedEventId, cause: ev.id,
-    found: true, success, pPermille: -1, men: st.men, ambushed: st.ambushed, enemy: st.enemy, garrisonLost, troopsLost, battleId: setup.battleId,
+    found: true, success, pPermille: -1, men: st.men, ambushed: st.ambushed, enemy: st.enemy, garrisonLost, garrisonKinds, troopsLost, battleId: setup.battleId,
     debriefs: r.debrief.filter((d) => d.author !== ruler).map((d) => d.author),
   });
 }

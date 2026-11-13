@@ -25,7 +25,8 @@ export function personOf(c: import("../content.ts").Content, id: string, skill?:
 export interface BattleInputs {
   battleId: number; seed: number; site: string; place: string; endT: number; weather: "clear" | "rain";
   field: FieldSpec; params: BattleParams; forces: ForcesParams; obedience: ObedienceParams;
-  garrison: { men: number; castellan?: Person; sergeant?: Person };
+  /** The fort's men; archers and horse, if known, are how many of them are bowmen and riders (D-067), else content shares. */
+  garrison: { men: number; archers?: number; horse?: number; castellan?: Person; sergeant?: Person };
   companies: { captain: Person; men: number }[];
   raiderMen: number;
   ruler: Person & { present: boolean; post?: "rear" | "centre" | "forward" };
@@ -56,10 +57,16 @@ export function buildSetup(x: BattleInputs): BattleSetup {
     cmd(co.captain, "crown", ids);
   }
   const gIds: Record<string, (string | undefined)[]> = { castellan: [], sergeant: [] };
+  // the garrison by kind: from the fort's roster when the campaign gives it, else split by content shares (the last share
+  // above nothing takes what is left)
+  const typed = x.garrison.archers !== undefined || x.garrison.horse !== undefined;
+  const archers = Math.min(x.garrison.men, x.garrison.archers ?? 0), horse = Math.min(x.garrison.men - archers, x.garrison.horse ?? 0);
+  const lastShared = F.garrison.reduce((k, p, i) => (p.sharePermille > 0 ? i : k), -1);
   let gLeft = x.garrison.men;
   F.garrison.forEach((part, i) => {
     const who = (part.by === "sergeant" && x.garrison.sergeant) || x.garrison.castellan || x.garrison.sergeant;
-    const n = i === F.garrison.length - 1 ? gLeft : Math.floor((x.garrison.men * part.sharePermille) / 1000);
+    const n = typed ? (part.kind === "archers" ? archers : part.kind === "horse" ? horse : part.kind === "foot" ? x.garrison.men - archers - horse : 0)
+      : i === lastShared ? gLeft : i > lastShared ? 0 : Math.floor((x.garrison.men * part.sharePermille) / 1000);
     gLeft -= n;
     if (!who) return;
     gIds[who === x.garrison.sergeant && part.by === "sergeant" ? "sergeant" : "castellan"].push(add("crown", part.kind, n, who.id, `${x.place} ${LABEL[part.kind]}`));

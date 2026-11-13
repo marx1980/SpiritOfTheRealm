@@ -7,6 +7,8 @@ export const raiderMen = (b: BattleParams, intensityPermille: number) => Math.fl
 /** Men a force of `men` loses fighting `enemy` men: the base rate at an even match, more against a larger enemy, less against a smaller. */
 export function battleLoss(b: BattleParams, men: number, enemy: number, won: boolean): number {
   const share = (1000 * enemy) / Math.max(1, enemy + men);
-  const rate = won ? b.sortie.lossOnSuccessPermille : b.sortie.lossOnFailurePermille;
+  // with battles fought out on the field, the rates commanders expect are the battles' own (D-068)
+  const est = b.field ? b.sortie.estimate : undefined;
+  const rate = won ? est?.lossOnWinPermille ?? b.sortie.lossOnSuccessPermille : est?.lossOnDefeatPermille ?? b.sortie.lossOnFailurePermille;
   return Math.min(men, Math.floor((men * rate * share) / (500 * 1000)));
 }

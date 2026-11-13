@@ -39,7 +39,8 @@ test("manpower: a muster moves hands, iron and horses exactly and adds the men t
   assert.equal(w.goodsLedger.iron.northwatch.used, men * M.ironPerMan);
   assert.equal(w.goodsLedger.horses.northwatch.used, mounted);
   const f = w.fortifications.northwatch;
-  assert.equal(f.garrison, f.establishment + men + mounted, "mounted men count twice");
+  assert.equal(f.garrison, f.establishment + men, "the riders are among the men (D-067: they used to count twice)");
+  assert.equal(f.horse, mounted, "the riders stand as horse");
 });
 
 test("manpower: no iron at the fort and no spare hands each abandon the order", () => {

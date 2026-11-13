@@ -425,11 +425,11 @@ export function battleClaims(ctx: Ctx, who: string, from: string, site: string, 
 /** The end of a sortie, rolled or fought (D-060): the outcome event, losses, the raiders ended if beaten, experience, what
  *  those present now know, and the letters home. A fought battle also sends each commander's debrief to his superior. */
 export function concludeSortie(ctx: Ctx, o: { commander: string; from: string; site: string; launchedEventId: number; cause: number; found: boolean; success: boolean; pPermille: number;
-  men: number; ambushed: boolean; enemy: number; garrisonLost: number; troopsLost: Record<string, number>; battleId?: number; debriefs?: string[] }) {
+  men: number; ambushed: boolean; enemy: number; garrisonLost: number; garrisonKinds?: { archers: number; horse: number }; troopsLost: Record<string, number>; battleId?: number; debriefs?: string[] }) {
   const { commander, from, site } = o;
   const res = ctx.emit("SortieResolved", [o.cause], [chr(commander), loc(site)], { commander, site, from, found: o.found, success: o.success, pPermille: o.pPermille, men: o.men, ambushed: o.ambushed, enemy: o.enemy, ...(o.battleId !== undefined ? { battleId: o.battleId } : {}) });
   if (o.found) {
-    if (o.garrisonLost || Object.keys(o.troopsLost).length) ctx.emit("LossesTaken", [res.id], [loc(from)], { location: from, garrisonLost: o.garrisonLost, troopsLost: o.troopsLost, cause: o.battleId !== undefined ? "battle" : "sortie" });
+    if (o.garrisonLost || Object.keys(o.troopsLost).length) ctx.emit("LossesTaken", [res.id], [loc(from)], { location: from, garrisonLost: o.garrisonLost, ...(o.garrisonKinds && o.garrisonLost ? { garrisonKinds: o.garrisonKinds } : {}), troopsLost: o.troopsLost, cause: o.battleId !== undefined ? "battle" : "sortie" });
     if (o.success && ctx.s.threats[site]) ctx.emit("ThreatEnded", [res.id], [loc(site)], { site, endedBy: o.battleId !== undefined ? "battle" : "sortie" });
   }
   const exp = ctx.content.scenario.agents.experience;
