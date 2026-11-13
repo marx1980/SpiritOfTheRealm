@@ -3,6 +3,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { hashOf, sha256 } from "./canonical.ts";
 import type { Content } from "./content.ts";
 import { createSim, hashLog, type Sim, type SimParams } from "./engine.ts";
+import { readAttention, readEnding } from "./endings.ts";
 import type { SystemId } from "./events.ts";
 import type { PolicyId } from "./policies.ts";
 
@@ -44,12 +45,13 @@ export function metricsRow(sim: Sim, spec: BatchSpec, wallMs: number) {
   const crisis = log.filter((e) => e.type === "Storm" || e.type === "Hazard" || e.type === "ThreatBegan");
   const breached = minConditionBelow(sim, spec.content.scenario.endStates.fortificationBreachedBelowMilli);
   const obs = sim.decisionsObserved;
+  const ending = readEnding(log, spec.content, sim.tick), attention = readAttention(log, spec.content);
   return {
     seed: sim.seed,
-    dominantCrisis: null,
+    dominantCrisis: attention.dominant,
     crisisCount: { Storm: count("Storm") + count("Hazard"), ThreatBegan: count("ThreatBegan") },
     timeToFirstCrisis: crisis.length ? crisis[0].tick : null,
-    timeToEnding: log.find((e) => e.type === "CampaignEnded")?.tick ?? null, endingType: sim.objectiveStatus().ended, endingFirstCause: null, endingAncestryDomains: null,
+    timeToEnding: ending.tick, endingType: ending.type, endingFirstCause: ending.firstCause, endingAncestryDomains: ending.type === "unresolved" ? null : ending.ancestryDomains,
     objectiveMet: sim.objectiveStatus().met,
     decisionsTotal: count("PlayerInput"),
     decisionsUsingStaleOrWrongBelief: obs.filter((o) => o.staleBelief || o.wrongBelief).length,

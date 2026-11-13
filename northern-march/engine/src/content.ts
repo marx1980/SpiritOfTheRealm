@@ -186,6 +186,8 @@ export interface Scenario {
   manpower?: ManpowerParams;
   scripts: Script[];
   endStates: { fortificationBreachedBelowMilli: number };
+  /** Phase 14: when each ending is read from the log (docs/CONTENT.md). Read-only: nothing here changes the world. */
+  endings: { horizonDays: number; fractureCommunities: number; fractureDays: number; lostForts: number };
   agents: AgentParams;
   battle: BattleParams;
   regency: { regent: string; seat: string; maxRepairCostMilli: number; mayLevy: boolean; maySendCaptain: boolean };
@@ -341,6 +343,9 @@ export function validateContent(raw: RawContent): { errors: ContentError[] } {
   need(chars, sc.regency.regent, "character", "regency.regent"); need(locs, sc.regency.seat, "location", "regency.seat");
   for (const l of sc.presence.travelTo) need(locs, l, "location", "presence.travelTo");
   for (const f of sc.objective.forts) if (!raw.locations.find((l) => l.id === f)?.fortification) err("ID_UNKNOWN", `objective fort ${f} is not fortified`);
+  const en = sc.endings;
+  if (!en || ![en.horizonDays, en.fractureCommunities, en.fractureDays, en.lostForts].every((n) => Number.isInteger(n) && n >= 1)) err("RANGE", "scenario.endings needs whole numbers of at least 1");
+  else if (en.lostForts > sc.objective.forts.length) err("RANGE", "scenario.endings.lostForts is more than the objective forts");
   for (const l of raw.locations) if (!Array.isArray(l.pos) || l.pos.length !== 2) err("POSITION", `location ${l.id} has no map position`);
   for (const s of sc.scripts) {
     if (s.kind === "travel") { need(chars, s.who, "character", "script"); need(locs, s.to, "location", "script"); if (!(MODES as readonly string[]).includes(s.mode)) err("MODE_MISSING", `script mode ${s.mode}`); }

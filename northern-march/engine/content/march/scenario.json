@@ -148,6 +148,12 @@
  "endStates": {
   "fortificationBreachedBelowMilli": 30000
  },
+ "endings": {
+  "horizonDays": 240,
+  "fractureCommunities": 2,
+  "fractureDays": 10,
+  "lostForts": 2
+ },
  "agents": {
   "reviewDays": {
    "strategic": 7,
