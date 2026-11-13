@@ -105,7 +105,44 @@ export interface PolicyParams {
   punish: { minMen: number; seizeMilli: number; grievancePermille: number; trust: number };
   precedent: { milli: number; halfLifeDays: number; oddsWindowPermille: number; max: number; watchDays: number };
 }
+/** Phase 10 (docs/ENVIRONMENT.md): the seasons, weather, ground, snow, river, stress and what they do to routes, harvests, walls and battles. All integers. */
+export const SEASONS = ["winter", "spring", "summer", "autumn"] as const;
+export type Season = (typeof SEASONS)[number];
+export interface EnvRain { start: number; stay: number; heavy: number; storm: number } // permille: a dry day turns wet, a wet day stays wet, a wet day is heavy, a heavy day is a storm
+export interface EnvRiver {
+  base: number; recessPermille: number; gainPerMm: number; floodStage: number; floodedBelowPermille: number;
+  basin: Record<string, number>; freezeBelowC10: number; freezeDays: number; thawAboveC10: number; thawDays: number;
+}
+export interface EnvironmentParams {
+  yearDays: number; startDay: number;
+  seasons: { id: Season; from: number }[];
+  monthlyMeanC10: number[];
+  anomalyC10: number; anomalyKeepPermille: number;
+  regions: Record<string, { tempOffsetC10: number; wetOffsetPermille: number; stressPerDay: number }>;
+  rain: Record<Season, EnvRain>;
+  mm: { light: number; heavy: number };
+  snowBelowC10: number; meltPerC10Permille: number;
+  ground: { wetPerMm: number; evapPermille: Record<Season, number>; minEvap: number; mudAt: number; waterloggedAt: number; waterloggedOpen: number; runoffBase: number };
+  snow: { slowAtCm: number; closeAtCm: number; openBelowCm: number; settlePermille: number; closes: string[]; waterloggedCloses: string[] };
+  slow: { mud: Record<string, number>; snow: Record<string, number> };
+  rivers: Record<string, EnvRiver>;
+  crossings: Record<string, { closeAbove: number; openBelow: number; frozenClosed?: boolean }>;
+  growthPermille: Record<Season, number>;
+  harvest: {
+    flood: { atLevel: number; permille: number; days: number; terrains: string[] };
+    frost: { belowC10: number; fromDays: number; windowDays: number; permille: number; days: number };
+    drought: { dryDays: number; permille: number; days: number };
+    materialPermille: number; // a damaged harvest costs the people at that place this much of their means (community material), once
+  };
+  storm: { hitScale: number };
+  fire: { dryDays: number; seasons: Season[]; maxPermille: number };
+  quake: { scale: number; releasePermille: [number, number]; neighbourPermille: number; landslidePermilleAtFull: number; landslideTerrains: string[]; clearDays: [number, number] };
+  battle: { mudSlowPermille: number };
+  /** Starting values that differ from the defaults (tests and scenarios). */
+  initial?: { regions?: Record<string, Partial<{ snow: number; wet: number; dry: number; anom: number }>>; rivers?: Record<string, Partial<{ level: number; ice: number }>>; stress?: Record<string, number> };
+}
 export interface Scenario {
+  environment?: EnvironmentParams;
   policy?: PolicyParams;
   ruler: string; treasuryMilli: number;
   movement: { speedsKmPerDay: Record<Mode, Record<string, number>>; crossingDelayTicks: Record<string, number> };
@@ -250,6 +287,30 @@ export function validateContent(raw: RawContent): { errors: ContentError[] } {
     if (g.store > g.cap) err("RANGE", `grain ${g.location} store above cap`);
   }
   if (sc.grain && !(sc.grain.harvestHitPermille >= 0 && sc.grain.harvestHitPermille <= 1000)) err("RANGE", "grain harvestHitPermille");
+  const env = sc.environment;
+  if (env) {
+    const seasonIds = new Set<string>(SEASONS);
+    if (!(env.yearDays > 0 && Number.isInteger(env.yearDays)) || !(env.startDay >= 0 && env.startDay < env.yearDays)) err("RANGE", "environment yearDays/startDay");
+    if (env.monthlyMeanC10.length !== 12) err("RANGE", "environment monthlyMeanC10 needs 12 values");
+    const froms = env.seasons.map((x) => x.from);
+    if (env.seasons.length !== 4 || new Set(env.seasons.map((x) => x.id)).size !== 4 || env.seasons.some((x) => !seasonIds.has(x.id) || !(x.from >= 0 && x.from < env.yearDays))) err("RANGE", "environment seasons: the four seasons once each, starting inside the year");
+    void froms;
+    for (const p of provs) if (!env.regions[p]) err("ID_UNKNOWN", `environment.regions has no province ${p}`);
+    for (const p of Object.keys(env.regions)) need(provs, p, "province", "environment.regions");
+    for (const s of SEASONS) for (const k of ["rain", "growthPermille"] as const) if (!env[k][s]) err("RANGE", `environment.${k}.${s}`);
+    for (const [id, r] of Object.entries(env.rivers)) {
+      need(rivers, id, "river", "environment.rivers");
+      for (const p of Object.keys(r.basin)) need(provs, p, "province", `environment river ${id} basin`);
+      if (Object.values(r.basin).reduce((a, x) => a + x, 0) !== 1000) err("RANGE", `environment river ${id}: basin shares must sum to 1000`);
+    }
+    for (const rt of raw.routes) if (rt.crossing) {
+      if (!env.rivers[rt.crossing.river]) err("ID_UNKNOWN", `environment.rivers has no ${rt.crossing.river} (route ${rt.id})`);
+      if (!env.crossings[rt.crossing.kind]) err("ID_UNKNOWN", `environment.crossings has no ${rt.crossing.kind} (route ${rt.id})`);
+    }
+    for (const [k, c] of Object.entries(env.crossings)) if (!(c.openBelow < c.closeAbove)) err("RANGE", `environment crossing ${k}: reopens below it closes`);
+    for (const t of [...Object.keys(env.slow.mud), ...Object.keys(env.slow.snow), ...env.snow.closes, ...env.quake.landslideTerrains]) if (!terrains.has(t)) err("TERRAIN_UNKNOWN", `environment: ${t}`);
+    for (const [p, d] of Object.entries(env.initial?.regions ?? {})) { need(provs, p, "province", "environment.initial"); void d; }
+  }
   for (const s of sc.threat.sites) { need(locs, s.site, "location", "threat site"); need(locs, s.target, "location", "threat target"); }
   for (const i of sc.interception) { need(locs, i.location, "location", "interception"); need(chars, i.by, "character", "interception"); }
   need(chars, sc.regency.regent, "character", "regency.regent"); need(locs, sc.regency.seat, "location", "regency.seat");
@@ -283,6 +344,7 @@ export function validateContent(raw: RawContent): { errors: ContentError[] } {
   }
   for (const id of ["fortification.condition", "character.location", "character.seat", "order.status", "order.content", "report.route", "threat.intensity", "treasury.balance", "request.reinforce"]) need(preds, id, "predicate", "engine requires");
 
+  if (sc.environment) need(preds, "road.closed", "predicate", "the environment needs it (news of shut roads)");
   const ruler = raw.characters.find((c) => c.id === sc.ruler);
   if (ruler && locs.has(ruler.location)) {
     const adj = new Map<string, string[]>();

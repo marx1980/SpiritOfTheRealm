@@ -35,6 +35,7 @@ function placeOf(e: SimEvent): string | null {
     case "GrainShipped": return p.from as string;
     case "GrainDelivered": return p.to as string;
     case "MusterCalled": return p.community as string;
+    case "CropDamaged": return p.place as string;
     default: return null;
   }
 }
@@ -190,6 +191,12 @@ function effectsOf(ctx: Ctx, id: string, type: string, p: Record<string, any>, h
       out.grievances = [{ kind: "levy", delta: scale(scale(scale(g.levy, context(ctx, c, d)), weight(d, "levy")), share), blameCrown: 900 }];
       out.material = -scale(pr.levyMaterial, share);
       out.trust = [["crown", scale(pr.trust.levyCrown, share)]];
+      return out;
+    }
+    case "CropDamaged": { // the people whose fields they were lose some of their means (Phase 10); no one is blamed
+      if (how !== "witnessed" || p.place !== id) return null;
+      out.memory = { kind: "harvest_failed", actor: "weather", at: p.place, weight: 500 };
+      out.material = -(ctx.content.scenario.environment?.harvest.materialPermille ?? 0);
       return out;
     }
     case "GrainDelivered": {
@@ -416,7 +423,7 @@ function audience(ctx: Ctx, e: SimEvent): { id: string; delay: number; how: "wit
   return out;
 }
 
-const HEARD = new Set(["RaidDamage", "FortFell", "FortRetaken", "SortieResolved", "LevyRaised", "ReliefDelivered", "TroopMisconduct", "Arrived", "GrainShipped", "GrainDelivered", "MusterCalled", "CommunityParley", "CommunityPunished"]);
+const HEARD = new Set(["RaidDamage", "FortFell", "FortRetaken", "SortieResolved", "LevyRaised", "ReliefDelivered", "TroopMisconduct", "Arrived", "GrainShipped", "GrainDelivered", "MusterCalled", "CommunityParley", "CommunityPunished", "CropDamaged"]);
 
 export const communities: System = {
   id: "communities",

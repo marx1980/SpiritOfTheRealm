@@ -97,6 +97,7 @@ export function planWords(v: View, planId: string): string {
 export const GRIEF: Record<string, string> = { unprotected: "say the crown leaves them to the raiders", levy: "resent the levy", broken_promise: "say the crown broke its promise to consult them before a levy", misconduct: "complain of the soldiers quartered on them" };
 export const REQUEST: Record<string, string> = { protection: "protection from the raiders", relief: "relief", recall: "the soldiers to be withdrawn" };
 export const STANCE_WORDS: Record<string, string> = { cooperate: "cooperate again", petition: "are petitioning", delay: "are slow to pay their dues", withhold: "are withholding their dues", refuse: "refuse the crown's demands", support: "have declared for another lord" };
+const ROAD_WHY: Record<string, string> = { flood: "under floodwater", ice: "shut by ice", snow: "blocked by snow", waterlogged: "under water", landslide: "blocked by a landslide" };
 const people = (place: string) => `The people of ${place}`;
 type LetterLike = { author: string; composedAt?: number; claims: { predicate: string; subject: { id: string }; believedValue: unknown }[] };
 /** What an earlier letter (written before this one) said about the same thing, if anything. */
@@ -131,6 +132,11 @@ function letterParts(v: View, r: LetterLike): { rank: number; text: string }[] {
           if (here) fort.push(`the walls are ${wallWords(val as number)}${why}`); else out.push({ rank: 1, text: `The walls at ${s} are ${wallWords(val as number)}${why}.` }); }
         break;
       case "fortification.incident": break; // told with the walls
+      case "road.closed": { // the roads shut at the writer's place (Phase 10)
+        const shut = String(val).split(",").filter((x) => x).map((t) => { const [pair, why] = t.split(":"), [a, b] = pair.split("~"); return `the road from ${nameOf(v, a)} to ${nameOf(v, b)} is ${ROAD_WHY[why] ?? "shut"}`; });
+        if (shut.length) out.push({ rank: -1, text: cap(shut.join("; ")) + "." }); else if (prev) out.push({ rank: 0, text: "The roads here are open again." });
+        break;
+      }
       case "captain.heading": out.push({ rank: 0, text: `I am returning to ${nameOf(v, String(val))} to refill my company.` }); break;
       case "captain.refilled": out.push({ rank: 3, text: `My company is full again. Shall I return to ${nameOf(v, String(val))} to attack the raiders or to defend it?` }); break;
       case "captain.query": out.push({ rank: 3, text: `Shall I return to ${seatOf(v, r.author)} to refill my company, or stay at ${nameOf(v, String(val))} to help rebuild the walls and defend?` }); break;

@@ -3,6 +3,7 @@ import type { BeliefProposition } from "./beliefs.ts";
 import type { Content, Mode } from "./content.ts";
 import type { SimEvent } from "./events.ts";
 import type { ActionRef, Recommendation, Report, StructuredOrder } from "./schemas.ts";
+import { initialEnv, type ClosedRoute, type EnvState } from "./environment.ts";
 
 export type Position = { at: string } | { transit: { from: string; dest: string; path: string[]; arrivals: number[]; departedAt: number; mode: Mode } };
 export type ReportStatus = "composed" | "in_transit" | "delivered" | "lost" | "intercepted" | "undeliverable";
@@ -59,7 +60,12 @@ export interface WorldState {
   lastStorm: Record<string, number>;
   fallen: Record<string, true>; // forts held by the raiders
   threats: Record<string, { intensityPermille: number; untilTick: number; eventId: number; since: number }>;
-  routesClosed: Record<string, true>;
+  /** Phase 10: the environment (null when a scenario has none): weather, ground, snow, rivers, stress. */
+  env: EnvState | null;
+  /** Routes that are shut, and why (flood, ice, snow, waterlogged, landslide), with the event that shut them. */
+  routesClosed: Record<string, ClosedRoute>;
+  /** The last time an official could not send for grain to a place because the roads were shut (the event, and when). */
+  supplyBlocked: Record<string, { eventId: number; tick: number }>;
   positions: Record<string, Position>;
   departures: Record<string, Record<string, { to: string | null; tick: number }>>;
   beliefs: Record<string, Record<string, BeliefProposition>>;
@@ -102,7 +108,7 @@ export interface WorldState {
   grainAsked: Record<string, number>; // place -> tick its castellan last sent for grain himself
   grainRefusedAt: Record<string, number>; // community -> tick it last refused to give grain
   grainBand: Record<string, string>;
-  harvestHit: Record<string, { permille: number; until: number; eventId: number }>;
+  harvestHit: Record<string, { permille: number; until: number; eventId: number; env?: true }>;
   repairs: Record<string, { mode: string; startedAt: number; orderId: number; work: number; done: number; lastT: number; men: number; gen: number; restoredMilli: number; startedEventId: number; engineer: string }>;
 }
 
@@ -146,7 +152,7 @@ export function initialState(c: Content): WorldState {
     if (ch.id !== c.scenario.ruler && ch.tier !== "C") agents[ch.id] = newAgent();
   }
   return {
-    treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, tiers, history: {}, agents, recommendations: {}, heard: {}, campaign: { ended: null, lastDanger: -1 }, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, sortieOpen: {}, battles: {}, policyKnown: initialPolicies(c), precedents: [], prestige: {}, conduct: {}, lastStorm: {}, fallen: {}, threats: {}, routesClosed: {},
+    treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, tiers, history: {}, agents, recommendations: {}, heard: {}, campaign: { ended: null, lastDanger: -1 }, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, sortieOpen: {}, battles: {}, policyKnown: initialPolicies(c), precedents: [], prestige: {}, conduct: {}, lastStorm: {}, fallen: {}, threats: {}, routesClosed: {}, supplyBlocked: {}, env: initialEnv(c),
     positions, departures: {}, beliefs: {}, nextPropId: 1, reports: {}, nextReportId: 1, messengers: {}, nextMessengerId: 1,
     orders: {}, nextOrderId: 1, advisePending: {}, dayEndDay: -1, ordersInForce: {}, issued: {}, repairs: {}, communities: initialCommunities(c), ...initialGrain(c), ...initialGoods(c), hands: Object.fromEntries(c.communities.communities.map((x) => [x.id, x.hands ?? 0])), musterAway: {}, musters: {}, nextMusterId: 1,
   };
@@ -264,8 +270,22 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
     (s.departures[p.from] ??= {})[p.who] = { to: p.secret ? null : p.dest, tick: e.tick };
   },
   Arrived: (s, p, e) => { s.positions[p.who] = { at: p.at }; (s.lastArrival[p.at] ??= {})[p.who] = e.tick; },
-  RouteClosed: (s, p) => { s.routesClosed[p.route] = true; },
+  RouteClosed: (s, p, e) => { s.routesClosed[p.route] = { eventId: e.id, reason: p.reason, since: e.tick, ...(p.until !== undefined ? { until: p.until } : {}) }; },
   RouteOpened: (s, p) => { delete s.routesClosed[p.route]; },
+  // environment (Phase 10): the daily snapshot replaces the weather, ground, snow, river and stress state
+  EnvironmentDay: (s, p) => { s.env = structuredClone({ day: p.day, season: p.season, regions: p.regions, rivers: p.rivers, stress: p.stress }) as EnvState; }, // a copy: later reducers change the state, never the logged event
+  RiverFlooded: (s, p, e) => { if (s.env) s.env.rivers[p.river].floodEvent = e.id; },
+  RiverReceded: noop, RiverFroze: noop, RiverThawed: noop,
+  StressReleased: (s, p) => { if (s.env) s.env.stress[p.province] = p.remaining; },
+  Hazard: (s, p, e) => {
+    s.lastStorm[p.location] = e.tick;
+    const f = s.fortifications[p.location]; if (f) { f.conditionMilli = clampCond(f.conditionMilli - p.damageMilli); f.lastChangeEvent = e.id; }
+  },
+  CropDamaged: (s, p, e) => {
+    const cur = s.harvestHit[p.place];
+    if (!cur || cur.until <= e.tick || p.permille >= cur.permille) s.harvestHit[p.place] = { permille: p.permille, until: Math.max(p.until, cur && cur.until > e.tick ? cur.until : 0), eventId: e.id, env: true };
+  },
+  SupplyBlocked: (s, p, e) => { s.supplyBlocked[p.place] = { eventId: e.id, tick: e.tick }; },
 
   Observed: noop,
   BeliefUpdated: (s, p) => { (s.beliefs[p.holder] ??= {})[String(p.prop.id)] = p.prop; s.nextPropId = Math.max(s.nextPropId, p.prop.id + 1); },

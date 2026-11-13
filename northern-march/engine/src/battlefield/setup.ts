@@ -23,7 +23,7 @@ export function personOf(c: import("../content.ts").Content, id: string, skill?:
   return { id, name: ch.name ?? id, traits, skill: skill ?? ch.capabilities.military ?? 0, loyalty };
 }
 export interface BattleInputs {
-  battleId: number; seed: number; site: string; place: string; endT: number; weather: "clear" | "rain";
+  battleId: number; seed: number; site: string; place: string; endT: number; weather: "clear" | "rain" | "snow"; mudPermille?: number;
   field: FieldSpec; params: BattleParams; forces: ForcesParams; obedience: ObedienceParams;
   /** The fort's men; archers and horse, if known, are how many of them are bowmen and riders (D-067), else content shares. */
   garrison: { men: number; archers?: number; horse?: number; castellan?: Person; sergeant?: Person };
@@ -115,7 +115,7 @@ export function buildSetup(x: BattleInputs): BattleSetup {
   if (guard) plan.push(order(x.ruler.id, x.ruler.id, { kind: "hold", place: F.posts[x.ruler.post ?? "rear"] }));
 
   return {
-    schemaVersion: 1, battleId: x.battleId, seed: x.seed, site: x.site, place: x.place, endT: Math.min(x.endT, x.params.capSeconds), weather: x.weather,
+    schemaVersion: 1, battleId: x.battleId, seed: x.seed, site: x.site, place: x.place, endT: Math.min(x.endT, x.params.capSeconds), weather: x.weather, ...(x.mudPermille ? { mudPermille: x.mudPermille } : {}),
     field, params: x.params, obedience: x.obedience, formations, commanders,
     ruler: { id: x.ruler.id, present: x.ruler.present, ...(guard ? { guard } : {}) },
     hq: x.ruler.present ? x.ruler.id : senior?.id ?? x.ruler.id,

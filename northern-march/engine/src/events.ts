@@ -4,8 +4,8 @@
 export const EVENT_SCHEMA_VERSION = 3; // v3 (Phase 3): agents, DecisionTrace, obedience payloads; v2 (Phase 2): B2/B5 payloads
 
 export type Domain = "military" | "economic" | "political" | "social" | "environment" | "magic" | "info";
-export type SystemId = "core" | "economy" | "weather" | "threat" | "movement" | "knowledge" | "messenger" | "orders" | "player" | "advice" | "agents" | "battle" | "communities" | "grain" | "goods" | "manpower" | "policy";
-export const ABLATABLE: readonly SystemId[] = ["economy", "weather", "threat", "messenger", "communities"];
+export type SystemId = "core" | "economy" | "weather" | "threat" | "movement" | "knowledge" | "messenger" | "orders" | "player" | "advice" | "agents" | "battle" | "communities" | "grain" | "goods" | "manpower" | "policy" | "environment";
+export const ABLATABLE: readonly SystemId[] = ["economy", "weather", "threat", "messenger", "communities", "environment"];
 
 export interface SubjectRef {
   kind: "character" | "location" | "report" | "order";
@@ -55,8 +55,18 @@ export const EVENT_TYPES: Readonly<Record<string, EventTypeDef>> = Object.freeze
   TravelScripted: T("movement", "info", 1, true), // test/scenario script only
   Departed: T("movement", "info", 1),
   Arrived: T("movement", "info", 1),
-  RouteClosed: T("movement", "environment", 2, true),
-  RouteOpened: T("movement", "environment", 2, true),
+  RouteClosed: T("environment", "environment", 2),
+  RouteOpened: T("environment", "environment", 2),
+  // environment (Phase 10, docs/ENVIRONMENT.md)
+  EnvironmentDay: T("environment", "environment", 1, true), // the daily step: a clock-driven snapshot
+  Hazard: T("environment", "environment", 2), // a storm, fire or earthquake striking a place (the legacy weather system's Storm, from the state of the environment)
+  RiverFlooded: T("environment", "environment", 2),
+  RiverReceded: T("environment", "environment", 1),
+  RiverFroze: T("environment", "environment", 1),
+  RiverThawed: T("environment", "environment", 1),
+  StressReleased: T("environment", "environment", 3), // an earthquake: the stress it let go
+  CropDamaged: T("environment", "environment", 2),
+  SupplyBlocked: T("grain", "economic", 2), // an official could not send for grain because the roads were shut
   // knowledge (B5)
   Observed: T("knowledge", "info", 0),
   BeliefUpdated: T("knowledge", "info", 1),

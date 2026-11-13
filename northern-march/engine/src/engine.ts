@@ -18,6 +18,8 @@ import { goods } from "./systems/goods.ts";
 import { manpower } from "./systems/manpower.ts";
 import { battle } from "./systems/battle.ts";
 import { policy } from "./systems/policy.ts";
+import { environment } from "./systems/environment.ts";
+import { routeSpeedPermille } from "./environment.ts";
 import { makePlayer } from "./systems/player.ts";
 import { MapGraph } from "./map.ts";
 import { beliefsAbout } from "./view.ts";
@@ -80,8 +82,10 @@ export class Sim {
     this.disabled = new Set(cfg.ablate ?? []);
     this.state = initialState(cfg.content);
     this.map = new MapGraph(cfg.content);
+    // mud and snow slow every journey (Phase 10); with the environment switched off the roads are as they always were
+    if (cfg.content.scenario.environment && !this.disabled.has("environment")) this.map.speedPermille = (r) => routeSpeedPermille(cfg.content, this.state.env, r);
     this.ctx = this.makeCtx();
-    for (const s of [economy, weather, threat, movement, knowledge, messenger, orders, agents, communities, grain, goods, manpower, battle, policy, makePlayer((ctx, d, r) => this.decide(ctx, d, r))]) this.systems.set(s.id, s);
+    for (const s of [economy, weather, environment, threat, movement, knowledge, messenger, orders, agents, communities, grain, goods, manpower, battle, policy, makePlayer((ctx, d, r) => this.decide(ctx, d, r))]) this.systems.set(s.id, s);
     this.emit("ScenarioStarted", [], [], { contentVersion: cfg.content.version, seed: cfg.seed });
     for (const s of this.systems.values()) if (!this.disabled.has(s.id)) s.start(this.ctx);
   }

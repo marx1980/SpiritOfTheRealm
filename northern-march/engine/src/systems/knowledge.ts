@@ -4,6 +4,7 @@ import { bandFromQuality, effectiveBand, evictionPlan, integrate, type Band, typ
 import type { SubjectRef } from "../events.ts";
 import type { Ctx, System } from "./types.ts";
 import { chr, sorted } from "./types.ts";
+import { closedAt } from "../environment.ts";
 
 export interface Claim { subject: SubjectRef; predicate: string; value: unknown; observedAt: number; band: Band }
 
@@ -136,6 +137,9 @@ export function observe(ctx: Ctx, observer: string, subject: SubjectRef, predica
     const pos = ctx.s.positions[subject.id];
     if (!("at" in pos)) return null;
     value = pos.at; quality = 1000; // seeing someone in the same place is certain
+  } else if (predicate === "road.closed") {
+    // the roads shut at a place, as "from~to:reason" (Phase 10); exact for whoever is there
+    value = closedAt(ctx.content, ctx.s.routesClosed, subject.id).map((id) => { const r = ctx.content.byId.route.get(id)!; return `${r.from}~${r.to}:${ctx.s.routesClosed[id].reason}`; }).join(","); quality = 1000;
   } else throw new Error(`cannot observe ${predicate}`);
   const band = interpretBand(ctx, observer, predicate, bandFromQuality(quality, k.bands));
   const obs = ctx.emit("Observed", [cause], [chr(observer), subject], { observer, subject, predicate, value, qualityPermille: quality, band });

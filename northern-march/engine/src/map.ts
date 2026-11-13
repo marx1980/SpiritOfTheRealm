@@ -7,6 +7,8 @@ export interface Path { locations: string[]; routes: string[]; legTicks: number[
 export class MapGraph {
   private c: Content;
   private adj = new Map<string, { route: string; to: string }[]>();
+  /** How fast a route is today, in permille of its usual speed (mud, snow). Unset: always the usual (Phase 10). */
+  speedPermille?: (routeId: string) => number;
 
   constructor(c: Content) {
     this.c = c;
@@ -19,7 +21,8 @@ export class MapGraph {
     const r = this.c.byId.route.get(routeId);
     if (!r) throw new Error(`unknown route ${routeId}`);
     const speed = this.c.scenario.movement.speedsKmPerDay[mode][r.terrain];
-    return Math.ceil((r.km * DAY) / speed) + (r.crossing ? this.c.scenario.movement.crossingDelayTicks[r.crossing.kind] : 0);
+    const f = this.speedPermille ? this.speedPermille(routeId) : 1000;
+    return (f === 1000 ? Math.ceil((r.km * DAY) / speed) : Math.ceil((r.km * DAY * 1000) / (speed * f))) + (r.crossing ? this.c.scenario.movement.crossingDelayTicks[r.crossing.kind] : 0);
   }
 
   /** Dijkstra; ties broken by location id, then route id, so the result never depends on hash order. */

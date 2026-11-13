@@ -638,7 +638,7 @@ function render() {
   st.shownPause = st.paused !== null ? pauseKey : null;
   document.getElementById("app")!.innerHTML = `
   <div class="top"><h1>Northern March</h1>
-    <div class="meta"><span>Day ${Math.floor((v.now - PRE) / DAY) + 1} / ${__H01__.days}</span><span>${"at" in pos ? esc(name(v, pos.at)) : "on the road to " + esc(name(v, pos.transit.dest))}</span></div>
+    <div class="meta"><span>Day ${Math.floor((v.now - PRE) / DAY) + 1} / ${__H01__.days}</span><span>${"at" in pos ? esc(name(v, pos.at)) : "on the road to " + esc(name(v, pos.transit.dest))}</span>${v.environment ? `<span>${esc(cap1(v.environment.season))} · ${esc(v.environment.here.wx)} · ${Math.round(v.environment.here.tempC10 / 10)}°</span>` : ""}</div>
     <div class="grow"></div>
     ${cont}
     <button id="restart">Restart</button>

@@ -16,7 +16,7 @@ export interface MapPlace {
 export interface MapCaptain { id: string; name: string; at: string; count: number; exact: boolean; strength: number;
   /** What his last order says he is doing, as far as the player knows; `projected` when the order is newer than the news of where he is. */
   heading?: { words: string; to: string; projected: boolean } }
-export interface MapModel { captains: MapCaptain[]; places: MapPlace[]; routes: { from: string; to: string; crossing?: string }[]; orders: { to: string; what: string; where: string; sent: string }[] }
+export interface MapModel { captains: MapCaptain[]; places: MapPlace[]; routes: { from: string; to: string; crossing?: string; closed?: string }[]; orders: { to: string; what: string; where: string; sent: string }[] }
 
 /** Days over which the ring round a believed position fades from full to nothing. */
 export const FADE_DAYS = 12;
@@ -72,7 +72,7 @@ export function buildMap(v: View): MapModel {
     };
   });
   return {
-    captains, places, routes: v.world.routes.map((r) => ({ ...r })),
+    captains, places, routes: v.world.routes.map((r) => { const shut = v.environment?.roads.find((x) => x.from === r.from && x.to === r.to); return { ...r, ...(shut ? { closed: shut.reason } : {}) }; }),
     orders: v.self.orders.map((o) => ({ to: nameOf(v, o.recipient), what: o.action, where: nameOf(v, o.target), sent: ago(v.now, o.tick) })),
   };
 }

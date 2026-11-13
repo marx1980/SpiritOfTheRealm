@@ -37,9 +37,9 @@ export interface FieldSpec {
 export interface KindP { speed: number; meleeRange: number; missileRange: number; meleeRate: number; missileRate: number; discipline: number; mounted: boolean }
 export interface BattleParams {
   step: number; frameEvery: number; staleAfter: number; capSeconds: number;
-  sight: { clear: number; rain: number; wood: number; ridgeBonusPermille: number; dustRange: number; dustPermille: number };
+  sight: { clear: number; rain: number; snow?: number; wood: number; ridgeBonusPermille: number; dustRange: number; dustPermille: number };
   runner: { speed: number; dangerRange: number; dangerPermille: number; findRadius: number; searchSeconds: number };
-  signal: { range: number; missPermille: { base: number; rain: number; dust: number } };
+  signal: { range: number; missPermille: { base: number; rain: number; snow?: number; dust: number } };
   voiceRange: number; reportEvery: number; reportLossPermille: number;
   /** Ground a formation takes up: the least distance kept from a friendly formation, and from an enemy it is fighting. */
   spacing: { friends: number; enemies: number; overlap: number; frontage: number };
@@ -61,7 +61,9 @@ export interface ObedienceParams { adaptMarginMilli: number; refuseMarginMilli: 
 export interface BattleSetup {
   schemaVersion: 1; battleId: number; seed: number; site: string; place: string;
   /** Seconds until the battle must stop (nightfall, or the cap). */
-  endT: number; weather: "clear" | "rain";
+  endT: number; weather: "clear" | "rain" | "snow";
+  /** Mud (Phase 10): the share of its speed every formation loses. */
+  mudPermille?: number;
   field: FieldSpec; params: BattleParams; obedience: ObedienceParams;
   formations: FormationSetup[]; commanders: CommanderSetup[];
   ruler: { id: string; present: boolean; guard?: string };
@@ -255,7 +257,7 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
 
   // ---- perception ----
   const sightRange = (ox: number, oy: number, tx: number, ty: number) => {
-    let r = setup.weather === "rain" ? P.sight.rain : P.sight.clear;
+    let r = setup.weather === "rain" ? P.sight.rain : setup.weather === "snow" ? P.sight.snow ?? P.sight.rain : P.sight.clear;
     if (field.ridges.some((g) => inside(g, ox, oy))) r = Math.floor((r * (1000 + P.sight.ridgeBonusPermille)) / 1000);
     if (field.woods.some((w) => inside(w, ox, oy) || inside(w, tx, ty))) r = Math.min(r, P.sight.wood);
     // dust of melee near the target
@@ -334,8 +336,8 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
       for (const x of [c]) {
         if (!sees(h.x, h.y, x.x, x.y) || dist(h.x, h.y, x.x, x.y) > P.signal.range) { notes.push({ t, kind: "signal_missed", orderId: o.id, commander: x.id, why: "out of sight" }); continue; }
         const dusty = order.some((id) => { const f = fs.get(id)!; return f.engaged && dist(f.x, f.y, x.x, x.y) < P.sight.dustRange; });
-        const miss = P.signal.missPermille.base + (setup.weather === "rain" ? P.signal.missPermille.rain : 0) + (dusty ? P.signal.missPermille.dust : 0);
-        if (roll(`signal:${o.id}:${x.id}`) < miss) { notes.push({ t, kind: "signal_missed", orderId: o.id, commander: x.id, why: dusty ? "dust" : setup.weather === "rain" ? "rain" : "not seen" }); continue; }
+        const miss = P.signal.missPermille.base + (setup.weather === "rain" ? P.signal.missPermille.rain : setup.weather === "snow" ? P.signal.missPermille.snow ?? P.signal.missPermille.rain : 0) + (dusty ? P.signal.missPermille.dust : 0);
+        if (roll(`signal:${o.id}:${x.id}`) < miss) { notes.push({ t, kind: "signal_missed", orderId: o.id, commander: x.id, why: dusty ? "dust" : setup.weather === "rain" ? "rain" : setup.weather === "snow" ? "snow" : "not seen" }); continue; }
         receive(x, o, t + step, "signal");
       }
       hqOrders.set(c.id, { orderId: o.id, task: o.task, sentT: t, eta: t + step, status: "presumed delivered", lastContact: hqOrders.get(c.id)?.lastContact ?? 0 });
@@ -428,6 +430,7 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
     if (field.woods.some((w) => inside(w, f.x, f.y))) v = Math.floor(v / 2);
     if (field.lines.some((l) => Math.abs(f.y - l.y) < 25)) v = Math.floor(v / 2);
     v = Math.floor((v * (1000 - Math.floor(f.fatigue / 3))) / 1000);
+    if (setup.mudPermille) v = Math.floor((v * (1000 - setup.mudPermille)) / 1000); // heavy ground
     const go = Math.min(v, d - stopAt);
     f.x += Math.trunc(((tx - f.x) * go) / d); f.y += Math.trunc(((ty - f.y) * go) / d);
     f.x = Math.max(0, Math.min(field.width, f.x)); f.y = Math.max(0, Math.min(field.height, f.y));

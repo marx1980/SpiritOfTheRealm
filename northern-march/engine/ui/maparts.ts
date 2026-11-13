@@ -53,6 +53,12 @@ const ICON: Record<string, { id: string; top: number }> = {
 };
 
 let cache: { key: string; svg: string } | null = null;
+/** The drawn line of a road (a gentle curve, straight for a crossing). */
+function roadD(rt: { from: string; to: string; crossing?: string }, a: { x: number; y: number }, b: { x: number; y: number }): string {
+  const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, len = Math.hypot(b.x - a.x, b.y - a.y), sgn = (rt.from.length + rt.to.length) % 2 ? 1 : -1;
+  const cx = mx + (-(b.y - a.y) / len) * len * 0.07 * sgn, cy = my + ((b.x - a.x) / len) * len * 0.07 * sgn;
+  return rt.crossing ? `M${a.x} ${a.y}L${b.x} ${b.y}` : `M${a.x} ${a.y}Q${cx.toFixed(0)} ${cy.toFixed(0)} ${b.x} ${b.y}`;
+}
 function artwork(m: MapModel, kinds: Map<string, string>, terrains: Map<string, string>) {
   const key = m.places.map((p) => p.id + p.x + p.y).join();
   if (cache?.key === key) return cache.svg;
@@ -77,9 +83,7 @@ function artwork(m: MapModel, kinds: Map<string, string>, terrains: Map<string, 
   const byId = new Map(places.map((p) => [p.id, p]));
   const roads = m.routes.map((rt) => {
     const a = byId.get(rt.from)!, b = byId.get(rt.to)!, mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
-    const len = Math.hypot(b.x - a.x, b.y - a.y), sgn = (rt.from.length + rt.to.length) % 2 ? 1 : -1;
-    const cx = mx + (-(b.y - a.y) / len) * len * 0.07 * sgn, cy = my + ((b.x - a.x) / len) * len * 0.07 * sgn;
-    const d = rt.crossing ? `M${a.x} ${a.y}L${b.x} ${b.y}` : `M${a.x} ${a.y}Q${cx.toFixed(0)} ${cy.toFixed(0)} ${b.x} ${b.y}`;
+    const d = roadD(rt, a, b);
     let mark = "";
     if (rt.crossing === "bridge") mark = `<g transform="translate(${mx} ${my}) rotate(${(Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI})"><rect x="-13" y="-7" width="26" height="14" fill="${PAPER}" stroke="${INK}" stroke-width="1.5"/><path d="M-13 -3h26M-13 3h26" stroke="${INK}" stroke-width="1.2"/><path d="M-8 -7v14M0 -7v14M8 -7v14" stroke="${INK}" stroke-width=".8"/></g>`;
     else if (rt.crossing === "ford") mark = `<g transform="translate(${mx} ${my})" stroke="${INK}" stroke-width="1.3" fill="none"><circle r="10" fill="${PAPER}" stroke="none"/><path d="M-8 -3q4-3 8 0t8 0M-8 3q4-3 8 0t8 0"/></g>`;
@@ -123,6 +127,10 @@ const wcls = (w?: string) => !w ? "none" : w === "sound" ? "sound" : w === "worn
 
 export function mapSvg({ model: m, selected, kinds, terrains }: MapArtInput): string {
   const art = artwork(m, kinds, terrains), byId = new Map(m.places.map((q) => [q.id, q]));
+  const shut = m.routes.filter((rt) => rt.closed).map((rt) => {
+    const a = byId.get(rt.from)!, b = byId.get(rt.to)!, mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    return `<g class="shut"><title>${esc(rt.closed!)}</title><path d="${roadD(rt, a, b)}" fill="none" stroke="#a0381c" stroke-width="3.4" stroke-linecap="round" stroke-dasharray="10 7"/><g transform="translate(${mx.toFixed(0)} ${my.toFixed(0)})"><circle r="11" fill="${PAPER}" stroke="#a0381c" stroke-width="2"/><path d="M-5 -5L5 5M5 -5L-5 5" stroke="#a0381c" stroke-width="2.4" stroke-linecap="round"/></g></g>`;
+  }).join("");
   const places = m.places.map((p: MapPlace) => {
     const k = ICON[kinds.get(p.id) ?? "village"] ?? ICON.village;
     const flag = p.fortified ? `<path d="M0 ${k.top}v-12" stroke="${INK}" stroke-width="1.5"/><path d="M0 ${k.top - 12}l12 4-12 4z" fill="${FLAG[wcls(p.wall?.words)]}" stroke="${INK}" stroke-width="1.2" stroke-linejoin="round"/>` : "";
@@ -144,5 +152,5 @@ export function mapSvg({ model: m, selected, kinds, terrains }: MapArtInput): st
     const txt = (s: string, dy: number, cls: string) => `<text class="${cls}" x="${p.x + 27}" y="${p.y + dy}">${s}</text>`;
     return `${sel}${you}<g transform="translate(${p.x} ${p.y}) scale(1.3)"><use href="#${k.id}"/>${flag}</g>${raid}${knights}${txt(esc(p.name), 5, "nm")}${sub ? txt(esc(sub), 20, "sb") : ""}${parts.length ? txt(parts.join(" · "), sub ? 34 : 20, "sb") : ""}<circle class="hit" fill="transparent" cx="${p.x}" cy="${p.y}" r="28" data-place="${p.id}"/>`;
   }).join("");
-  return `<svg viewBox="-120 -20 1160 1010" role="img" aria-label="Map of the realm"><defs><radialGradient id="raider-glow"><stop offset="0" stop-color="#ff2a1a" stop-opacity=".9"/><stop offset=".55" stop-color="#ff2a1a" stop-opacity=".4"/><stop offset="1" stop-color="#ff2a1a" stop-opacity="0"/></radialGradient></defs>${art}${places}</svg>`;
+  return `<svg viewBox="-120 -20 1160 1010" role="img" aria-label="Map of the realm"><defs><radialGradient id="raider-glow"><stop offset="0" stop-color="#ff2a1a" stop-opacity=".9"/><stop offset=".55" stop-color="#ff2a1a" stop-opacity=".4"/><stop offset="1" stop-color="#ff2a1a" stop-opacity="0"/></radialGradient></defs>${art}${shut}${places}</svg>`;
 }

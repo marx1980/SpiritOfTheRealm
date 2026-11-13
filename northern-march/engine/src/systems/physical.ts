@@ -42,7 +42,7 @@ function presence(ctx: Ctx, fort: string, raid: number): boolean {
 }
 
 /** Those at the fort when something befalls it know what it was. */
-function witness(ctx: Ctx, where: string, kind: string, cause: number) {
+export function witness(ctx: Ctx, where: string, kind: string, cause: number) {
   if (!ctx.s.fortifications[where]) return; // only forts are written about
   for (const who of presentAt(ctx, where).filter((x) => ctx.s.tiers[x] !== "C"))
     learn(ctx, who, { subject: loc(where), predicate: "fortification.incident", value: kind, observedAt: ctx.tick, band: "certain" }, { kind: "observation", eventId: cause, source: who }, [cause]);
@@ -130,6 +130,7 @@ export const weather: System = {
         const e = ctx.emit("FortificationsWeathered", [], forts.map(loc), { changes: forts.map((f) => [f, sc.weather.decayMilliPerDay]) });
         forts.forEach((f, i) => maybeAlarm(ctx, f, before[i], e.id));
       }
+      if (sc.environment) { ctx.extraDraws("weather"); ctx.at(ctx.tick + DAY, "weather:day", {}); return; } // storms, fires and earthquakes come from the environment's state (Phase 10)
       for (const l of sorted(ctx.content.locations, (l) => l.id)) {
         if (l.exposurePermille <= 0 || !r.chancePermille(l.exposurePermille)) continue;
         const damageMilli = r.int(sc.weather.stormDamageMilli[0], sc.weather.stormDamageMilli[1]);

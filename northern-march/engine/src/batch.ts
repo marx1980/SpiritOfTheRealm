@@ -41,13 +41,13 @@ export function metricsRow(sim: Sim, spec: BatchSpec, wallMs: number) {
   const count = (t: string) => log.filter((e) => e.type === t).length;
   const eventsByType: Record<string, number> = {};
   for (const e of log) eventsByType[e.type] = (eventsByType[e.type] ?? 0) + 1;
-  const crisis = log.filter((e) => e.type === "Storm" || e.type === "ThreatBegan");
+  const crisis = log.filter((e) => e.type === "Storm" || e.type === "Hazard" || e.type === "ThreatBegan");
   const breached = minConditionBelow(sim, spec.content.scenario.endStates.fortificationBreachedBelowMilli);
   const obs = sim.decisionsObserved;
   return {
     seed: sim.seed,
     dominantCrisis: null,
-    crisisCount: { Storm: count("Storm"), ThreatBegan: count("ThreatBegan") },
+    crisisCount: { Storm: count("Storm") + count("Hazard"), ThreatBegan: count("ThreatBegan") },
     timeToFirstCrisis: crisis.length ? crisis[0].tick : null,
     timeToEnding: log.find((e) => e.type === "CampaignEnded")?.tick ?? null, endingType: sim.objectiveStatus().ended, endingFirstCause: null, endingAncestryDomains: null,
     objectiveMet: sim.objectiveStatus().met,
@@ -81,7 +81,7 @@ function minConditionBelow(sim: Sim, threshold: number): boolean {
   for (const e of sim.log) {
     const p = e.payload as Record<string, any>;
     if (e.type === "FortificationsWeathered") for (const [l, d] of p.changes) cond[l] = clamp(cond[l] - d);
-    else if ((e.type === "Storm" || e.type === "RaidDamage") && cond[p.location] !== undefined) cond[p.location] = clamp(cond[p.location] - p.damageMilli);
+    else if ((e.type === "Storm" || e.type === "Hazard" || e.type === "RaidDamage") && cond[p.location] !== undefined) cond[p.location] = clamp(cond[p.location] - p.damageMilli);
     else if (e.type === "RepairCompleted") cond[p.location] = clamp(cond[p.location] + p.restoredMilli);
     else continue;
     if (Object.values(cond).some((c) => c < threshold)) low = true;

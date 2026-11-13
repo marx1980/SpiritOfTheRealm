@@ -289,7 +289,8 @@
     "wood": 150,
     "ridgeBonusPermille": 250,
     "dustRange": 250,
-    "dustPermille": 500
+    "dustPermille": 500,
+    "snow": 700
    },
    "runner": {
     "speed": 5,
@@ -303,7 +304,8 @@
     "missPermille": {
      "base": 50,
      "rain": 150,
-     "dust": 300
+     "dust": 300,
+     "snow": 200
     }
    },
    "voiceRange": 150,
@@ -952,6 +954,228 @@
    "oddsWindowPermille": 150,
    "max": 3,
    "watchDays": 20
+  }
+ },
+ "environment": {
+  "yearDays": 360,
+  "startDay": 40,
+  "seasons": [
+   {
+    "id": "winter",
+    "from": 330
+   },
+   {
+    "id": "spring",
+    "from": 60
+   },
+   {
+    "id": "summer",
+    "from": 150
+   },
+   {
+    "id": "autumn",
+    "from": 240
+   }
+  ],
+  "monthlyMeanC10": [
+   -20,
+   -10,
+   20,
+   70,
+   120,
+   160,
+   180,
+   170,
+   130,
+   80,
+   30,
+   -10
+  ],
+  "anomalyC10": 40,
+  "anomalyKeepPermille": 800,
+  "regions": {
+   "crownlands": {
+    "tempOffsetC10": 10,
+    "wetOffsetPermille": 0,
+    "stressPerDay": 1
+   },
+   "northmarch": {
+    "tempOffsetC10": -20,
+    "wetOffsetPermille": 60,
+    "stressPerDay": 2
+   },
+   "eastmarch": {
+    "tempOffsetC10": -10,
+    "wetOffsetPermille": 20,
+    "stressPerDay": 1
+   }
+  },
+  "rain": {
+   "winter": {
+    "start": 190,
+    "stay": 560,
+    "heavy": 110,
+    "storm": 60
+   },
+   "spring": {
+    "start": 240,
+    "stay": 580,
+    "heavy": 140,
+    "storm": 40
+   },
+   "summer": {
+    "start": 170,
+    "stay": 480,
+    "heavy": 140,
+    "storm": 30
+   },
+   "autumn": {
+    "start": 260,
+    "stay": 600,
+    "heavy": 160,
+    "storm": 70
+   }
+  },
+  "mm": {
+   "light": 5,
+   "heavy": 22
+  },
+  "snowBelowC10": 10,
+  "meltPerC10Permille": 60,
+  "ground": {
+   "wetPerMm": 20,
+   "evapPermille": {
+    "winter": 50,
+    "spring": 110,
+    "summer": 160,
+    "autumn": 100
+   },
+   "minEvap": 4,
+   "mudAt": 650,
+   "waterloggedAt": 950,
+   "waterloggedOpen": 850,
+   "runoffBase": 200
+  },
+  "snow": {
+   "slowAtCm": 10,
+   "closeAtCm": 70,
+   "openBelowCm": 50,
+   "closes": [
+    "hills"
+   ],
+   "waterloggedCloses": [
+    "marsh"
+   ],
+   "settlePermille": 35
+  },
+  "slow": {
+   "mud": {
+    "road": 80,
+    "track": 250,
+    "forest": 300,
+    "marsh": 350,
+    "hills": 200
+   },
+   "snow": {
+    "road": 200,
+    "track": 350,
+    "forest": 400,
+    "marsh": 300,
+    "hills": 400
+   }
+  },
+  "rivers": {
+   "vey": {
+    "base": 300,
+    "recessPermille": 110,
+    "gainPerMm": 14,
+    "floodStage": 1000,
+    "floodedBelowPermille": 850,
+    "basin": {
+     "crownlands": 300,
+     "northmarch": 400,
+     "eastmarch": 300
+    },
+    "freezeBelowC10": -30,
+    "freezeDays": 5,
+    "thawAboveC10": 0,
+    "thawDays": 3
+   }
+  },
+  "crossings": {
+   "bridge": {
+    "closeAbove": 1500,
+    "openBelow": 1250
+   },
+   "ford": {
+    "closeAbove": 950,
+    "openBelow": 800
+   },
+   "ferry": {
+    "closeAbove": 750,
+    "openBelow": 650,
+    "frozenClosed": true
+   }
+  },
+  "growthPermille": {
+   "winter": 700,
+   "spring": 900,
+   "summer": 1300,
+   "autumn": 1100
+  },
+  "harvest": {
+   "flood": {
+    "atLevel": 1100,
+    "permille": 300,
+    "days": 20,
+    "terrains": [
+     "marsh"
+    ]
+   },
+   "frost": {
+    "belowC10": -20,
+    "fromDays": 25,
+    "windowDays": 35,
+    "permille": 250,
+    "days": 15
+   },
+   "drought": {
+    "dryDays": 20,
+    "permille": 200,
+    "days": 20
+   },
+   "materialPermille": 40
+  },
+  "storm": {
+   "hitScale": 30
+  },
+  "fire": {
+   "dryDays": 10,
+   "seasons": [
+    "summer",
+    "autumn"
+   ],
+   "maxPermille": 20
+  },
+  "quake": {
+   "scale": 5,
+   "releasePermille": [
+    400,
+    800
+   ],
+   "neighbourPermille": 330,
+   "landslidePermilleAtFull": 500,
+   "landslideTerrains": [
+    "hills",
+    "forest"
+   ],
+   "clearDays": [
+    5,
+    12
+   ]
+  },
+  "battle": {
+   "mudSlowPermille": 250
   }
  }
 }

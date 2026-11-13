@@ -2,12 +2,14 @@
 // not by chance). Conservation: store = start + produced - consumed - spilled, exactly, at every place.
 import type { Ctx, System } from "./types.ts";
 import { DAY, HOUR, chr, loc } from "./types.ts";
-import { bandOf } from "../world.ts";
+import { BANDS, bandOf } from "../world.ts";
 import type { ActionRef } from "../agents/model.ts";
 import { finish } from "./orders.ts";
 import { best, observe, observeTreasury } from "./knowledge.ts";
 import { contribution, inputsOf } from "./communities.ts";
 import { delayTicks } from "./goods.ts";
+import { blockedBy } from "./environment.ts";
+import { growthPermille } from "../environment.ts";
 
 /** The grain price at each market (D-050): dearer with a shortage across the realm, a tight or short granary nearest the market, a spoiled harvest there, and raiders about. */
 export function grainPrices(ctx: Ctx, after: Record<string, number>): Record<string, number> | undefined {
@@ -41,7 +43,7 @@ export function startGrainOrder(ctx: Ctx, orderId: number, a: ActionRef, cause: 
     const gm = ctx.content.scenario.goods;
     if (!g || !gm || a.kind !== "purchase" || !gm.market.towns.some((t) => t.location === source) || !place(ctx, dest)) return finish(ctx, orderId, "abandoned", cause, "noDestination");
     const p0 = ctx.s.positions[o.recipient], at0 = "at" in p0 ? p0.at : p0.transit.dest, word = ctx.map.path(at0, source, "rider", (r) => ctx.isOpen(r));
-    if (!word) return finish(ctx, orderId, "abandoned", cause, "noRoute");
+    if (!word) return finish(ctx, orderId, "abandoned", blockedBy(ctx, at0, source, "rider")[0] ?? cause, "noRoute");
     const asked0 = Number(o.constraints.find((c) => c.kind === "units")?.textKey);
     return void ctx.at(ctx.tick + word.ticks, "grain:ship", { orderId, kind: "purchase", source, dest, consult: false, market: true, cause, ...(asked0 > 0 ? { asked: asked0 } : {}) });
   }
@@ -49,7 +51,7 @@ export function startGrainOrder(ctx: Ctx, orderId: number, a: ActionRef, cause: 
   const pos = ctx.s.positions[o.recipient];
   const from = "at" in pos ? pos.at : pos.transit.dest;
   const there = ctx.map.path(from, source, "rider", (r) => ctx.isOpen(r));
-  if (!there) return finish(ctx, orderId, "abandoned", cause, "noRoute");
+  if (!there) return finish(ctx, orderId, "abandoned", blockedBy(ctx, from, source, "rider")[0] ?? cause, "noRoute");
   const asked = Number(o.constraints.find((c) => c.kind === "units")?.textKey);
   ctx.at(ctx.tick + there.ticks + (consult ? g.requisition.consultDays * DAY : 0), "grain:ship", { orderId, kind: a.kind, source, dest, consult, cause, ...(asked > 0 ? { asked } : {}) });
 }
@@ -70,7 +72,7 @@ export const grain: System = {
     "grain:ship": (ctx, { orderId, kind, source, dest, consult, cause, official, asked, market }) => {
       const g = ctx.content.scenario.grain!, o = ctx.s.orders[String(orderId)]?.order;
       if (!official && (!o || ctx.s.orders[String(orderId)].status !== "executing")) return;
-      const stop = (reason: string) => { if (!official) finish(ctx, orderId, "abandoned", cause, reason); };
+      const stop = (reason: string, why = cause) => { if (!official) finish(ctx, orderId, "abandoned", why, reason); };
       const by = official ?? o!.recipient;
       if (market) { // a purchase at a market: paid at once at the market's grain price; the sacks come from the granary with the most to spare
         const gp = g.market, price = ctx.s.grainPrice?.[source] ?? g.purchase.priceMilliPerSack, gd = place(ctx, dest);
@@ -81,7 +83,7 @@ export const grain: System = {
         const sacks = Math.min(asked > 0 ? Math.min(asked, g.purchase.sacks) : g.purchase.sacks, sup.spare, Math.floor(Math.max(0, ctx.s.treasuryMilli[ctx.content.scenario.ruler]) / price));
         if (sacks <= 0) return stop("funds");
         const trip = ctx.map.path(source, dest, "foot", (r) => ctx.isOpen(r)) ?? (source === dest ? { ticks: 0 } : null);
-        if (!trip) return stop("noRoute");
+        if (!trip) return stop("noRoute", blockedBy(ctx, source, dest, "foot")[0] ?? cause);
         void gp;
         const late = delayTicks(ctx, `g${orderId}`, trip.ticks, g.convoy);
         const sh = ctx.emit("GrainShipped", [cause], [loc(source), loc(dest), loc(sup.p.location), { kind: "order", id: String(orderId) }], { by: o!.recipient, convoyId: ctx.s.nextConvoyId, from: sup.p.location, via: source, to: dest, sacks, departedAt: ctx.tick,
@@ -107,7 +109,11 @@ export const grain: System = {
         }
       }
       const trip = ctx.map.path(source, dest, "foot", (r) => ctx.isOpen(r)); // carts walk
-      if (!trip) return stop("noRoute");
+      if (!trip) {
+        const shut = blockedBy(ctx, source, dest, "foot");
+        if (official && shut.length) ctx.emit("SupplyBlocked", shut, [chr(by), loc(dest)], { place: dest, by, sources: [source] }); // he set out, and the road was shut by the time the cart was ready
+        return stop("noRoute", shut[0] ?? cause);
+      }
       const consulted = !buy && consult;
       const talk = consulted ? ctx.emit("GrainConsulted", [cause], [loc(source), { kind: "order", id: String(orderId) }], { community: source, orderId, by, days: g.requisition.consultDays }) : null;
       const costMilli = buy ? sacks * g.purchase.priceMilliPerSack : 0;
@@ -135,7 +141,8 @@ export const grain: System = {
       const after: Record<string, number> = {};
       for (const p of [...g.places].sort((a, b) => (a.location < b.location ? -1 : 1))) {
         const hit = ctx.s.harvestHit[p.location], cut = hit && hit.until > ctx.tick ? hit.permille : 0;
-        const raw = Math.floor((p.production * (1000 - cut)) / 1000), mp = ctx.content.scenario.manpower, gone = ctx.s.musterAway[p.location] ?? 0, base = ctx.content.communities.communities.find((x) => x.id === p.location)?.hands ?? 0;
+        const growth = ctx.enabled("environment") ? growthPermille(ctx.content, ctx.s.env) : 1000; // the season's share of the harvest (Phase 10)
+        const raw = Math.floor((Math.floor((p.production * (1000 - cut)) / 1000) * growth) / 1000), mp = ctx.content.scenario.manpower, gone = ctx.s.musterAway[p.location] ?? 0, base = ctx.content.communities.communities.find((x) => x.id === p.location)?.hands ?? 0;
         const produced = gone > 0 && mp && base > 0 ? Math.floor((raw * (1000 - Math.min(1000, Math.floor((mp.harvestPermille * gone) / base)))) / 1000) : raw; // the men who are away are not at the harvest
         const have = ctx.s.grain[p.location] + produced;
         const consumed = Math.min(have, p.need), spilled = Math.max(0, have - consumed - p.cap);
@@ -150,7 +157,12 @@ export const grain: System = {
       if (starving.length) ctx.emit("GarrisonStarved", [day.id], starving.map(([l]) => loc(l)), { changes: starving });
       for (const p of g.places) {
         const to = bandOf(after[p.location], p.need, g.bandDays), from = ctx.s.grainBand[p.location];
-        if (to !== from) ctx.emit("ScarcityChanged", [day.id], [loc(p.location)], { place: p.location, from, to, store: after[p.location] });
+        if (to !== from) {
+          // a place that got worse after its supply was blocked, or its harvest was damaged by the weather, says so (Phase 10)
+          const worse = BANDS.indexOf(to as (typeof BANDS)[number]) > BANDS.indexOf(from as (typeof BANDS)[number]), sb = ctx.s.supplyBlocked[p.location], hit = ctx.s.harvestHit[p.location];
+          const why = worse ? [...(sb && ctx.tick - sb.tick <= 40 * DAY ? [sb.eventId] : []), ...(hit && hit.env && hit.until > ctx.tick ? [hit.eventId] : [])] : [];
+          ctx.emit("ScarcityChanged", [day.id, ...why], [loc(p.location)], { place: p.location, from, to, store: after[p.location] });
+        }
       }
       // a castellan at his post looks at his own store; if it would feed his place for too few days he sends for grain himself
       for (const p of g.places) {
@@ -164,12 +176,25 @@ export const grain: System = {
         const consult = cover >= g.official.cover;
         const asked = ctx.s.grainAsked[p.location + (consult ? "" : "!")];
         if (asked !== undefined && ctx.tick - asked < g.official.cooldownDays * DAY) continue;
-        const from = g.places.filter((x) => x.location !== p.location).map((x) => ({ x, b: best(ctx, who, x.location, "grain.stock") })).filter(({ x, b }) => b && (b.believedValue as number) >= 12 * x.need && !(g.requisition.refuse?.standDays !== undefined && ctx.s.grainRefusedAt[x.location] !== undefined && ctx.tick - ctx.s.grainRefusedAt[x.location] < g.requisition.refuse.standDays * DAY))
-          .sort((a, b) => (b.b!.believedValue as number) - (a.b!.believedValue as number) || (a.x.location < b.x.location ? -1 : 1))[0];
-        if (!from) continue;
-        const there = ctx.map.path(p.location, from.x.location, "rider", (r) => ctx.isOpen(r));
-        if (!there) continue;
-        const ask = ctx.emit("GrainAsked", [upd.id], [chr(who), loc(p.location), loc(from.x.location)], { place: p.location, by: who, source: from.x.location, consult });
+        const sources = g.places.filter((x) => x.location !== p.location).map((x) => ({ x, b: best(ctx, who, x.location, "grain.stock") })).filter(({ x, b }) => b && (b.believedValue as number) >= 12 * x.need && !(g.requisition.refuse?.standDays !== undefined && ctx.s.grainRefusedAt[x.location] !== undefined && ctx.tick - ctx.s.grainRefusedAt[x.location] < g.requisition.refuse.standDays * DAY))
+          .sort((a, b) => (b.b!.believedValue as number) - (a.b!.believedValue as number) || (a.x.location < b.x.location ? -1 : 1));
+        // a source he cannot reach (the roads are shut) is passed over; what shut them is remembered (Phase 10)
+        const shut: number[] = [];
+        let from: (typeof sources)[number] | undefined, there: ReturnType<typeof ctx.map.path> = null;
+        for (const cand of sources) {
+          const way = ctx.map.path(p.location, cand.x.location, "rider", (r) => ctx.isOpen(r));
+          if (way) { from = cand; there = way; break; }
+          shut.push(...blockedBy(ctx, p.location, cand.x.location, "rider"));
+        }
+        const closures = [...new Set(shut)].sort((a, b) => a - b);
+        if (!from || !there) {
+          const sb = ctx.s.supplyBlocked[p.location];
+          if (closures.length && (!sb || ctx.tick - sb.tick >= g.official.cooldownDays * DAY))
+            ctx.emit("SupplyBlocked", [...closures], [chr(who), loc(p.location)], { place: p.location, by: who, sources: sources.map((x) => x.x.location) });
+          continue;
+        }
+        const crop = ctx.s.harvestHit[p.location];
+        const ask = ctx.emit("GrainAsked", [upd.id, ...closures, ...(crop && crop.env && crop.until > ctx.tick ? [crop.eventId] : [])], [chr(who), loc(p.location), loc(from.x.location)], { place: p.location, by: who, source: from.x.location, consult });
         ctx.at(ctx.tick + there.ticks + (consult ? g.requisition.consultDays * DAY : 0), "grain:ship", { orderId: 0, kind: "requisition", source: from.x.location, dest: p.location, consult, cause: ask.id, official: who });
       }
       ctx.at(ctx.tick + DAY, "grain:day", {});

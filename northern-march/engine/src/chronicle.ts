@@ -129,7 +129,7 @@ export function analyzeRun(sim: { log: readonly SimEvent[]; content: Content; ti
       if (e.type === "SortieResolved" && e.payload.found && !e.payload.success) o.sortieFailed = true;
       if (e.type === "LossesTaken") o.menLost += (e.payload.garrisonLost as number) + Object.values(e.payload.troopsLost as Record<string, number>).reduce((a, b) => a + b, 0);
     }
-    if (e.type === "Storm") for (const o of open) if (o.v.subject === e.payload.location && e.tick <= o.until && e.tick > o.v.tick) o.stormMilli += e.payload.damageMilli as number;
+    if (e.type === "Storm" || e.type === "Hazard") for (const o of open) if (o.v.subject === e.payload.location && e.tick <= o.until && e.tick > o.v.tick) o.stormMilli += e.payload.damageMilli as number;
     if (e.type === "OrderIssued") issuedAt.set((e.payload.order as StructuredOrder).id, e.tick);
     if (e.type === "OrderReceived") receivedAt.set(e.payload.orderId as number, e.tick);
 

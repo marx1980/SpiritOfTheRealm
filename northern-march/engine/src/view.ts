@@ -50,6 +50,11 @@ export interface WorldKnowledge {
     muster?: { arms?: Record<"foot" | "archers" | "horse", { iron: number; timber: number; horses: number }>; men: number; ironPerMan: number; mountedPermille: number; serviceDays: number; wageMilli: number; communities: string[] };
   };
 }
+export interface EnvironmentView {
+  season: string; day: number;
+  here: { place: string; wx: string; tempC10: number; snow: number; wet: number };
+  roads: { from: string; to: string; reason: string; observedAt: number }[];
+}
 export interface View {
   readonly now: number;
   readonly self: { readonly id: string; readonly position: Position; readonly ordersInForce: readonly StructuredOrder[]; readonly orders: readonly IssuedRecord[]; readonly policies?: Readonly<Record<string, { rule: string; learnedAt: number }>> };
@@ -58,6 +63,8 @@ export interface View {
   /** What advisers told the viewer in person, latest per adviser (DESIGN_PIPELINE §5). */
   readonly advice: readonly Recommendation[];
   readonly world: WorldKnowledge;
+  /** Phase 10: the season, the weather where the viewer is, and the roads they believe shut (what they saw or were told). */
+  readonly environment?: EnvironmentView;
   /** The steward's books as last read out to the ruler at the seat (stocks and going prices, with his error); the ruler's view only. */
   /** The battle the ruler is fighting in (or has just fought): headquarters' picture only, never the field as it is (D-060). */
   readonly battle?: BattleView;
@@ -115,6 +122,18 @@ function deepFreeze<T>(o: T): T {
   return o;
 }
 
+function envView(s: Readonly<WorldState>, c: Content, who: string, beliefs: Record<string, BeliefView>): EnvironmentView {
+  const pos = s.positions[who], place = "at" in pos ? pos.at : pos.transit.from, reg = s.env!.regions[c.byId.location.get(place)!.province];
+  const roads: EnvironmentView["roads"] = [];
+  const bs = Object.values(beliefs).filter((b) => b.predicate === "road.closed");
+  for (const r of c.routes) {
+    const at = bs.filter((b) => b.subject.id === r.from || b.subject.id === r.to).sort((a, b) => b.observedAt - a.observedAt || b.id - a.id)[0];
+    const tok = at && String(at.believedValue).split(",").find((t) => t.startsWith(`${r.from}~${r.to}:`));
+    if (tok) roads.push({ from: r.from, to: r.to, reason: tok.split(":")[1], observedAt: at.observedAt });
+  }
+  return { season: s.env!.season, day: s.env!.day, here: { place, wx: reg.wx, tempC10: reg.tempC10, snow: reg.snow, wet: reg.wet }, roads };
+}
+
 export function buildView(s: Readonly<WorldState>, c: Content, who: string, now: number): View {
   const beliefs: Record<string, BeliefView> = {};
   for (const [id, p] of Object.entries(s.beliefs[who] ?? {})) {
@@ -137,6 +156,7 @@ export function buildView(s: Readonly<WorldState>, c: Content, who: string, now:
     ...((): { battle?: BattleView } => { const bv = battleView(s, c, who, now); return bv ? { battle: bv } : {}; })(),
     advice: Object.values(s.heard[who] ?? {}).filter((r) => now - r.computedAt <= ADVICE_FRESH).map((r) => structuredClone(r))
       .sort((a, b) => (a.author < b.author ? -1 : a.author > b.author ? 1 : b.computedAt - a.computedAt || a.id - b.id)),
+    ...(c.scenario.environment && s.env ? { environment: envView(s, c, who, beliefs) } : {}),
     world: {
       places: c.locations.map((l) => ({ id: l.id, name: l.name, province: l.province, kind: l.kind, terrain: l.terrain, pos: [...l.pos] as [number, number], fortified: !!l.fortification })),
       routes: c.routes.map((r) => ({ from: r.from, to: r.to, ...(r.crossing ? { crossing: r.crossing.kind } : {}) })),

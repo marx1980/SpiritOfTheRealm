@@ -5,6 +5,7 @@
 // pauses for her at the start and at moments headquarters notices; without her it runs on the senior commander's plan.
 // At the end the result flows back: losses, the raiders broken or weakened, prestige, the record of obedience,
 // community memory (through the sortie's outcome) and each commander's debrief letter.
+import { groundAt } from "../environment.ts";
 import type { BattleOrder, BattleRecord, BattleSetup, HqFrame, Note } from "../battlefield/core.ts";
 import { battleRecord } from "../battlefield/record.ts";
 export { battleRecord };
@@ -50,10 +51,12 @@ export const battle: System = {
       if (captains.includes(commander)) captains.splice(captains.indexOf(commander), 1), captains.unshift(commander);
       const rulerHere = here.includes(ruler);
       const seed = ctx.keyed(`battle:seed:${from}:${site}:${ctx.tick}`).int(1, 2147483646); // where and when, not event ids: a bigger cast must not reshuffle the fight
+      // the day's weather where the fort stands and how heavy the ground is (Phase 10); without an environment, rain after a storm
+      const ground = ctx.enabled("environment") ? groundAt(ctx.content, ctx.s.env, ctx.content.byId.location.get(from)!.province) : null;
       const rainy = (ctx.s.lastStorm[from] ?? -1e9) > ctx.tick - DAY;
       const setup: BattleSetup = buildSetup({
         battleId: launchedEventId, seed, site, place: ctx.content.byId.location.get(from)?.name ?? from,
-        endT: Math.max(600, dusk - ctx.tick), weather: rainy ? "rain" : "clear",
+        endT: Math.max(600, dusk - ctx.tick), weather: ground ? ground.weather : rainy ? "rain" : "clear", ...(ground?.mudPermille ? { mudPermille: ground.mudPermille } : {}),
         field: b.field!, params: b.tactics!, forces: b.forces!, obedience: sc.agents.obedience,
         garrison: { men: ctx.s.fortifications[from]?.garrison ?? 0, archers: ctx.s.fortifications[from]?.archers ?? 0, horse: ctx.s.fortifications[from]?.horse ?? 0, ...(castellan ? { castellan: who(ctx, castellan.id) } : {}), ...(sergeant ? { sergeant: who(ctx, sergeant.id) } : {}) },
         companies: captains.map((id) => ({ captain: who(ctx, id), men: ctx.s.troops[id] ?? 0 })),

@@ -206,5 +206,13 @@
     "domain": "political",
     "wakeSignificance": 2,
     "materialDelta": 1
+  },
+  {
+    "id": "road.closed",
+    "subjectKind": "location",
+    "halfLifeTicks": 604800,
+    "domain": "info",
+    "wakeSignificance": 2,
+    "materialDelta": 1
   }
 ]
