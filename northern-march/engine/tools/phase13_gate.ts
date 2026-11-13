@@ -51,7 +51,7 @@ function phrase(arm: number, text: string, v: View, r: () => number): { first: s
     return { first: `please ${out.replace(n, slip)}` };
   }
   if (roll < 0.45 && target) { // the wrong place first, then a correction
-    const other = nameIndex(v).filter((e) => e.kind === "place" && e.id !== target.id && e.name.length >= 5).sort((a, b) => (a.id < b.id ? -1 : 1))[Math.floor(r() * 5)];
+    const other = nameIndex(v).filter((e) => e.kind === "place" && !out.includes(e.name) && e.name.length >= 5).sort((a, b) => (a.id < b.id ? -1 : 1))[Math.floor(r() * 5)];
     if (other) return { first: out.replace(target.name, other.name), fix: `No, I mean ${target.name}` };
   }
   return { first: roll < 0.7 ? `${out.charAt(0).toLowerCase()}${out.slice(1)}, my queen` : `please ${out.charAt(0).toLowerCase()}${out.slice(1)}` };
