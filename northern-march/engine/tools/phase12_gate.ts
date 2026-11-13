@@ -67,7 +67,7 @@ function measure(s: BattleSetup, r: BattleRecord) {
   for (const h of r.hq) for (const row of h.network.filter((n) => n.state === "fallen")) { const k = r.notes.find((n) => n.kind === "fall_known" && n.commander === row.commander); if (!k || k.t > h.t) knowBad++; }
   // (e) observed marks are reality
   let infoBad = 0;
-  for (const h of r.hq) { const real = r.frames.find((x) => x.t === h.t); for (const m of h.marks.filter((m) => m.category === "observed")) { const f = real?.formations.find((x) => x.id === m.id); if (f && (f.behaviour !== m.behaviour || (f.behaviour !== "gone" && (f.x !== m.x || f.y !== m.y)))) infoBad++; // the guard's last place is kept once it is gone } }
+  for (const h of r.hq) { const real = r.frames.find((x) => x.t === h.t); for (const m of h.marks.filter((m) => m.category === "observed")) { const f = real?.formations.find((x) => x.id === m.id); if (f && (f.behaviour !== m.behaviour || (f.behaviour !== "gone" && (f.x !== m.x || f.y !== m.y)))) infoBad++; } } // (the ruler's guard keeps its last place once gone)
   return { departures, reasonedBad, judged: judged.length, ...out, falls: (r.result.fallen ?? []).length, succBad, knowBad, infoBad, winner: r.result.winner, ...chained(r) };
 }
 
