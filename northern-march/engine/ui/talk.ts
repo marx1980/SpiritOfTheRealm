@@ -8,7 +8,7 @@ import type { View } from "../src/view.ts";
 declare const __LEXICON__: unknown;
 type Line = { who: string; text: string; kind: "you" | "say" | "tech" };
 /** The browser's speech recogniser, only what the panel uses. */
-interface BrowserRec { lang: string; interimResults: boolean; maxAlternatives: number; continuous: boolean; start(): void; stop(): void; onresult: (e: { results: ArrayLike<ArrayLike<{ transcript: string; confidence: number }> & { isFinal: boolean }> }) => void; onend: () => void; onerror: (e: { error: string }) => void }
+interface BrowserRec { lang: string; interimResults: boolean; maxAlternatives: number; start(): void; stop(): void; onresult: (e: { results: ArrayLike<ArrayLike<{ transcript: string; confidence: number }> & { isFinal: boolean }> }) => void; onend: () => void; onerror: (e: { error: string }) => void }
 /** The platform's dictation namespace (artifact runtime contract), only what the panel uses. */
 interface Dictation { start(): Promise<void>; stop(): Promise<void>; onPartial(h: (e: { text: string }) => void): () => void; onFinal(h: (e: { text: string }) => void): () => void; onState(h: (e: { state: string; reason?: string }) => void): () => void }
 const esc = (s: unknown) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -96,8 +96,10 @@ export class Talk {
     if (this.rec) { this.rec.stop(); return; }
     const base = this.input.trim() ? `${this.input.trim()} ` : "";
     const rec = this.rec = new Rec();
-    rec.lang = "en-GB"; rec.interimResults = false; rec.maxAlternatives = 1; rec.continuous = false;
-    this.listening = true; this.host.render();
+    // as HeadJams does it: nothing else set, and the page left alone while it starts (no redraw, no focus on the box:
+    // the keyboard coming up takes the microphone and the phone aborts the recogniser)
+    rec.lang = "en-US"; rec.interimResults = false; rec.maxAlternatives = 1;
+    (document.activeElement as HTMLElement | null)?.blur?.(); this.focus = false;
     let got = false;
     rec.onresult = (e) => {
       got = true;
@@ -111,7 +113,9 @@ export class Talk {
     const done = () => { if (!this.rec) return; this.rec = undefined; this.listening = false; if (!got) this.lines.push({ who: "", text: `Speak: ${why ? why.replace(/-/g, " ") : "heard nothing"}`, kind: "tech" }); this.host.render(); };
     rec.onend = () => done();
     rec.onerror = (e) => { why = e.error; done(); };
-    try { rec.start(); } catch (e) { why = (e as Error).name || "unavailable"; done(); }
+    try { rec.start(); } catch (e) { why = (e as Error).name || "unavailable"; done(); return; }
+    this.listening = true;
+    const b = document.getElementById("talk-mic"); if (b) { b.textContent = "Stop"; b.setAttribute("aria-pressed", "true"); }
   }
   /** Speak: start listening (straight from the click, as the platform requires), or stop. */
   listen() {
