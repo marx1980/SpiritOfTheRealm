@@ -15,7 +15,7 @@ export interface Lexicon {
   };
   fuzzy: { minLength: number; oneEditUpTo: number; twoEditsFrom: number };
   /** What another layer may change when it speaks: courtesy it may add or drop, phrases that count as one (validate.ts). */
-  speech: { free: string[]; same: string[][] };
+  speech: { free: string[]; openers: string[]; same: string[][] };
 }
 
 /** Validate a parsed lexicon file; throws with the first problem. */
@@ -31,6 +31,7 @@ export function parseLexicon(raw: unknown): Lexicon {
   for (const k of ["limits", "command", "all"] as const) strs(x.battle?.[k], `battle.${k}`);
   for (const k of ["questionSeconds", "readbackSeconds", "technicalSeconds", "pressAfter"] as const) if (!Number.isInteger(x.battle?.cost?.[k])) throw new Error(`lexicon: battle.cost.${k}`);
   strs(x.speech?.free, "speech.free");
+  strs(x.speech?.openers, "speech.openers");
   if (!Array.isArray(x.speech?.same) || !x.speech.same.length) throw new Error("lexicon: speech.same must be a list of groups");
   x.speech.same.forEach((g, i) => { strs(g, `speech.same.${i}`); if (g.length < 2) throw new Error(`lexicon: speech.same.${i} needs two phrases or more`); });
   return x;

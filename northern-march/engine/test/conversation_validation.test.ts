@@ -66,6 +66,9 @@ const field = toBattle();
 {
   const c = createConversation({ domain: "battle", layer: rec.layer, lexicon, rules });
   c.say(`${field.battle!.commanders[0].name.split(" ")[0]}, attack the ford but not beyond the stream`, field);
+  c.say("yes", field);
+  const [c0, c1] = field.battle!.commanders;
+  if (c1) { const d = createConversation({ domain: "battle", layer: rec.layer, lexicon, rules }); d.say(`${c0.name.split(" ")[0]}, attack the ford and command ${c1.name.split(" ")[0]}`, field); }
 }
 const A = (kind: SpeechAct["kind"], re?: RegExp) => { const a = rec.acts.find((x) => x.kind === kind && (!re || re.test(x.canonical))); assert.ok(a, `no ${kind} act ${re ?? ""}: ${rec.acts.map((x) => x.canonical).join(" / ")}`); return a!; };
 const viewOf = (a: SpeechAct) => rec.views.get(a)!;
@@ -222,4 +225,65 @@ test("the conversation replaces a rejected line with the canonical one and recor
   assert.equal(r.templated, true);
   assert.ok(!/certainly/.test(r.text));
   assert.ok(r.rejected && r.rejected.length > 0);
+});
+
+// ---- found by the independent review (D-080): punctuation, loose courtesy and loose equivalents -------------------------
+test("punctuation is part of what a line says: moving a stop, a question mark or an exclamation turns it round", () => {
+  const b = A("readback", /not beyond the stream/), why = A("answer", /; against it weigh/), would = A("answer", /^I would [^,;]*\.$/), q = A("question", /Which place/);
+  rejects(b, b.canonical.replace("attack the ford, but not beyond the stream.", "attack the ford, but not so. Beyond the stream."));
+  rejects(b, b.canonical.replace("attack the ford, but not beyond the stream.", "attack: the ford? But not! Beyond the stream."));
+  rejects(b, b.canonical.replace("but not beyond", "but not. Beyond"));
+  rejects(why, why.canonical.replace("; against it weigh", ", against it! Weigh"));
+  rejects(why, why.canonical.replace(/^(I would [^,]*),/, "$1?"));
+  rejects(would, would.canonical.replace(/^I would (.*)\.$/, "I would? $1?"));
+  rejects(would, would.canonical.replace(/\.$/, "?"));
+  rejects(q, q.canonical.replace(/: (.*) or (.*)\?$/, "? $1! Or $2?"));
+  const cmd = rec.acts.find((x) => x.kind === "readback" && /and command/.test(x.canonical));
+  if (cmd) rejects(cmd, cmd.canonical.replace(/and command (\w+)\. Is that right/, "and command. $1, is that right"));
+});
+
+test("courtesy is a fixed set of phrases: no loose 'your', 'the', 'so' or 'aye' to own, blame, intensify or answer", () => {
+  const worry = A("answer", /^What worries me/), rb = A("readback", /from Crownwood to Northwatch/), b = A("readback", /not beyond the stream/);
+  if (/word that may/.test(worry.canonical)) {
+    for (const w of ["your word that may", "the queen' word that may", "Lady Grace' word that may", "my word that may"]) rejects(worry, worry.canonical.replace("word that may", w));
+  }
+  rejects(rb, rb.canonical.replace("send timber from Crownwood", "send your timber from my Crownwood"));
+  rejects(rb, rb.canonical.replace("Is that right?", "Is that right? Aye."));
+  rejects(b, b.canonical.replace("attack the ford", "attack a ford"));
+  accepts(b, b.canonical.replace("attack the ford", "attack ford")); // an article dropped before a name of the field: the same place
+});
+
+test("equivalents are equivalents: 'let me be clear', 'to be sure', 'failing that' and 'consider it done' are not", () => {
+  const rb = A("readback", /from Crownwood to Northwatch/), alt = A("answer", /^Otherwise/), ack = A("ack", /It shall be done/);
+  rejects(rb, rb.canonical.replace("Let me be sure:", "Let me be clear:"));
+  rejects(rb, rb.canonical.replace("Let me be sure:", "To be sure,"));
+  rejects(alt, alt.canonical.replace("Otherwise:", "Failing that:"));
+  rejects(ack, "Consider it done.");
+  accepts(ack, "It will be done.");
+});
+
+test("harmless forms the review found rejected now pass", () => {
+  const rb = A("readback", /from Crownwood to Northwatch/), ack = A("ack", /It shall be done/);
+  accepts(rb, rb.canonical.replace("Is that right?", "Is that correct?"));
+  accepts(rb, rb.canonical.replace("Is that right?", "Is that your will, my liege?"));
+  accepts(rb, rb.canonical.replace("Is that right?", "Is that right, Your Highness?"));
+  accepts(ack, "It shall be done, my lady.");
+});
+
+test("punctuation fuzz: a question mark, an exclamation or a new full stop put mid-line is caught (3,000 mutations)", () => {
+  let x = 777;
+  const r = () => ((x = (Math.imul(x, 1103515245) + 12345) >>> 0) / 4294967296);
+  const lines = rec.acts.filter((a) => a.kind !== "technical");
+  let n = 0;
+  for (let i = 0; i < 3000; i++) {
+    const a = lines[Math.floor(r() * lines.length)], ws = a.canonical.split(" ");
+    if (ws.length < 3) continue;
+    const k = Math.floor(r() * (ws.length - 1)); // never after the last word
+    if (/[^A-Za-z']$/.test(ws[k])) continue; // a stop already there
+    const mark = ["?", "!", "."][Math.floor(r() * 3)];
+    const out = [...ws]; out[k] = ws[k] + mark;
+    n++;
+    assert.equal(validateSpeech(viewOf(a), a, out.join(" "), lexicon).ok, false, `accepted "${out.join(" ")}"`);
+  }
+  assert.ok(n > 1500, `${n}`);
 });

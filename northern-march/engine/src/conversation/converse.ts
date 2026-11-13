@@ -111,6 +111,7 @@ export class Conversation {
       speak(say.readback(view, this.voice(view), r.text, u.mentions.map((m) => m.name)), 0);
       return;
     }
+    if (u.unparsed?.length) { this.reset(); speak(say.technical(`I cannot give that as one order: ${u.unparsed.join("; ")}.`)); return; }
     const r = resolveBattle(u, view, this.o.lexicon);
     if (r.kind === "none") { this.reset(); speak(say.technical(`I cannot give that order: ${r.why}.`)); return; }
     const who = people[0], speaker = present ? who.id : null;

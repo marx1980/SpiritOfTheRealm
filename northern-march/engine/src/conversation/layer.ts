@@ -29,6 +29,8 @@ export interface Understanding {
   question?: { kind: QuestionKind; addressee?: string };
   /** Words that look like a name she does not know. */
   unknown: string[];
+  /** Parts of what she said that no order can carry (a second order in one breath, a place for what is to be done later). */
+  unparsed?: string[];
 }
 export const emptyUnderstanding = (text: string, act: Understanding["act"] = "unclear"): Understanding => ({ act, text, mentions: [], modes: [], goods: [], arms: [], command: [], unknown: [] });
 

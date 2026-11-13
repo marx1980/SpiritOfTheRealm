@@ -23,37 +23,63 @@ const CLAIMS: [string, RegExp][] = [
   ["what someone else thinks or means", /\b(wants?|wanted|intends?|intended|plans?|planned|plots?|plotting|schemes?|scheming|hopes?|fears?|hates?|loves?|trusts?|distrusts?|lying|lies|lied|loyal|disloyal|betray\w*|believes?|thinks|feels|secretly|really|truly)\b/gi],
   ["the world outside the game", /\b(ai|model|game|player|simulation|seed|computer|program|chatbot|assistant)\b/gi],
 ];
-/** Rule 0: characters a spoken line may hold. */
-const CHARS = /^[A-Za-z0-9 .,;:!?'’\-–—()]+$/;
+/** Rule 0: characters a spoken line may hold (quotation marks are allowed and read as nothing). */
+const CHARS = /^[A-Za-z0-9 .,;:!?'’"“”\-–—()]+$/;
+const STRENGTH: Record<string, number> = { "|": 1, "!": 2, "?": 3 };
 
-interface Read { seq: string[]; entities: string[]; toks: Tok[] }
-/** A line as the closure sees it: names as entities, the register's equivalents as one, courtesy set aside. */
+interface Read { seq: string[]; entities: string[]; words: Tok[]; residual: string }
+/** Words and stops: a stop is "?" or "!" or "|" (any of . , ; : ( ) and dashes); a trailing apostrophe stays on its word. */
+function lex(text: string): Tok[] {
+  const out: Tok[] = [];
+  for (const m of text.replace(/[‘’]/g, "'").matchAll(/[A-Za-z0-9][A-Za-z0-9']*|[?!]|[.,;:()–—]|\s-\s|-/g)) {
+    const r = m[0].trim();
+    out.push({ w: /^[?!]$/.test(r) ? r : /^[.,;:()–—-]$/.test(r) ? "|" : r.toLowerCase(), raw: r, i: out.length });
+  }
+  return out;
+}
+const isStop = (w: string) => w in STRENGTH;
+/** Names she knows, and in a battle the places and lines of the field, each with its short forms. */
+function names(v: View, L: Lexicon): NameEntry[] {
+  const idx = nameIndex(v), f = v.battle?.field;
+  if (f) for (const p of [...f.places, ...f.lines]) idx.push({ id: `field:${p.id}`, name: p.name, kind: "place", aliases: [...new Set([tokenise(p.name).map((t) => t.w).join(" "), ...(L.battle.fieldAliases[p.id] ?? []).map((a) => tokenise(a).map((t) => t.w).join(" "))])] });
+  return idx;
+}
+/** A line as the closure sees it: names as entities, equivalent phrases as one, courtesy set aside, stops kept. */
 function read(text: string, idx: NameEntry[], L: Lexicon): Read {
-  const toks = tokenise(text);
-  // names first, longest first, exact forms only; a short form that fits several people stands for all of them
-  const out: string[] = [], entities: string[] = [];
-  const marks: (string | undefined)[] = toks.map(() => undefined), span = new Array<number>(toks.length).fill(1);
-  for (let len = 3; len >= 1; len--) for (let s = 0; s + len <= toks.length; s++) {
-    if (marks.slice(s, s + len).some((x) => x !== undefined)) continue;
-    const w = toks.slice(s, s + len).map((t) => t.w).join(" ");
-    const ids = idx.filter((e) => e.aliases.includes(w)).map((e) => e.id).sort();
+  const toks = lex(text);
+  const tag: (string | undefined)[] = toks.map(() => undefined);
+  // names first, longest first, exact short forms only, never across a stop; a short form that fits several stands for all
+  for (let len = 4; len >= 1; len--) for (let s = 0; s + len <= toks.length; s++) {
+    const span = toks.slice(s, s + len);
+    if (tag.slice(s, s + len).some((x) => x !== undefined) || span.some((t) => isStop(t.w))) continue;
+    const ids = idx.filter((e) => e.aliases.includes(span.map((t) => t.w).join(" "))).map((e) => e.id).sort();
     if (!ids.length) continue;
-    for (let k = s; k < s + len; k++) marks[k] = "";
-    marks[s] = `@${ids.join("|")}`; span[s] = len;
+    for (let k = s; k < s + len; k++) tag[k] = "";
+    tag[s] = `@${ids.join("|")}`;
   }
-  const rest: Tok[] = toks.map((t, i) => (marks[i] === undefined ? t : { ...t, w: marks[i] === "" ? "\u0000" : marks[i]! }));
-  const same = findPhrases(rest, Object.fromEntries(L.speech.same.map((g, i) => [`§${i}`, g])));
-  const at = new Map(same.map((h) => [h.start, h]));
+  const rest: Tok[] = toks.map((t, i) => (tag[i] === undefined ? t : { ...t, w: tag[i] || "\u0000" }));
+  const table: Record<string, string[]> = { free: L.speech.free, ...Object.fromEntries(L.speech.same.map((g, i) => [`§${i}`, g])) };
+  const at = new Map(findPhrases(rest, table).map((h) => [h.start, h]));
+  const seq: string[] = [], entities: string[] = [], residual: string[] = [];
   for (let i = 0; i < rest.length; i++) {
-    const h = at.get(i);
-    if (h) { out.push(h.key); i = h.end - 1; continue; }
-    const w = rest[i].w;
+    const h = at.get(i), w = rest[i].w;
+    if (h) { if (h.key !== "free") seq.push(h.key); i = h.end - 1; continue; }
     if (w === "\u0000") continue;
-    if (w.startsWith("@")) { out.push(w); entities.push(w); continue; }
-    if (L.speech.free.includes(w)) continue;
-    out.push(w);
+    residual.push(toks[i].raw);
+    if (w.startsWith("@")) { seq.push(w); entities.push(w); continue; }
+    if (L.speech.openers.includes(w) && (!seq.length || isStop(seq[seq.length - 1]))) continue; // "Indeed, ..." / "... . So, ..."
+    seq.push(w);
   }
-  return { seq: out, entities, toks };
+  // stops: a run is its strongest; none at the start; a plain stop at the end is the line's end
+  const out: string[] = [];
+  for (const w of seq) {
+    if (!isStop(w)) { out.push(w); continue; }
+    if (!out.length) continue;
+    const last = out[out.length - 1];
+    if (isStop(last)) { if (STRENGTH[w] > STRENGTH[last]) out[out.length - 1] = w; } else out.push(w);
+  }
+  if (out[out.length - 1] === "|") out.pop();
+  return { seq: out, entities, words: toks.filter((t) => !isStop(t.w)), residual: residual.join(" ") };
 }
 const count = (re: RegExp, s: string) => (s.match(re) ?? []).length;
 
@@ -67,29 +93,31 @@ export function validateSpeech(v: View, act: SpeechAct, text: string, L: Lexicon
   if (text.length > Math.max(2 * C.length, C.length + 80)) problems.push("is far longer than what it has to say");
   // 1. a system line (out of the world) is the game speaking: never reworded
   if (act.kind === "technical" && text !== C) return { ok: false, problems: [...problems, "rewords a system line"] };
-  const idx = nameIndex(v), mine = read(text, idx, L), canon = read(C, idx, L);
+  const idx = names(v, L), mine = read(text, idx, L), canon = read(C, idx, L);
   // 2. names: only those the act carries (its facts or its own line), and none dropped
   const allowed = new Set(canon.entities);
   for (const n of act.facts.names) for (const e of read(n, idx, L).entities) allowed.add(e);
   for (const e of new Set(mine.entities)) if (!allowed.has(e)) problems.push(`names ${e.slice(1).split("|").map((id) => v.world.names[id] ?? id).join(" or ")}, which the line is not about`);
   for (const e of new Set(canon.entities)) if (!mine.entities.includes(e)) problems.push(`drops ${e.slice(1).split("|").map((id) => v.world.names[id] ?? id).join(" or ")}`);
   // 3. a capitalised word she has not been given, anywhere in the line (a sentence start included), is a name made up
-  const ok = new Set([...canon.toks.map((t) => t.w), ...L.speech.free, ...L.speech.same.flat().flatMap((p) => tokenise(p).map((t) => t.w)), ...idx.flatMap((e) => e.aliases.flatMap((a) => tokenise(a).map((t) => t.w)))]);
-  for (const t of mine.toks) if (/^[A-Z]/.test(t.raw) && t.raw !== "I" && !ok.has(t.w)) problems.push(`names ${t.raw}, whom she has not been told of (a name made up)`);
+  const ok = new Set([...canon.words.map((t) => t.w), ...L.speech.free.flatMap((p) => tokenise(p).map((t) => t.w)), ...L.speech.openers, ...L.speech.same.flat().flatMap((p) => tokenise(p).map((t) => t.w)), ...idx.flatMap((e) => e.aliases.flatMap((a) => tokenise(a).map((t) => t.w)))]);
+  for (const t of mine.words) if (/^[A-Z]/.test(t.raw) && t.raw !== "I" && !ok.has(t.w)) problems.push(`names ${t.raw}, whom she has not been told of (a name made up)`);
   // 4. figures: only those the canonical line gives or the act holds
-  const figures = (r: Read) => r.toks.map((t) => t.w).filter((w) => NUMBER.test(w));
+  const figures = (r: Read) => r.words.map((t) => t.w).filter((w) => NUMBER.test(w));
   const have = figures(canon), nums = new Set(act.facts.numbers.map(String));
   for (const w of figures(mine)) { const i = have.indexOf(w); if (i >= 0) have.splice(i, 1); else if (!nums.has(w.replace(/,/g, ""))) problems.push(`gives the number word "${w}", which the line does not carry`); }
   // 5. claims: no more of each shape than the canonical line makes
-  for (const [why, re] of CLAIMS) if (count(re, text) > count(re, C)) problems.push(`says ${why}`);
+  // counted outside the phrases the register lists as equivalent ("is that your will" is a question, not a prophecy)
+  const pct = (t: string) => (t.includes("%") ? " %" : "");
+  for (const [why, re] of CLAIMS) if (count(re, mine.residual + pct(text)) > count(re, canon.residual + pct(C))) problems.push(`says ${why}`);
   // 6. negation: as many "not"s as the canonical line, no more and no fewer
-  const neg = (r: Read) => r.toks.filter((t) => NEGATOR.test(t.w)).length;
+  const neg = (r: Read) => r.words.filter((t) => NEGATOR.test(t.w)).length;
   if (neg(mine) !== neg(canon)) problems.push(`adds or drops a "not" (negation)`);
   // 7. the closure: the same words in the same order, once courtesy is set aside and equivalents are read as one
   if (mine.seq.join(" ") !== canon.seq.join(" ")) {
     const k = mine.seq.findIndex((w, i) => w !== canon.seq[i]);
     const at = k < 0 ? canon.seq[mine.seq.length] : mine.seq[k];
-    problems.push(k < 0 ? `leaves out "${at}"` : canon.seq.includes(at) ? `says things in another order (at "${at}")` : `adds or changes words (at "${at}")`);
+    problems.push(k < 0 ? `leaves out "${at}"` : isStop(at) || isStop(canon.seq[k] ?? "") ? `stops or asks in another place (at "${at}")` : canon.seq.includes(at) ? `says things in another order (at "${at}")` : `adds or changes words (at "${at}")`);
   }
   return { ok: problems.length === 0, problems: [...new Set(problems)] };
 }

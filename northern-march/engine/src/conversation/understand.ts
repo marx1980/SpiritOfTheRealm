@@ -126,6 +126,12 @@ export function understandBattle(text: string, ctx: UnderstandCtx): Understandin
   if (lim) { const ln = fieldHits.find((h) => lineIdx.some((e) => e.id === h.id) && h.start >= lim.end && h.start <= lim.end + 3); if (ln) u.limitLine = ln.id; }
   const cond = conds[0];
   if (cond) { const then = verbs.find((v) => v.start >= cond.end); u.when = { kind: cond.key as "enemy_engaged" | "enemy_horse_seen", ...(then ? { then: then.key } : {}) }; }
+  // what an order cannot carry is said back, never dropped quietly: a second order, or a place for the part that waits
+  const then = cond ? verbs.find((v) => v.start >= cond.end) : undefined, extra = verbs.filter((v) => v !== firstVerb && v !== then && !(firstVerb && v.key === firstVerb.key && v.start < (cond?.start ?? Infinity)));
+  const unparsed: string[] = [];
+  if (extra.length) unparsed.push("one order at a time");
+  if (cond && fieldHits.some((h) => fieldIdx.some((e) => e.id === h.id) && h.start >= cond.end)) unparsed.push("what is to be done later cannot go to another place; give that place in its own order");
+  if (unparsed.length) u.unparsed = unparsed;
   u.modes = [...new Set(vias.map((h) => h.key))];
   if (u.modes.includes("signal")) {
     const rest = toks.filter((_, k) => !covered.has(k) || vias.some((v) => v.key === "signal" && k >= v.start && k < v.end)).map((t) => t.w).join(" ");

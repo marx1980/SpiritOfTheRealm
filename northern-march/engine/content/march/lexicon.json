@@ -511,7 +511,10 @@
     "when engaged",
     "when the line is engaged",
     "as soon as the enemy is engaged",
-    "when the enemy commits"
+    "when the enemy commits",
+    "until the enemy is engaged",
+    "until engaged",
+    "until they engage"
    ],
    "enemy_horse_seen": [
     "if their horse appear",
@@ -523,7 +526,16 @@
     "if you see their horse",
     "when you see their horse",
     "if you see cavalry",
-    "if you see riders"
+    "if you see riders",
+    "when their horse is seen",
+    "if their horse is seen",
+    "once their horse is seen",
+    "when their cavalry is seen",
+    "if their cavalry is seen",
+    "until their horse is seen",
+    "until their horse appears",
+    "until you see their horse",
+    "when you see horse"
    ]
   },
   "command": [
@@ -620,20 +632,18 @@
   "twoEditsFrom": 8
  },
  "speech": {
-  "note": "What another language layer may change when it speaks (validate.ts, rule 7): courtesy words it may add or leave out, and phrases that count as one. Anything else must be the canonical line's words in its order.",
+  "note": "What another language layer may change when it speaks (validate.ts, rule 7): courtesy phrases it may add or leave out anywhere, words it may open a sentence with, and phrases that count as one. Anything else must be the canonical line's words and stops in its order.",
   "free": [
-   "a",
-   "an",
-   "the",
-   "my",
-   "lady",
-   "queen",
-   "majesty",
-   "your",
-   "grace",
+   "my lady",
+   "my queen",
+   "your majesty",
+   "your grace",
+   "your highness",
+   "my liege"
+  ],
+  "openers": [
    "indeed",
    "well",
-   "aye",
    "so",
    "please"
   ],
@@ -641,9 +651,7 @@
    [
     "let me be sure",
     "if i have it right",
-    "so that i have it right",
-    "to be sure",
-    "let me be clear"
+    "so that i have it right"
    ],
    [
     "is that right",
@@ -651,6 +659,7 @@
     "have i that right",
     "do i have that right",
     "is that so",
+    "is that correct",
     "is that your will"
    ],
    [
@@ -674,9 +683,44 @@
     "don't"
    ],
    [
+    "cannot",
+    "can't"
+   ],
+   [
+    "is not",
+    "isn't"
+   ],
+   [
+    "are not",
+    "aren't"
+   ],
+   [
+    "was not",
+    "wasn't"
+   ],
+   [
+    "have not",
+    "haven't"
+   ],
+   [
+    "would not",
+    "wouldn't"
+   ],
+   [
+    "could not",
+    "couldn't"
+   ],
+   [
+    "does not",
+    "doesn't"
+   ],
+   [
+    "did not",
+    "didn't"
+   ],
+   [
     "it shall be done",
     "it will be done",
-    "consider it done",
     "as you command"
    ],
    [
@@ -689,11 +733,6 @@
     "what troubles me",
     "my worry is",
     "my concern is"
-   ],
-   [
-    "otherwise",
-    "or else",
-    "failing that"
    ],
    [
     "i must see to my men",

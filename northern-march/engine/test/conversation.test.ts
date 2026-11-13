@@ -401,3 +401,17 @@ test("'do as X advises' with several pieces of advice from X asks which, and the
   }
   assert.equal(found, 1);
 });
+
+test("a battle order is never shortened quietly: what no order can carry is said back, and 'until ... then' is a condition", () => {
+  const { view } = toBattle();
+  const n = present(view).name.split(" ")[0];
+  const c = battle();
+  const t = say(c, view, `${n}, hold the ridge, and when their horse is seen, attack the ford`);
+  assert.equal(t.actions.length, 0);
+  assert.equal(c.state, "idle");
+  assert.match(spoken(t), /cannot give that as one order/);
+  const d = battle();
+  assert.match(spoken(say(d, view, `${n}, hold the ridge, then attack the ford`)), /one order at a time/);
+  const e = battle();
+  assert.match(spoken(say(e, view, `${n}, hold the ridge until their horse is seen, then attack`)), /hold the ridge, and when their horse is seen, attack/);
+});
