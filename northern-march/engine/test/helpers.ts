@@ -11,8 +11,15 @@ export function variant(edit: (raw: RawContent) => void) {
   return deriveContent(raw);
 }
 
+/** The scenario as it was before Phase 10 (no environment block): dry roads, the placeholder weather. For tests that pin exact travel times or the old weather. */
+export const legacyVariant = (edit: (raw: RawContent) => void = () => {}) => variant((r) => { delete (r.scenario as { environment?: unknown }).environment; edit(r); });
+export const LEGACY = legacyVariant();
+
 export function run(cfg: Partial<SimConfig> & { seed: number }, days = 240) {
   const sim = createSim({ content: CONTENT, policy: "delegating", ...cfg });
   sim.runDays(days);
   return sim;
 }
+
+/** `run` on the pre-environment scenario (for tests that pin old trajectories and balance). */
+export const legacyRun = (cfg: Partial<SimConfig> & { seed: number }, days = 240) => run({ content: LEGACY, ...cfg }, days);

@@ -4,7 +4,8 @@ import assert from "node:assert/strict";
 import { createSim } from "../src/engine.ts";
 import { DAY } from "../src/systems/types.ts";
 import type { PlayerAction } from "../src/policies.ts";
-import { CONTENT, variant } from "./helpers.ts";
+// Phase 10: these tests pin the pre-environment scenario (dry roads, the placeholder weather); the environment has its own tests
+import { LEGACY as CONTENT, legacyVariant as variant } from "./helpers.ts";
 
 const G = CONTENT.scenario.goods!;
 const num = (x: unknown) => x as number;

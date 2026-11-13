@@ -8,7 +8,8 @@ import { buildSituation } from "../src/systems/agents.ts";
 import { decideObedience } from "../src/agents/obedience.ts";
 import { validateDecisionTrace, type DecisionTrace } from "../src/schemas.ts";
 import { TICKS_PER_DAY as DAY } from "../src/engine.ts";
-import { CONTENT, run, variant } from "./helpers.ts";
+// Phase 10: these tests pin the pre-environment scenario (dry roads, the placeholder weather); the environment has its own tests
+import { LEGACY as CONTENT, legacyRun as run, legacyVariant as variant } from "./helpers.ts";
 
 const CONTENT_OF = (sim: ReturnType<typeof run>) => sim.content;
 const traces = (sim: ReturnType<typeof run>, agent?: string) =>
@@ -52,7 +53,7 @@ test("a meaningful event wakes only implicated agents", () => {
   for (let seed = 1; seed <= 40 && checked < 5; seed++) {
     const sim = run({ seed, policy: "passive" }, 120);
     const byId = new Map(sim.log.map((e) => [e.id, e]));
-    for (const storm of sim.log.filter((e) => e.type === "Storm" && e.payload.location === "eastmarch")) {
+    for (const storm of sim.log.filter((e) => (e.type === "Storm" || e.type === "Hazard") && e.payload.location === "eastmarch")) {
       const woken = wakes(sim).filter((w) => w.tick === storm.tick && (w.payload.triggers as number[]).some((t) => {
         for (let x = byId.get(t); x; x = byId.get(x.causedBy[0])) if (x.id === storm.id) return true;
         return false;

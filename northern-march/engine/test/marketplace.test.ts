@@ -5,7 +5,8 @@ import assert from "node:assert/strict";
 import { createSim } from "../src/engine.ts";
 import { DAY } from "../src/systems/types.ts";
 import type { PlayerAction } from "../src/policies.ts";
-import { CONTENT, variant } from "./helpers.ts";
+// Phase 10: these tests pin the pre-environment scenario (dry roads, the placeholder weather); the environment has its own tests
+import { LEGACY as CONTENT, legacyVariant as variant } from "./helpers.ts";
 
 const quiet = (edit: (r: any) => void = () => {}) => variant((r) => { r.scenario.scripts = []; r.scenario.threat.startPermillePerDay = 0; edit(r); });
 function ordered(action: PlayerAction, days = 40, content = quiet()) {

@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import type { BeliefProposition } from "../src/beliefs.ts";
 import { TICKS_PER_DAY as DAY } from "../src/engine.ts";
 import { beliefsAbout } from "../src/view.ts";
-import { run, variant } from "./helpers.ts";
+import { run, variant, LEGACY } from "./helpers.ts";
 
 const allIntercepted = variant((r) => { r.scenario.interception = [{ location: "greybridge", by: "varos", permille: 1000 }]; });
 
@@ -43,7 +43,7 @@ test("messages can be lost, and the loss is logged at the leg where it happened"
 });
 
 test("delivery takes the physical travel time", () => {
-  const sim = run({ seed: 6, policy: "passive" }, 60);
+  const sim = run({ seed: 6, policy: "passive", content: LEGACY }, 60);
   const d = sim.log.find((e) => e.type === "ReportDispatched" && e.payload.sender === "bren")!;
   const got = sim.log.find((e) => e.type === "ReportDelivered" && e.payload.reportId === d.payload.reportId)!;
   assert.ok(got, "this seed's first report arrives");

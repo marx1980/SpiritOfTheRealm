@@ -40,7 +40,7 @@ export const ORDER_LIFECYCLE = {
 /** Allowed next steps for one order. Superseded may follow any step after receipt. */
 export const ORDER_TRANSITIONS: Record<string, readonly string[]> = {
   start: ["OrderIssued"],
-  OrderIssued: ["OrderDispatched", "OrderReceived"],
+  OrderIssued: ["OrderDispatched", "OrderReceived", "OrderUndeliverable"], // Phase 10: no open road to the recipient at all (a closed route), so nothing is sent
   OrderDispatched: ["OrderReceived", "OrderLost", "OrderIntercepted", "OrderUndeliverable"],
   OrderIntercepted: ["InterceptedOrderReceived"],
   OrderReceived: ["OrderInterpreted", "OrderSuperseded"],

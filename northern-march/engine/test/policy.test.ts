@@ -7,7 +7,8 @@ import { createSim, type Sim } from "../src/engine.ts";
 import { checkRun } from "../src/invariants.ts";
 import { DAY } from "../src/systems/types.ts";
 import type { PlayerAction } from "../src/policies.ts";
-import { CONTENT, variant } from "./helpers.ts";
+// Phase 10: these tests pin the pre-environment scenario (dry roads, the placeholder weather); the environment has its own tests
+import { LEGACY as CONTENT, legacyVariant as variant } from "./helpers.ts";
 
 type Trace = { agent: string; candidates: { action: { kind: string; target?: string }; score: number; contributions: { kind: string; ref: { kind: string; id: string }; weight: number; textKey: string }[] }[]; selected: { kind: string }; ordersInForce: unknown[] };
 const traces = (sim: Sim) => sim.log.filter((e) => e.type === "DecisionMade").map((e) => ({ e, t: e.payload.trace as Trace })).filter((x) => x.t && x.t.candidates);

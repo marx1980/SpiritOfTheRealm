@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Rng } from "../src/rng.ts";
-import { run } from "./helpers.ts";
+import { run, LEGACY } from "./helpers.ts";
 
 test("streams are seeded by (master, name) and independent", () => {
   const a = Rng.fromSeed(5, "economy"), b = Rng.fromSeed(5, "weather"), a2 = Rng.fromSeed(5, "economy");
@@ -44,7 +44,7 @@ test("G-02: extra weather draws do not change economy outcomes", () => {
 
 test("G-02: extra weather draws change weather outcomes on some seed (the switch is live)", () => {
   const storms = (log: readonly { type: string; tick: number }[]) => JSON.stringify(log.filter((e) => e.type === "Storm").map((e) => e.tick));
-  const changed = [1, 2, 3, 4, 5, 6, 7, 8].some((seed) => storms(run({ seed }).log) !== storms(run({ seed, params: { extraDraws: { weather: 3 } } }).log));
+  const changed = [1, 2, 3, 4, 5, 6, 7, 8].some((seed) => storms(run({ seed, content: LEGACY }).log) !== storms(run({ seed, content: LEGACY, params: { extraDraws: { weather: 3 } } }).log));
   assert.ok(changed);
 });
 

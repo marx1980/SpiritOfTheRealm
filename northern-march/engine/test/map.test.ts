@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { MapGraph } from "../src/map.ts";
 import { TICKS_PER_DAY as DAY } from "../src/engine.ts";
-import { CONTENT, run, variant } from "./helpers.ts";
+import { CONTENT, run, variant, legacyVariant } from "./helpers.ts";
 
 const map = new MapGraph(CONTENT);
 
@@ -35,7 +35,7 @@ test("a closed route forces a detour", () => {
 });
 
 test("a character rides along the route and arrives exactly on time", () => {
-  const c = variant((r) => { r.scenario.scripts = [{ day: 3, kind: "travel", who: "bren", to: "ravenport", mode: "rider" }]; });
+  const c = legacyVariant((r) => { r.scenario.scripts = [{ day: 3, kind: "travel", who: "bren", to: "ravenport", mode: "rider" }]; });
   const sim = run({ seed: 1, content: c, policy: "passive" }, 10);
   const dep = sim.log.find((e) => e.type === "Departed" && e.payload.who === "bren")!;
   const arr = sim.log.find((e) => e.type === "Arrived" && e.payload.who === "bren")!;
@@ -46,7 +46,7 @@ test("a character rides along the route and arrives exactly on time", () => {
 });
 
 test("an army moves at army speed", () => {
-  const c = variant((r) => { r.scenario.scripts = [{ day: 1, kind: "travel", who: "caron", to: "northwatch", mode: "army" }]; });
+  const c = legacyVariant((r) => { r.scenario.scripts = [{ day: 1, kind: "travel", who: "caron", to: "northwatch", mode: "army" }]; });
   const sim = run({ seed: 1, content: c, policy: "passive" }, 10);
   const dep = sim.log.find((e) => e.type === "Departed" && e.payload.who === "caron")!;
   const arr = sim.log.find((e) => e.type === "Arrived" && e.payload.who === "caron")!;

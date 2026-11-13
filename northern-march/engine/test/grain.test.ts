@@ -7,7 +7,8 @@ import { checkRun } from "../src/invariants.ts";
 import { createSim } from "../src/engine.ts";
 import { DAY } from "../src/systems/types.ts";
 import type { PlayerAction } from "../src/policies.ts";
-import { CONTENT, run, variant } from "./helpers.ts";
+// Phase 10: these tests pin the pre-environment scenario (dry roads, the placeholder weather); the environment has its own tests
+import { LEGACY as CONTENT, legacyRun as run, legacyVariant as variant } from "./helpers.ts";
 
 const G = CONTENT.scenario.grain!;
 const SEEDS = [1, 2, 3, 4, 5, 6, 7, 8];

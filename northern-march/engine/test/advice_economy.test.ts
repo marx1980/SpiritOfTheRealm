@@ -10,7 +10,8 @@ import { generateEconomy, score } from "../src/agents/planner.ts";
 import { adviceAction, actionText, economyProblems } from "../src/presentation/affordances.ts";
 import { planOf, planWords } from "../src/presentation/phrasing.ts";
 import { checkRun } from "../src/invariants.ts";
-import { CONTENT, variant } from "./helpers.ts";
+// Phase 10: these tests pin the pre-environment scenario (dry roads, the placeholder weather); the environment has its own tests
+import { LEGACY as CONTENT, legacyVariant as variant } from "./helpers.ts";
 
 /** A realm where Northwatch's walls are worn down (so repairs are wanted) and the crown's timber is plentiful. */
 const WORN = variant((r: any) => { r.locations.find((l: any) => l.id === "northwatch").fortification.conditionMilli = 40000; r.scenario.scripts = []; });
