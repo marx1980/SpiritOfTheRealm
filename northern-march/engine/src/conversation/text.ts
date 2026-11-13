@@ -77,7 +77,7 @@ export function nameIndex(v: View): NameEntry[] {
 
 export interface NameHit { start: number; end: number; id: string; name: string; kind: "place" | "person"; exact: boolean }
 /** Names in the tokens: spans that equal a name or short form exactly; then spans that match once joined ("grey fen" for
- *  Greyfen) or with a spelling slip, which are not exact (they are confirmed out of the world). Longest first. */
+ *  a one-word name) or with a spelling slip, which are not exact (they are confirmed out of the world). Longest first. */
 export function findNames(toks: Tok[], idx: NameEntry[], f: Lexicon["fuzzy"], skip: Set<number> = new Set()): NameHit[] {
   const out: NameHit[] = [], taken = new Set<number>();
   const free = (s: number, e: number) => { for (let k = s; k < e; k++) if (taken.has(k)) return false; return true; };
@@ -88,7 +88,7 @@ export function findNames(toks: Tok[], idx: NameEntry[], f: Lexicon["fuzzy"], sk
     const e = idx.find((x) => x.aliases.includes(span));
     if (e) claim({ start: s, end: s + len, id: e.id, name: e.name, kind: e.kind, exact: true });
   }
-  // the near misses look only at words that are not the lexicon's own ("when" is not Bren)
+  // the near misses look only at words that are not the lexicon's own ("when" is not a name)
   const freeFuzzy = (s: number, e: number) => { for (let k = s; k < e; k++) if (taken.has(k) || skip.has(k)) return false; return true; };
   // fewest slips first, so "grey fen" (none, once joined) is taken before anything that needs a guess
   for (let slip = 0; slip <= 2; slip++) for (let len = 1; len <= 3; len++) for (let s = 0; s + len <= toks.length; s++) {

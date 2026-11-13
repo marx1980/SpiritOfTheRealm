@@ -74,7 +74,7 @@ export function understandCourt(text: string, ctx: UnderstandCtx): Understanding
   // "follow": the adviser named is the one followed
   u.unknown = leftovers(toks, covered, ctx);
   if (lead > 0) {
-    // "no, I mean Northwatch": a correction; with its own verb it is a new command
+    // "no, I mean <place>": a correction; with its own verb it is a new command
     u.act = u.verb ? "command" : "correct";
     if (!u.verb && !u.mentions.length && !u.modes.length && !u.goods.length && !u.arms.length && !u.unknown.length) return emptyUnderstanding(text, "correct");
     return u;

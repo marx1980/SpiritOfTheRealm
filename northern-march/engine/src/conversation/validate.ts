@@ -22,7 +22,7 @@ export function validateSpeech(v: View, act: SpeechAct, text: string): Verdict {
   const problems: string[] = [];
   const allowedNames = new Set(act.facts.names.flatMap((n) => tokenise(n).map((t) => t.w)));
   if (act.speaker) for (const t of tokenise(v.world.names[act.speaker] ?? act.speaker)) allowedNames.add(t.w);
-  allowedNames.add("anna");
+  for (const t of tokenise(v.world.names[v.self.id] ?? "")) allowedNames.add(t.w); // she may be spoken of by name
   const toks = tokenise(text);
   // 1. every name in the line is one the act carries
   const known = nameIndex(v);

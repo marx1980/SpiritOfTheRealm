@@ -79,6 +79,7 @@ function converse(conv: Conversation, v: View, arm: number, first: string, again
     if (conv.state === "readback" && fix && !fixed) { text = fix; fixed = true; st.corrections++; continue; }
     text = conv.state === "technical" ? yes : conv.state === "readback" ? yes : again;
   }
+  if (process.env.TRACE) console.log("STUCK", JSON.stringify({ arm, first, again, fix, state: conv.state }));
   conv.say("never mind", v); st.stuck++;
   return actions;
 }
