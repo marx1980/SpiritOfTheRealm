@@ -37,6 +37,12 @@ function slotsOf(verb: string, a: PlayerAction): { role: "from" | "at" | "to" | 
 }
 const fits = (m: Mention, s: { role: Mention["role"]; id: string | undefined }) => s.id === m.id && (m.role === null || s.role === null || m.role === s.role || (m.role === "at" && s.role === "to") || (m.role === "to" && s.role === "at"));
 
+/** Each place she names takes a place of its own in the order ("buy iron at Greybridge for Greybridge" names the market and the store). */
+function assignable(ms: Mention[], slots: ReturnType<typeof slotsOf>, used = new Set<number>(), i = 0): boolean {
+  if (i === ms.length) return true;
+  return slots.some((s, k) => !used.has(k) && fits(ms[i], s) && assignable(ms, slots, new Set([...used, k]), i + 1));
+}
+
 export function resolveCourt(u: Understanding, v: View, rules: PublicRules, L: Lexicon): CourtResolution {
   void L;
   const verb = u.verb ?? "";
@@ -61,8 +67,10 @@ export function resolveCourt(u: Understanding, v: View, rules: PublicRules, L: L
     const exact = cands.filter((a) => (a.repairMode ?? "standard") === wanted);
     cands = exact.length ? exact : cands;
   }
+  const placed: Mention[] = [];
   for (const m of u.mentions.filter((x) => x.kind === "place")) {
-    const next = cands.filter((a) => slotsOf(verb, a).some((s) => fits(m, s)));
+    placed.push(m);
+    const next = cands.filter((a) => assignable(placed, slotsOf(verb, a)));
     if (!next.length) return { kind: "none", why: `${m.name} does not fit that order, as far as you know` };
     cands = next;
   }

@@ -9,6 +9,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { createSim, hashLog, type Sim } from "../src/engine.ts";
 import { publicRules, playerActions, adviceChoices, type PublicRules } from "../src/presentation/affordances.ts";
 import { planWords } from "../src/presentation/phrasing.ts";
+import { actionText } from "../src/presentation/affordances.ts";
 import { beliefsAbout, type PlayerAction, type View } from "../src/view.ts";
 import { createConversation, correctTranscript, loadLexicon, recommendationStale, templatedLayer, type Conversation, type Lexicon } from "../src/conversation/index.ts";
 import { standInLayer } from "./conversation_layers.ts";
@@ -353,4 +354,25 @@ test("a different layer, speaking and hearing differently, leaves the event log 
     });
     assert.equal(logs[0], logs[1], `seed ${seed}`);
   }
+});
+
+test("every sentence the rules use for an offered action is understood back as that action (several seeds, all pauses)", () => {
+  let n = 0;
+  for (const seed of [4, 5]) {
+    const sim = createSim({ content: CONTENT, seed, policy: "external" });
+    for (let i = 0; i < 400; i++) {
+      const r = sim.next(40 * 86400);
+      if (r.ended || !r.paused) break;
+      const v = r.view!;
+      for (const a of playerActions(v, rules)) {
+        const text = actionText(v, a), c = court();
+        say(c, v, text);
+        const t = say(c, v, "yes");
+        n++;
+        assert.deepEqual(t.actions.map((x) => ({ ...x, followed: undefined })), [{ ...a, followed: undefined }], text); // including "buy iron at X for X": one place named twice
+      }
+      sim.answer([]);
+    }
+  }
+  assert.ok(n > 500);
 });
