@@ -88,7 +88,9 @@ export class Talk {
   private show(text: string) { this.input = text; const i = document.getElementById("talk-in") as HTMLInputElement | null; if (i) i.value = text; }
   /** Whether this view can listen: the platform's dictation in an artifact, else the browser's own recogniser (Safari, Chrome) on a page of its own. */
   private browserRec(): (new () => BrowserRec) | undefined { const w = window as unknown as Record<string, new () => BrowserRec>; return w.SpeechRecognition ?? w.webkitSpeechRecognition; }
-  canSpeak(): boolean { return !!this.dict || !!this.browserRec(); }
+  /** A phone's home-screen app gives no speech-to-text (iOS aborts it at once): there the keyboard's own microphone is the way. */
+  private homeScreen(): boolean { return (navigator as { standalone?: boolean }).standalone === true || matchMedia?.("(display-mode: standalone)").matches === true; }
+  canSpeak(): boolean { return !!this.dict || (!!this.browserRec() && !this.homeScreen()); }
   private rec?: BrowserRec;
   private listenBrowser() {
     const Rec = this.browserRec();
