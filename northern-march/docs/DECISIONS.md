@@ -433,3 +433,12 @@ Run once each, from a worktree of commit 77f74f3 (Phase 11 code, content march-0
 
 ## D-075 — G-19 recalibration: emergence threshold (13 Nov)
 Option 1 of D-074, chosen by Marko. One content change, tuned on TUNE seeds only: `wilds.reputation.activeAt` 500 → 350 (content march-0.11). TUNE probes, seeds 101-220 (240 expedition games, delegating and aggressive): activeAt 350 gives Stefan 65 of 240 (27.1%, interval 22.6-32.0; delegating 45/120, aggressive 20/120); 400 gives 43 of 240 (17.9%). Stone, chain and invariant checks unchanged (outside Anna's hands about 60%, 0 gaps, 0 violations). The band, the bars and the code are unchanged. Full suite 340 of 340 after re-recording the KI-01 hash (predicate still false). G-19 runs once on a fresh block (520000) from a worktree of the committing commit; whatever it says is the verdict.
+
+## D-076 — G-19 on the recalibrated code: PASS (13 Nov)
+Block 520000, content march-0.11, 500 seeds × three scripted policies, run once from a worktree of commit 8086b58, no tuning inside the round.
+- (a) Stefan emerged in 347 of 999 games with an expedition: 34.7% (90% interval 32.3-37.3), inside 20-40%. Delegating 200/500 (40%), aggressive 147/499 (29.5%). PASS.
+- (b) 347 of 347 emergences traced through recommendation, appointment, expedition and reputation. PASS.
+- (c) Stone found in 496 games, ended outside Anna's hands in 328 (66.1%, interval 62.6-69.5); no custody gaps. PASS.
+- (d) 0 invariant violations. PASS.
+- Phase 11 is complete (G-18 on 500000 and G-19 on 520000 PASS, with the earlier G-19 FAIL on 510000 recorded in D-074). The TUNE probe said 27%; the sealed block says 35%, so the delegating arm now sits at the top edge of the band: worth watching if emergence is tuned further. Playtested by no human; whether Stefan's rise feels earned is unverified.
+- Phase 9 round (D-071) still not run.
