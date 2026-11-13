@@ -4,7 +4,7 @@
 export const EVENT_SCHEMA_VERSION = 3; // v3 (Phase 3): agents, DecisionTrace, obedience payloads; v2 (Phase 2): B2/B5 payloads
 
 export type Domain = "military" | "economic" | "political" | "social" | "environment" | "magic" | "info";
-export type SystemId = "core" | "economy" | "weather" | "threat" | "movement" | "knowledge" | "messenger" | "orders" | "player" | "advice" | "agents" | "battle" | "communities" | "grain" | "goods" | "manpower";
+export type SystemId = "core" | "economy" | "weather" | "threat" | "movement" | "knowledge" | "messenger" | "orders" | "player" | "advice" | "agents" | "battle" | "communities" | "grain" | "goods" | "manpower" | "policy";
 export const ABLATABLE: readonly SystemId[] = ["economy", "weather", "threat", "messenger", "communities"];
 
 export interface SubjectRef {
@@ -149,6 +149,13 @@ export const EVENT_TYPES: Readonly<Record<string, EventTypeDef>> = Object.freeze
   ThreatWeakened: T("battle", "military", 2),
   PrestigeChanged: T("battle", "political", 2),
   BattleConduct: T("battle", "military", 1),
+  // Phase 9: standing policy and precedent (D-070)
+  PolicyProclaimed: T("policy", "political", 3),
+  PolicyLearned: T("policy", "political", 1),
+  PolicyApplied: T("policy", "political", 2),
+  CommunityParley: T("policy", "social", 2),
+  CommunityPunished: T("policy", "social", 2),
+  PrecedentRecorded: T("policy", "political", 1),
   DetachmentSent: T("agents", "military", 1),
   DetachmentArrived: T("agents", "military", 1),
 });

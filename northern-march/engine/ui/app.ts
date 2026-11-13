@@ -8,7 +8,7 @@ import { MapGraph } from "../src/map.ts";
 import { mapSvg } from "./maparts.ts";
 import { BATTLE_CSS, battleSvg, frameBox, framePoints, glyphOf, mins } from "./battleart.ts";
 import type { Task } from "../src/battlefield/core.ts";
-import { actionText, ARM_WORD, adviceAction, adviceChoices, affordable as affordableR, coinsKnown as coinsKnownR, buyKnown, economyProblems, GOOD_LABEL, grainCover, grainKnown, houseOf, openAdvice, priceKnown, publicRules, purchaseCostKnown, raidNear, repairCostKnown as repairCostKnownR, storeKnown, type AdviceChoice } from "../src/presentation/affordances.ts";
+import { actionText, ARM_WORD, POLICY_AREA, POLICY_RULE, adviceAction, adviceChoices, affordable as affordableR, coinsKnown as coinsKnownR, buyKnown, economyProblems, GOOD_LABEL, grainCover, grainKnown, houseOf, openAdvice, priceKnown, publicRules, purchaseCostKnown, raidNear, repairCostKnown as repairCostKnownR, storeKnown, type AdviceChoice } from "../src/presentation/affordances.ts";
 import { captainSentTo, fallenAt, lettersFall, planOf, certainty, letterSentences, letterGist, planWords, reasonWords, sourceOf } from "../src/presentation/phrasing.ts";
 import { beliefsAbout, validateDraft, type OrderDraft, type View } from "../src/view.ts";
 import { INTENTS, type Recommendation } from "../src/schemas.ts";
@@ -44,7 +44,7 @@ const REASON_LABEL: Record<string, string> = { report: "Letters", advice: "Advic
 
 type Sim = ReturnType<typeof createSim>;
 const st = {
-  sim: null as unknown as Sim, log: [] as PlayerAction[][], shownPause: null as string | null, advSeen: {} as Record<string, number>, windfall: null as null | { day: number; milli: number }, advDay: -1, seed: __H01__.seed, paused: null as null | string, over: false, letter: null as number | null, advice: null as number | null, tab: "game" as "game" | "settings" | "economy",
+  sim: null as unknown as Sim, log: [] as PlayerAction[][], shownPause: null as string | null, advSeen: {} as Record<string, number>, windfall: null as null | { day: number; milli: number }, advDay: -1, seed: __H01__.seed, paused: null as null | string, over: false, letter: null as number | null, advice: null as number | null, tab: "game" as "game" | "settings" | "economy" | "policy", pol: {} as Record<string, string>,
   batch: [] as number[], queue: [] as PlayerAction[], autoPause: new Set<string>(REASONS), selected: "northwatch",
   draft: { recipient: "", action: "p:repair", objective: "northwatch", discretion: "bounded", mission: "defend", repairMode: "standard" } as { recipient: string; action: string; objective: string; discretion: string; mission: string; repairMode: string },
   eco: { act: "move", good: "timber", from: "", to: "", community: "", fort: "", arm: "foot", consult: false, qty: 0 } as { act: string; good: string; from: string; to: string; community: string; fort: string; arm: string; consult: boolean; qty: number },
@@ -454,6 +454,19 @@ function ecoForm(v: View) {
     : e.act === "muster" ? { action: "levy", muster: true, target: e.community, to: e.fort, ...(g?.muster?.arms ? { arm: e.arm as "foot" } : {}) } : null;
   return { action, from, to: e.act === "send" ? to.filter((x) => x !== e.from) : to, communities, forts, isGrain, amounts };
 }
+function policyTab(v: View): string {
+  const rules = v.world.policy ?? {}, mine = v.self.policies ?? {};
+  const rows = Object.entries(rules).map(([area, rs]) => {
+    const cur = st.pol[area] ?? mine[area]?.rule ?? "";
+    const known = mine[area]?.rule;
+    return `<tr><td><label for="pol-${esc(area)}">${esc(POLICY_AREA[area] ?? area)}</label></td>
+      <td><select id="pol-${esc(area)}"><option value=""${cur ? "" : " selected"}>None</option>${rs.map((r) => `<option value="${esc(r)}"${r === cur ? " selected" : ""}>${esc(POLICY_RULE[r] ?? r)}</option>`).join("")}</select></td>
+      <td class="dim">${known ? esc(POLICY_RULE[known] ?? known) : "–"}</td></tr>`;
+  }).join("");
+  const changed = Object.entries(st.pol).some(([area, r]) => r && mine[area]?.rule !== r);
+  return `<div class="grid one"><div class="card"><h2>Standing policy</h2><table><tr><th></th><th>Proclaim</th><th>In force</th></tr>${rows}</table>
+    <div class="row"><button id="pol-go"${changed ? "" : " disabled"}>Proclaim</button></div></div></div>`;
+}
 function economyTab(v: View): string {
   const g = v.world.goods, gr = v.world.grain, L = v.ledger, e = st.eco;
   const f = ecoForm(v);
@@ -629,6 +642,7 @@ function render() {
     <div class="grow"></div>
     ${cont}
     <button id="restart">Restart</button>
+    ${v.world.policy ? `<button id="policy-tab" aria-pressed="${st.tab === "policy"}">${st.tab === "policy" ? "Back" : "Policy"}</button>` : ""}
     <button id="economy-tab" aria-pressed="${st.tab === "economy"}">${st.tab === "economy" ? "Back" : "Economy"}</button>
     <button id="settings-tab" aria-pressed="${st.tab === "settings"}">${st.tab === "settings" ? "Back" : "Settings"}</button>
   </div>
@@ -638,7 +652,7 @@ function render() {
     ${st.paused && st.paused !== "battle" ? choicesBlock(v) : ""}
     <span class="queue">${st.queue.map((a, i) => ({ a, i })).filter(({ a }) => !isShown(a)).map(({ a, i }) => `<span class="chip">${esc(textOf(v, a))} <button data-unq="${i}" aria-label="Remove">×</button></span>`).join("")}</span>
     ${st.error ? `<span class="err">${esc(st.error)}</span>` : ""}</div>
-  ${st.tab === "economy" ? economyTab(v) : st.paused === "battle" && v.battle ? battleScreen(v) : `<div class="grid">${court(v)}${map(v)}${side(v)}</div>`}
+  ${st.tab === "policy" ? policyTab(v) : st.tab === "economy" ? economyTab(v) : st.paused === "battle" && v.battle ? battleScreen(v) : `<div class="grid">${court(v)}${map(v)}${side(v)}</div>`}
   ${st.observer ? observer() : ""}`}`;
   void o;
   syncMore();
@@ -647,7 +661,7 @@ function render() {
 
 document.addEventListener("click", (e) => {
   const t = e.target as HTMLElement;
-  const el = t.closest("#bo-add,[data-act],[data-toggle],[data-mission],[data-place],[data-q],[data-unq],[data-letter],[data-issue],[data-close-letter],[data-use-levy],#go,#restart,#settings-tab,#economy-tab,#o-add,#eco-add,#copy-log") as HTMLElement | null;
+  const el = t.closest("#bo-add,[data-act],[data-toggle],[data-mission],[data-place],[data-q],[data-unq],[data-letter],[data-issue],[data-close-letter],[data-use-levy],#go,#restart,#settings-tab,#economy-tab,#policy-tab,#pol-go,#o-add,#eco-add,#copy-log") as HTMLElement | null;
   if (!el) return;
   if (el.dataset.useLevy !== undefined) { st.draft.action = "p:levy"; return render(); }
   if (el.dataset.letter) { const id = Number(el.dataset.letter); st.openLetter = st.openLetter === id ? null : id; return render(); }
@@ -675,6 +689,12 @@ document.addEventListener("click", (e) => {
   if (el.id === "go") return send();
   if (el.id === "restart") return start(st.seed, false);
   if (el.id === "settings-tab") { st.tab = st.tab === "settings" ? "game" : "settings"; return render(); }
+  if (el.id === "policy-tab") { st.tab = st.tab === "policy" ? "game" : "policy"; return render(); }
+  if (el.id === "pol-go") {
+    const v = st.sim.viewOf("player");
+    for (const [area, rule] of Object.entries(st.pol)) if (rule && v.self.policies?.[area]?.rule !== rule) queue({ action: "policy", policy: { area: area as "military", rule } });
+    st.pol = {}; return render();
+  }
   if (el.id === "economy-tab") { st.tab = st.tab === "economy" ? "game" : "economy"; return render(); }
   if (el.id === "bo-add") { const a = battleForm(st.sim.viewOf("player")).action; if (a) queue(a); return; }
   if (el.id === "eco-add") { const a = ecoForm(st.sim.viewOf("player")).action; if (a) queue(a); return; }
@@ -694,6 +714,7 @@ document.addEventListener("click", (e) => {
 document.addEventListener("change", (e) => {
   const t = e.target as HTMLInputElement | HTMLSelectElement;
   if (t.id === "observer-toggle") { st.observer = (t as HTMLInputElement).checked; return render(); }
+  if (t.id.startsWith("pol-")) { st.pol[t.id.slice(4)] = t.value; return render(); }
   if (t.id === "eco-qty") { st.eco.qty = Number(t.value); return render(); }
   const bo = ({ "bo-to": "to", "bo-kind": "kind", "bo-place": "place", "bo-target": "target", "bo-when": "when", "bo-via": "via", "bo-signal": "signal" } as Record<string, "to" | "kind" | "place" | "target" | "when" | "via" | "signal">)[t.id];
   if (bo) { st.bo[bo] = t.value; return render(); }

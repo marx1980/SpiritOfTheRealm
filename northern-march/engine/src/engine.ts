@@ -17,6 +17,7 @@ import { grain } from "./systems/grain.ts";
 import { goods } from "./systems/goods.ts";
 import { manpower } from "./systems/manpower.ts";
 import { battle } from "./systems/battle.ts";
+import { policy } from "./systems/policy.ts";
 import { makePlayer } from "./systems/player.ts";
 import { MapGraph } from "./map.ts";
 import { beliefsAbout } from "./view.ts";
@@ -80,7 +81,7 @@ export class Sim {
     this.state = initialState(cfg.content);
     this.map = new MapGraph(cfg.content);
     this.ctx = this.makeCtx();
-    for (const s of [economy, weather, threat, movement, knowledge, messenger, orders, agents, communities, grain, goods, manpower, battle, makePlayer((ctx, d, r) => this.decide(ctx, d, r))]) this.systems.set(s.id, s);
+    for (const s of [economy, weather, threat, movement, knowledge, messenger, orders, agents, communities, grain, goods, manpower, battle, policy, makePlayer((ctx, d, r) => this.decide(ctx, d, r))]) this.systems.set(s.id, s);
     this.emit("ScenarioStarted", [], [], { contentVersion: cfg.content.version, seed: cfg.seed });
     for (const s of this.systems.values()) if (!this.disabled.has(s.id)) s.start(this.ctx);
   }
@@ -219,7 +220,7 @@ export class Sim {
       ...(e.payload.repairMode ? { repairMode: e.payload.repairMode as InputRecord["repairMode"] } : {}),
       ...(e.payload.to ? { to: e.payload.to as string } : {}), ...(e.payload.consult ? { consult: true } : {}),
       ...(e.payload.muster ? { muster: true } : {}), ...(e.payload.arm ? { arm: e.payload.arm as "foot" } : {}), ...(e.payload.sell ? { sell: true } : {}), ...(e.payload.good ? { good: e.payload.good as string } : {}), ...(e.payload.units ? { units: e.payload.units as number } : {}), ...(e.payload.market ? { market: true } : {}),
-      ...(e.payload.battle ? { battle: e.payload.battle as InputRecord["battle"] } : {}),
+      ...(e.payload.battle ? { battle: e.payload.battle as InputRecord["battle"] } : {}), ...(e.payload.policy ? { policy: e.payload.policy as InputRecord["policy"] } : {}),
     }));
     const rngStates: SaveFile["rngStates"] = {};
     for (const [n, r] of [...this.streams].sort(([a], [b]) => (a < b ? -1 : 1))) rngStates[n] = { state: r.getState(), draws: r.draws };
@@ -253,7 +254,7 @@ export class Sim {
       actions = recs.map((r) => ({ action: r.action, ...(r.target ? { target: r.target } : {}), ...(r.order ? { order: r.order } : {}), ...(r.followed ? { followed: r.followed } : {}),
         ...(r.mission ? { mission: r.mission } : {}), ...(r.raid ? { raid: r.raid } : {}), ...(r.repairMode ? { repairMode: r.repairMode } : {}),
         ...(r.to ? { to: r.to } : {}), ...(r.consult ? { consult: true } : {}),
-        ...(r.muster ? { muster: true } : {}), ...(r.arm ? { arm: r.arm } : {}), ...(r.sell ? { sell: true } : {}), ...(r.good ? { good: r.good } : {}), ...(r.units ? { units: r.units } : {}), ...(r.market ? { market: true } : {}), ...(r.battle ? { battle: r.battle } : {}) }));
+        ...(r.muster ? { muster: true } : {}), ...(r.arm ? { arm: r.arm } : {}), ...(r.sell ? { sell: true } : {}), ...(r.good ? { good: r.good } : {}), ...(r.units ? { units: r.units } : {}), ...(r.market ? { market: true } : {}), ...(r.battle ? { battle: r.battle } : {}), ...(r.policy ? { policy: r.policy } : {}) }));
     } else if ((rp ? this.resumePolicy : this.cfg.policy) === "external") {
       actions = this.pendingAnswer ?? [];
     } else if (reason === "battle") {

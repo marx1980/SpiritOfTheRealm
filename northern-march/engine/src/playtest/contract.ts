@@ -61,7 +61,7 @@ export const PlaytestRunManifestSchema = z.strictObject({
   budgets: z.strictObject({ maxGames: int.min(1), workers: int.min(1).max(64), wallMs: int.min(1000), artifactBytes: int.min(1024), llmCalls: z.literal(0) }),
 });
 const ActionRecordSchema = z.strictObject({
-  action: z.enum(["repair", "levy", "advance", "travel", "relief", "requisition", "purchase"]), target: id.optional(), to: id.optional(), good: z.string().optional(), units: z.number().int().positive().optional(), market: z.boolean().optional(), sell: z.boolean().optional(), muster: z.boolean().optional(), arm: z.enum(["foot", "archers", "horse"]).optional(), consult: z.boolean().optional(), mission: z.enum(["defend", "attack", "scout"]).optional(), raid: id.optional(),
+  action: z.enum(["repair", "levy", "advance", "travel", "relief", "requisition", "purchase", "policy"]), policy: z.object({ area: z.enum(["military", "emergency", "communities"]), rule: z.string() }).optional(), target: id.optional(), to: id.optional(), good: z.string().optional(), units: z.number().int().positive().optional(), market: z.boolean().optional(), sell: z.boolean().optional(), muster: z.boolean().optional(), arm: z.enum(["foot", "archers", "horse"]).optional(), consult: z.boolean().optional(), mission: z.enum(["defend", "attack", "scout"]).optional(), raid: id.optional(),
   repairMode: z.enum(["rush", "labour"]).optional(), followed: id.optional(),
 });
 export const REJECT_STEPS = ["schema", "crossref", "context", "allowlist", "engine", "agent-error"] as const;

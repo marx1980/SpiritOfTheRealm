@@ -2,6 +2,7 @@
 import type { ActionRef, Perceiver, Situation } from "./model.ts";
 import { DAY } from "./model.ts";
 import { battleLoss, raiderMen } from "../battle.ts";
+import type { BattleParams } from "../content.ts";
 
 export interface FortPicture { id: string; cond: number | null; intensity: number; defence: number; sites: string[] }
 
@@ -20,6 +21,15 @@ export const dmgPerDay = (sit: Situation, intensity: number, defence: number) =>
 /** Expected damage over a span of ticks at a given defence (linear in time). */
 const lossOver = (sit: Situation, i: number, d: number, ticks: number) => Math.floor((dmgPerDay(sit, i, d) * Math.max(0, ticks)) / DAY);
 
+/** The odds of a battle as a commander judges them (D-068), for men against raiders seen, with no second band. */
+export function battleOdds(b: BattleParams, men: number, skill: number, raiders: number) {
+  const est = b.sortie.estimate;
+  if (!est) { const S = Math.floor((men * (b.sortie.skillBasePermille + skill)) / 1000); return S + raiders > 0 ? Math.floor((1000 * S) / (S + raiders)) : 500; }
+  const S = Math.floor((men * (est.skillBasePermille + skill)) / 1000), R = Math.floor((raiders * est.raiderWeightPermille) / 1000);
+  let a = 1, c = 1;
+  for (let i = 0; i < est.sharpness; i++) { a *= S; c *= R; }
+  return a + c > 0 ? Math.floor((1000 * a) / (a + c)) : 500;
+}
 export function sortieP(sit: Situation, men: number, skill: number, intensity: number) {
   if (intensity <= 0) return 1000;
   const est = sit.p.battle.sortie.estimate;

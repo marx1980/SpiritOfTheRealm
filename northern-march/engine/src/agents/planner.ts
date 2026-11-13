@@ -1,6 +1,7 @@
 // Planner (ARCHITECTURE §20.5-20.6): generate a few contextual candidates, score them from beliefs through objectives,
 // traits, relationships, orders and resources, select deterministically, keep the current intention unless beaten by
 // a commitment margin. Pure: the same Situation and beliefs always give the same decision.
+import { policyReasons, precedentReasons } from "./policy.ts";
 import type { Reason } from "../schemas.ts";
 import type { ActionRef, Candidate, Perceiver, Situation } from "./model.ts";
 import { act, actionKey, avgTrait, dominantTrait, DAY } from "./model.ts";
@@ -156,6 +157,7 @@ export function score(sit: Situation, per: Perceiver, a: ActionRef): Candidate {
   }
   // a fort the raiders hold: waiting loses it, whatever the purse says
   if (a.kind === "advise_wait" && sit.captains.length && lostForts(sit, per).length) c.push(R("belief", lostForts(sit, per)[0], -Math.floor(v.breachPenaltyMilli / 2), "reason.fort_lost"));
+  c.push(...policyReasons(sit, a, e.successP), ...precedentReasons(sit, a, e.successP));
   if (a.kind === "sortie" || a.kind === "advise_sortie" || a.kind === "advise_retake") c.push(R("capability", "military", Math.floor(((sit.cap.military ?? 0) - 500) * 4), "reason.own_skill"));
   // relationships
   if (e.helps) c.push(R("relationship", e.helps, Math.floor((2000 * sit.trust(e.helps)) / 1000), "reason.trusts"));

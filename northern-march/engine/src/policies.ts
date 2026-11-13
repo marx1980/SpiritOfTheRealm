@@ -8,7 +8,7 @@ import { adviceAction, economyProblems, affordable as affordableR, publicRulesOf
 export type PolicyId = "passive" | "delegating" | "aggressive" | "cautious" | "provisioner" | "random-valid" | "follow-best-adviser" | "follow-worst-adviser" | "external" | "replay" | `follow:${string}`;
 /** `mission` (for sending a captain): defend the fort (default), or scout / attack the raiders at `raid`. */
 export interface BattleOrderDraft { to: string; task: import("./battlefield/core.ts").Task; via: "runner" | "signal" | "voice"; signal?: string }
-export interface PlayerAction { action: "repair" | "levy" | "advance" | "travel" | "order" | "relief" | "requisition" | "purchase" | "battle"; battle?: BattleOrderDraft; target?: string; to?: string; consult?: boolean; good?: string; units?: number; market?: boolean; sell?: boolean; muster?: boolean; arm?: "foot" | "archers" | "horse"; order?: OrderDraft; decision?: number; followed?: string; mission?: "defend" | "scout" | "attack"; raid?: string; repairMode?: "standard" | "rush" | "labour" }
+export interface PlayerAction { action: "repair" | "levy" | "advance" | "travel" | "order" | "relief" | "requisition" | "purchase" | "battle" | "policy"; battle?: BattleOrderDraft; target?: string; to?: string; consult?: boolean; good?: string; units?: number; market?: boolean; sell?: boolean; muster?: boolean; arm?: "foot" | "archers" | "horse"; policy?: { area: "military" | "emergency" | "communities"; rule: string }; order?: OrderDraft; decision?: number; followed?: string; mission?: "defend" | "scout" | "attack"; raid?: string; repairMode?: "standard" | "rush" | "labour" }
 export type PolicyFn = (v: View, rng: () => Rng) => PlayerAction[];
 
 const DAY = 86400;

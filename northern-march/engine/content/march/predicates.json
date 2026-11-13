@@ -182,5 +182,29 @@
     "domain": "military",
     "wakeSignificance": 1,
     "materialDelta": 1
+  },
+  {
+    "id": "policy.military",
+    "subjectKind": "character",
+    "halfLifeTicks": 31536000,
+    "domain": "political",
+    "wakeSignificance": 2,
+    "materialDelta": 1
+  },
+  {
+    "id": "policy.emergency",
+    "subjectKind": "character",
+    "halfLifeTicks": 31536000,
+    "domain": "political",
+    "wakeSignificance": 2,
+    "materialDelta": 1
+  },
+  {
+    "id": "policy.communities",
+    "subjectKind": "character",
+    "halfLifeTicks": 31536000,
+    "domain": "political",
+    "wakeSignificance": 2,
+    "materialDelta": 1
   }
 ]

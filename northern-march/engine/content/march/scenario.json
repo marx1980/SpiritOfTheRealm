@@ -909,5 +909,49 @@
   "handsReservePermille": 300,
   "harvestPermille": 700,
   "grievanceAtFullPermille": 2000
+ },
+ "policy": {
+  "rules": {
+   "military": [
+    "hold_walls",
+    "cautious",
+    "bold"
+   ],
+   "emergency": [
+    "repairs"
+   ],
+   "communities": [
+    "negotiate",
+    "punish",
+    "tolerate"
+   ]
+  },
+  "initial": {},
+  "policyMilli": 20000,
+  "cautiousOddsPermille": 700,
+  "boldOddsPermille": 300,
+  "repairLimitMilli": 60000,
+  "officials": [
+   "castellan",
+   "captain"
+  ],
+  "parley": {
+   "remitMilli": 3000,
+   "remedyPermille": 300,
+   "trust": 40
+  },
+  "punish": {
+   "minMen": 40,
+   "seizeMilli": 4000,
+   "grievancePermille": 1500,
+   "trust": -80
+  },
+  "precedent": {
+   "milli": 6000,
+   "halfLifeDays": 60,
+   "oddsWindowPermille": 150,
+   "max": 3,
+   "watchDays": 20
+  }
  }
 }

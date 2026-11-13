@@ -31,7 +31,7 @@ function placeOf(e: SimEvent): string | null {
     case "SortieResolved": return p.from as string;
     case "Arrived": return p.at as string;
     case "LevyRaised": return null; // paid where each community lives
-    case "ReliefDelivered": case "TroopMisconduct": return p.community as string;
+    case "ReliefDelivered": case "TroopMisconduct": case "CommunityParley": case "CommunityPunished": return p.community as string;
     case "GrainShipped": return p.from as string;
     case "GrainDelivered": return p.to as string;
     case "MusterCalled": return p.community as string;
@@ -138,6 +138,24 @@ function effectsOf(ctx: Ctx, id: string, type: string, p: Record<string, any>, h
       out.material = pr.reliefMaterial;
       out.eased = c.grievances.map((x): [number, number] => [x.id, x.intensity - scale(x.intensity, x.kind === "broken_promise" ? pr.remedy.reliefPromisePermille : pr.remedy.reliefPermille)]);
       out.trust = [["crown", pr.trust.reliefCrown]];
+      return out;
+    }
+    // Phase 9: what the crown's officer did under the communities policy (D-070)
+    case "CommunityParley": {
+      const pp = ctx.content.scenario.policy!.parley;
+      out.memory = { kind: "parley", actor: "crown", at: p.community, weight: p.community === id ? 600 : 150 };
+      if (p.community !== id) return out;
+      out.eased = eased(null, pp.remedyPermille);
+      out.trust = [["crown", pp.trust]];
+      return out;
+    }
+    case "CommunityPunished": {
+      const pp = ctx.content.scenario.policy!.punish;
+      out.memory = { kind: "punished", actor: "crown", at: p.community, weight: p.community === id ? 800 : 300 };
+      if (p.community !== id) return out;
+      out.grievances = [{ kind: "levy", delta: scale(scale(g.levy, pp.grievancePermille), weight(d, "levy")), blameCrown: 1000 }];
+      out.material = -pr.levyMaterial;
+      out.trust = [["crown", pp.trust]];
       return out;
     }
     case "TroopMisconduct": {
@@ -398,7 +416,7 @@ function audience(ctx: Ctx, e: SimEvent): { id: string; delay: number; how: "wit
   return out;
 }
 
-const HEARD = new Set(["RaidDamage", "FortFell", "FortRetaken", "SortieResolved", "LevyRaised", "ReliefDelivered", "TroopMisconduct", "Arrived", "GrainShipped", "GrainDelivered", "MusterCalled"]);
+const HEARD = new Set(["RaidDamage", "FortFell", "FortRetaken", "SortieResolved", "LevyRaised", "ReliefDelivered", "TroopMisconduct", "Arrived", "GrainShipped", "GrainDelivered", "MusterCalled", "CommunityParley", "CommunityPunished"]);
 
 export const communities: System = {
   id: "communities",

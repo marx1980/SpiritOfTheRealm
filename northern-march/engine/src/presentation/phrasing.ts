@@ -34,7 +34,7 @@ const REASON: Record<string, string> = {
   "reason.protect_realm": "keeping the realm safe", "reason.crown_standing": "how the crown is seen", "reason.hold_fortification": "holding the fortress",
   "reason.hold_post": "staying at his post", "reason.win_renown": "his reputation", "reason.preserve_forces": "keeping the men alive",
   "reason.preserve_treasury": "the money in the treasury", "reason.sound_works": "keeping the works in good repair", "reason.house_standing": "his family's standing",
-  "reason.risk": "the danger involved", "reason.risk_averse": "the danger involved", "reason.own_skill": "his own skill", "reason.trusts": "trust in the people involved",
+  "reason.risk": "the danger involved", "reason.risk_averse": "the danger involved", "reason.own_skill": "his own skill", "reason.policy_for": "your standing policy", "reason.policy_against": "your standing policy", "reason.precedent_won": "how it went the last time", "reason.precedent_lost": "how it went the last time", "reason.too_few_men": "too few men to do it", "reason.trusts": "trust in the people involved",
   "reason.community_eased": "easing the people's trouble", "reason.community_resents": "the people's anger at a levy",
   "reason.asked_for_help": "a request for help", "reason.as_ordered": "his orders", "reason.against_orders": "his orders", "reason.cost": "what it costs", "reason.fort_lost": "the fort that has been lost", "reason.duty": "duty",
 };

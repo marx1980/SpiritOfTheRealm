@@ -96,10 +96,13 @@ export function openAdvice(v: View): Recommendation[] {
   return latestAdviceOf(v).filter((r) => !adviceSettled(v, r.id));
 }
 
+export const POLICY_AREA: Record<string, string> = { military: "Sorties", emergency: "Regent", communities: "Peoples" };
+export const POLICY_RULE: Record<string, string> = { hold_walls: "Hold the walls", cautious: "Sally on good odds", bold: "Sally boldly", repairs: "May repair", negotiate: "Negotiate", punish: "Punish", tolerate: "Tolerate" };
 export const ARM_WORD: Record<"foot" | "archers" | "horse", string> = { foot: "foot", archers: "archers", horse: "horse" };
 /** The words for an action, as the page shows them. */
 export function actionText(v: View, a: PlayerAction): string {
-  return a.action === "order" ? `Order ${name(v, a.order!.recipient)}: ${a.order!.intent} ${name(v, a.order!.objective.id)}`
+  return a.action === "policy" && a.policy ? `${POLICY_AREA[a.policy.area] ?? a.policy.area}: ${POLICY_RULE[a.policy.rule] ?? a.policy.rule}`
+    : a.action === "order" ? `Order ${name(v, a.order!.recipient)}: ${a.order!.intent} ${name(v, a.order!.objective.id)}`
     : a.action === "levy" && a.muster ? `Call ${a.arm ? ARM_WORD[a.arm] : "men"} from ${name(v, a.target!)} to ${name(v, a.to!)}`
     : (a.action === "requisition" || a.action === "purchase") && a.to ? `${a.sell ? "Sell" : a.action === "purchase" ? "Buy" : a.good ? "Send" : "Take"} ${a.units ? `${a.units} ` : ""}${a.good ?? "grain"} ${a.sell ? `from ${name(v, a.target!)} at ${name(v, a.to)}` : a.action === "purchase" ? `at ${name(v, a.target!)} for ${name(v, a.to)}` : `from ${name(v, a.target!)} to ${name(v, a.to)}`}${a.consult ? ", asking the people first" : ""}`
     : a.action === "levy" ? "Raise a levy" : a.action === "relief" ? `Send relief to ${name(v, a.target!)}` : a.action === "travel" ? `Travel to ${name(v, a.target!)}`

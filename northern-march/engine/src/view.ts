@@ -32,6 +32,8 @@ export interface WorldKnowledge {
   places: { id: string; name: string; province: string; kind: string; terrain: string; pos: [number, number]; fortified: boolean }[];
   routes: { from: string; to: string; crossing?: string }[];
   names: Record<string, string>;
+  /** The rules a standing policy can name, by area (Phase 9). */
+  policy?: Record<string, string[]>;
   /** What each known person is known for: their strongest skill, in words (the area they advise on). */
   areas: Record<string, string>;
   /** What each store feeds each day, and the days of cover that mark the scarcity bands: the stewards know their own needs. */
@@ -50,7 +52,7 @@ export interface WorldKnowledge {
 }
 export interface View {
   readonly now: number;
-  readonly self: { readonly id: string; readonly position: Position; readonly ordersInForce: readonly StructuredOrder[]; readonly orders: readonly IssuedRecord[] };
+  readonly self: { readonly id: string; readonly position: Position; readonly ordersInForce: readonly StructuredOrder[]; readonly orders: readonly IssuedRecord[]; readonly policies?: Readonly<Record<string, { rule: string; learnedAt: number }>> };
   readonly beliefs: Readonly<Record<string, Readonly<BeliefView>>>;
   readonly reports: readonly DeliveredReport[];
   /** What advisers told the viewer in person, latest per adviser (DESIGN_PIPELINE §5). */
@@ -128,7 +130,7 @@ export function buildView(s: Readonly<WorldState>, c: Content, who: string, now:
   return deepFreeze({
     now,
     self: { id: who, position: structuredClone(s.positions[who]), ordersInForce: (s.ordersInForce[who] ?? []).map((id) => structuredClone(s.orders[String(id)].order)),
-      orders: structuredClone(s.issued[who] ?? []) },
+      orders: structuredClone(s.issued[who] ?? []), ...(s.policyKnown?.[who] ? { policies: structuredClone(s.policyKnown[who]) } : {}) },
     beliefs,
     reports,
     ...(who === c.scenario.ruler && s.ledger ? { ledger: structuredClone(s.ledger) } : {}),
@@ -138,6 +140,7 @@ export function buildView(s: Readonly<WorldState>, c: Content, who: string, now:
     world: {
       places: c.locations.map((l) => ({ id: l.id, name: l.name, province: l.province, kind: l.kind, terrain: l.terrain, pos: [...l.pos] as [number, number], fortified: !!l.fortification })),
       routes: c.routes.map((r) => ({ from: r.from, to: r.to, ...(r.crossing ? { crossing: r.crossing.kind } : {}) })),
+      ...(c.scenario.policy ? { policy: structuredClone(c.scenario.policy.rules) } : {}),
       names: Object.fromEntries([...c.locations.map((l) => [l.id, l.name]), ...[...known].sort().map((id) => [id, c.byId.character.get(id)?.name ?? id])]),
       areas: Object.fromEntries([...known].sort().map((id) => [id, areaOf(c.byId.character.get(id)?.capabilities ?? {})])),
       ...(c.scenario.goods ? { goods: {

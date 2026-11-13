@@ -6,6 +6,7 @@ import type { ActionRef, Recommendation, Report, StructuredOrder } from "./schem
 
 export type Position = { at: string } | { transit: { from: string; dest: string; path: string[]; arrivals: number[]; departedAt: number; mode: Mode } };
 export type ReportStatus = "composed" | "in_transit" | "delivered" | "lost" | "intercepted" | "undeliverable";
+export interface Precedent { id: number; kind: "sortie" | "negotiate" | "punish"; place: string; site?: string; community?: string; oddsPermille?: number; outcome: "won" | "lost" | "eased" | "escalated" | "unchanged"; tick: number; knownBy: string[] }
 export interface BattleState {
   setup: import("./battlefield/core.ts").BattleSetup; orders: import("./battlefield/core.ts").BattleOrder[];
   startTick: number; status: "running" | "ended"; launchedEventId: number; commander: string; from: string; site: string;
@@ -48,6 +49,10 @@ export interface WorldState {
   sortieOpen: Record<string, number>; // commander -> tick of the sortie still being fought
   /** Phase 8 battles (D-060): the setup and the ruler's battle orders; the record is recomputed from them. */
   battles: Record<string, BattleState>;
+  /** Standing policy each person knows of (Phase 9): area → the rule, the proclamation, when they learned it. */
+  policyKnown: Record<string, Record<string, { rule: string; proclaimed: number; learnedAt: number }>>;
+  /** Institutional memory (D-070): what was done and how it went, and who remembers it ("fort:<id>" for a fort's own). */
+  precedents: Precedent[];
   /** Battlefield prestige and the record of how each commander answered battle orders (BATTLEFIELD §20). */
   prestige: Record<string, number>;
   conduct: Record<string, { obey: number; adapt: number; keep: number }>;
@@ -102,6 +107,13 @@ export interface WorldState {
 }
 
 export const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+/** A policy in force from the start is known to everyone. */
+function initialPolicies(c: Content) {
+  const out: WorldState["policyKnown"] = {};
+  const init = Object.entries(c.scenario.policy?.initial ?? {}).sort(([a], [b]) => cmp(a, b));
+  if (init.length) for (const ch of [...c.characters].sort((a, b) => cmp(a.id, b.id))) out[ch.id] = Object.fromEntries(init.map(([area, rule]) => [area, { rule: rule as string, proclaimed: 0, learnedAt: 0 }]));
+  return out;
+}
 type Fort = WorldState["fortifications"][string];
 /** Men leave a fort: bowmen and riders go in their share of the garrison, unless the kinds lost are known. */
 export function loseMen(f: Fort, n: number, kinds?: { archers?: number; horse?: number }) {
@@ -134,7 +146,7 @@ export function initialState(c: Content): WorldState {
     if (ch.id !== c.scenario.ruler && ch.tier !== "C") agents[ch.id] = newAgent();
   }
   return {
-    treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, tiers, history: {}, agents, recommendations: {}, heard: {}, campaign: { ended: null, lastDanger: -1 }, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, sortieOpen: {}, battles: {}, prestige: {}, conduct: {}, lastStorm: {}, fallen: {}, threats: {}, routesClosed: {},
+    treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, tiers, history: {}, agents, recommendations: {}, heard: {}, campaign: { ended: null, lastDanger: -1 }, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, sortieOpen: {}, battles: {}, policyKnown: initialPolicies(c), precedents: [], prestige: {}, conduct: {}, lastStorm: {}, fallen: {}, threats: {}, routesClosed: {},
     positions, departures: {}, beliefs: {}, nextPropId: 1, reports: {}, nextReportId: 1, messengers: {}, nextMessengerId: 1,
     orders: {}, nextOrderId: 1, advisePending: {}, dayEndDay: -1, ordersInForce: {}, issued: {}, repairs: {}, communities: initialCommunities(c), ...initialGrain(c), ...initialGoods(c), hands: Object.fromEntries(c.communities.communities.map((x) => [x.id, x.hands ?? 0])), musterAway: {}, musters: {}, nextMusterId: 1,
   };
@@ -413,6 +425,11 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   SortieResolved: (s, p) => { delete s.sortieOpen[p.commander]; },
   BattleBegan: (s, p, e) => { s.battles[String(p.battleId)] = { setup: p.setup, orders: [], startTick: e.tick, status: "running", launchedEventId: p.launchedEventId, commander: p.commander, from: p.from, site: p.site, enemy: p.enemy, men: p.men, ambushed: p.ambushed, beganEventId: e.id }; },
   BattleOrderGiven: (s, p) => { s.battles[String(p.battleId)].orders.push(p.order); },
+  PolicyProclaimed: () => {}, PolicyApplied: () => {},
+  PolicyLearned: (s, p) => { (s.policyKnown[p.holder] ??= {})[p.area] = { rule: p.rule, proclaimed: p.proclaimed, learnedAt: p.learnedAt }; },
+  PrecedentRecorded: (s, p, e) => { s.precedents.push({ id: e.id, kind: p.kind, place: p.place, ...(p.site ? { site: p.site } : {}), ...(p.community ? { community: p.community } : {}), ...(p.oddsPermille !== undefined ? { oddsPermille: p.oddsPermille } : {}), outcome: p.outcome, tick: e.tick, knownBy: p.knownBy }); },
+  CommunityParley: (s, p) => { s.treasuryMilli[p.payer] -= p.remitMilli; },
+  CommunityPunished: (s, p) => { s.treasuryMilli[p.payer] += p.seizedMilli; },
   BattleEnded: (s, p) => { const b = s.battles[String(p.battleId)]; b.status = "ended"; b.result = { winner: p.winner, reason: p.reason, endT: p.endT, ruler: p.ruler }; },
   ThreatWeakened: (s, p) => { if (s.threats[p.site]) s.threats[p.site].intensityPermille = p.intensityPermille; },
   PrestigeChanged: (s, p) => { s.prestige[p.who] = (s.prestige[p.who] ?? 0) + p.delta; },

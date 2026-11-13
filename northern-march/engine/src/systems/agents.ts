@@ -121,6 +121,8 @@ export function buildSituation(s: Readonly<WorldState>, c: Content, agent: strin
     answerRate: (o) => st?.answerRate[o] ?? rel(o, "trust") ?? rel(o, "loyalty") ?? 500,
     loyalty: (o) => rel(o, "loyalty") ?? rel(o, "trust") ?? 500,
     ordersInForce: [...view.self.ordersInForce],
+    ...(c.scenario.policy ? { policy: c.scenario.policy, policies: s.policyKnown[agent] ?? {},
+      precedents: s.precedents.filter((p) => p.knownBy.includes(agent) || p.knownBy.includes(`fort:${ch.location}`)) } : {}),
     current: cur ? { action: cur.action, score: cur.score, adoptedAt: cur.adoptedAt, idle: cur.idle || (ONE_SHOT.has(cur.action.kind) && now - cur.adoptedAt >= 7 * DAY) } : null,
     mode, order,
     p: { agents: c.scenario.agents, battle: c.scenario.battle, raidBaseMilli: c.scenario.threat.raidDamageMilliAtFullIntensity,
@@ -340,9 +342,11 @@ function regency(ctx: Ctx, agent: string, cause: number) {
   const recent = (ctx.s.issued[agent] ?? []).some((r) => r.target === a.target && ctx.tick - r.tick < 20 * DAY);
   const cond = a.target ? (per.get(a.target, "fortification.condition")?.value as number | undefined) : undefined;
   const cost = a.kind === "advise_repair" && cond !== undefined ? Math.max(0, c.scenario.player.repairRestoreToMilli - cond) * c.scenario.player.repairCostMilliPerMilli : 0;
-  const within = (a.kind === "advise_repair" && cost <= rg.maxRepairCostMilli) || (a.kind === "advise_levy" && rg.mayLevy) || ((a.kind === "advise_send_captain" || a.kind === "advise_retake") && rg.maySendCaptain);
+  // an emergency policy she knows of widens what she may do herself (Phase 9)
+  const byPolicy = a.kind === "advise_repair" && cost > rg.maxRepairCostMilli && ctx.s.policyKnown[agent]?.emergency?.rule === "repairs" && cost <= (c.scenario.policy?.repairLimitMilli ?? 0);
+  const within = (a.kind === "advise_repair" && cost <= rg.maxRepairCostMilli) || byPolicy || (a.kind === "advise_levy" && rg.mayLevy) || ((a.kind === "advise_send_captain" || a.kind === "advise_retake") && rg.maySendCaptain);
   const d = ctx.emit("DecisionMade", [cause], [chr(agent), chr(ruler)], {
-    trace: { ...traceOf(sit, per, res, cause, "strategic", "regency") }, score: res.score, idle: true, authority: within ? "within" : "reserved", recent });
+    trace: { ...traceOf(sit, per, res, cause, "strategic", "regency") }, score: res.score, idle: true, authority: within ? "within" : "reserved", recent, ...(byPolicy ? { policy: "emergency:repairs" } : {}) });
   if (recent) return;
   const fort = a.target && ctx.s.fortifications[a.target] ? a.target : null;
   const claims = fort ? claimsFor(ctx, agent, fort) : [];

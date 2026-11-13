@@ -169,7 +169,7 @@ test("every DecisionTrace validates, and its selection is reproducible from its 
 
 test("the planner reads only beliefs: agent modules import nothing that exposes WorldState", () => {
   const dir = new URL("../src/agents/", import.meta.url).pathname;
-  const allowed = new Set(["../view.ts", "../beliefs.ts", "../schemas.ts", "../content.ts", "./planner.ts", "./model.ts", "./obedience.ts", "./terms.ts", "../battle.ts"]);
+  const allowed = new Set(["../view.ts", "../beliefs.ts", "../schemas.ts", "../content.ts", "./planner.ts", "./model.ts", "./obedience.ts", "./terms.ts", "../battle.ts", "./policy.ts"]);
   for (const f of readdirSync(dir)) {
     const src = readFileSync(dir + f, "utf8");
     for (const m of src.matchAll(/from\s+["']([^"']+)["']/g)) assert.ok(allowed.has(m[1]), `${f} imports ${m[1]}`);

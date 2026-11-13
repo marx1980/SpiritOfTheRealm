@@ -94,7 +94,19 @@ export interface GrainParams {
   /** Where the crisis lies, whose people are asked, and who may act on their grievance (read by the log classifier, not by the world). */
   crisis: { place: string; community: string; actor: string };
 }
+export type PolicyArea = "military" | "emergency" | "communities";
+/** Standing policy and precedent (Phase 9, docs/POLICY.md). */
+export interface PolicyParams {
+  rules: Record<PolicyArea, string[]>;
+  initial?: Partial<Record<PolicyArea, string>>; // in force from the start, known to everyone
+  policyMilli: number; cautiousOddsPermille: number; boldOddsPermille: number; repairLimitMilli: number;
+  officials: string[]; // the roles the proclamation is written to
+  parley: { remitMilli: number; remedyPermille: number; trust: number };
+  punish: { minMen: number; seizeMilli: number; grievancePermille: number; trust: number };
+  precedent: { milli: number; halfLifeDays: number; oddsWindowPermille: number; max: number; watchDays: number };
+}
 export interface Scenario {
+  policy?: PolicyParams;
   ruler: string; treasuryMilli: number;
   movement: { speedsKmPerDay: Record<Mode, Record<string, number>>; crossingDelayTicks: Record<string, number> };
   knowledge: { beliefCaps: Record<(typeof TIERS)[number], number>; bands: { certain: number; probable: number; uncertain: number };

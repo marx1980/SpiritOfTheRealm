@@ -52,6 +52,10 @@ export interface Situation {
   answerRate: (other: string) => number;
   loyalty: (other: string) => number;
   ordersInForce: StructuredOrder[];
+  /** Standing policy the agent knows of, and the precedents he remembers (Phase 9). */
+  policies?: Record<string, { rule: string; proclaimed: number }>;
+  precedents?: KnownPrecedent[];
+  policy?: import("../content.ts").PolicyParams;
   current: { action: ActionRef; score: number; adoptedAt: number; idle: boolean } | null;
   mode: Mode;
   order?: StructuredOrder;               // in "obey" mode
@@ -60,6 +64,8 @@ export interface Situation {
        labourWorkPermille: number; labourToMilli: number; companyWorkPermille: number };
 }
 
+/** A precedent the agent remembers (Phase 9): what was done, where, at what odds, and how it went. */
+export interface KnownPrecedent { id: number; kind: string; place: string; site?: string; community?: string; oddsPermille?: number; outcome: string; tick: number }
 export interface Candidate { action: ActionRef; score: number; contributions: Reason[]; serves?: boolean; obey?: boolean }
 
 export const actionKey = (a: ActionRef) => JSON.stringify(a);
