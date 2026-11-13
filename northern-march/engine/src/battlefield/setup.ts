@@ -9,7 +9,7 @@ export interface ForcesParams {
   guardMen: number;
   raiders: { minMen: number; parts: { kind: Kind; sharePermille: number }[] }[];
   start: { crownY: number; raidersY: number; spacing: number };
-  signals: { id: string; task: Task }[];
+  signals: { id: string; task: Task; standard?: boolean }[];
   posts: Record<"rear" | "centre" | "forward", string>;
 }
 export interface Person { id: string; name: string; traits: TraitP[]; skill: number; loyalty: Record<string, number> }
@@ -114,11 +114,65 @@ export function buildSetup(x: BattleInputs): BattleSetup {
   }
   if (guard) plan.push(order(x.ruler.id, x.ruler.id, { kind: "hold", place: F.posts[x.ruler.post ?? "rear"] }));
 
+  // Phase 12: the pre-set order of command (the castellan stands in for the senior captain, the sergeant for the castellan)
+  if (x.params.full) for (const c of commanders) {
+    if (c.side !== "crown" || c.id === x.ruler.id) continue;
+    const dep = c.id === senior?.id && x.garrison.castellan && x.garrison.castellan.id !== c.id ? x.garrison.castellan.id : c.id === x.garrison.castellan?.id && x.garrison.sergeant ? x.garrison.sergeant.id : undefined;
+    if (dep && commanders.some((d) => d.id === dep)) c.deputy = dep;
+  }
+
   return {
     schemaVersion: 1, battleId: x.battleId, seed: x.seed, site: x.site, place: x.place, endT: Math.min(x.endT, x.params.capSeconds), weather: x.weather, ...(x.mudPermille ? { mudPermille: x.mudPermille } : {}),
     field, params: x.params, obedience: x.obedience, formations, commanders,
     ruler: { id: x.ruler.id, present: x.ruler.present, ...(guard ? { guard } : {}) },
     hq: x.ruler.present ? x.ruler.id : senior?.id ?? x.ruler.id,
-    plan, signals: F.signals,
+    plan, signals: F.signals, ...(x.params.full && x.endT <= x.params.capSeconds ? { nightfall: true } : {}),
+  };
+}
+
+/** Phase 12 (docs/COMMAND.md §9): a field army in wings - each wing commander with his own formations and the commanders
+ *  under him, his deputy the first of them - against a raider host, the ruler and her guard at a post, and her plan. */
+export interface ArmyInputs {
+  battleId: number; seed: number; site: string; place: string; endT: number; weather: "clear" | "rain" | "snow"; mudPermille?: number;
+  field: FieldSpec; params: BattleParams; forces: ForcesParams; obedience: ObedienceParams;
+  wings: { at: "left" | "centre" | "right"; lead: Person; own: { kind: Kind; men: number }[]; subs: { person: Person; kind: Kind; men: number }[] }[];
+  raiderMen: number;
+  ruler: Person & { present: boolean; post?: "rear" | "centre" | "forward" };
+  plan: BattleOrder[];
+}
+export function buildArmySetup(x: ArmyInputs): BattleSetup {
+  const F = x.forces, field = x.field, formations: FormationSetup[] = [], commanders: CommanderSetup[] = [];
+  const add = (side: FormationSetup["side"], kind: Kind, men: number, commander: string, label: string, cx: number, y: number) => {
+    const id = `${side === "crown" ? "c" : "r"}${formations.length + 1}`;
+    formations.push({ id, side, kind, label, men, commander, x: cx, y: y + (kind === "archers" || kind === "bowmen" ? (side === "crown" ? 50 : -50) : 0) });
+    return id;
+  };
+  const at = { left: Math.floor(field.width / 4), centre: Math.floor(field.width / 2), right: Math.floor((field.width * 3) / 4) };
+  for (const w of x.wings) {
+    const units = [...w.own.map((o) => ({ p: w.lead, kind: o.kind, men: o.men })), ...w.subs.map((s) => ({ p: s.person, kind: s.kind, men: s.men }))];
+    const ids = units.map((u, i) => add("crown", u.kind, u.men, u.p.id, `${u.p.name}'s ${LABEL[u.kind]}`, at[w.at] + Math.floor((i - (units.length - 1) / 2) * 150), F.start.crownY));
+    const own = ids.slice(0, w.own.length);
+    commanders.push({ id: w.lead.id, name: w.lead.name, side: "crown", formations: own, traits: w.lead.traits, skill: w.lead.skill, loyalty: w.lead.loyalty, ...(w.subs[0] ? { deputy: w.subs[0].person.id } : {}) });
+    w.subs.forEach((s, i) => commanders.push({ id: s.person.id, name: s.person.name, side: "crown", formations: [ids[w.own.length + i]], traits: s.person.traits, skill: s.person.skill, loyalty: s.person.loyalty, superior: w.lead.id }));
+  }
+  let guard: string | undefined;
+  if (x.ruler.present) {
+    const p = field.places.find((q) => q.id === F.posts[x.ruler.post ?? "rear"]) ?? field.places[0];
+    guard = add("crown", "guard", F.guardMen, x.ruler.id, "the queen's guard", p.x, Math.min(field.height - 10, p.y + 40));
+    commanders.push({ id: x.ruler.id, name: x.ruler.name, side: "crown", formations: [guard], traits: x.ruler.traits, skill: x.ruler.skill, loyalty: {} });
+  }
+  const shape = [...F.raiders].sort((a, b) => b.minMen - a.minMen).find((s) => x.raiderMen >= s.minMen) ?? F.raiders[F.raiders.length - 1];
+  let left = x.raiderMen;
+  const rIds = shape.parts.map((part, i) => { const n = i === shape.parts.length - 1 ? left : Math.floor((x.raiderMen * part.sharePermille) / 1000); left -= n;
+    return add("raiders", part.kind, n, "chief", `${LABEL[part.kind]} ${i + 1}`, Math.floor(field.width / 2) + Math.floor((i - (shape.parts.length - 1) / 2) * F.start.spacing), F.start.raidersY); });
+  commanders.push({ id: "chief", name: "the raiders' chief", side: "raiders", formations: rIds, traits: [{ riskPermille: 800, obedienceWhenDisagreeingPermille: 500, lossResponsePermille: 600, commitmentPermille: 500 }], skill: 500, loyalty: {} });
+  const plan: BattleOrder[] = x.plan.map((o, i) => ({ ...o, id: i + 1, t: 0, via: "voice" as const }));
+  if (guard) plan.push({ schemaVersion: 1, id: plan.length + 1, t: 0, from: x.ruler.id, to: x.ruler.id, task: { kind: "hold", place: F.posts[x.ruler.post ?? "rear"] }, via: "voice" });
+  return {
+    schemaVersion: 1, battleId: x.battleId, seed: x.seed, site: x.site, place: x.place, endT: Math.min(x.endT, x.params.capSeconds), weather: x.weather, ...(x.mudPermille ? { mudPermille: x.mudPermille } : {}),
+    field, params: x.params, obedience: x.obedience, formations, commanders,
+    ruler: { id: x.ruler.id, present: x.ruler.present, ...(guard ? { guard } : {}) },
+    hq: x.ruler.present ? x.ruler.id : x.wings[0]?.lead.id ?? x.ruler.id,
+    plan, signals: F.signals, ...(x.params.full && x.endT <= x.params.capSeconds ? { nightfall: true } : {}),
   };
 }

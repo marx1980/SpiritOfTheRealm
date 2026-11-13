@@ -66,7 +66,9 @@ export interface WorldState {
   precedents: Precedent[];
   /** Battlefield prestige and the record of how each commander answered battle orders (BATTLEFIELD §20). */
   prestige: Record<string, number>;
-  conduct: Record<string, { obey: number; adapt: number; keep: number }>;
+  conduct: Record<string, { obey: number; adapt: number; keep: number; defy?: number }>;
+  /** Phase 12: commanders wounded or killed in battle (docs/COMMAND.md §7). */
+  commandersFallen: Record<string, { tick: number; fate: "wounded" | "killed" }>;
   lastStorm: Record<string, number>;
   fallen: Record<string, true>; // forts held by the raiders
   threats: Record<string, { intensityPermille: number; untilTick: number; eventId: number; since: number }>;
@@ -151,6 +153,8 @@ export function loseMen(f: Fort, n: number, kinds?: { archers?: number; horse?: 
   if (over > 0) { const da = Math.min(f.archers, Math.ceil((over * f.archers) / Math.max(1, f.archers + f.horse))); f.archers -= da; f.horse -= Math.min(f.horse, over - da); }
 }
 /** Men join a fort: local recruits are trained to the bow until the fort has its usual bowmen, the rest stand as foot. */
+/** Dead: fallen on an expedition (Phase 11) or killed in battle (Phase 12). */
+export function isDead(s: Readonly<WorldState>, id: string): boolean { return !!s.bw?.dead[id] || s.commandersFallen?.[id]?.fate === "killed"; }
 function recruit(f: Fort, n: number) { if (n <= 0) return; f.garrison += n; f.archers += Math.max(0, Math.min(n, f.estArchers - f.archers)); }
 export const newAgent = (): AgentState => ({ operational: null, focus: null, experience: {}, lastDecision: null, answerRate: {}, lastActive: 0 });
 
@@ -170,7 +174,7 @@ export function initialState(c: Content): WorldState {
     if (ch.id !== c.scenario.ruler && ch.tier !== "C") agents[ch.id] = newAgent();
   }
   return {
-    treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, tiers, history: {}, agents, recommendations: {}, heard: {}, campaign: { ended: null, lastDanger: -1 }, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, sortieOpen: {}, battles: {}, policyKnown: initialPolicies(c), precedents: [], prestige: {}, conduct: {}, lastStorm: {}, fallen: {}, threats: {}, routesClosed: {}, supplyBlocked: {}, env: initialEnv(c), bw: initialWilds(c),
+    treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, tiers, history: {}, agents, recommendations: {}, heard: {}, campaign: { ended: null, lastDanger: -1 }, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, sortieOpen: {}, battles: {}, policyKnown: initialPolicies(c), precedents: [], prestige: {}, conduct: {}, commandersFallen: {}, lastStorm: {}, fallen: {}, threats: {}, routesClosed: {}, supplyBlocked: {}, env: initialEnv(c), bw: initialWilds(c),
     positions, departures: {}, beliefs: {}, nextPropId: 1, reports: {}, nextReportId: 1, messengers: {}, nextMessengerId: 1,
     orders: {}, nextOrderId: 1, advisePending: {}, dayEndDay: -1, ordersInForce: {}, issued: {}, repairs: {}, communities: initialCommunities(c), ...initialGrain(c), ...initialGoods(c), hands: Object.fromEntries(c.communities.communities.map((x) => [x.id, x.hands ?? 0])), musterAway: {}, musters: {}, nextMusterId: 1,
   };
@@ -487,7 +491,12 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   BattleEnded: (s, p) => { const b = s.battles[String(p.battleId)]; b.status = "ended"; b.result = { winner: p.winner, reason: p.reason, endT: p.endT, ruler: p.ruler }; },
   ThreatWeakened: (s, p) => { if (s.threats[p.site]) s.threats[p.site].intensityPermille = p.intensityPermille; },
   PrestigeChanged: (s, p) => { s.prestige[p.who] = (s.prestige[p.who] ?? 0) + p.delta; },
-  BattleConduct: (s, p) => { const c = (s.conduct[p.commander] ??= { obey: 0, adapt: 0, keep: 0 }); c[p.decision as "obey" | "adapt" | "keep"]++; },
+  BattleConduct: (s, p) => { const c = (s.conduct[p.commander] ??= { obey: 0, adapt: 0, keep: 0 }); const d = p.decision as "obey" | "adapt" | "keep" | "defy"; c[d] = (c[d] ?? 0) + 1; },
+  // a commander killed in battle takes no further part; a dead captain's men go back to the fort they fought from
+  CommanderFell: (s, p, e) => {
+    s.commandersFallen[p.who] = { tick: e.tick, fate: p.fate };
+    if (p.fate === "killed" && (s.troops[p.who] ?? 0) > 0) { const f = s.fortifications[p.from]; if (f && !s.fallen[p.from]) recruit(f, s.troops[p.who]); s.troops[p.who] = 0; }
+  },
   LossesTaken: (s, p) => {
     if (p.garrisonLost) loseMen(s.fortifications[p.location], p.garrisonLost, p.garrisonKinds);
     for (const [who, n] of Object.entries(p.troopsLost as Record<string, number>)) s.troops[who] -= n;

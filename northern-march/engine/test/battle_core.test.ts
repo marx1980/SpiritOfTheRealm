@@ -135,7 +135,8 @@ test("with Anna absent there is no guard, no danger and she is safe", () => {
 
 test("every behaviour occurs across battles", () => {
   const seen = new Set<string>();
-  for (let seed = 1; seed <= 30 && seen.size < BEHAVIOURS.length; seed++) for (const raiders of [180, 360, 520]) {
+  // stop once every behaviour is seen ("gone" is not one of them: counting it stopped the search early, found in Phase 12)
+  for (let seed = 1; seed <= 30 && !BEHAVIOURS.every((b) => seen.has(b)); seed++) for (const raiders of [180, 360, 520]) {
     const r = runBattle(sampleSetup({ seed, raiders }), seed % 3 === 0 ? [order({ t: 1200, to: "bren", task: { kind: "withdraw", place: "gate" } })] : []);
     for (const f of r.frames) for (const x of f.formations) seen.add(x.behaviour);
   }

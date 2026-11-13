@@ -49,6 +49,8 @@ Phases 0-4: see DECISIONS D-001 to D-014.
 
 **Phase 11, exploration, creature and artefact (D-073, built 13 Nov; `docs/EXPLORATION.md`).** `src/systems/exploration.ts`: hidden apex-predator ecology with scheduled hunts and rumours, military and scholarly expeditions to Blackwood chosen by a senior delegate (weighted keyed draw, weights recorded), reputation and `CharacterEmerged` (Stefan Veyr), the Stone of Vey (actual vs believed properties, custody events with reasons, `provenance(log)`), crown trust on delivery. Content march-0.10. `tools/phase11_gate.ts` (G-19 probe/shard/eval) written, not run on a gate block.
 
+**Phase 12, the full battlefield (D-077, built 13 Nov; `docs/COMMAND.md`).** `battle.tactics.full` (content march-0.12): command hierarchy with reports up the chain and deputies; sector delegation (`Task.command`, `planSector`); dead ground behind ridges and failing light at dusk; inferred enemy movement on headquarters' map; six signals (two custom) that the enemy can read if standard; panic by sight and commanders riding to trouble; review of orders every minute (local adaptation, deliberate disobedience; scored, traced); commanders who fall in contact, with succession; every departure judged against the battle replayed with it obeyed. Campaign: `CommanderFell`, the dead take no further part. Lab army fixture (15 formations a side). `tools/phase12_gate.ts` (G-20) written, not run on a gate block. Page: a Command choice in battle orders, fallen commanders in the network.
+
 ## Result
 - Phase 1: G-01, G-02 PASS (D-009). Phase 2: built (D-010).
 - Phase 3: G-10 PASS, G-11 FAIL, overridden (D-013, D-016).
@@ -75,6 +77,8 @@ Phases 0-4: see DECISIONS D-001 to D-014.
 
 - Exploration (Phase 11): no contested reports between expeditions, no theft or capture, no competing claims on the Stone; one creature that does not change; planners do not weigh the creature; the Stone's effect is trust only; magic is P1. Numbers are first guesses from TUNE probes (Stefan emerges 20.5% pooled; 65% of finds end outside Anna's hands).
 
+- Battlefield (Phase 12): the enemy has no hierarchy or deception; no prisoners; no smoke; wounded commanders have no campaign effect; the regent does not replace a dead castellan (his fort fights on with whoever is left); a fallen commander is not yet told in letters; planners still use the battle estimate of D-068 (not the commanders' new behaviour). Numbers (hazard, contagion, review) are first guesses from TUNE probes.
+
 ## Needs a human
 - H-03 battle screen playability (version 3; deferred by Marko on 13 Nov, D-069, still owed): at least 5 testers, two on a phone, on the Battle Clips page, shared as Contributors (`docs/H03_PROTOCOL.md`); it also picks the flash style. The bars are proposals (D-063) for you to confirm. Phase 8 completes only on its PASS or your override.
 - One round on the frozen Phase 9 code (D-071): G-17 400000, 7A 410000, G-12 420000, G-13 430000, tune-seed checks; running from a worktree.
@@ -82,6 +86,7 @@ Phases 0-4: see DECISIONS D-001 to D-014.
 - Optional: run `node src/cli.ts g01 --seeds 1..100` in `engine/` on your own computer; it must end with the combined hash above.
 
 ## Next phase
+(13 Nov, Phase 12.) Phase 12 built; G-20 to run once on frozen code after Marko confirms the bars (D-077); H-03 still owed and now has more to show. Next: Phase 13 conversation layer, Sonnet 5.5 high (Opus for validation rules); its gate G-16.
 (13 Nov, latest.) Phase 11 built; G-19 to run once on frozen code after Marko confirms the bars (D-073). G-18 and G-19 passed (D-074, D-076). Next: Phase 12 full battlefield; the Phase 9 round (D-071) is still owed.
 (13 Nov, later.) Phase 10 built; G-18 to run once on the frozen code (needs Marko's confirmation of the bars in D-072). Then Phase 11 (exploration, artefact): Sonnet 5.5, high; Opus medium for the Stefan emergence rules.
 (13 Nov.) Phase 9 built; G-17 and the regression round run once on the frozen code. Then Phase 10 (environment): Sonnet 5.5, high.

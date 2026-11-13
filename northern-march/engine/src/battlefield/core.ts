@@ -20,6 +20,8 @@ export type TaskKind = "hold" | "advance" | "attack" | "withdraw" | "give_ground
 export interface Task {
   kind: TaskKind; place?: string; target?: string; limit?: string;
   when?: { kind: "enemy_engaged" | "enemy_horse_seen"; then: Omit<Task, "when"> };
+  /** Phase 12 sector delegation (COMMAND.md §1): these commanders are put under the recipient, who plans for them. */
+  command?: string[];
 }
 /** A battle order (new contract, schema 1). `to` is a commander, or the ruler herself (her own id) to move her command post. */
 export interface BattleOrder { schemaVersion: 1; id: number; t: number; from: string; to: string; task: Task; via: "runner" | "signal" | "voice"; signal?: string }
@@ -53,10 +55,39 @@ export interface BattleParams {
   /** Men who see the enemy break may run after them, out of formation (D-063). Ranges in metres. */
   pursuit: PursuitParams;
   goneBelowPermille: number;
+  /** Phase 12, the full battlefield (docs/COMMAND.md). Absent: the Phase 8 battle exactly. Each part may be left out on its own. */
+  full?: FullParams;
 }
+export interface FullParams {
+  /** Reports go to the commander's superior, who passes them on (§1). */
+  chain?: boolean;
+  /** Metres behind a ridge's far edge that low ground on the other side cannot see (§2). */
+  deadGround?: number;
+  /** Failing light before nightfall (§2). */
+  dusk?: { lastSeconds: number; sightPermille: number };
+  /** Headquarters draws an enemy it lost sight of where its heading would take it (§3). */
+  inferEnemy?: { after: number; maxSeconds: number };
+  /** The enemy reads the standard signals it can see (§4). */
+  enemySignals?: boolean;
+  /** Men lose heart at friends they see breaking beyond their neighbours (§5). */
+  contagion?: { range: number; seenRout: number; seenRetreat: number; chainPerExtra: number; leaderless: number };
+  /** A commander rides to the formation of his in the worst state (§5). */
+  rally?: { below: number; speed: number };
+  /** Local adaptation and deliberate disobedience: how often a commander re-weighs his order (§6). */
+  review?: { every: number; settle: number };
+  /** Commanders fall in contact (per 10,000 per step), and who learns of it (§7). */
+  hazard?: { meleePerMyriad: number; missilePerMyriad: number; killedPermille: number; noticeSeconds: number; shock: number; observeRange: number };
+  /** Sector planning (§1). */
+  sector?: SectorParams;
+  /** How a departure from orders is judged against the battle with it obeyed (§8). */
+  outcome?: { lossMargin: number };
+}
+export interface SectorParams { capableAt: number; boldAt: number }
 export interface PursuitParams { triggerRange: number; loseRange: number; startMargin: number; mountedUrge: number; holdRestraint: number; skillRestraintPermille: number; fatigueRestraintPermille: number; caughtCohesion: number }
 export interface FormationSetup { id: string; side: Side; kind: Kind; label: string; men: number; commander: string; x: number; y: number }
-export interface CommanderSetup { id: string; name: string; side: Side; formations: string[]; traits: TraitP[]; skill: number; loyalty: Record<string, number>; superior?: string }
+export interface CommanderSetup { id: string; name: string; side: Side; formations: string[]; traits: TraitP[]; skill: number; loyalty: Record<string, number>; superior?: string;
+  /** Phase 12: who takes his men if he falls (the pre-set order of command, COMMAND.md §7). */
+  deputy?: string }
 export interface ObedienceParams { adaptMarginMilli: number; refuseMarginMilli: number; changedCircumstancesPermille: number; dutyMilli: number; legitimacyRulerPermille: number }
 export interface BattleSetup {
   schemaVersion: 1; battleId: number; seed: number; site: string; place: string;
@@ -71,34 +102,49 @@ export interface BattleSetup {
   hq: string;
   /** Orders given before the fight (by the ruler, or by the senior commander when she is absent), delivered by voice at t = 0. */
   plan: BattleOrder[];
-  signals: { id: string; task: Task }[];
+  /** The signals agreed before the fight; `standard` ones any army knows (and so may the enemy, Phase 12). */
+  signals: { id: string; task: Task; standard?: boolean }[];
+  /** Phase 12: the battle ends at nightfall (so the light fails before it), not at the cap. */
+  nightfall?: boolean;
 }
 
 // ---- record ---------------------------------------------------------------------------------------------------------
 export interface FrameFormation { id: string; side: Side; kind: Kind; label: string; commander: string; men: number; x: number; y: number; behaviour: Behaviour; task: Task; shooting?: string }
 export interface Frame { t: number; formations: FrameFormation[]; ruler?: { x: number; y: number } }
 export interface Mark { id: string; side: Side; kind: Kind; label: string; x: number; y: number; behaviour: Behaviour; menBand: "few" | "some" | "many"; category: "observed" | "reported" | "inferred"; source: string; age: number; stale: boolean; shooting?: string }
-export interface NetworkRow { commander: string; task: Task | null; status: "none" | "dispatched" | "presumed delivered" | "confirmed" | "lost"; lastContact: number }
+export interface NetworkRow { commander: string; task: Task | null; status: "none" | "dispatched" | "presumed delivered" | "confirmed" | "lost"; lastContact: number;
+  /** Phase 12: his state as headquarters believes it, and who it believes took his men. */
+  state?: "commanding" | "fallen"; successor?: string }
 export interface HqFrame { t: number; x: number; y: number; marks: Mark[]; network: NetworkRow[] }
 export interface Note {
-  t: number; kind: "order_sent" | "order_received" | "order_decided" | "runner_lost" | "runner_searching" | "signal_missed" | "report_sent" | "report_received" | "danger" | "contact" | "behaviour" | "contingency" | "end";
+  t: number; kind: "order_sent" | "order_received" | "order_decided" | "runner_lost" | "runner_searching" | "signal_missed" | "report_sent" | "report_received" | "danger" | "contact" | "behaviour" | "contingency" | "end"
+    | "review" | "commander_fell" | "succession" | "fall_known" | "signal_seen" | "rally" | "sector_plan";
   orderId?: number; commander?: string; formation?: string; via?: string; towards?: { x: number; y: number }; why?: string; decision?: string; from?: string; to?: string; text?: string;
 }
+export type Decision = "obey" | "adapt" | "keep" | "defy";
 export interface BattleTrace {
   schemaVersion: 1; commander: string; orderId: number; t: number; issuer: string; via: string;
   clarity: number; comprehension: number; literal: boolean; understood: Task; current: Task;
-  candidates: { kind: "obey" | "adapt" | "keep"; task: Task; score: number; contributions: Reason[] }[];
-  decision: "obey" | "adapt" | "keep"; by: number; margins: { adaptMargin: number; refuseMargin: number };
+  candidates: { kind: Decision; task: Task; score: number; contributions: Reason[] }[];
+  decision: Decision; by: number; margins: { adaptMargin: number; refuseMargin: number };
   beliefs: { believedOdds: number; lossesPermille: number; cohesion: number; changed: boolean };
   draws: number;
+  /** Phase 12: on receipt of an order, or a later review of it (local adaptation, deliberate disobedience). */
+  trigger?: "order" | "review";
 }
 export interface Debrief { author: string; result: "won" | "lost" | "drawn"; ownLosses: number; enemyLosses: number; conduct: { orderId: number; decision: string; reason: string }[] }
+export interface Fall { commander: string; t: number; fate: "wounded" | "killed"; why: "melee" | "missile"; successor?: string }
+/** A departure from orders judged against the same battle with that one decision obeyed (COMMAND.md §8). */
+export interface Departure { commander: string; orderId: number; issuer: string; t: number; trigger: "order" | "review"; decision: Decision;
+  outcome: "saved" | "ruined" | "no_difference"; winnerIf: Side | "none"; crownLostIf: number; rulerIf: BattleResult["ruler"] }
 export interface BattleResult {
   winner: Side | "none"; reason: string; endT: number;
   lost: Record<Side, number>; lostBy: Record<string, number>; lostByFormation: Record<string, number>;
   ruler: "absent" | "safe" | "killed" | "captured";
   /** How each commander answered each order (for prestige and the record of obedience). */
-  conduct: { commander: string; orderId: number; issuer: string; decision: "obey" | "adapt" | "keep" }[];
+  conduct: { commander: string; orderId: number; issuer: string; decision: Decision; trigger?: "order" | "review"; t?: number }[];
+  /** Phase 12: commanders who fell, and the judged departures from orders. */
+  fallen?: Fall[]; disobedience?: Departure[];
 }
 export interface BattleRecord { schemaVersion: 1; frames: Frame[]; hq: HqFrame[]; notes: Note[]; traces: BattleTrace[]; result: BattleResult; debrief: Debrief[] }
 
@@ -194,8 +240,13 @@ export function wouldPursue(x: PursuitInput): { pursue: boolean; urge: number; r
 // ---- the battle -----------------------------------------------------------------------------------------------------
 interface Sighting { id: string; x: number; y: number; behaviour: Behaviour; men: number; t: number; source: string; how: "observed" | "reported" }
 interface F extends FormationSetup { shotAt: string; start: number; cohesion: number; fatigue: number; behaviour: Behaviour; task: Task; acc: number; lostSteps: number[]; doneSteps: number[]; engaged: boolean; underFire: boolean; risingFrom: number; slot: number; chase: string }
-interface C extends CommanderSetup { x: number; y: number; task: Task; sight: Map<string, Sighting>; lastReport: number; menAtReport: number; contact: boolean; orderIds: number[]; reportedDecisions: number[] }
-interface Runner { id: number; kind: "order" | "report"; orderId?: number; from: string; to: string; x: number; y: number; tx: number; ty: number; searching: number; done: boolean; payload?: Sighting[]; decisions?: { orderId: number; decision: string; task: Task }[] }
+interface C extends CommanderSetup { x: number; y: number; task: Task; sight: Map<string, Sighting>; lastReport: number; menAtReport: number; contact: boolean; orderIds: number[]; reportedDecisions: number[];
+  // Phase 12
+  fallen?: { t: number; fate: Fall["fate"] }; successor?: string; ordered?: { orderId: number; issuer: string; task: Task; at: number };
+  delegated: string[]; plannedFor?: string; knownFallen: Map<string, string | undefined>; with?: string; settledUntil?: number }
+interface Decided { orderId: number; decision: string; task: Task; commander: string; issuer: string }
+interface Runner { id: number; kind: "order" | "report"; orderId?: number; from: string; to: string; x: number; y: number; tx: number; ty: number; searching: number; done: boolean; payload?: Sighting[]; decisions?: Decided[]; fallen?: [string, string | undefined][] }
+export interface Forced { commander: string; t: number; trigger: "order" | "review" }
 
 const dist = (ax: number, ay: number, bx: number, by: number) => Math.floor(Math.sqrt((ax - bx) * (ax - bx) + (ay - by) * (ay - by)));
 /** How far apart two formations' fronts are: a formation is a line, so men across a frontage can reach men beside the one opposite. */
@@ -214,8 +265,118 @@ function crosses(r: Rect, ax: number, ay: number, bx: number, by: number): boole
 }
 const band = (men: number): Mark["menBand"] => (men < 60 ? "few" : men < 140 ? "some" : "many");
 
-export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { until?: number } = {}): BattleRecord {
-  const P = setup.params, field = setup.field, step = P.step;
+// ---- Phase 12 pure rules (docs/COMMAND.md) --------------------------------------------------------------------------
+/** Where the segment a-b enters and leaves the rectangle (fractions of a-b), or null if it misses it. */
+function clip(r: Rect, ax: number, ay: number, bx: number, by: number): [number, number] | null {
+  const dx = bx - ax, dy = by - ay;
+  let t0 = 0, t1 = 1;
+  for (const [p, q] of [[-dx, ax - r.x0], [dx, r.x1 - ax], [-dy, ay - r.y0], [dy, r.y1 - ay]] as const) {
+    if (p === 0) { if (q < 0) return null; continue; }
+    const t = q / p;
+    if (p < 0) { if (t > t1) return null; if (t > t0) t0 = t; } else { if (t < t0) return null; if (t < t1) t1 = t; }
+  }
+  return t1 > t0 ? [t0, t1] : null;
+}
+/** Dead ground (§2): from low ground, the ground just beyond a ridge (within `deadGround` metres of where the line of sight
+ *  leaves it) is hidden. From the ridge itself, or of the ridge itself, nothing is hidden by it. */
+export function deadGroundBlocks(field: FieldSpec, deadGround: number, ox: number, oy: number, tx: number, ty: number): boolean {
+  const len = Math.sqrt((tx - ox) * (tx - ox) + (ty - oy) * (ty - oy));
+  return field.ridges.some((g) => {
+    if (inside(g, ox, oy) || inside(g, tx, ty)) return false;
+    const c = clip(g, ox, oy, tx, ty);
+    return !!c && (1 - c[1]) * len < deadGround;
+  });
+}
+/** Failing light (§2): sight in thousandths over the last stretch before nightfall. */
+export function lightPermille(t: number, endT: number, dusk: { lastSeconds: number; sightPermille: number } | undefined, nightfall: boolean): number {
+  if (!dusk || !nightfall) return 1000;
+  const left = endT - t;
+  if (left >= dusk.lastSeconds) return 1000;
+  if (left <= 0) return dusk.sightPermille;
+  return dusk.sightPermille + Math.floor(((1000 - dusk.sightPermille) * left) / dusk.lastSeconds);
+}
+
+/** Part of an order's purpose, as a commander on the spot would carry it out (local adaptation on review). */
+export function reviewAdapt(t: Task): Task {
+  switch (t.kind) {
+    case "hold": case "protect": return { kind: "give_ground", ...(t.place ? { place: t.place } : {}) };
+    case "attack": case "advance": return { kind: "hold", ...(t.place ? { place: t.place } : {}) };
+    case "withdraw": return { kind: "give_ground" };
+    case "give_ground": return { kind: "hold", ...(t.place ? { place: t.place } : {}) };
+  }
+}
+export interface ReviewInput {
+  /** The task his order gives him (as he understood it), what he is doing now, and the other courses open to him. */
+  order: Task; current: Task; alternatives: Task[];
+  traits: TraitP[]; skill: number; loyalty: number; issuerIsRuler: boolean;
+  believedOdds: number; lossesPermille: number; cohesion: number; params: ObedienceParams;
+}
+/** Local adaptation and deliberate disobedience (§6): stay with the order, adapt it, or go another way, scored from his
+ *  beliefs and traits with the same duty and margins as on receipt (circumstances have changed). His commitment to what
+ *  he is doing now is a reason to keep doing it. No dice. */
+export function decideReview(x: ReviewInput) {
+  const p = x.params, temperament = avg(x.traits, "obedienceWhenDisagreeingPermille"), commit = avg(x.traits, "commitmentPermille");
+  const asInput = { traits: x.traits, believedOdds: x.believedOdds, lossesPermille: x.lossesPermille, cohesion: x.cohesion } as ObedienceInput;
+  const duty: Reason = { kind: "order", ref: { kind: "order", id: "standing" }, weight: Math.floor((p.dutyMilli * x.loyalty) / 1000), textKey: "reason.duty" };
+  const keepR: Reason = { kind: "trait", ref: { kind: "trait", id: "commitment" }, weight: commit * 3, textKey: "reason.commitment" };
+  const mk = (kind: Decision, task: Task, extra: Reason[]) => { const contributions = [...taskValue(task, asInput), ...extra, ...(same(task, x.current) ? [keepR] : [])]; return { kind, task, score: contributions.reduce((n, c) => n + c.weight, 0), contributions }; };
+  const obey = mk("obey", x.order, [duty]);
+  const a = reviewAdapt(x.order);
+  const adapt = same(a, x.order) ? undefined : mk("adapt", a, [{ ...duty, weight: Math.floor(duty.weight / 2), textKey: "reason.duty_in_part" }]);
+  const others = x.alternatives.filter((t) => !same(t, x.order) && !same(t, a)).map((t) => mk("defy", t, []));
+  const other = others.sort((m, n) => n.score - m.score || (m.task.kind < n.task.kind ? -1 : 1))[0];
+  const legit = x.issuerIsRuler ? p.legitimacyRulerPermille : 500, bond = 200 + x.loyalty;
+  const f = (v: number) => Math.floor((((v * temperament) / 500) * bond * legit) / 1_000_000);
+  const margins = { adaptMargin: Math.floor((f(p.adaptMarginMilli) * p.changedCircumstancesPermille) / 1000), refuseMargin: f(p.refuseMarginMilli) };
+  const d = decideObedience({ obey: obey.score, bestServing: adapt ? adapt.score : -1e12, bestOther: other ? other.score : -1e12, ...margins });
+  const decision: Decision = d.decision === "refuse" ? "defy" : d.decision;
+  const candidates = [obey, ...(adapt ? [adapt] : []), ...others];
+  return { candidates, decision, by: d.by, margins, chosen: decision === "obey" ? obey.task : decision === "adapt" ? adapt!.task : other!.task };
+}
+
+/** Sector delegation (§1): how a commander given a sector orders the commanders put under him, by his skill and
+ *  temperament. A capable one keeps horse back as a reserve that attacks once the enemy is engaged (a bold one sends it
+ *  in); an unskilled one gives everyone the same order. Pure; the result is a list of orders to give. */
+export function planSector(x: { skill: number; traits: TraitP[]; task: Task; subs: { id: string; kinds: Kind[] }[]; params: SectorParams }): { to: string; task: Task }[] {
+  const base: Task = { kind: x.task.kind, ...(x.task.place ? { place: x.task.place } : {}), ...(x.task.target ? { target: x.task.target } : {}), ...(x.task.limit ? { limit: x.task.limit } : {}) };
+  if (x.skill < x.params.capableAt) return x.subs.map((s) => ({ to: s.id, task: { ...base } }));
+  const bold = avg(x.traits, "riskPermille") >= x.params.boldAt;
+  return x.subs.map((s) => {
+    const mounted = s.kinds.length > 0 && s.kinds.every((k) => k === "horse" || k === "riders");
+    const shooters = s.kinds.length > 0 && s.kinds.every((k) => k === "archers" || k === "bowmen");
+    if (mounted) return { to: s.id, task: bold ? { kind: "attack", ...(base.place ? { place: base.place } : {}), ...(base.limit ? { limit: base.limit } : {}) } : { kind: "hold", ...(base.place ? { place: base.place } : {}), when: { kind: "enemy_engaged", then: { kind: "attack", ...(base.limit ? { limit: base.limit } : {}) } } } };
+    if (shooters) return { to: s.id, task: { kind: base.kind === "attack" ? "advance" : "hold", ...(base.place ? { place: base.place } : {}) } };
+    return { to: s.id, task: { ...base } };
+  });
+}
+
+export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { until?: number; force?: Forced[]; judge?: boolean } = {}): BattleRecord {
+  const rec = fightBattle(setup, orders, opts);
+  // a whole battle with the full battlefield: each departure from orders is judged against the battle with it obeyed
+  return setup.params.full && opts.judge !== false && opts.until === undefined ? judgeDisobedience(setup, orders, rec, opts.force ?? []) : rec;
+}
+
+/** Each departure from an order (kept his own course on receipt; adapted or went his own way on review) judged against the
+ *  same battle with that one decision forced to obedience (COMMAND.md §8). The battle is a pure function of its setup and
+ *  orders, so the counterfactual is exact. Prior forced decisions (when judging inside a counterfactual) are kept. */
+export function judgeDisobedience(setup: BattleSetup, orders: BattleOrder[], rec: BattleRecord, prior: Forced[] = []): BattleRecord {
+  const margin = setup.params.full?.outcome?.lossMargin ?? 0;
+  const rank = (r: BattleResult) => (r.ruler === "killed" || r.ruler === "captured" ? -1 : r.winner === "crown" ? 2 : r.winner === "none" ? 1 : 0);
+  const out: Departure[] = [];
+  for (const tr of rec.traces) {
+    const trigger = tr.trigger ?? "order";
+    if (tr.decision === "obey" || (trigger === "order" && tr.decision !== "keep")) continue; // on receipt only keeping his own course departs from the order
+    const cf = fightBattle(setup, orders, { force: [...prior, { commander: tr.commander, t: tr.t, trigger }] }).result;
+    const a = rank(rec.result), b = rank(cf);
+    const outcome = a > b ? "saved" : a < b ? "ruined" : rec.result.lost.crown + margin < cf.lost.crown ? "saved" : rec.result.lost.crown > cf.lost.crown + margin ? "ruined" : "no_difference";
+    out.push({ commander: tr.commander, orderId: tr.orderId, issuer: tr.issuer, t: tr.t, trigger, decision: tr.decision, outcome, winnerIf: cf.winner, crownLostIf: cf.lost.crown, rulerIf: cf.ruler });
+  }
+  return { ...rec, result: { ...rec.result, disobedience: out } };
+}
+
+function fightBattle(setup: BattleSetup, orders: BattleOrder[], opts: { until?: number; force?: Forced[] }): BattleRecord {
+  const P = setup.params, field = setup.field, step = P.step, X = P.full;
+  const forced = (commander: string, t: number, trigger: Forced["trigger"]) => !!opts.force?.some((f) => f.commander === commander && f.t === t && f.trigger === trigger);
   const until = Math.min(setup.endT, opts.until ?? setup.endT);
   let draws = 0;
   const roll = (key: string, lo = 0, hi = 999) => { draws++; return Rng.fromSeed(setup.seed, `battle:${key}`).int(lo, hi); };
@@ -231,16 +392,22 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
   const cs = new Map<string, C>();
   for (const c of setup.commanders) {
     const main = fs.get(c.formations[0]);
-    cs.set(c.id, { ...c, x: main?.x ?? 0, y: main?.y ?? 0, task: { kind: "hold" }, sight: new Map(), lastReport: 0, menAtReport: c.formations.reduce((n, f) => n + (fs.get(f)?.men ?? 0), 0), contact: false, orderIds: [], reportedDecisions: [] });
+    cs.set(c.id, { ...c, formations: [...c.formations], x: main?.x ?? 0, y: main?.y ?? 0, task: { kind: "hold" }, sight: new Map(), lastReport: 0, menAtReport: c.formations.reduce((n, f) => n + (fs.get(f)?.men ?? 0), 0), contact: false, orderIds: [], reportedDecisions: [], delegated: [], knownFallen: new Map() });
   }
   const crown = () => order.map((id) => fs.get(id)!).filter((f) => f.side === "crown");
   const live = (f: F) => f.behaviour !== "gone";
   const guard = setup.ruler.present && setup.ruler.guard ? fs.get(setup.ruler.guard) : undefined;
+  // headquarters is the ruler's command post, or the senior commander; if he falls, whoever takes his men keeps it (Phase 12)
+  let hqHolder = setup.hq;
+  const isHq = (id: string) => id === setup.hq || id === hqHolder;
   const hqPos = () => {
     if (guard && live(guard)) return { x: guard.x, y: guard.y };
-    const c = cs.get(setup.hq);
+    const c = cs.get(hqHolder);
     return c ? { x: c.x, y: c.y } : { x: field.width / 2, y: field.edge.crown };
   };
+  const up = (c: C) => (c.superior && cs.get(c.superior) && !cs.get(c.superior)!.fallen ? c.superior : undefined);
+  /** Everyone under a commander, however far down. */
+  const under = (id: string): C[] => { const out: C[] = [], seen = new Set([id]); let frontier = [id]; while (frontier.length) { const next: string[] = []; for (const c of cs.values()) if (c.superior && frontier.includes(c.superior) && !seen.has(c.id)) { seen.add(c.id); out.push(c); next.push(c.id); } frontier = next; } return out.sort((a, b) => (a.id < b.id ? -1 : 1)); };
   // headquarters' picture: sightings (observed or reported) plus inferences from orders believed delivered
   const hqSight = new Map<string, Sighting>();
   const hqOrders = new Map<string, { orderId: number; task: Task; sentT: number; eta: number; status: NetworkRow["status"]; lastContact: number }>();
@@ -256,8 +423,10 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
   const conduct: BattleResult["conduct"] = [];
 
   // ---- perception ----
+  let now = 0;
   const sightRange = (ox: number, oy: number, tx: number, ty: number) => {
     let r = setup.weather === "rain" ? P.sight.rain : setup.weather === "snow" ? P.sight.snow ?? P.sight.rain : P.sight.clear;
+    if (X?.dusk) r = Math.floor((r * lightPermille(now, setup.endT, X.dusk, !!setup.nightfall)) / 1000);
     if (field.ridges.some((g) => inside(g, ox, oy))) r = Math.floor((r * (1000 + P.sight.ridgeBonusPermille)) / 1000);
     if (field.woods.some((w) => inside(w, ox, oy) || inside(w, tx, ty))) r = Math.min(r, P.sight.wood);
     // dust of melee near the target
@@ -266,19 +435,41 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
   };
   const sees = (ox: number, oy: number, tx: number, ty: number) => {
     if (dist(ox, oy, tx, ty) > sightRange(ox, oy, tx, ty)) return false;
+    if (X?.deadGround && deadGroundBlocks(field, X.deadGround, ox, oy, tx, ty)) return false;
     return !field.woods.some((w) => !inside(w, ox, oy) && !inside(w, tx, ty) && crosses(w, ox, oy, tx, ty));
   };
+  // headquarters' earlier sightings of each enemy, a little apart, to infer where it is going (Phase 12)
+  const hqTrail = new Map<string, { x: number; y: number; t: number }[]>();
+  const hqKnownFallen = new Map<string, string | undefined>();
+  const fallKnown = (id: string, successor: string | undefined, t: number, how: string) => {
+    const had = hqKnownFallen.has(id);
+    if (had && (hqKnownFallen.get(id) === successor || successor === undefined)) return;
+    hqKnownFallen.set(id, successor ?? hqKnownFallen.get(id));
+    if (!had) notes.push({ t, kind: "fall_known", commander: id, via: how, ...(successor ? { to: successor } : {}) });
+  };
   const observeAll = (t: number) => {
-    for (const c of cs.values()) for (const id of order) {
-      const f = fs.get(id)!;
-      if (!live(f) && !c.sight.has(id)) continue;
-      if (live(f) && sees(c.x, c.y, f.x, f.y)) c.sight.set(id, { id, x: f.x, y: f.y, behaviour: f.behaviour, men: f.men, t, source: c.id, how: "observed" });
+    for (const c of cs.values()) {
+      if (c.fallen) continue;
+      for (const id of order) {
+        const f = fs.get(id)!;
+        if (!live(f) && !c.sight.has(id)) continue;
+        if (live(f) && sees(c.x, c.y, f.x, f.y)) c.sight.set(id, { id, x: f.x, y: f.y, behaviour: f.behaviour, men: f.men, t, source: c.id, how: "observed" });
+      }
     }
     const h = hqPos();
     for (const id of order) {
       const f = fs.get(id)!;
-      if (live(f) && sees(h.x, h.y, f.x, f.y)) hqSight.set(id, { id, x: f.x, y: f.y, behaviour: f.behaviour, men: f.men, t, source: setup.hq, how: "observed" });
+      if (live(f) && sees(h.x, h.y, f.x, f.y)) {
+        hqSight.set(id, { id, x: f.x, y: f.y, behaviour: f.behaviour, men: f.men, t, source: setup.hq, how: "observed" });
+        if (X?.inferEnemy && f.side !== "crown") { const tr = hqTrail.get(id) ?? []; if (!tr.length || t - tr[tr.length - 1].t >= 30) { tr.push({ x: f.x, y: f.y, t }); if (tr.length > 3) tr.shift(); } hqTrail.set(id, tr); }
+      }
       else if (!live(f) && f.side === "crown" && hqSight.has(id) && guard && f.id === guard.id) hqSight.set(id, { ...hqSight.get(id)!, behaviour: "gone", t });
+    }
+    // a commander's fall is seen by those near enough who can see where he was
+    if (X?.hazard) for (const c of cs.values()) {
+      if (!c.fallen) continue;
+      if (!hqKnownFallen.has(c.id) && dist(h.x, h.y, c.x, c.y) <= X.hazard.observeRange && sees(h.x, h.y, c.x, c.y)) fallKnown(c.id, undefined, t, "seen");
+      for (const o of cs.values()) if (o.side === c.side && !o.fallen && o.id !== c.id && !o.knownFallen.has(c.id) && dist(o.x, o.y, c.x, c.y) <= X.hazard.observeRange && sees(o.x, o.y, c.x, c.y)) o.knownFallen.set(c.id, c.successor);
     }
   };
 
@@ -286,7 +477,13 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
   const odds = (c: C) => {
     let own = 0, enemy = 0;
     for (const id of c.formations) { const f = fs.get(id)!; if (live(f)) own += f.men; }
-    for (const s of c.sight.values()) { const f = fs.get(s.id)!; if (f.side !== c.side && s.behaviour !== "gone" && s.behaviour !== "rout" && dist(s.x, s.y, c.x, c.y) < 900) enemy += s.men; }
+    for (const s of c.sight.values()) {
+      const f = fs.get(s.id)!;
+      if (s.behaviour === "gone" || s.behaviour === "rout" || dist(s.x, s.y, c.x, c.y) >= 900) continue;
+      if (f.side !== c.side) enemy += s.men;
+      // Phase 12: in a line of battle he counts the friends he sees beside him, not only his own men
+      else if (X && !c.formations.includes(s.id) && s.behaviour !== "retreat") own += s.men;
+    }
     return own + enemy === 0 ? 500 : Math.floor((1000 * own) / (own + enemy));
   };
   const lossesP = (c: C) => { let start = 0, now = 0; for (const id of c.formations) { const f = fs.get(id)!; start += f.start; now += live(f) ? f.men : 0; } return start ? Math.floor((1000 * (start - now)) / start) : 0; };
@@ -300,26 +497,49 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
       order: o, current: c.task, traits: c.traits, skill: c.skill, loyalty: c.loyalty[o.from] ?? 400, issuerIsRuler: o.from === setup.ruler.id,
       believedOdds: odds(c), lossesPermille: lossesP(c), cohesion: cohesionOf(c), changed: t - o.t > 300, params: setup.obedience, clarityParams: P.clarity,
     });
+    // a counterfactual replay: this one decision is made to obey (COMMAND.md §8)
+    if (forced(c.id, t, "order") && d.decision !== "obey") { d.decision = "obey"; d.chosen = d.understood; }
     traces.push({ schemaVersion: 1, commander: c.id, orderId: o.id, t, issuer: o.from, via, clarity: d.clarity, comprehension: d.comprehension, literal: d.literal, understood: d.understood, current: c.task,
-      candidates: d.candidates, decision: d.decision, by: d.by, margins: d.margins, beliefs: { believedOdds: odds(c), lossesPermille: lossesP(c), cohesion: cohesionOf(c), changed: t - o.t > 300 }, draws: draws - before });
+      candidates: d.candidates, decision: d.decision, by: d.by, margins: d.margins, beliefs: { believedOdds: odds(c), lossesPermille: lossesP(c), cohesion: cohesionOf(c), changed: t - o.t > 300 }, draws: draws - before, ...(X ? { trigger: "order" as const } : {}) });
     notes.push({ t, kind: "order_decided", orderId: o.id, commander: c.id, decision: d.decision });
-    conduct.push({ commander: c.id, orderId: o.id, issuer: o.from, decision: d.decision });
+    conduct.push({ commander: c.id, orderId: o.id, issuer: o.from, decision: d.decision, ...(X ? { trigger: "order" as const, t } : {}) });
     c.orderIds.push(o.id);
+    // the order he now holds, as he understood it (what a later review weighs against)
+    if (X && o.from !== c.id) c.ordered = { orderId: o.id, issuer: o.from, task: d.understood, at: t };
+    // commanders put under him (sector delegation): he plans for them if he takes the order up
+    if (X?.sector && d.decision !== "keep" && d.understood.command?.length) {
+      for (const id of d.understood.command) { const s = cs.get(id); if (s && s.id !== c.id && s.side === c.side && !s.fallen) { s.superior = c.id; if (!c.delegated.includes(id)) c.delegated.push(id); } }
+      c.plannedFor = undefined;
+    }
     if (d.decision !== "keep") assign(c, d.chosen, t);
     // he lets headquarters know what he is doing (a report goes back with the decision)
-    if (o.from === setup.ruler.id || o.from === setup.hq) sendReport(c, t, [{ orderId: o.id, decision: d.decision, task: d.decision === "keep" ? c.task : d.chosen }]);
+    if (o.from === setup.ruler.id || isHq(o.from)) sendReport(c, t, [{ orderId: o.id, decision: d.decision, task: d.decision === "keep" ? c.task : d.chosen, commander: c.id, issuer: o.from }]);
   };
   // the commander's own formations take the task: by voice if near him, by his own runner (a short delay) if not
   const pendingAssign: { at: number; formation: string; task: Task }[] = [];
   const assign = (c: C, task: Task, t: number) => {
-    c.task = task;
+    const { command: _c, ...own } = task;
+    c.task = X ? own : task;
     for (const id of c.formations) {
       const f = fs.get(id)!;
       if (!live(f)) continue;
       const d = dist(c.x, c.y, f.x, f.y);
-      if (d <= P.voiceRange) f.task = { ...task };
-      else pendingAssign.push({ at: t + Math.floor(d / P.runner.speed), formation: id, task: { ...task } });
+      if (d <= P.voiceRange) f.task = { ...c.task };
+      else pendingAssign.push({ at: t + Math.floor(d / P.runner.speed), formation: id, task: { ...c.task } });
     }
+    planFor(c, t);
+  };
+  // sector delegation (§1): when his own task changes, he orders the commanders put under him by his own judgement
+  let ownOrderId = 100000;
+  const planFor = (c: C, t: number) => {
+    if (!X?.sector || c.fallen) return;
+    const subs = c.delegated.map((id) => cs.get(id)!).filter((s) => s && !s.fallen && s.superior === c.id);
+    const key = `${c.task.kind}:${c.task.place ?? ""}:${c.task.target ?? ""}:${subs.map((s) => s.id).join(",")}`;
+    if (!subs.length || c.plannedFor === key) return;
+    c.plannedFor = key;
+    const plan = planSector({ skill: c.skill, traits: c.traits, task: c.task, subs: subs.map((s) => ({ id: s.id, kinds: s.formations.map((id) => fs.get(id)!).filter(live).map((f) => f.kind) })), params: X.sector });
+    notes.push({ t, kind: "sector_plan", commander: c.id, text: plan.map((p) => `${p.to}:${p.task.kind}${p.task.when ? "+reserve" : ""}`).join(" ") });
+    for (const p of plan) dispatchOrder({ schemaVersion: 1, id: ++ownOrderId, t, from: c.id, to: p.to, task: p.task, via: "runner" }, t);
   };
 
   // ---- runners ----
@@ -329,11 +549,23 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
     if (!c) return;
     if (o.from === o.to) { assign(c, { ...o.task }, t); return; } // his own plan for his own men
     const h = hqPos();
-    if (o.via === "voice" || (o.from !== setup.ruler.id && o.from !== setup.hq && dist(cs.get(o.from)?.x ?? h.x, cs.get(o.from)?.y ?? h.y, c.x, c.y) <= P.voiceRange)) { receive(c, o, t, "voice"); return; }
+    if (o.via === "voice" || (o.from !== setup.ruler.id && !isHq(o.from) && dist(cs.get(o.from)?.x ?? h.x, cs.get(o.from)?.y ?? h.y, c.x, c.y) <= P.voiceRange)) { receive(c, o, t, "voice"); return; }
+    // a commander's own order to a man under him goes by his own runner, to where he believes that man to be (Phase 12)
+    if (X && o.from !== setup.ruler.id && !isHq(o.from) && cs.get(o.from)) {
+      const iss = cs.get(o.from)!;
+      const seen = c.formations.map((id) => iss.sight.get(id)).filter((s): s is Sighting => !!s).sort((a, b) => b.t - a.t)[0] ?? { x: c.x, y: c.y };
+      const r: Runner = { id: ++runnerId, kind: "order", orderId: o.id, from: o.from, to: c.id, x: iss.x, y: iss.y, tx: seen.x, ty: seen.y, searching: 0, done: false };
+      runners.push(r);
+      pendingOrders.set(r.id, o);
+      notes.push({ t, kind: "order_sent", orderId: o.id, commander: c.id, from: o.from, via: "runner", towards: { x: seen.x, y: seen.y } });
+      return;
+    }
     if (o.via === "signal") {
       notes.push({ t, kind: "order_sent", orderId: o.id, commander: c.id, via: "signal" });
       if (o.task.kind === "withdraw") withdrawSignalAt = t;
-      for (const x of [c]) {
+      // a signal is seen by the addressee and, on the full battlefield, by everyone under him who can see the banners
+      if (X?.enemySignals) enemySees(o, t);
+      for (const x of X ? [c, ...under(c.id)].filter((y) => !y.fallen) : [c]) {
         if (!sees(h.x, h.y, x.x, x.y) || dist(h.x, h.y, x.x, x.y) > P.signal.range) { notes.push({ t, kind: "signal_missed", orderId: o.id, commander: x.id, why: "out of sight" }); continue; }
         const dusty = order.some((id) => { const f = fs.get(id)!; return f.engaged && dist(f.x, f.y, x.x, x.y) < P.sight.dustRange; });
         const miss = P.signal.missPermille.base + (setup.weather === "rain" ? P.signal.missPermille.rain : setup.weather === "snow" ? P.signal.missPermille.snow ?? P.signal.missPermille.rain : 0) + (dusty ? P.signal.missPermille.dust : 0);
@@ -353,14 +585,18 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
   };
   const pendingOrders = new Map<number, BattleOrder>();
   const sendReport = (c: C, t: number, decisions?: Runner["decisions"]) => {
-    if (setup.hq === c.id) return;
-    const h = hqPos();
+    if (isHq(c.id) || c.fallen) return;
+    // to his superior on the full battlefield (he passes it on), else straight to headquarters
+    const sup = X?.chain ? up(c) : undefined;
+    const to = sup && !isHq(sup) && sup !== c.id ? sup : setup.hq;
+    const dest = to === setup.hq ? hqPos() : { x: cs.get(to)!.x, y: cs.get(to)!.y };
     // what he tells headquarters: his own formations and the enemy he has seen; a commander who dislikes bad news makes his men look steadier
     const bad = avg(c.traits, "badNewsReportingPermille") < 450;
     const soften = (b: Behaviour): Behaviour => (!bad ? b : b === "rout" || b === "retreat" ? "yielding" : b === "disorganised" || b === "rallying" ? "good_order" : b);
     const payload = [...c.sight.values()].filter((s) => t - s.t <= P.staleAfter).map((s) => ({ ...s, behaviour: fs.get(s.id)!.side === c.side ? soften(s.behaviour) : s.behaviour, source: c.id, how: "reported" as const }));
-    runners.push({ id: ++runnerId, kind: "report", from: c.id, to: setup.hq, x: c.x, y: c.y, tx: h.x, ty: h.y, searching: 0, done: false, payload, ...(decisions ? { decisions } : {}) });
-    notes.push({ t, kind: "report_sent", from: c.id });
+    const fallen = X ? [...c.knownFallen.entries()] : [];
+    runners.push({ id: ++runnerId, kind: "report", from: c.id, to, x: c.x, y: c.y, tx: dest.x, ty: dest.y, searching: 0, done: false, payload, ...(decisions ? { decisions } : {}), ...(fallen.length ? { fallen } : {}) });
+    notes.push({ t, kind: "report_sent", from: c.id, ...(X ? { to } : {}) });
     c.lastReport = t;
     c.menAtReport = c.formations.reduce((n, id) => n + (live(fs.get(id)!) ? fs.get(id)!.men : 0), 0);
   };
@@ -379,7 +615,15 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
       if (d > go) { r.x += Math.trunc(((r.tx - r.x) * go) / d); r.y += Math.trunc(((r.ty - r.y) * go) / d); continue; }
       r.x = r.tx; r.y = r.ty;
       // arrived where he was told to go: is the addressee here?
-      const who = r.kind === "order" ? cs.get(r.to)! : null;
+      let who = r.kind === "order" || r.to !== setup.hq ? cs.get(r.to)! : null;
+      // he has fallen (Phase 12): an order goes to whoever took his men; a report goes on to headquarters
+      if (who?.fallen && dist(r.x, r.y, who.x, who.y) <= P.runner.findRadius) {
+        if (r.kind === "report") { r.to = setup.hq; const h = hqPos(); r.tx = h.x; r.ty = h.y; continue; }
+        const heir = who.successor ? cs.get(who.successor) : undefined;
+        if (!heir || heir.fallen) { r.done = true; notes.push({ t, kind: "runner_lost", orderId: r.orderId, commander: who.id, why: "he has fallen" }); const e = hqOrders.get(r.to); if (e && e.orderId === r.orderId) e.status = "lost"; continue; }
+        notes.push({ t, kind: "runner_searching", orderId: r.orderId, commander: heir.id, why: "he has fallen" });
+        r.to = heir.id; r.tx = heir.x; r.ty = heir.y; r.searching = 0; who = heir; continue;
+      }
       const at = who ? { x: who.x, y: who.y } : hqPos();
       if (dist(r.x, r.y, at.x, at.y) <= P.runner.findRadius) {
         r.done = true;
@@ -399,14 +643,31 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
     }
   };
   const deliverReport = (r: Runner, t: number) => {
-    notes.push({ t, kind: "report_received", from: r.from });
+    notes.push({ t, kind: "report_received", from: r.from, ...(X ? { to: r.to } : {}) });
+    // to a superior (Phase 12): he folds it into his own picture and passes on at once what headquarters is waiting for
+    if (r.to !== setup.hq) {
+      const sup = cs.get(r.to)!;
+      for (const s of r.payload ?? []) { const cur = sup.sight.get(s.id); if (!cur || cur.t < s.t) sup.sight.set(s.id, { ...s, how: "reported", source: r.from }); }
+      let news = false;
+      for (const [id, heir] of r.fallen ?? []) if (!sup.knownFallen.has(id) || (heir && sup.knownFallen.get(id) !== heir)) { sup.knownFallen.set(id, heir ?? sup.knownFallen.get(id)); news = true; }
+      const forHq = (r.decisions ?? []).filter((d) => d.issuer === setup.ruler.id || isHq(d.issuer));
+      if (forHq.length || news) sendReport(sup, t, forHq.length ? forHq : undefined);
+      return;
+    }
     for (const s of r.payload ?? []) { const cur = hqSight.get(s.id); if (!cur || cur.t < s.t) hqSight.set(s.id, { ...s, how: "reported", source: r.from }); }
+    for (const [id, heir] of r.fallen ?? []) fallKnown(id, heir, t, "report");
     const e = hqOrders.get(r.from);
     if (e) {
       e.lastContact = t;
-      const dec = (r.decisions ?? []).find((x) => x.orderId === e.orderId);
+      const dec = (r.decisions ?? []).find((x) => x.orderId === e.orderId && (x.commander ?? r.from) === r.from);
       if (dec) { e.status = "confirmed"; e.task = dec.task; }
     } else hqOrders.set(r.from, { orderId: 0, task: cs.get(r.from)!.task, sentT: 0, eta: 0, status: "none", lastContact: t });
+    // decisions passed up by a superior from the men under him
+    for (const d of r.decisions ?? []) {
+      if (d.commander === r.from) continue;
+      const x = hqOrders.get(d.commander);
+      if (x && x.orderId === d.orderId) { x.status = "confirmed"; x.task = d.task; x.lastContact = t; }
+    }
   };
 
   // ---- movement ----
@@ -607,8 +868,26 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
         else if (b === "withdrawing" && g.commander !== f.commander && t - withdrawSignalAt > 300) d -= C.unannouncedWithdrawal;
       }
       const c = cs.get(f.commander);
-      // each raider band follows its own war leader; the crown's formations depend on their commander being near
-      const near = f.side === "raiders" || (!!c && dist(c.x, c.y, f.x, f.y) <= P.voiceRange);
+      // each raider band follows its own war leader; the crown's formations depend on their commander being near (and alive)
+      const near = f.side === "raiders" || (!!c && !c.fallen && dist(c.x, c.y, f.x, f.y) <= P.voiceRange);
+      // Phase 12: friends seen breaking farther off, the more of them the worse, and worse still with no one to steady them
+      if (X?.contagion) {
+        const K = X.contagion;
+        let seen = 0, hit = 0;
+        for (const g of order.map((x) => fs.get(x)!)) {
+          if (g.id === f.id || g.side !== f.side || !live(g)) continue;
+          const b = prev.get(g.id);
+          if (b !== "rout" && b !== "retreat") continue;
+          const gd = dist(f.x, f.y, g.x, g.y);
+          if (gd <= 400) { seen++; continue; } // neighbours: counted above
+          if (gd > K.range || !sees(f.x, f.y, g.x, g.y)) continue;
+          seen++;
+          hit += Math.max(1, Math.floor(((b === "rout" ? K.seenRout : K.seenRetreat) * (K.range - gd)) / Math.max(1, K.range - 400)));
+        }
+        if (seen > 1) hit += K.chainPerExtra * (seen - 1);
+        if (seen > 0 && !near) hit += K.leaderless;
+        d -= hit;
+      }
       if (near) d += C.commanderBase + (f.side === "crown" && c ? Math.floor(c.skill / 250) : 0);
       if (f.side === "crown" && guard && live(guard) && guard.id !== f.id && dist(guard.x, guard.y, f.x, f.y) < 600) d += C.rulerNear;
       if (!f.engaged && !f.underFire && f.cohesion < P.kinds[f.kind].discipline) d += C.recover;
@@ -644,17 +923,41 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
   };
 
   // ---- commanders: move with their men, check conditions, report ----
+  const pendingSucc: { at: number; from: string; to: string }[] = [];
+  const fallen: Fall[] = [];
   const commanders = (t: number) => {
+    // successions whose news has reached the heir (Phase 12)
+    for (const s of pendingSucc.filter((x) => x.at <= t)) succeed(s.from, s.to, t);
+    for (let i = pendingSucc.length - 1; i >= 0; i--) if (pendingSucc[i].at <= t) pendingSucc.splice(i, 1);
     for (const c of cs.values()) {
-      const main = c.formations.map((id) => fs.get(id)!).find((f) => live(f) && f.behaviour !== "rout") ?? c.formations.map((id) => fs.get(id)!).find(live);
-      if (main) { c.x = main.x; c.y = main.y + (c.side === "crown" ? 30 : -30); }
+      if (c.fallen) continue; // where he fell
+      const mine = c.formations.map((id) => fs.get(id)!);
+      const main = mine.find((f) => live(f) && f.behaviour !== "rout") ?? mine.find(live);
+      // Phase 12: he rides to the formation of his in the worst state, if one is in trouble
+      if (X?.rally && c.side === "crown") {
+        const trouble = mine.filter((f) => live(f) && f.behaviour !== "rout" && f.cohesion < X.rally!.below && f.id !== guard?.id).sort((a, b) => a.cohesion - b.cohesion || (a.id < b.id ? -1 : 1))[0];
+        const go = trouble ?? main;
+        if (go) {
+          if (trouble && c.with !== trouble.id && mine.length > 1) notes.push({ t, kind: "rally", commander: c.id, formation: trouble.id });
+          c.with = go.id;
+          const tx = go.x, ty = go.y + 30, d = dist(c.x, c.y, tx, ty), v = X.rally!.speed * step;
+          if (d <= v) { c.x = tx; c.y = ty; } else { c.x += Math.trunc(((tx - c.x) * v) / d); c.y += Math.trunc(((ty - c.y) * v) / d); }
+        }
+      } else if (main) { c.x = main.x; c.y = main.y + (c.side === "crown" ? 30 : -30); c.with = main.id; }
       if (c.side !== "crown") continue;
+      if (X?.hazard && c.id !== setup.ruler.id && hazard(c, t)) continue;
+      if (X?.review && c.ordered && !isHq(c.id) && t % X.review.every === 0 && t - c.ordered.at >= X.review.every && t >= (c.settledUntil ?? 0)) review(c, t);
       // a condition in his task, judged on what he believes
       const w = c.task.when;
       if (w) {
         const seen = [...c.sight.values()].filter((s) => fs.get(s.id)!.side !== c.side && t - s.t < 120);
         const hit = w.kind === "enemy_horse_seen" ? seen.some((s) => P.kinds[fs.get(s.id)!.kind].mounted) : seen.some((s) => dist(s.x, s.y, c.x, c.y) < 400) || c.formations.some((id) => fs.get(id)!.engaged);
-        if (hit) { notes.push({ t, kind: "contingency", commander: c.id, text: w.kind }); assign(c, { ...w.then }, t); }
+        if (hit) {
+          notes.push({ t, kind: "contingency", commander: c.id, text: w.kind });
+          // the condition was part of his order: carrying out its "then" is obeying it (Phase 12 review weighs against that)
+          if (c.ordered && c.ordered.task.when && same(c.ordered.task.when.then as Task, w.then as Task)) c.ordered = { ...c.ordered, task: { ...w.then } };
+          assign(c, { ...w.then }, t);
+        }
       }
       // reporting policy: on first contact, on heavy losses, and every so often
       const engaged = c.formations.some((id) => fs.get(id)!.engaged);
@@ -664,6 +967,90 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
       else if (!bad && c.menAtReport - menNow > Math.floor((c.menAtReport * P.reportLossPermille) / 1000)) sendReport(c, t);
       else if (t - c.lastReport >= P.reportEvery * (bad ? 2 : 1)) sendReport(c, t);
     }
+  };
+
+  // ---- Phase 12: a commander in the fight can fall (§7). Drawn only while his men are in melee or under fire. ----
+  const hazard = (c: C, t: number): boolean => {
+    const H = X!.hazard!, f = fs.get(c.with ?? "");
+    if (!f || !live(f) || dist(c.x, c.y, f.x, f.y) > P.voiceRange) return false;
+    const why: Fall["why"] | null = f.engaged ? "melee" : f.underFire ? "missile" : null;
+    if (!why) return false;
+    const per = Math.floor(((why === "melee" ? H.meleePerMyriad : H.missilePerMyriad) * (500 + avg(c.traits, "riskPermille"))) / 1000);
+    if (per <= 0 || roll(`cmd:${c.id}:${t}`, 0, 9999) >= per) return false;
+    const fate: Fall["fate"] = roll(`cmd:fate:${c.id}:${t}`) < H.killedPermille ? "killed" : "wounded";
+    c.fallen = { t, fate };
+    fallen.push({ commander: c.id, t, fate, why });
+    notes.push({ t, kind: "commander_fell", commander: c.id, why, text: fate });
+    // his men who see it are shaken
+    for (const id of c.formations) { const g = fs.get(id)!; if (live(g) && sees(g.x, g.y, c.x, c.y)) g.cohesion = Math.max(0, g.cohesion - H.shock); }
+    // the pre-set order of command: his deputy, else his superior; the heir hears at once if near, else when word reaches him
+    const heir = [c.deputy, c.superior].map((id) => (id ? cs.get(id) : undefined)).find((h) => h && !h.fallen && h.side === c.side);
+    if (heir) {
+      const d = dist(heir.x, heir.y, c.x, c.y);
+      pendingSucc.push({ at: t + (d <= P.voiceRange ? 0 : H.noticeSeconds + Math.floor(d / P.runner.speed)), from: c.id, to: heir.id });
+    }
+    return true;
+  };
+  const succeed = (from: string, to: string, t: number) => {
+    const c = cs.get(from)!, h = cs.get(to)!;
+    if (h.fallen) { // the heir fell first: the next in line
+      const next = [h.deputy, h.superior].map((id) => (id ? cs.get(id) : undefined)).find((x) => x && !x.fallen && x.id !== from);
+      if (next) pendingSucc.push({ at: t + X!.hazard!.noticeSeconds, from, to: next.id });
+      return;
+    }
+    c.successor = h.id;
+    const f = fallen.find((x) => x.commander === from && !x.successor);
+    if (f) f.successor = h.id;
+    for (const id of c.formations) { const g = fs.get(id)!; g.commander = h.id; if (!h.formations.includes(id)) h.formations.push(id); }
+    c.formations = [];
+    // those under him now answer to his heir; the heir himself (if he was one of them) answers to whom the fallen answered
+    for (const s of cs.values()) if (s.superior === from) s.superior = s.id === h.id ? c.superior : h.id;
+    if (h.superior === h.id) h.superior = undefined;
+    for (const id of c.delegated) if (!h.delegated.includes(id) && id !== h.id) h.delegated.push(id);
+    if (isHq(from)) hqHolder = h.id;
+    h.knownFallen.set(from, h.id);
+    notes.push({ t, kind: "succession", from, to: h.id });
+    // the men he takes over get his own instruction; he tells his superior (or headquarters) at once
+    h.plannedFor = undefined;
+    assign(h, { ...h.task }, t);
+    sendReport(h, t);
+  };
+
+  // ---- Phase 12: local adaptation and deliberate disobedience (§6). Scored, never rolled; only a change is acted on. ----
+  const review = (c: C, t: number) => {
+    const o = c.ordered!;
+    const seen = [...c.sight.values()].filter((s) => fs.get(s.id)!.side !== c.side && s.behaviour !== "gone" && t - s.t <= P.staleAfter).sort((a, b) => dist(c.x, c.y, a.x, a.y) - dist(c.x, c.y, b.x, b.y) || (a.id < b.id ? -1 : 1));
+    const alternatives: Task[] = [{ kind: "withdraw", place: place("gate") ? "gate" : undefined }];
+    if (seen.length) alternatives.push({ kind: "attack", ...(o.task.limit ? { limit: o.task.limit } : {}) });
+    const clean = (x: Task): Task => { const { command: _x, when: _w, ...rest } = x; return Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== undefined)) as unknown as Task; };
+    const d = decideReview({
+      order: clean(o.task), current: clean(c.task), alternatives: alternatives.map(clean), traits: c.traits, skill: c.skill, loyalty: c.loyalty[o.issuer] ?? 400,
+      issuerIsRuler: o.issuer === setup.ruler.id, believedOdds: odds(c), lossesPermille: lossesP(c), cohesion: cohesionOf(c), params: setup.obedience,
+    });
+    if (forced(c.id, t, "review") && d.decision !== "obey") { d.decision = "obey"; d.chosen = clean(o.task); }
+    if (same(d.chosen, clean(c.task))) return; // nothing changes
+    // back to the order as given (with its condition and limit), or another course
+    const next: Task = d.decision === "obey" ? { ...o.task } : d.chosen;
+    traces.push({ schemaVersion: 1, commander: c.id, orderId: o.orderId, t, issuer: o.issuer, via: "review", clarity: 0, comprehension: 0, literal: false, understood: o.task, current: c.task,
+      candidates: d.candidates, decision: d.decision, by: d.by, margins: d.margins, beliefs: { believedOdds: odds(c), lossesPermille: lossesP(c), cohesion: cohesionOf(c), changed: true }, draws: 0, trigger: "review" });
+    notes.push({ t, kind: "review", commander: c.id, orderId: o.orderId, decision: d.decision, text: next.kind });
+    if (d.decision !== "obey") conduct.push({ commander: c.id, orderId: o.orderId, issuer: o.issuer, decision: d.decision, trigger: "review", t });
+    c.settledUntil = t + X!.review!.settle; // a course once changed is given time before it is weighed again
+    assign(c, next, t);
+    // he tells his superior what he is doing (so headquarters may learn it, late)
+    sendReport(c, t, [{ orderId: o.orderId, decision: d.decision, task: next, commander: c.id, issuer: o.issuer }]);
+  };
+
+  // ---- Phase 12: the enemy sees a signal from headquarters (§4); it understands the standard ones ----
+  let pressUntil = -1, braceUntil = -1;
+  const enemySees = (o: BattleOrder, t: number) => {
+    const h = hqPos();
+    if (!order.some((id) => { const f = fs.get(id)!; return f.side === "raiders" && live(f) && f.behaviour !== "rout" && sees(f.x, f.y, h.x, h.y); })) return;
+    const sig = setup.signals.find((s) => s.id === o.signal);
+    const understood = !!sig?.standard;
+    notes.push({ t, kind: "signal_seen", orderId: o.id, why: o.signal, text: understood ? "understood" : "seen" });
+    if (understood) { if (o.task.kind === "withdraw" || o.task.kind === "give_ground") pressUntil = t + 300; else braceUntil = t + 120; }
+    lastRaiderPlan = -1e9; // the chief re-plans at once
   };
 
   // ---- the raiders' chief: simple doctrine, no obedience modelling (they are not the player's men) ----
@@ -683,7 +1070,10 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
       // riders look for a soft target (archers, the shaken, the guard); the rest go for the nearest
       const near = crownLive.filter((g) => sees(f.x, f.y, g.x, g.y) || dist(f.x, f.y, g.x, g.y) < 1600);
       const pool = near.some((g) => ahead(f, g)) ? near.filter((g) => ahead(f, g)) : near; // down the field first, as the crown pushes up it
-      const soft = P.kinds[f.kind].mounted ? pool.filter((g) => g.kind === "archers" || (g.behaviour !== "good_order" && g.kind !== "guard")) : [];
+      // Phase 12: a signal they understood - they brace for an advance, and press men they see pulling back
+      if (t < braceUntil) { f.task = { kind: "hold" }; continue; }
+      const going = t < pressUntil ? pool.filter((g) => g.behaviour === "withdrawing" || g.task.kind === "withdraw") : [];
+      const soft = going.length ? going : P.kinds[f.kind].mounted ? pool.filter((g) => g.kind === "archers" || (g.behaviour !== "good_order" && g.kind !== "guard")) : [];
       const pick = (soft.length ? soft : pool).sort((a, b) => dist(f.x, f.y, a.x, a.y) - dist(f.x, f.y, b.x, b.y) || (a.id < b.id ? -1 : 1))[0];
       f.task = pick ? { kind: "attack", target: pick.id } : { kind: "advance", place: "gate" };
     }
@@ -753,9 +1143,16 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
         const p = place(e.task.place);
         if (p) { const d = dist(x, y, p.x, p.y), go = Math.min(d, P.kinds[f.kind].speed * (t - e.eta)); if (d > 0) { x += Math.trunc(((p.x - x) * go) / d); y += Math.trunc(((p.y - y) * go) / d); } category = "inferred"; if (e.status === "dispatched") e.status = "presumed delivered"; }
       }
+      // Phase 12: an enemy it lost sight of, drawn where its heading (from its own earlier sightings) would take it
+      const I = X?.inferEnemy;
+      if (I && !observed && f.side !== "crown" && s.how === "observed" && age >= I.after && age <= I.maxSeconds && s.behaviour !== "gone") {
+        const was = (hqTrail.get(id) ?? []).filter((q) => q.t <= s.t - 30).pop();
+        if (was) { const dt = s.t - was.t; x = s.x + Math.trunc(((s.x - was.x) * age) / dt); y = s.y + Math.trunc(((s.y - was.y) * age) / dt); x = Math.max(0, Math.min(field.width, x)); y = Math.max(0, Math.min(field.height, y)); category = "inferred"; }
+      }
       marks.push({ id, side: f.side, kind: f.kind, label: f.label, x, y, behaviour: s.behaviour, menBand: band(s.men), category, source: s.source, age, stale: age > P.staleAfter, ...(observed && f.shotAt && f.behaviour !== "retreat" && f.behaviour !== "rout" && hqSight.get(f.shotAt) ? { shooting: f.shotAt } : {}) });
     }
-    const network: NetworkRow[] = [...cs.values()].filter((c) => c.side === "crown" && c.id !== setup.hq).map((c) => { const e = hqOrders.get(c.id); return { commander: c.id, task: e ? e.task : null, status: e ? e.status : "none", lastContact: e?.lastContact ? t - e.lastContact : t }; });
+    const network: NetworkRow[] = [...cs.values()].filter((c) => c.side === "crown" && c.id !== setup.hq).map((c) => { const e = hqOrders.get(c.id); return { commander: c.id, task: e ? e.task : null, status: e ? e.status : "none", lastContact: e?.lastContact ? t - e.lastContact : t,
+      ...(X?.hazard ? { state: hqKnownFallen.has(c.id) ? "fallen" as const : "commanding" as const, ...(hqKnownFallen.get(c.id) ? { successor: hqKnownFallen.get(c.id) } : {}) } : {}) }; });
     hqFrames.push({ t, x: h.x, y: h.y, marks, network });
   };
 
@@ -769,6 +1166,7 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
   let t = 0, end: { winner: Side | "none"; reason: string } | null = null;
   while (!end) {
     t += step;
+    now = t;
     for (const o of all.filter((o) => o.t > t - step && o.t <= t)) dispatchOrder(o, t);
     for (const pa of pendingAssign.filter((x) => x.at <= t)) { const f = fs.get(pa.formation)!; if (live(f)) f.task = pa.task; }
     for (let i = pendingAssign.length - 1; i >= 0; i--) if (pendingAssign[i].at <= t) pendingAssign.splice(i, 1);
@@ -788,9 +1186,12 @@ export function runBattle(setup: BattleSetup, orders: BattleOrder[], opts: { unt
 
   // ---- result and debrief ----
   const lost: Record<Side, number> = { crown: 0, raiders: 0 }, lostBy: Record<string, number> = {};
-  for (const f of fs.values()) { const n = f.start - f.men; lost[f.side] += n; lostBy[f.commander] = (lostBy[f.commander] ?? 0) + n; }
-  const result: BattleResult = { winner: end.winner, reason: end.reason, endT: t, lost, lostBy, lostByFormation, ruler: rulerFate, conduct };
-  const debrief: Debrief[] = [...cs.values()].filter((c) => c.side === "crown").map((c) => {
+  // losses are counted to whose men they were at the start (a successor's borrowed men stay the fort's or the company's)
+  const owner = new Map(setup.formations.map((f) => [f.id, f.commander]));
+  for (const f of fs.values()) { const n = f.start - f.men, o = owner.get(f.id)!; lost[f.side] += n; lostBy[o] = (lostBy[o] ?? 0) + n; }
+  const result: BattleResult = { winner: end.winner, reason: end.reason, endT: t, lost, lostBy, lostByFormation, ruler: rulerFate, conduct, ...(X ? { fallen } : {}) };
+  // the dead write no debrief
+  const debrief: Debrief[] = [...cs.values()].filter((c) => c.side === "crown" && c.fallen?.fate !== "killed").map((c) => {
     const truth = lostBy[c.id] ?? 0, frank = avg(c.traits, "badNewsReportingPermille"), risk = avg(c.traits, "riskPermille");
     const own = Math.floor((truth * Math.min(1000, 400 + frank)) / 1000);
     const enemy = Math.floor((lost.raiders * (700 + Math.floor((risk * 6) / 10))) / 1000);

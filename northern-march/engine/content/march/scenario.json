@@ -242,6 +242,12 @@
      "y": 1040
     },
     {
+     "id": "fold",
+     "name": "the sheepfold",
+     "x": 600,
+     "y": 1040
+    },
+    {
      "id": "camp",
      "name": "the raiders' camp",
      "x": 1200,
@@ -444,6 +450,49 @@
     "enemies": 36,
     "overlap": 220,
     "frontage": 60
+   },
+   "full": {
+    "chain": true,
+    "deadGround": 300,
+    "dusk": {
+     "lastSeconds": 1800,
+     "sightPermille": 400
+    },
+    "inferEnemy": {
+     "after": 60,
+     "maxSeconds": 300
+    },
+    "enemySignals": true,
+    "contagion": {
+     "range": 1000,
+     "seenRout": 4,
+     "seenRetreat": 2,
+     "chainPerExtra": 1,
+     "leaderless": 2
+    },
+    "rally": {
+     "below": 450,
+     "speed": 3
+    },
+    "review": {
+     "every": 60,
+     "settle": 600
+    },
+    "hazard": {
+     "meleePerMyriad": 6,
+     "missilePerMyriad": 2,
+     "killedPermille": 350,
+     "noticeSeconds": 60,
+     "shock": 60,
+     "observeRange": 500
+    },
+    "sector": {
+     "capableAt": 500,
+     "boldAt": 600
+    },
+    "outcome": {
+     "lossMargin": 20
+    }
    }
   },
   "forces": {
@@ -480,6 +529,67 @@
    ],
    "guardMen": 30,
    "raiders": [
+    {
+     "minMen": 900,
+     "parts": [
+      {
+       "kind": "riders",
+       "sharePermille": 70
+      },
+      {
+       "kind": "warband",
+       "sharePermille": 80
+      },
+      {
+       "kind": "bowmen",
+       "sharePermille": 70
+      },
+      {
+       "kind": "warband",
+       "sharePermille": 80
+      },
+      {
+       "kind": "riders",
+       "sharePermille": 70
+      },
+      {
+       "kind": "warband",
+       "sharePermille": 80
+      },
+      {
+       "kind": "bowmen",
+       "sharePermille": 70
+      },
+      {
+       "kind": "warband",
+       "sharePermille": 80
+      },
+      {
+       "kind": "riders",
+       "sharePermille": 70
+      },
+      {
+       "kind": "warband",
+       "sharePermille": 80
+      },
+      {
+       "kind": "bowmen",
+       "sharePermille": 70
+      },
+      {
+       "kind": "warband",
+       "sharePermille": 80
+      },
+      {
+       "kind": "riders",
+       "sharePermille": 50
+      },
+      {
+       "kind": "warband",
+       "sharePermille": 50
+      }
+     ]
+    },
     {
      "minMen": 240,
      "parts": [
@@ -555,25 +665,43 @@
      "task": {
       "kind": "advance",
       "place": "ford"
-     }
+     },
+     "standard": true
     },
     {
      "id": "hold",
      "task": {
       "kind": "hold"
-     }
+     },
+     "standard": true
     },
     {
      "id": "withdraw",
      "task": {
       "kind": "withdraw",
       "place": "gate"
-     }
+     },
+     "standard": true
     },
     {
      "id": "reserve",
      "task": {
       "kind": "attack"
+     },
+     "standard": true
+    },
+    {
+     "id": "fallback",
+     "task": {
+      "kind": "withdraw",
+      "place": "ridge"
+     }
+    },
+    {
+     "id": "flank",
+     "task": {
+      "kind": "attack",
+      "place": "woodedge"
      }
     }
    ],

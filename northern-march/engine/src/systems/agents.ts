@@ -8,7 +8,7 @@ import { MapGraph } from "../map.ts";
 import type { Recommendation, Reason, StructuredOrder } from "../schemas.ts";
 import { validateRecommendation, type DecisionTrace } from "../schemas.ts";
 import { beliefsAbout, buildView, type View } from "../view.ts";
-import type { WorldState } from "../world.ts";
+import { isDead, type WorldState } from "../world.ts";
 import type { ActionRef, Perceiver, Seen, Situation } from "../agents/model.ts";
 import { actionKey } from "../agents/model.ts";
 import { byScore, chooseFocus, generateEconomy, plan, score, type PlanResult } from "../agents/planner.ts";
@@ -73,7 +73,7 @@ export function defenceAt(s: Readonly<WorldState>, where: string) {
 export function leaderCandidates(s: Readonly<WorldState>, c: Content, agent: string) {
   const ch = c.byId.character.get(agent)!;
   const min = c.scenario.agents.recommendationTrustMin;
-  const free = (id: string) => id !== agent && !(s.ordersInForce[id] ?? []).length && "at" in s.positions[id] && !s.bw?.dead[id];
+  const free = (id: string) => id !== agent && !(s.ordersInForce[id] ?? []).length && "at" in s.positions[id] && !isDead(s, id);
   const out: { id: string; recommendedBy: string; score: number }[] = [];
   for (const r of ch.relationships) if (r.kind === "retainer" && free(r.to)) out.push({ id: r.to, recommendedBy: agent, score: r.value });
   for (const r of ch.relationships) {
@@ -187,7 +187,7 @@ function rebuild(ctx: Ctx, agent: string) {
   }
 }
 
-const isAgent = (ctx: Ctx, who: string) => !!ctx.s.agents[who] && ctx.s.tiers[who] !== "C" && !ctx.s.bw?.dead[who];
+const isAgent = (ctx: Ctx, who: string) => !!ctx.s.agents[who] && ctx.s.tiers[who] !== "C" && !isDead(ctx.s, who);
 const RANK = { C: 0, B: 1, A: 2 } as const;
 
 /** Promotion (ARCHITECTURE §20.9). The promoted start with what their station would tell them: whom they answer to and
@@ -219,6 +219,7 @@ function compress(t: DecisionTrace): DecisionTrace {
 }
 
 function think(ctx: Ctx, agent: string, cause: number, layer: "strategic" | "operational", reason: "triggers" | "review") {
+  if (isDead(ctx.s, agent)) return; // killed in battle (Phase 12) or on an expedition: he decides nothing more
   const c = ctx.content, ch = c.byId.character.get(agent)!;
   const tierB = ctx.s.tiers[agent] === "B";
   if (tierB) layer = "operational"; // locally relevant people do not replan strategically

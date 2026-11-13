@@ -10,7 +10,7 @@ import type { BattleOrder, BattleRecord, BattleSetup, HqFrame, Note } from "../b
 import { battleRecord } from "../battlefield/record.ts";
 export { battleRecord };
 import { buildSetup, personOf, type Person } from "../battlefield/setup.ts";
-import type { BattleState } from "../world.ts";
+import { isDead, type BattleState } from "../world.ts";
 import type { Ctx, System } from "./types.ts";
 import { DAY, HOUR, chr, loc, sorted } from "./types.ts";
 import { capability, concludeSortie } from "./agents.ts";
@@ -45,7 +45,7 @@ export const battle: System = {
     "battle:begin": (ctx, { commander, from, site, launchedEventId, enemy, ambushed, men, dusk }) => {
       const sc = ctx.content.scenario, b = sc.battle, ruler = sc.ruler;
       if (!ctx.s.threats[site]) return; // the raiders were gone by morning
-      const here = present(ctx, from), chars = here.map((id) => ctx.content.byId.character.get(id)).filter((c) => !!c);
+      const here = present(ctx, from).filter((id) => !isDead(ctx.s, id)), chars = here.map((id) => ctx.content.byId.character.get(id)).filter((c) => !!c);
       const castellan = chars.find((c) => c!.role === "castellan"), sergeant = chars.find((c) => c!.role === "sergeant");
       const captains = chars.filter((c) => c!.role === "captain" && (ctx.s.troops[c!.id] ?? 0) > 0).map((c) => c!.id).sort();
       if (captains.includes(commander)) captains.splice(captains.indexOf(commander), 1), captains.unshift(commander);
@@ -113,9 +113,14 @@ function concludeBattle(ctx: Ctx, st: BattleState) {
   // the record of obedience and prestige (§20): winning raises a commander, losing lowers him; one who went against
   // his orders and won becomes a hero, and one who did so and lost bears the blame
   const crownCommanders = setup.commanders.filter((c) => c.side === "crown" && c.id !== ruler).map((c) => c.id).sort();
-  for (const c of res.conduct) ctx.emit("BattleConduct", [ev.id], [chr(c.commander)], { battleId: setup.battleId, commander: c.commander, orderId: c.orderId, issuer: c.issuer, decision: c.decision, outcome: res.winner });
+  // Phase 12: a departure from orders carries its judged outcome (the battle replayed with it obeyed, COMMAND.md §8)
+  for (const c of res.conduct) {
+    const judged = (res.disobedience ?? []).find((d) => d.commander === c.commander && d.orderId === c.orderId && d.t === c.t && d.trigger === (c.trigger ?? "order"));
+    ctx.emit("BattleConduct", [ev.id], [chr(c.commander)], { battleId: setup.battleId, commander: c.commander, orderId: c.orderId, issuer: c.issuer, decision: c.decision, outcome: res.winner,
+      ...(c.trigger ? { trigger: c.trigger, t: c.t } : {}), ...(judged ? { judged: judged.outcome } : {}) });
+  }
   for (const c of crownCommanders) {
-    const defied = res.conduct.some((x) => x.commander === c && x.decision === "keep" && x.issuer === ruler);
+    const defied = res.conduct.some((x) => x.commander === c && (x.decision === "keep" || x.decision === "defy") && x.issuer === ruler);
     const delta = res.winner === "crown" ? (defied ? 150 : 100) : res.winner === "raiders" ? (defied ? -150 : -80) : 0;
     if (delta) ctx.emit("PrestigeChanged", [ev.id], [chr(c)], { who: c, delta, reason: res.winner === "crown" ? (defied ? "won_against_orders" : "won") : defied ? "lost_against_orders" : "lost" });
   }
@@ -157,4 +162,6 @@ function concludeBattle(ctx: Ctx, st: BattleState) {
     found: true, success, pPermille: -1, men: st.men, ambushed: st.ambushed, enemy: st.enemy, garrisonLost, garrisonKinds, troopsLost, battleId: setup.battleId,
     debriefs: r.debrief.filter((d) => d.author !== ruler).map((d) => d.author),
   });
+  // Phase 12: commanders who fell (after the losses are counted, so a dead captain's surviving men go back to the fort)
+  for (const f of res.fallen ?? []) ctx.emit("CommanderFell", [ev.id], [chr(f.commander), loc(st.from)], { who: f.commander, fate: f.fate, why: f.why, battleId: setup.battleId, from: st.from, ...(f.successor ? { successor: f.successor } : {}) });
 }

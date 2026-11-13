@@ -3,7 +3,7 @@
 // who misses the recipient follows word left with locals (redirect) or gives up (undeliverable).
 import { downgrade, type BeliefProposition } from "../beliefs.ts";
 import type { Report } from "../schemas.ts";
-import type { Messenger } from "../world.ts";
+import { isDead, type Messenger } from "../world.ts";
 import type { Ctx, System } from "./types.ts";
 import { DAY, HOUR, chr, loc, sorted } from "./types.ts";
 import { best, interpretBand, learn, observe } from "./knowledge.ts";
@@ -52,6 +52,8 @@ function arrive(ctx: Ctx, m: Messenger, cause: number) {
   }
   const rp = ctx.s.positions[m.recipient];
   const subj = [chr(m.recipient), { kind: m.kind as "report" | "order", id: String(m.ref) }];
+  // Phase 12: the recipient was killed in battle; the letter finds no one to take it
+  if (isDead(ctx.s, m.recipient)) return void ctx.emit(T(m.kind as "report" | "order", "Undeliverable"), [cause], subj, { ...ref(m, m.ref), messengerId: m.id, at: dest, reason: "recipient is dead" });
   if ("at" in rp && rp.at === dest) {
     if (m.kind === "order") {
       const r = ctx.emit("OrderReceived", [cause], subj, { orderId: m.ref, recipient: m.recipient, at: dest, messengerId: m.id });
@@ -182,7 +184,7 @@ function selfClaim(ctx: Ctx, who: string, eventId: number): BeliefProposition {
 function inspectAndReport(ctx: Ctx, author: string, cause: number) {
   const ch = ctx.content.byId.character.get(author)!;
   const p = ctx.s.positions[author];
-  if (ctx.s.tiers[author] === "C" || !("at" in p) || p.at !== ch.location || !ctx.s.fortifications[ch.location] || !ch.reportsTo) return;
+  if (ctx.s.tiers[author] === "C" || isDead(ctx.s, author) || !("at" in p) || p.at !== ch.location || !ctx.s.fortifications[ch.location] || !ch.reportsTo) return;
   const upd = observe(ctx, author, loc(ch.location), "fortification.condition", cause)!;
   observe(ctx, author, loc(ch.location), "fortification.garrison", cause);
   // captains' companies with them at the fort are counted too

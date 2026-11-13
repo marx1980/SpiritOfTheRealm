@@ -48,7 +48,7 @@ const st = {
   batch: [] as number[], queue: [] as PlayerAction[], autoPause: new Set<string>(REASONS), selected: "northwatch",
   draft: { recipient: "", action: "p:repair", objective: "northwatch", discretion: "bounded", mission: "defend", repairMode: "standard" } as { recipient: string; action: string; objective: string; discretion: string; mission: string; repairMode: string },
   eco: { act: "move", good: "timber", from: "", to: "", community: "", fort: "", arm: "foot", consult: false, qty: 0 } as { act: string; good: string; from: string; to: string; community: string; fort: string; arm: string; consult: boolean; qty: number },
-  bo: { to: "", kind: "hold", place: "ridge", target: "", limit: false, when: "", via: "runner", signal: "hold" } as { to: string; kind: string; place: string; target: string; limit: boolean; when: string; via: string; signal: string },
+  bo: { to: "", kind: "hold", place: "ridge", target: "", limit: false, when: "", via: "runner", signal: "hold", command: "" } as { to: string; kind: string; place: string; target: string; limit: boolean; when: string; via: string; signal: string; command: string },
   error: "", observer: location.hash === "#observer", answered: 0, openLetter: null as number | null, openIssue: null as string | null,
 };
 
@@ -576,7 +576,8 @@ function battleForm(v: View): { html: string; action: PlayerAction | null } {
   if (targets.length && !targets.some((m) => m.id === f.target)) f.target = targets[0].id;
   const signal = !self && b.t > 0 && f.via === "signal";
   const task: Task = { kind: f.kind as Task["kind"], ...(needsPlace || (f.kind === "attack" && !targets.length) ? { place: f.place } : {}), ...(targets.length ? { target: f.target } : {}),
-    ...(f.limit && f.kind === "attack" ? { limit: "stream" } : {}), ...(f.when && f.kind !== "attack" ? { when: { kind: f.when as "enemy_engaged" | "enemy_horse_seen", then: { kind: "attack" as const } } } : {}) };
+    ...(f.limit && f.kind === "attack" ? { limit: "stream" } : {}), ...(f.when && f.kind !== "attack" ? { when: { kind: f.when as "enemy_engaged" | "enemy_horse_seen", then: { kind: "attack" as const } } } : {}),
+    ...(!self && f.command && f.command !== f.to && b.commanders.some((c) => c.id === f.command) ? { command: [f.command] } : {}) };
   const action: PlayerAction = { action: "battle", battle: { to: f.to, task: signal ? { kind: "hold" } : task, via: self || b.t === 0 ? "voice" : (f.via as "runner" | "signal"), ...(signal ? { signal: f.signal } : {}) } };
   const opt = (val: string, label: string, cur: string) => `<option value="${esc(val)}" ${val === cur ? "selected" : ""}>${esc(label)}</option>`;
   const html = `<div class="form">
@@ -587,6 +588,7 @@ function battleForm(v: View): { html: string; action: PlayerAction | null } {
     ${needsPlace || (f.kind === "attack" && !targets.length) ? `<label for="bo-place">Where</label><select id="bo-place">${b.field.places.map((p) => opt(p.id, p.name, f.place)).join("")}</select>` : ""}
     ${targets.length ? `<label for="bo-target">${f.kind === "attack" ? "Enemy" : "Formation"}</label><select id="bo-target">${targets.map((m) => opt(m.id, m.label, f.target)).join("")}</select>` : ""}
     ${f.kind === "attack" ? `<span></span><label class="check"><input type="checkbox" id="bo-limit" ${f.limit ? "checked" : ""}> Not past the stream</label>` : ""}
+    ${!self ? `<label for="bo-command">Command</label><select id="bo-command">${opt("", "–", f.command)}${b.commanders.filter((c) => c.id !== f.to).map((c) => opt(c.id, battleName(v, c.id), f.command)).join("")}</select>` : ""}
     ${!self && f.kind !== "attack" ? `<label for="bo-when">Then</label><select id="bo-when">${opt("", "–", f.when)}${opt("enemy_engaged", "Attack when engaged", f.when)}${opt("enemy_horse_seen", "Attack on seeing horse", f.when)}</select>` : ""}`}
     <span></span><button id="bo-add">Add order</button></div>`;
   return { html, action };
@@ -606,8 +608,8 @@ function battleView(field: Parameters<typeof frameBox>[1], pts: { x: number; y: 
 function battleScreen(v: View): string {
   const b = v.battle!;
   const glyphs = b.hq.marks.map(glyphOf);
-  const net = b.hq.network.map((n) => `<tr><td>${esc(battleName(v, n.commander))}</td><td>${esc(taskWords(v, n.task))}</td><td>${esc(STATUS[n.status] ?? n.status)}</td><td class="n">${n.lastContact >= b.t ? "–" : mins(n.lastContact)}</td></tr>`).join("");
-  const noteText = (n: (typeof b.notes)[number]) => n.kind === "report_received" ? `Report from ${battleName(v, n.from!)}` : n.kind === "danger" ? n.text! : n.kind === "order_sent" ? `Order to ${battleName(v, n.commander!)} sent${n.via === "signal" ? " by signal" : " by runner"}` : n.kind === "end" ? n.why! : n.kind;
+  const net = b.hq.network.map((n) => `<tr><td>${esc(battleName(v, n.commander))}</td><td>${esc(taskWords(v, n.task))}</td><td>${esc(n.state === "fallen" ? `Fallen${n.successor ? ` · ${battleName(v, n.successor)}` : ""}` : STATUS[n.status] ?? n.status)}</td><td class="n">${n.lastContact >= b.t ? "–" : mins(n.lastContact)}</td></tr>`).join("");
+  const noteText = (n: (typeof b.notes)[number]) => n.kind === "report_received" ? `Report from ${battleName(v, n.from!)}` : n.kind === "danger" ? n.text! : n.kind === "order_sent" ? `Order to ${battleName(v, n.commander!)} sent${n.via === "signal" ? " by signal" : " by runner"}` : n.kind === "fall_known" ? `${battleName(v, n.commander!)} has fallen` : n.kind === "end" ? n.why! : n.kind;
   const notes = [...b.notes].reverse().slice(0, 14).map((n) => `<div class="letter${n.kind === "danger" ? " alarm" : ""}"><span class="when">${clock(n.t)}</span> ${esc(noteText(n))}</div>`).join("");
   const form = battleForm(v);
   return `<div class="eco-grid battle eco">
@@ -716,7 +718,7 @@ document.addEventListener("change", (e) => {
   if (t.id === "observer-toggle") { st.observer = (t as HTMLInputElement).checked; return render(); }
   if (t.id.startsWith("pol-")) { st.pol[t.id.slice(4)] = t.value; return render(); }
   if (t.id === "eco-qty") { st.eco.qty = Number(t.value); return render(); }
-  const bo = ({ "bo-to": "to", "bo-kind": "kind", "bo-place": "place", "bo-target": "target", "bo-when": "when", "bo-via": "via", "bo-signal": "signal" } as Record<string, "to" | "kind" | "place" | "target" | "when" | "via" | "signal">)[t.id];
+  const bo = ({ "bo-to": "to", "bo-kind": "kind", "bo-place": "place", "bo-target": "target", "bo-when": "when", "bo-via": "via", "bo-signal": "signal", "bo-command": "command" } as Record<string, "to" | "kind" | "place" | "target" | "when" | "via" | "signal" | "command">)[t.id];
   if (bo) { st.bo[bo] = t.value; return render(); }
   if (t.id === "bo-limit") { st.bo.limit = (t as HTMLInputElement).checked; return render(); }
   const eco = ({ "eco-act": "act", "eco-good": "good", "eco-from": "from", "eco-to": "to", "eco-comm": "community", "eco-fort": "fort", "eco-arm": "arm" } as Record<string, "act" | "good" | "from" | "to" | "community" | "fort" | "arm">)[t.id];

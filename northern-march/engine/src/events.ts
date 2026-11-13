@@ -175,6 +175,8 @@ export const EVENT_TYPES: Readonly<Record<string, EventTypeDef>> = Object.freeze
   ThreatWeakened: T("battle", "military", 2),
   PrestigeChanged: T("battle", "political", 2),
   BattleConduct: T("battle", "military", 1),
+  // Phase 12: a commander fell in battle (docs/COMMAND.md §7)
+  CommanderFell: T("battle", "military", 2),
   // Phase 9: standing policy and precedent (D-070)
   PolicyProclaimed: T("policy", "political", 3),
   PolicyLearned: T("policy", "political", 1),

@@ -83,7 +83,7 @@ export interface BattleView {
   readonly signals: readonly { readonly id: string; readonly task: Task }[];
   readonly ended?: { readonly winner: string; readonly reason: string };
 }
-const HQ_NOTES = new Set(["report_received", "danger", "end"]);
+const HQ_NOTES = new Set(["report_received", "danger", "end", "fall_known"]);
 function battleView(s: Readonly<WorldState>, c: Content, who: string, now: number): BattleView | undefined {
   if (who !== c.scenario.ruler) return undefined;
   const st = Object.values(s.battles).filter((b) => b.setup.ruler.present && (b.status === "running" || now - (b.startTick + (b.result?.endT ?? 0)) < DAY_TICKS)).sort((a, b) => b.startTick - a.startTick)[0];
@@ -114,6 +114,8 @@ export function validateBattleDraft(v: View, d: { to: string; task: Task; via: s
   if (d.task.place && !b.field.places.some((p) => p.id === d.task.place)) out.push(`no place ${d.task.place} on this field`);
   if (d.task.limit && !b.field.lines.some((l) => l.id === d.task.limit)) out.push(`no line ${d.task.limit} on this field`);
   if (d.task.target && !b.hq.marks.some((m) => m.id === d.task.target)) out.push(`headquarters knows of no ${d.task.target}`);
+  // Phase 12 sector delegation: only commanders in this battle can be put under another
+  for (const id of d.task.command ?? []) if (id === d.to || id === v.self.id || !b.commanders.some((c) => c.id === id)) out.push(`${id} cannot be put under ${d.to}`);
   if (!["runner", "signal", "voice"].includes(d.via)) out.push(`cannot send by ${d.via}`);
   if (d.via === "signal" && !b.signals.some((s) => s.id === d.signal)) out.push("a signal must be one agreed before the battle");
   return out;

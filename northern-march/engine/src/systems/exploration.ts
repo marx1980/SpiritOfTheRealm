@@ -11,6 +11,7 @@ import { travel } from "./movement.ts";
 import { finish } from "./orders.ts";
 import { capability } from "./agents.ts";
 import type { StructuredOrder } from "../schemas.ts";
+import { isDead } from "../world.ts";
 
 const P = (ctx: Ctx) => ctx.content.scenario.wilds!;
 const cap = (ctx: Ctx, who: string, domain: string) => capability(ctx.s, ctx.content, who, domain);
@@ -27,8 +28,8 @@ type Cand = { id: string; recommendedBy: string; score: number };
  *  and draws among them (keyed): the same delegate does not always choose the same man. The weights go in the event. */
 export function chooseLeader(ctx: Ctx, o: StructuredOrder, cands: Cand[]): Cand & { weights: { id: string; w: number }[] } {
   const p = P(ctx), b = ctx.s.bw!, kind = kindOf(o), L = p.leader;
-  const free = (id: string) => id !== o.recipient && !(ctx.s.ordersInForce[id] ?? []).length && "at" in ctx.s.positions[id] && !b.dead[id];
-  const pool: Cand[] = cands.filter((c) => !b.dead[c.id]);
+  const free = (id: string) => id !== o.recipient && !(ctx.s.ordersInForce[id] ?? []).length && "at" in ctx.s.positions[id] && !isDead(ctx.s, id);
+  const pool: Cand[] = cands.filter((c) => !isDead(ctx.s, c.id));
   for (const id of Object.keys(b.emerged).sort()) if (!pool.some((c) => c.id === id) && free(id)) pool.push({ id, recommendedBy: "record", score: b.rep[id] ?? 0 });
   if (!pool.length) return { ...cands[0], weights: [] };
   const weights = pool.map((c) => {
