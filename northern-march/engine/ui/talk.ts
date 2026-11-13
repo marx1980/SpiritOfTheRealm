@@ -7,6 +7,8 @@ import type { View } from "../src/view.ts";
 
 declare const __LEXICON__: unknown;
 type Line = { who: string; text: string; kind: "you" | "say" | "tech" };
+/** The browser's speech recogniser, only what the panel uses. */
+interface BrowserRec { lang: string; interimResults: boolean; maxAlternatives: number; continuous: boolean; start(): void; stop(): void; onresult: (e: { results: ArrayLike<ArrayLike<{ transcript: string; confidence: number }> & { isFinal: boolean }> }) => void; onend: () => void; onerror: (e: { error: string }) => void }
 /** The platform's dictation namespace (artifact runtime contract), only what the panel uses. */
 interface Dictation { start(): Promise<void>; stop(): Promise<void>; onPartial(h: (e: { text: string }) => void): () => void; onFinal(h: (e: { text: string }) => void): () => void; onState(h: (e: { state: string; reason?: string }) => void): () => void }
 const esc = (s: unknown) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -84,10 +86,32 @@ export class Talk {
   }
   /** Put words in the box without redrawing the page (the live guess changes many times a second). */
   private show(text: string) { this.input = text; const i = document.getElementById("talk-in") as HTMLInputElement | null; if (i) i.value = text; }
+  /** Whether this view can listen: the platform's dictation in an artifact, else the browser's own recogniser (Safari, Chrome) on a page of its own. */
+  private browserRec(): (new () => BrowserRec) | undefined { const w = window as unknown as Record<string, new () => BrowserRec>; return w.SpeechRecognition ?? w.webkitSpeechRecognition; }
+  canSpeak(): boolean { return !!this.dict || !!this.browserRec(); }
+  private rec?: BrowserRec;
+  private listenBrowser() {
+    const Rec = this.browserRec();
+    if (!Rec) return;
+    if (this.rec) { this.rec.stop(); return; }
+    const base = this.input.trim() ? `${this.input.trim()} ` : "";
+    const rec = this.rec = new Rec();
+    rec.lang = "en-GB"; rec.interimResults = true; rec.maxAlternatives = 1; rec.continuous = false;
+    this.listening = true; this.host.render();
+    rec.onresult = (e) => {
+      const r = e.results[e.results.length - 1], alt = r[0];
+      const text = base + alt.transcript;
+      this.show(r.isFinal ? correctTranscript(this.host.view(), { text: text.trim(), words: alt.transcript.split(/\s+/).map((x) => ({ w: x, conf: alt.confidence })) }).text : text);
+    };
+    const done = (why?: string) => { this.rec = undefined; this.listening = false; if (why && why !== "aborted" && why !== "no-speech") this.lines.push({ who: "", text: `Speak: ${why.replace(/-/g, " ")}`, kind: "tech" }); this.host.render(); };
+    rec.onend = () => done();
+    rec.onerror = (e) => done(e.error);
+    try { rec.start(); } catch { done("unavailable"); }
+  }
   /** Speak: start listening (straight from the click, as the platform requires), or stop. */
   listen() {
     const d = this.dict;
-    if (!d) return;
+    if (!d) return this.listenBrowser();
     if (this.listening) { d.stop().catch(() => {}); return; }
     this.heard = this.input.trim() ? `${this.input.trim()} ` : "";
     d.start().catch((e: { code?: string }) => {
@@ -118,7 +142,7 @@ export class Talk {
     return `<div class="card talk"><h2>Talk</h2>
       <div class="tlog">${log || "–"}</div>
       <div class="talk-row"><input id="talk-in" type="text" autocomplete="off" enterkeyhint="send" value="${esc(this.input)}" aria-label="Order">
-        ${this.dict ? `<button type="button" id="talk-mic" aria-pressed="${this.listening}">${this.listening ? "Stop" : "Speak"}</button>` : ""}
+        ${this.canSpeak() ? `<button type="button" id="talk-mic" aria-pressed="${this.listening}">${this.listening ? "Stop" : "Speak"}</button>` : ""}
         <button type="button" id="talk-say" class="primary">Order</button>
         ${state === "readback" ? `<button type="button" data-say="yes">Yes</button><button type="button" data-say="no">No</button>` : ""}</div></div>`;
   }
