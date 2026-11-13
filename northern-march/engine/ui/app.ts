@@ -632,11 +632,7 @@ function render() {
   const pos = v.self.position;
   const cls = st.over ? "ended" : st.paused === "danger" ? "danger" : "";
   const cont = st.over ? "" : `<button class="primary" id="go">${st.queue.length ? "Send and continue" : "Continue"}</button>`;
-  const adv = st.paused === "advice" ? v.advice.find((x) => x.id === st.advice) : undefined;
-  const why = adv ? [
-    ...(adv.reasons.some((x) => x.weight > 0) ? [`Supports: ${adv.reasons.filter((x) => x.weight > 0).slice(0, 3).map((x) => reasonWords(x.textKey)).join(", ")}`] : []),
-    ...(adv.reasons.some((x) => x.weight < 0) ? [`Concerns: ${adv.reasons.filter((x) => x.weight < 0).slice(0, 3).map((x) => reasonWords(x.textKey)).join(", ")}`] : []),
-  ].map((x) => x + ".").join(" ") : "";
+
   const shownChoices = choices(v);
   const isShown = (q: PlayerAction) => shownChoices.some((c) => matches(q, c.action));
   const pauseKey = `${st.paused}:${st.letter}:${st.advice}`;
@@ -654,7 +650,7 @@ function render() {
   </div>
   <div class="status-row" aria-label="Realm status">${coinStatus(v)}</div>
   ${st.tab === "settings" ? settingsTab() : `
-  <div class="pause ${cls}">${batchBlock(v)}${(st.paused === "report" && batchBlock(v)) || (st.paused === "advice" && choices(v).length) ? "" : `<span class="what">${tone(pauseText(v))}</span>`}${why ? `<span class="why-line">${esc(why)}</span>` : ""}
+  <div class="pause ${cls}">${batchBlock(v)}${(st.paused === "report" && batchBlock(v)) || (st.paused === "advice" && choices(v).length) ? "" : `<span class="what">${tone(pauseText(v))}</span>`}
     ${st.paused && st.paused !== "battle" ? choicesBlock(v) : ""}
     <span class="queue">${st.queue.map((a, i) => ({ a, i })).filter(({ a }) => !isShown(a)).map(({ a, i }) => `<span class="chip">${esc(textOf(v, a))} <button data-unq="${i}" aria-label="Remove">×</button></span>`).join("")}</span>
     ${st.error ? `<span class="err">${esc(st.error)}</span>` : ""}</div>
@@ -668,9 +664,9 @@ function render() {
 
 document.addEventListener("click", (e) => {
   const t = e.target as HTMLElement;
-  const el = t.closest("#talk-mic,[data-say],#bo-add,[data-act],[data-toggle],[data-mission],[data-place],[data-q],[data-unq],[data-letter],[data-issue],[data-close-letter],[data-use-levy],#go,#restart,#settings-tab,#economy-tab,#policy-tab,#pol-go,#o-add,#eco-add,#copy-log") as HTMLElement | null;
+  const el = t.closest("#talk-say,[data-say],#bo-add,[data-act],[data-toggle],[data-mission],[data-place],[data-q],[data-unq],[data-letter],[data-issue],[data-close-letter],[data-use-levy],#go,#restart,#settings-tab,#economy-tab,#policy-tab,#pol-go,#o-add,#eco-add,#copy-log") as HTMLElement | null;
   if (!el) return;
-  if (el.id === "talk-mic") return talk.listen();
+  if (el.id === "talk-say") return talk.say((document.getElementById("talk-in") as HTMLInputElement).value);
   if (el.dataset.say) return talk.say(el.dataset.say);
   if (el.dataset.useLevy !== undefined) { st.draft.action = "p:levy"; return render(); }
   if (el.dataset.letter) { const id = Number(el.dataset.letter); st.openLetter = st.openLetter === id ? null : id; return render(); }
@@ -720,10 +716,8 @@ document.addEventListener("click", (e) => {
   }
   if (el.id === "copy-log") navigator.clipboard?.writeText(st.sim.log.map((x) => JSON.stringify(x)).join("\n")).catch(() => {});
 });
-document.addEventListener("submit", (e) => {
-  if ((e.target as HTMLElement).id !== "talk-form") return;
-  e.preventDefault(); talk.say((document.getElementById("talk-in") as HTMLInputElement).value);
-});
+// no <form>: the artifact frame does not submit forms, so Say is a button and Enter is a key
+document.addEventListener("keydown", (e) => { if ((e.target as HTMLElement).id === "talk-in" && e.key === "Enter") { e.preventDefault(); talk.say((e.target as HTMLInputElement).value); } });
 document.addEventListener("input", (e) => { if ((e.target as HTMLElement).id === "talk-in") { talk.input = (e.target as HTMLInputElement).value; talk.focus = true; } });
 document.addEventListener("focusin", (e) => { talk.focus = (e.target as HTMLElement).id === "talk-in"; });
 document.addEventListener("change", (e) => {

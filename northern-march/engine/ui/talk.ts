@@ -83,10 +83,10 @@ export class Talk {
     const log = this.lines.slice(-8).map((l) => `<div class="tl ${l.kind}">${l.who ? `<b>${esc(l.who)}</b> ` : ""}${esc(l.text)}</div>`).join("");
     return `<div class="card talk"><h2>Talk</h2>
       <div class="tlog">${log || "–"}</div>
-      <form id="talk-form" autocomplete="off"><input id="talk-in" type="text" value="${esc(this.input)}" aria-label="Say">
-        <button type="submit">Say</button>${this.voiceAvailable() ? `<button type="button" id="talk-mic" aria-pressed="${this.listening}">${this.listening ? "Listening" : "Speak"}</button>` : ""}
-        ${state === "readback" ? `<button type="button" data-say="yes">Yes</button><button type="button" data-say="no">No</button>` : ""}</form></div>`;
+      <div class="talk-row"><input id="talk-in" type="text" autocomplete="off" enterkeyhint="send" value="${esc(this.input)}" aria-label="Say">
+        <button type="button" id="talk-say">Say</button>
+        ${state === "readback" ? `<button type="button" data-say="yes">Yes</button><button type="button" data-say="no">No</button>` : ""}</div></div>`;
   }
   static CSS = `.talk .tlog { display: grid; gap: 4px; margin-bottom: 8px; font-size: 14px; max-height: 220px; overflow: auto; } .talk .tl.you { color: var(--mute); } .talk .tl.tech { font-style: italic; }
-.talk form { display: flex; gap: 6px; flex-wrap: wrap; } .talk input[type=text] { flex: 1; min-width: 12ch; }`;
+.talk .talk-row { display: flex; gap: 6px; flex-wrap: wrap; } .talk input[type=text] { flex: 1; min-width: 12ch; }`;
 }

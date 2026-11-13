@@ -154,6 +154,8 @@ function letterParts(v: View, r: LetterLike): { rank: number; text: string }[] {
       case "community.stance": out.push({ rank: -1, text: `${people(s)} ${STANCE_WORDS[String(val)] ?? String(val)}.` }); break;
       case "fortification.holder": out.push({ rank: -2, text: val === "raiders" ? `${s} has fallen to the raiders!` : `${s} is ours again.` }); break;
       case "battle.result": out.push({ rank: 0, text: val === "nobody" ? `We found no raiders at ${s}.` : `We fought the raiders at ${s} and ${val === "won" ? "won" : "were beaten"}.` }); break;
+      case "battle.ownLosses": out.push({ rank: 1, text: Number(val) > 0 ? `We lost ${val} men.` : "We lost no men." }); break;
+      case "battle.enemyLosses": out.push({ rank: 1, text: Number(val) > 0 ? `About ${val} of the raiders fell at ${s}.` : `None of the raiders fell at ${s}.` }); break;
       case "threat.intensity":
         // a fight and the raiders' present strength are one story: do not tell it twice
         if (fought.has(c.subject.id) && (val as number) <= 0) { if (fought.get(c.subject.id) === "lost") out.push({ rank: 2, text: `The raiders at ${s} have since gone.` }); break; }
