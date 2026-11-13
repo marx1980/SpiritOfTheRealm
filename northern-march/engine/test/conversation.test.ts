@@ -447,3 +447,21 @@ test("'No, I mean X' on a two-place order: replaces the place that is not X; whe
   }
   assert.ok(same && pair, "both shapes are offered at this pause");
 });
+
+test("after 'Did you mean X?': a phrase that holds the name confirms it, a filler is no name, a different place replaces it", () => {
+  const { view } = pauseWhere(SEED, withRepairAdvice);
+  const c = court();
+  const t1 = say(c, view, "send the captain to North Watch");
+  assert.match(spoken(t1), /Did you mean Northwatch/);
+  const t2 = say(c, view, "Sorry, yes, I meant north watch");
+  assert.doesNotMatch(spoken(t2), /Sorry/);
+  assert.equal(c.state, "readback", spoken(t2));
+  const d = court();
+  say(d, view, "send the captain to North Watch");
+  const t3 = say(d, view, "I meant Northwatch");
+  assert.equal(d.state, "readback", spoken(t3));
+  const e = court();
+  say(e, view, "send the captain to North Watch");
+  const t4 = say(e, view, "no, Greyfen");
+  assert.match(spoken(t4), /Greyfen/);
+});

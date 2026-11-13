@@ -55,7 +55,7 @@ export function editDistance(a: string, b: string, cap = 3): number {
   }
   return prev[b.length];
 }
-const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+export const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 /** How many slips a word of this length is allowed before it stops being the same name. */
 export const slips = (len: number, f: Lexicon["fuzzy"]) => (len < f.minLength ? 0 : len < f.twoEditsFrom ? 1 : 2);
 

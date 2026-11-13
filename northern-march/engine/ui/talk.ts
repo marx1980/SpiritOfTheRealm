@@ -98,12 +98,15 @@ export class Talk {
     const rec = this.rec = new Rec();
     rec.lang = "en-GB"; rec.interimResults = true; rec.maxAlternatives = 1; rec.continuous = false;
     this.listening = true; this.host.render();
+    let got = false;
     rec.onresult = (e) => {
+      got = true;
       const r = e.results[e.results.length - 1], alt = r[0];
       const text = base + alt.transcript;
       this.show(r.isFinal ? correctTranscript(this.host.view(), { text: text.trim(), words: alt.transcript.split(/\s+/).map((x) => ({ w: x, conf: alt.confidence })) }).text : text);
     };
-    const done = (why?: string) => { this.rec = undefined; this.listening = false; if (why && why !== "aborted" && why !== "no-speech") this.lines.push({ who: "", text: `Speak: ${why.replace(/-/g, " ")}`, kind: "tech" }); this.host.render(); };
+    // iOS reports "service not allowed" when the recogniser closes, even after it has heard her: only a silence is worth saying
+    const done = (why?: string) => { this.rec = undefined; this.listening = false; if (why && why !== "aborted" && why !== "no-speech" && !(got && why === "service-not-allowed")) this.lines.push({ who: "", text: why === "service-not-allowed" ? "Speak: switch on Dictation in the phone's keyboard settings" : `Speak: ${why.replace(/-/g, " ")}`, kind: "tech" }); this.host.render(); };
     rec.onend = () => done();
     rec.onerror = (e) => done(e.error);
     try { rec.start(); } catch { done("unavailable"); }
@@ -124,6 +127,8 @@ export class Talk {
   bind() {
     const i = document.getElementById("talk-in") as HTMLInputElement | null;
     if (!i) return;
+    const log = document.querySelector<HTMLElement>(".tlog");
+    if (log) log.scrollTop = log.scrollHeight; // the newest line is always in view
     i.addEventListener("input", () => { this.input = i.value; this.focus = true; });
     i.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); this.order(); } });
     document.getElementById("talk-say")?.addEventListener("click", () => this.order());

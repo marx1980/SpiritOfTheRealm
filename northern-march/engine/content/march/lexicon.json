@@ -76,7 +76,19 @@
   "go with",
   "i want you to",
   "i think",
-  "kindly"
+  "kindly",
+  "sorry",
+  "oh",
+  "um",
+  "uh",
+  "er",
+  "erm",
+  "hmm",
+  "ah",
+  "ahem",
+  "excuse me",
+  "pardon",
+  "oops"
  ],
  "verbs": {
   "repair": [

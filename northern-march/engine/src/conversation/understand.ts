@@ -1,7 +1,7 @@
 // The templated parser: her words → an Understanding, by the lexicon and the names she knows. Deterministic, no model.
 import type { View } from "../view.ts";
 import { emptyUnderstanding, type Mention, type QuestionKind, type Understanding, type UnderstandCtx } from "./layer.ts";
-import { findNames, findPhrases, nameIndex, onlyPhrases, tokenise, type Hit, type NameEntry, type NameHit, type Tok } from "./text.ts";
+import { findNames, findPhrases, nameIndex, onlyPhrases, squash, tokenise, type Hit, type NameEntry, type NameHit, type Tok } from "./text.ts";
 
 /** Words that carry no meaning of their own here (articles, pronouns, the commonest nouns of an order). */
 const STOP = new Set(["the", "a", "an", "and", "or", "of", "my", "our", "your", "his", "her", "their", "that", "this", "it", "its", "up", "out", "on", "off", "with", "by", "is", "are", "be", "me", "us", "we", "i", "you", "he", "she", "they", "them", "do", "does", "so", "as", "all",
@@ -50,8 +50,15 @@ export function understandCourt(text: string, ctx: UnderstandCtx): Understanding
   const qh = findPhrases(toks, L.questions)[0];
   const lead = LEAD_CORRECT(toks, ctx);
   const covered = new Set<number>();
-  const verbHits = findPhrases(toks, L.verbs), modeHits = findPhrases(toks, L.modes), goodHits = findPhrases(toks, L.goods), armHits = findPhrases(toks, L.arms);
-  const fillHits = findPhrases(toks, { f: L.fillers });
+  // a name said as two words ("north watch", "grey fen") is one name even when one of its words is also a verb or a good
+  const split = new Set<number>();
+  for (let len = 2; len <= 3; len++) for (let s = 0; s + len <= toks.length; s++) {
+    const joined = squash(toks.slice(s, s + len).map((t) => t.w).join(""));
+    if (idx.some((e) => e.aliases.some((a) => squash(a) === joined))) for (let k = s; k < s + len; k++) split.add(k);
+  }
+  const clear = <T extends { start: number; end: number }>(hs: T[]) => hs.filter((h) => { for (let k = h.start; k < h.end; k++) if (split.has(k)) return false; return true; });
+  const verbHits = clear(findPhrases(toks, L.verbs)), modeHits = clear(findPhrases(toks, L.modes)), goodHits = clear(findPhrases(toks, L.goods)), armHits = clear(findPhrases(toks, L.arms));
+  const fillHits = clear(findPhrases(toks, { f: L.fillers }));
   const qPhrase = qh && !(verbHits.some((v) => v.start < qh.start && v.key !== "follow")) ? qh : undefined;
   cover(covered, verbHits); cover(covered, modeHits); cover(covered, goodHits); cover(covered, armHits); cover(covered, fillHits);
   if (qPhrase) cover(covered, [qPhrase]);

@@ -71,6 +71,13 @@ export class Conversation {
   // ---- the state machine ------------------------------------------------------------------------------------------------
   private step(u: Understanding, view: View, speak: (a: SpeechAct, s?: number) => void, actions: PlayerAction[]) {
     const L = this.o.lexicon.battle.cost, battle = this.o.domain === "battle";
+    // "Did you mean Northwatch?" is answered by saying the name again (or any phrase that holds it), not only by "yes"; a
+    // different place named exactly replaces the one she was asked about
+    if (this.state === "technical" && this.pending && !u.verb && (u.act === "answer" || u.act === "correct" || u.act === "affirm")) {
+      const asked = new Set(this.pending.mentions.filter((m) => !m.exact).map((m) => m.id));
+      if (u.act === "affirm" || u.mentions.some((m) => asked.has(m.id))) { this.pending = { ...this.pending, mentions: this.pending.mentions.map((m) => ({ ...m, exact: true })) }; return this.pipeline(this.pending, view, speak); }
+      if (u.mentions.some((m) => m.exact)) return this.corrected(this.merge(this.pending, u, true, view), view, speak);
+    }
     switch (u.act) {
       case "cancel": this.reset(); speak(say.ack(this.voice(view), "As you wish.")); return;
       case "affirm":
