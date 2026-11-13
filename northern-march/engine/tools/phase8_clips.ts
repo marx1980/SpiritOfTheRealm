@@ -32,27 +32,44 @@ const alone = (f: HqFrame, m: Mark, room = 140) => f.marks.every((x) => x.id ===
 const crownTrouble = (f: HqFrame) => f.marks.filter((m) => m.side === "crown" && seenBreaking(m)).map((m) => m.id);
 const items: Item[] = [];
 
-// spot: the last three pictures all show one or two of the crown's units seen breaking, on a busy field
-const usedSeed = new Set<number>();
-for (const pass of [0, 1]) for (const r of runs) {
-  if (items.filter((i) => i.kind === "spot").length >= SPOT) break;
-  if (pass === 0 && usedSeed.has(r.seed)) continue;
-  for (let i = LEN; i + LEN <= r.hq.length; i += LEN) {
-    const w = r.hq.slice(i, i + LEN), tail = w.slice(-3);
-    const last = crownTrouble(w[LEN - 1]);
-    if (!tail.every((f) => crownTrouble(f).length > 0) || last.length > 2 || w[LEN - 1].marks.length < 8) continue;
-    if (items.some((x) => x.source.startsWith(r.name))) continue;
-    items.push({ id: `spot-${items.filter((x) => x.kind === "spot").length + 1}`, kind: "spot", frames: w.map(pic), trouble: [...new Set(w.flatMap(crownTrouble))], source: `${r.name}, from ${w[0].t} s` });
-    usedSeed.add(r.seed);
-    break;
-  }
+// spot: the last three pictures all show one or two of the crown's units seen breaking, on a busy field.
+// The set is spread on purpose: every raider strength and both ways of fighting equally, different seeds, and moments from
+// early, middle and late in the fight, so no two clips look like the same scene.
+interface Cand { r: (typeof runs)[number]; i: number; trouble: string[]; bucket: string }
+const cands: Cand[] = [];
+for (const r of runs) for (let i = LEN; i + LEN <= r.hq.length; i += LEN) {
+  const w = r.hq.slice(i, i + LEN), tail = w.slice(-3), last = crownTrouble(w[LEN - 1]);
+  if (!tail.every((f) => crownTrouble(f).length > 0) || last.length > 2 || w[LEN - 1].marks.length < 8) continue;
+  const raiders = /raiders (\d+)/.exec(r.name)![1], way = r.name.includes("attack") ? "attack" : "rear";
+  cands.push({ r, i, trouble: [...new Set(w.flatMap(crownTrouble))], bucket: `${raiders}/${way}` });
 }
+const buckets = [...new Set(cands.map((c) => c.bucket))].sort();
+const spotSeeds = new Set<number>(), spotKeys = new Set<string>(), tAt: number[] = [];
+const picked: Cand[] = [];
+for (let round = 0; picked.length < SPOT && round < 12; round++) for (const b of buckets) {
+  if (picked.length >= SPOT) break;
+  // within a bucket: an unused seed, a different set of troubled units, and the start time furthest from those already chosen
+  const pool = cands.filter((c) => c.bucket === b && !spotSeeds.has(c.r.seed) && !spotKeys.has(`${c.r.name}`) && !picked.some((p) => p.r.seed === c.r.seed && p.i === c.i));
+  if (!pool.length) continue;
+  const t = (c: Cand) => c.r.hq[c.i].t, gap = (c: Cand) => (tAt.length ? Math.min(...tAt.map((x) => Math.abs(x - t(c)))) : 0);
+  pool.sort((x, y) => gap(y) - gap(x) || x.r.seed - y.r.seed);
+  const c = pool[0];
+  picked.push(c); spotSeeds.add(c.r.seed); spotKeys.add(c.r.name); tAt.push(t(c));
+}
+picked.sort((x, y) => (x.r.seed * 7919) % 97 - (y.r.seed * 7919) % 97); // shuffled by seed, not grouped by strength
+for (const c of picked) {
+  const w = c.r.hq.slice(c.i, c.i + LEN);
+  items.push({ id: `spot-${items.filter((x) => x.kind === "spot").length + 1}`, kind: "spot", frames: w.map(pic), trouble: c.trouble, source: `${c.r.name}, from ${w[0].t} s` });
+}
+const usedSeed = new Set<number>(picked.map((c) => c.r.seed));
+// the other two kinds draw from the runs in an interleaved order too: every strength and way of fighting in turn
+const spread = [...runs].sort((x, y) => ((x.seed * 31 + x.name.length * 7) % 101) - ((y.seed * 31 + y.name.length * 7) % 101));
 // side: one unit seen breaking through the whole clip, half of them the crown's, half the raiders'
 for (const side of ["crown", "raiders"] as const) {
   let n = 0;
-  for (const r of runs) {
+  for (const r of spread) {
     if (n >= SIDE / 2) break;
-    if (items.some((x) => x.kind === "side" && x.source.startsWith(r.name))) continue;
+    if (items.some((x) => x.kind === "side" && x.source.startsWith(`seed ${r.seed} `))) continue; // one clip per seed
     found: for (let i = 0; i + LEN <= r.hq.length; i += LEN) {
       const w = r.hq.slice(i, i + LEN);
       for (const m of w[0].marks.filter((m) => m.side === side && seenBreaking(m))) {
@@ -66,8 +83,9 @@ for (const side of ["crown", "raiders"] as const) {
 // known: a single picture with one unit outlined, seen now or reported (at least three minutes old)
 for (const truth of ["observed", "reported"] as const) {
   let n = 0;
-  for (const r of runs.filter((_, i) => i % 3 === (truth === "observed" ? 0 : 1))) {
+  for (const r of spread.filter((_, i) => i % 3 === (truth === "observed" ? 0 : 1))) {
     if (n >= KNOWN / 2) break;
+    if (items.some((x) => x.kind === "known" && x.source.startsWith(r.name))) continue;
     const f = r.hq[Math.min(r.hq.length - 1, 40 + (r.seed % 5) * 6)];
     const m = f.marks.find((x) => x.behaviour !== "gone" && x.kind !== "guard" && alone(f, x) && (truth === "observed" ? x.category === "observed" && x.age === 0 : x.category === "reported" && x.age >= 180 && !x.stale));
     if (!m) continue;
