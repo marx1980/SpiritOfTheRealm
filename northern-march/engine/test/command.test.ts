@@ -292,3 +292,34 @@ test("campaign: a commander who falls in battle is recorded; the dead decide not
   }
   assert.ok(killed > 0, "a commander was killed somewhere");
 });
+
+test("when the whole line of command falls before word reaches the heir, the battle records that no one was left to take over", () => {
+  // the shape found by G-20 on its sealed block (D-078): a commander falls, his heir falls before the succession is due, and
+  // no one else in either line is alive. Built here with a much higher hazard so the shape turns up on TUNE seeds.
+  let chains = 0;
+  for (const seed of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]) {
+    const s = armySetup({ seed, plan: "attack" });
+    s.params.full!.hazard!.meleePerMyriad *= 40; s.params.full!.hazard!.missilePerMyriad *= 40;
+    const r = runBattle(s, []), fallen = r.result.fallen ?? [];
+    const fellBy = (id: string | undefined, t: number) => !!id && fallen.some((g) => g.commander === id && g.t <= t);
+    for (const f of fallen) {
+      const c = s.commanders.find((x) => x.id === f.commander)!;
+      const heirs = [c.deputy, c.superior].filter((x): x is string => !!x && !fellBy(x, f.t));
+      if (!heirs.length || r.result.endT - f.t < 1800) continue;
+      const succ = r.notes.find((n) => n.kind === "succession" && n.from === f.commander);
+      const failed = r.notes.find((n) => n.kind === "succession_failed" && n.from === f.commander);
+      assert.ok(succ || failed, `seed ${seed}: ${f.commander} fell at ${f.t} with ${heirs.join(", ")} alive and nothing was recorded`);
+      assert.ok(!(succ && failed), "either a successor or none, not both");
+      if (failed) {
+        chains++;
+        // only when everyone in the line had fallen by then
+        for (const h of [c.deputy, c.superior].filter((x): x is string => !!x)) {
+          assert.ok(fellBy(h, failed.t), `seed ${seed}: ${h} was alive when no successor was recorded`);
+          const hc = s.commanders.find((x) => x.id === h);
+          for (const n of [hc?.deputy, hc?.superior].filter((x): x is string => !!x && x !== f.commander)) assert.ok(fellBy(n, failed.t), `seed ${seed}: ${n}, next in line, was alive`);
+        }
+      }
+    }
+  }
+  assert.ok(chains > 0, "the shape turns up with a high hazard");
+});

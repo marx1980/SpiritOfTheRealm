@@ -10,7 +10,8 @@
 // (c) Panic spreads by sight: paired arms (contagion off / on, same seeds); the share of breaks that come within 120 s of a
 //     friend breaking 400-1000 m away; lift on/off >= 1.3 with the 90% bootstrap (over seeds) lower bound above 1.0.
 // (d) Succession and what headquarters knows: no fall with a living heir left without a successor while the battle went
-//     on (30 minutes); headquarters never shows a commander fallen before it saw it or heard it: 0 violations.
+//     on (30 minutes), unless the battle recorded that the whole line had fallen before word reached the heir and it had
+//     (D-078); headquarters never shows a commander fallen before it saw it or heard it: 0 violations.
 // (e) Information integrity and invariants: observed marks are reality; campaign runs (every 4th seed, three scripted
 //     rulers, 160 days) keep every invariant: 0 violations.
 import { readFileSync, writeFileSync } from "node:fs";
@@ -60,7 +61,16 @@ function measure(s: BattleSetup, r: BattleRecord) {
     const c = s.commanders.find((x) => x.id === f.commander)!;
     const heirs = [c.deputy, c.superior].filter((x): x is string => !!x && !(r.result.fallen ?? []).some((g) => g.commander === x && g.t <= f.t));
     const succ = r.notes.some((n) => n.kind === "succession" && n.from === f.commander);
-    if (heirs.length && !succ && r.result.endT - f.t >= 1800) succBad++;
+    // D-078: an heir may fall before word reaches him; then the battle records that no one in the line was left, which is
+    // right only if everyone in both lines had fallen by then
+    const failed = r.notes.find((n) => n.kind === "succession_failed" && n.from === f.commander);
+    const fellBy = (id: string, t: number) => (r.result.fallen ?? []).some((g) => g.commander === id && g.t <= t);
+    const lineGone = !!failed && [c.deputy, c.superior].filter((x): x is string => !!x).every((h) => {
+      const hc = s.commanders.find((x) => x.id === h);
+      return fellBy(h, failed.t) && [hc?.deputy, hc?.superior].filter((x): x is string => !!x && x !== f.commander).every((n) => fellBy(n, failed.t));
+    });
+    if (heirs.length && !succ && !lineGone && r.result.endT - f.t >= 1800) succBad++;
+    if (succ && failed) succBad++;
     const known = r.notes.find((n) => n.kind === "fall_known" && n.commander === f.commander);
     if (known && known.t < f.t) knowBad++;
   }

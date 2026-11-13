@@ -66,17 +66,35 @@ names she knows and marks what it changed, so the transcript is shown and editab
 transcriber stands in for tests; the page may offer the browser's recogniser when it exists (unverified, needs a human).
 
 ## 6. Validation rules (the part that makes a language layer safe)
-`validateSpeech(speakerView, act, text)`: a line is accepted only if
-1. every **entity** it names (places, people, goods, forts) is one the *speaker* knows (his view) and, where the act is a
-   voiced Recommendation, one that appears in that Recommendation (plan, alternatives, reasons' refs, beliefs it is based on);
-2. every **number** it gives is a number in the Recommendation's beliefs or the act's own slots (men, days, sacks, costs),
-   read as the speaker believes it, never the truth;
-3. it **asserts nothing** the act does not carry: no claim about a person's intent, no outcome, no hidden state (a list of
-   forbidden claim shapes: "will", "certainly", "I know that ... will" about other people, probabilities as numbers);
-4. it names no one who is not in his view (capitalised words that are not known names or ordinary sentence words).
-A rejected line is replaced by the templated line for the same act; the rejection and reasons are recorded in the exchange.
-A parse is validated by the actions the engine accepts (`validateDraft`, `validateBattleDraft`, the affordance list):
-unresolved references become a technical prompt.
+Speaking. `validateSpeech(view, act, text, lexicon)`: another layer may reword a line, but it may add nothing, drop nothing
+and turn nothing round. A line is accepted only if every rule holds; a rejected line is replaced by the canonical line and
+the reasons are kept with the exchange.
+0. **Form**: not empty; at most twice the canonical line's length (or 80 characters more); letters, digits and ordinary
+   punctuation only (no markup, line breaks or links).
+1. **System lines** (out of the world: "Did you mean ...?", "I cannot do that: ...") are never reworded.
+2. **Names**: every person or place it names (any short form) is one the act carries, and none the canonical line names is
+   dropped. A short form that fits two people stands for both and passes only if both are allowed.
+3. **No made-up names**: a capitalised word anywhere (a sentence start included) that is neither a name she knows nor a word
+   of the canonical line or the register.
+4. **Figures**: no number, in digits or words, plural or fraction, and no quantity word ("all", "most", "few", "first")
+   the canonical line does not give.
+5. **Claims**: no more of each shape than the canonical line makes: what will happen ("will", "'ll", "bound to", "soon"),
+   certainty ("certainly", "no doubt", "cannot fail"), odds ("%", "likely", "three to one"), what someone else thinks or
+   means ("wants", "is loyal", "is lying"), the world outside the game ("AI", "game", "player").
+6. **Negation**: as many "not"s (no, never, n't, without, unless ...) as the canonical line.
+7. **The closure**: once the register's courtesy words are set aside (`lexicon.speech.free`: "my lady", "indeed", ...)
+   and its equivalent phrases are read as one (`lexicon.speech.same`: "let me be sure" = "if I have it right", "I would" =
+   "I'd", "repair" = "mend", ...), the line must say the canonical line's words in the canonical line's order. This is the
+   rule that decides: it is why reasons for and against cannot swap, from and to cannot swap, and no fact can be added.
+   Rules 0-6 explain a rejection and guard against a mistake in the register list.
+What this cannot see: a rewording that keeps every word in order but changes the tone. Rewording is therefore narrow by
+design (courtesy and listed equivalents); a model is useful mainly in the other direction, understanding her.
+
+Understanding. A parse is validated by what the engine accepts (`playerActions`, `adviceChoices`, `validateBattleDraft`):
+it can only resolve to an action she could take, and every order is read back (in words that pass the rules above) and
+needs her yes. Consent is given in the lexicon's words: another layer's "yes" that the templated reading does not also hear
+as a yes sends nothing ("Is that a yes?", out of the world), so a layer cannot turn "no", "wait" or "never mind" into an
+order.
 
 ## 7. Simulation changes (additive; with no conversation the log is exactly as before)
 - `PlayerAction { action: "ask", target: adviser }`: `PlayerInput`, then, if the adviser is with the ruler, his advice is worked

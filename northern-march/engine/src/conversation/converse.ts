@@ -40,11 +40,15 @@ export class Conversation {
   say(text: string, view: View): Turn {
     if (view.battle?.t !== this.battleT) { this.battleT = view.battle?.t; this.elapsed = 0; } // a new pause: the clock of the talk starts again
     const ctx = { view, domain: this.o.domain, lexicon: this.o.lexicon, rules: this.o.rules };
-    const u = this.sanitize(this.o.layer.understand(text, ctx) ?? understand(text, ctx), view);
+    const theirs = this.o.layer.understand(text, ctx);
+    const u = this.sanitize(theirs ?? understand(text, ctx), view);
     const replies: Reply[] = [], actions: PlayerAction[] = [];
     let cost = 0;
     const speak = (a: SpeechAct, seconds = 0) => { replies.push(this.finalise(a, view)); cost += seconds; this.elapsed += seconds; };
-    this.step(u, view, speak, actions);
+    // consent is given in the lexicon's own words: another layer's "yes" that the templated reading does not also hear as a
+    // yes sends nothing; she is asked plainly, out of the world, and the read-back stays open
+    if (theirs && u.act === "affirm" && this.state !== "idle" && understand(text, ctx).act !== "affirm") speak(say.technical("Is that a yes?"));
+    else this.step(u, view, speak, actions);
     const turn: Turn = { replies, actions, costSeconds: cost };
     this.exchanges.push({ said: text, understood: u, turn, layer: this.o.layer.id });
     return turn;
@@ -220,7 +224,7 @@ export class Conversation {
   private finalise(a: SpeechAct, view: View): Reply {
     const cand = this.o.layer.say(a, { view, domain: this.o.domain });
     if (cand === undefined || cand === a.canonical) return { speaker: a.speaker, kind: a.kind, text: a.canonical, templated: true };
-    const verdict = validateSpeech(view, a, cand);
+    const verdict = validateSpeech(view, a, cand, this.o.lexicon);
     return verdict.ok ? { speaker: a.speaker, kind: a.kind, text: cand, templated: false } : { speaker: a.speaker, kind: a.kind, text: a.canonical, templated: true, rejected: verdict.problems };
   }
 }

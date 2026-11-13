@@ -1,622 +1,719 @@
 {
-  "schemaVersion": 1,
-  "note": "Words the templated language layer listens for (Phase 13, docs/CONVERSATION.md). Language, not world: it is not part of the simulation's content or its hash.",
-  "affirm": [
-    "yes",
-    "yeah",
-    "yep",
-    "aye",
-    "agreed",
-    "i agree",
-    "do so",
-    "do it",
-    "proceed",
-    "go ahead",
-    "that is right",
-    "that's right",
-    "correct",
-    "right",
-    "sure",
-    "very well",
-    "make it so",
-    "okay",
-    "ok",
-    "confirmed",
-    "fine",
-    "good"
+ "schemaVersion": 1,
+ "note": "Words the templated language layer listens for (Phase 13, docs/CONVERSATION.md). Language, not world: it is not part of the simulation's content or its hash.",
+ "affirm": [
+  "yes",
+  "yeah",
+  "yep",
+  "aye",
+  "agreed",
+  "i agree",
+  "do so",
+  "do it",
+  "proceed",
+  "go ahead",
+  "that is right",
+  "that's right",
+  "correct",
+  "right",
+  "sure",
+  "very well",
+  "make it so",
+  "okay",
+  "ok",
+  "confirmed",
+  "fine",
+  "good"
+ ],
+ "cancel": [
+  "never mind",
+  "nevermind",
+  "forget it",
+  "forget that",
+  "cancel",
+  "cancel that",
+  "drop it",
+  "leave it",
+  "scrap that",
+  "stop",
+  "belay that",
+  "do not"
+ ],
+ "correct": [
+  "no",
+  "nope",
+  "not that",
+  "wrong",
+  "i mean",
+  "i meant",
+  "rather",
+  "instead",
+  "actually",
+  "change that",
+  "make that",
+  "no no"
+ ],
+ "fillers": [
+  "please",
+  "could you",
+  "would you",
+  "can you",
+  "i want",
+  "i would like",
+  "i'd like",
+  "let us",
+  "let's",
+  "we should",
+  "you should",
+  "my lady",
+  "my queen",
+  "your majesty",
+  "lady",
+  "majesty",
+  "just",
+  "then",
+  "now",
+  "go with",
+  "i want you to",
+  "i think",
+  "kindly"
+ ],
+ "verbs": {
+  "repair": [
+   "repair",
+   "mend",
+   "fix",
+   "rebuild",
+   "restore",
+   "patch",
+   "shore up",
+   "see to the walls",
+   "work on the walls"
   ],
-  "cancel": [
-    "never mind",
-    "nevermind",
-    "forget it",
-    "forget that",
-    "cancel",
-    "cancel that",
-    "drop it",
-    "leave it",
-    "scrap that",
-    "stop",
-    "belay that",
-    "do not"
+  "scout": [
+   "scout",
+   "look into",
+   "investigate",
+   "watch",
+   "reconnoitre",
+   "find out about",
+   "spy on"
   ],
-  "correct": [
-    "no",
-    "nope",
-    "not that",
-    "wrong",
-    "i mean",
-    "i meant",
-    "rather",
-    "instead",
-    "actually",
-    "change that",
-    "make that",
-    "no no"
+  "attack": [
+   "attack",
+   "strike",
+   "destroy",
+   "fall on",
+   "hit",
+   "go after",
+   "drive off",
+   "rout",
+   "sally against",
+   "sally at"
   ],
-  "fillers": [
-    "please",
-    "could you",
-    "would you",
-    "can you",
-    "i want",
-    "i would like",
-    "i'd like",
-    "let us",
-    "let's",
-    "we should",
-    "you should",
-    "my lady",
-    "my queen",
-    "your majesty",
-    "lady",
-    "majesty",
-    "just",
-    "then",
-    "now",
-    "go with",
-    "i want you to",
-    "i think",
-    "kindly"
+  "advance": [
+   "send the captain",
+   "send caron",
+   "send the company",
+   "send men",
+   "dispatch the captain",
+   "march the captain",
+   "send the captain on",
+   "retake",
+   "reinforce",
+   "garrison",
+   "march to",
+   "march on",
+   "send a captain"
   ],
+  "levy": [
+   "raise a levy",
+   "levy",
+   "call a levy",
+   "impose a levy",
+   "levy the people",
+   "raise taxes"
+  ],
+  "relief": [
+   "send relief",
+   "relief",
+   "relieve",
+   "give relief",
+   "send aid",
+   "aid",
+   "help the people"
+  ],
+  "travel": [
+   "travel",
+   "ride to",
+   "go to",
+   "head to",
+   "journey to",
+   "ride",
+   "visit",
+   "move to"
+  ],
+  "buy": [
+   "buy",
+   "purchase",
+   "acquire",
+   "get",
+   "order in",
+   "procure"
+  ],
+  "sell": [
+   "sell",
+   "offload",
+   "dispose of"
+  ],
+  "send": [
+   "send",
+   "move",
+   "transfer",
+   "carry",
+   "bring",
+   "take",
+   "convoy"
+  ],
+  "muster": [
+   "call men",
+   "muster",
+   "raise men",
+   "call up",
+   "recruit",
+   "call the men",
+   "raise troops"
+  ],
+  "follow": [
+   "do as",
+   "follow",
+   "go with what",
+   "go with",
+   "take the advice of",
+   "do what",
+   "listen to",
+   "accept"
+  ]
+ },
+ "modes": {
+  "rush": [
+   "quickly",
+   "quick",
+   "rush",
+   "rushed",
+   "fast",
+   "at once",
+   "urgently",
+   "hurry",
+   "paying extra",
+   "whatever it costs",
+   "pay extra"
+  ],
+  "labour": [
+   "with the captain's men only",
+   "with the captain's men",
+   "men only",
+   "no cost",
+   "free of cost",
+   "for free",
+   "labour",
+   "labor",
+   "cheaply",
+   "slowly",
+   "with labour",
+   "without paying"
+  ],
+  "consult": [
+   "asking the people first",
+   "ask the people first",
+   "consult",
+   "consulting",
+   "after asking",
+   "with their consent",
+   "politely"
+  ]
+ },
+ "goods": {
+  "timber": [
+   "timber",
+   "wood",
+   "lumber",
+   "planks",
+   "beams"
+  ],
+  "iron": [
+   "iron",
+   "steel",
+   "metal"
+  ],
+  "horses": [
+   "horses",
+   "horse",
+   "mounts",
+   "steeds"
+  ],
+  "grain": [
+   "grain",
+   "bread",
+   "sacks",
+   "food",
+   "flour",
+   "wheat",
+   "corn"
+  ]
+ },
+ "arms": {
+  "foot": [
+   "foot",
+   "spearmen",
+   "infantry",
+   "footmen"
+  ],
+  "archers": [
+   "archers",
+   "bowmen",
+   "bows"
+  ],
+  "horse": [
+   "horse",
+   "cavalry",
+   "riders",
+   "horsemen"
+  ]
+ },
+ "prepositions": {
+  "from": [
+   "from",
+   "out of"
+  ],
+  "at": [
+   "at",
+   "in",
+   "on",
+   "against"
+  ],
+  "to": [
+   "to",
+   "for",
+   "into",
+   "towards",
+   "toward",
+   "of"
+  ]
+ },
+ "questions": {
+  "what_would_you_do": [
+   "what would you do",
+   "what do you suggest",
+   "what do you advise",
+   "what is your advice",
+   "what do you recommend",
+   "your advice",
+   "what should we do",
+   "what would you advise",
+   "what do you think we should do",
+   "advise me"
+  ],
+  "why": [
+   "why",
+   "why is that",
+   "why do you say that",
+   "what is your reason",
+   "what are your reasons",
+   "how come",
+   "on what grounds",
+   "explain"
+  ],
+  "how_sure": [
+   "how sure are you",
+   "how certain are you",
+   "are you sure",
+   "how confident are you",
+   "how sure",
+   "how reliable is that",
+   "how certain"
+  ],
+  "what_worries_you": [
+   "what worries you",
+   "what concerns you",
+   "what are you worried about",
+   "what troubles you",
+   "what is the danger",
+   "what are the risks",
+   "what could go wrong",
+   "what do you fear"
+  ],
+  "alternatives": [
+   "what else could we do",
+   "what else",
+   "what are the alternatives",
+   "any alternatives",
+   "what other options",
+   "other options",
+   "what other choice",
+   "what are our options",
+   "alternatives",
+   "what could we do instead"
+  ],
+  "what_if": [
+   "what if",
+   "what happens if",
+   "and if that fails",
+   "what if that fails",
+   "what if it fails",
+   "what then",
+   "if that fails"
+  ]
+ },
+ "battle": {
   "verbs": {
-    "repair": [
-      "repair",
-      "mend",
-      "fix",
-      "rebuild",
-      "restore",
-      "patch",
-      "shore up",
-      "see to the walls",
-      "work on the walls"
-    ],
-    "scout": [
-      "scout",
-      "look into",
-      "investigate",
-      "watch",
-      "reconnoitre",
-      "find out about",
-      "spy on"
-    ],
-    "attack": [
-      "attack",
-      "strike",
-      "destroy",
-      "fall on",
-      "hit",
-      "go after",
-      "drive off",
-      "rout",
-      "sally against",
-      "sally at"
-    ],
-    "advance": [
-      "send the captain",
-      "send caron",
-      "send the company",
-      "send men",
-      "dispatch the captain",
-      "march the captain",
-      "send the captain on",
-      "retake",
-      "reinforce",
-      "garrison",
-      "march to",
-      "march on",
-      "send a captain"
-    ],
-    "levy": [
-      "raise a levy",
-      "levy",
-      "call a levy",
-      "impose a levy",
-      "levy the people",
-      "raise taxes"
-    ],
-    "relief": [
-      "send relief",
-      "relief",
-      "relieve",
-      "give relief",
-      "send aid",
-      "aid",
-      "help the people"
-    ],
-    "travel": [
-      "travel",
-      "ride to",
-      "go to",
-      "head to",
-      "journey to",
-      "ride",
-      "visit",
-      "move to"
-    ],
-    "buy": [
-      "buy",
-      "purchase",
-      "acquire",
-      "get",
-      "order in",
-      "procure"
-    ],
-    "sell": [
-      "sell",
-      "offload",
-      "dispose of"
-    ],
-    "send": [
-      "send",
-      "move",
-      "transfer",
-      "carry",
-      "bring",
-      "take",
-      "convoy"
-    ],
-    "muster": [
-      "call men",
-      "muster",
-      "raise men",
-      "call up",
-      "recruit",
-      "call the men",
-      "raise troops"
-    ],
-    "follow": [
-      "do as",
-      "follow",
-      "go with what",
-      "go with",
-      "take the advice of",
-      "do what",
-      "listen to",
-      "accept"
-    ]
+   "hold": [
+    "hold",
+    "stand",
+    "stay",
+    "defend",
+    "keep",
+    "remain",
+    "hold the line",
+    "stand fast",
+    "hold fast"
+   ],
+   "advance": [
+    "advance",
+    "move up",
+    "move forward",
+    "go forward",
+    "push forward",
+    "press on",
+    "march",
+    "move"
+   ],
+   "attack": [
+    "attack",
+    "charge",
+    "strike",
+    "engage",
+    "assault",
+    "fall on",
+    "hit",
+    "go in",
+    "drive"
+   ],
+   "withdraw": [
+    "withdraw",
+    "retreat",
+    "fall back",
+    "pull back",
+    "retire",
+    "back off",
+    "fall back to"
+   ],
+   "give_ground": [
+    "give ground",
+    "yield ground",
+    "trade ground",
+    "give way slowly",
+    "give way",
+    "fall back slowly"
+   ],
+   "protect": [
+    "protect",
+    "guard",
+    "cover",
+    "shield",
+    "screen",
+    "support"
+   ]
   },
-  "modes": {
-    "rush": [
-      "quickly",
-      "quick",
-      "rush",
-      "rushed",
-      "fast",
-      "at once",
-      "urgently",
-      "hurry",
-      "paying extra",
-      "whatever it costs",
-      "pay extra"
-    ],
-    "labour": [
-      "with the captain's men only",
-      "with the captain's men",
-      "men only",
-      "no cost",
-      "free of cost",
-      "for free",
-      "labour",
-      "labor",
-      "cheaply",
-      "slowly",
-      "with labour",
-      "without paying"
-    ],
-    "consult": [
-      "asking the people first",
-      "ask the people first",
-      "consult",
-      "consulting",
-      "after asking",
-      "with their consent",
-      "politely"
-    ]
+  "fieldAliases": {
+   "gate": [
+    "gate",
+    "the gate",
+    "walls",
+    "the walls",
+    "fort",
+    "the fort"
+   ],
+   "ridge": [
+    "ridge",
+    "the ridge",
+    "the rise",
+    "high ground",
+    "the heights"
+   ],
+   "ford": [
+    "ford",
+    "the ford",
+    "crossing",
+    "the crossing"
+   ],
+   "woodedge": [
+    "wood's edge",
+    "woods edge",
+    "edge of the wood",
+    "edge of the woods",
+    "treeline",
+    "tree line",
+    "the wood",
+    "the woods",
+    "wood",
+    "woods",
+    "forest edge"
+   ],
+   "fold": [
+    "sheepfold",
+    "the sheepfold",
+    "fold",
+    "the fold",
+    "pen"
+   ],
+   "camp": [
+    "camp",
+    "the camp",
+    "raiders' camp",
+    "their camp",
+    "the raiders' camp",
+    "enemy camp"
+   ],
+   "stream": [
+    "stream",
+    "the stream",
+    "brook",
+    "the brook",
+    "the water",
+    "creek"
+   ]
   },
-  "goods": {
-    "timber": [
-      "timber",
-      "wood",
-      "lumber",
-      "planks",
-      "beams"
-    ],
-    "iron": [
-      "iron",
-      "steel",
-      "metal"
-    ],
-    "horses": [
-      "horses",
-      "horse",
-      "mounts",
-      "steeds"
-    ],
-    "grain": [
-      "grain",
-      "bread",
-      "sacks",
-      "food",
-      "flour",
-      "wheat",
-      "corn"
-    ]
+  "limits": [
+   "not beyond",
+   "no further than",
+   "no farther than",
+   "do not cross",
+   "don't cross",
+   "not past",
+   "short of",
+   "not across",
+   "do not go beyond",
+   "do not pass",
+   "without crossing",
+   "but not beyond",
+   "but not past",
+   "but do not cross"
+  ],
+  "conditions": {
+   "enemy_engaged": [
+    "when the enemy is engaged",
+    "when the enemy engages",
+    "once the enemy is engaged",
+    "once engaged",
+    "when they engage",
+    "when they are engaged",
+    "when engaged",
+    "when the line is engaged",
+    "as soon as the enemy is engaged",
+    "when the enemy commits"
+   ],
+   "enemy_horse_seen": [
+    "if their horse appear",
+    "if their horse appears",
+    "when their horse appear",
+    "if their cavalry appear",
+    "when their cavalry appears",
+    "if riders appear",
+    "if you see their horse",
+    "when you see their horse",
+    "if you see cavalry",
+    "if you see riders"
+   ]
   },
-  "arms": {
-    "foot": [
-      "foot",
-      "spearmen",
-      "infantry",
-      "footmen"
-    ],
-    "archers": [
-      "archers",
-      "bowmen",
-      "bows"
-    ],
-    "horse": [
-      "horse",
-      "cavalry",
-      "riders",
-      "horsemen"
-    ]
+  "command": [
+   "and command",
+   "and lead",
+   "command",
+   "take charge of",
+   "in charge of",
+   "with command of",
+   "put under you",
+   "use",
+   "put under him",
+   "put under her",
+   "and use",
+   "using"
+  ],
+  "via": {
+   "runner": [
+    "send a runner",
+    "by runner",
+    "by messenger",
+    "with a runner",
+    "send a messenger",
+    "a runner",
+    "by courier",
+    "send word"
+   ],
+   "voice": [
+    "in person",
+    "myself",
+    "tell him",
+    "tell her",
+    "tell them",
+    "by voice",
+    "face to face"
+   ],
+   "signal": [
+    "signal",
+    "by signal",
+    "by banner",
+    "raise the banner",
+    "by horn",
+    "sound the horn"
+   ]
   },
-  "prepositions": {
-    "from": [
-      "from",
-      "out of"
-    ],
-    "at": [
-      "at",
-      "in",
-      "on",
-      "against"
-    ],
-    "to": [
-      "to",
-      "for",
-      "into",
-      "towards",
-      "toward",
-      "of"
-    ]
+  "signals": {
+   "advance": [
+    "advance",
+    "push on"
+   ],
+   "hold": [
+    "hold",
+    "stand fast"
+   ],
+   "withdraw": [
+    "withdraw",
+    "fall back to the gate",
+    "retreat"
+   ],
+   "reserve": [
+    "reserve",
+    "commit the reserve",
+    "commit"
+   ],
+   "fallback": [
+    "fallback",
+    "fall back to the ridge",
+    "fallback to the ridge"
+   ],
+   "flank": [
+    "flank",
+    "strike from the wood",
+    "strike from the wood's edge",
+    "the flank"
+   ]
   },
-  "questions": {
-    "what_would_you_do": [
-      "what would you do",
-      "what do you suggest",
-      "what do you advise",
-      "what is your advice",
-      "what do you recommend",
-      "your advice",
-      "what should we do",
-      "what would you advise",
-      "what do you think we should do",
-      "advise me"
-    ],
-    "why": [
-      "why",
-      "why is that",
-      "why do you say that",
-      "what is your reason",
-      "what are your reasons",
-      "how come",
-      "on what grounds",
-      "explain"
-    ],
-    "how_sure": [
-      "how sure are you",
-      "how certain are you",
-      "are you sure",
-      "how confident are you",
-      "how sure",
-      "how reliable is that",
-      "how certain"
-    ],
-    "what_worries_you": [
-      "what worries you",
-      "what concerns you",
-      "what are you worried about",
-      "what troubles you",
-      "what is the danger",
-      "what are the risks",
-      "what could go wrong",
-      "what do you fear"
-    ],
-    "alternatives": [
-      "what else could we do",
-      "what else",
-      "what are the alternatives",
-      "any alternatives",
-      "what other options",
-      "other options",
-      "what other choice",
-      "what are our options",
-      "alternatives",
-      "what could we do instead"
-    ],
-    "what_if": [
-      "what if",
-      "what happens if",
-      "and if that fails",
-      "what if that fails",
-      "what if it fails",
-      "what then",
-      "if that fails"
-    ]
-  },
-  "battle": {
-    "verbs": {
-      "hold": [
-        "hold",
-        "stand",
-        "stay",
-        "defend",
-        "keep",
-        "remain",
-        "hold the line",
-        "stand fast",
-        "hold fast"
-      ],
-      "advance": [
-        "advance",
-        "move up",
-        "move forward",
-        "go forward",
-        "push forward",
-        "press on",
-        "march",
-        "move"
-      ],
-      "attack": [
-        "attack",
-        "charge",
-        "strike",
-        "engage",
-        "assault",
-        "fall on",
-        "hit",
-        "go in",
-        "drive"
-      ],
-      "withdraw": [
-        "withdraw",
-        "retreat",
-        "fall back",
-        "pull back",
-        "retire",
-        "back off",
-        "fall back to"
-      ],
-      "give_ground": [
-        "give ground",
-        "yield ground",
-        "trade ground",
-        "give way slowly",
-        "give way",
-        "fall back slowly"
-      ],
-      "protect": [
-        "protect",
-        "guard",
-        "cover",
-        "shield",
-        "screen",
-        "support"
-      ]
-    },
-    "fieldAliases": {
-      "gate": [
-        "gate",
-        "the gate",
-        "walls",
-        "the walls",
-        "fort",
-        "the fort"
-      ],
-      "ridge": [
-        "ridge",
-        "the ridge",
-        "the rise",
-        "high ground",
-        "the heights"
-      ],
-      "ford": [
-        "ford",
-        "the ford",
-        "crossing",
-        "the crossing"
-      ],
-      "woodedge": [
-        "wood's edge",
-        "woods edge",
-        "edge of the wood",
-        "edge of the woods",
-        "treeline",
-        "tree line",
-        "the wood",
-        "the woods",
-        "wood",
-        "woods",
-        "forest edge"
-      ],
-      "fold": [
-        "sheepfold",
-        "the sheepfold",
-        "fold",
-        "the fold",
-        "pen"
-      ],
-      "camp": [
-        "camp",
-        "the camp",
-        "raiders' camp",
-        "their camp",
-        "the raiders' camp",
-        "enemy camp"
-      ],
-      "stream": [
-        "stream",
-        "the stream",
-        "brook",
-        "the brook",
-        "the water",
-        "creek"
-      ]
-    },
-    "limits": [
-      "not beyond",
-      "no further than",
-      "no farther than",
-      "do not cross",
-      "don't cross",
-      "not past",
-      "short of",
-      "not across",
-      "do not go beyond",
-      "do not pass",
-      "without crossing",
-      "but not beyond",
-      "but not past",
-      "but do not cross"
-    ],
-    "conditions": {
-      "enemy_engaged": [
-        "when the enemy is engaged",
-        "when the enemy engages",
-        "once the enemy is engaged",
-        "once engaged",
-        "when they engage",
-        "when they are engaged",
-        "when engaged",
-        "when the line is engaged",
-        "as soon as the enemy is engaged",
-        "when the enemy commits"
-      ],
-      "enemy_horse_seen": [
-        "if their horse appear",
-        "if their horse appears",
-        "when their horse appear",
-        "if their cavalry appear",
-        "when their cavalry appears",
-        "if riders appear",
-        "if you see their horse",
-        "when you see their horse",
-        "if you see cavalry",
-        "if you see riders"
-      ]
-    },
-    "command": [
-      "and command",
-      "and lead",
-      "command",
-      "take charge of",
-      "in charge of",
-      "with command of",
-      "put under you",
-      "use",
-      "put under him",
-      "put under her",
-      "and use",
-      "using"
-    ],
-    "via": {
-      "runner": [
-        "send a runner",
-        "by runner",
-        "by messenger",
-        "with a runner",
-        "send a messenger",
-        "a runner",
-        "by courier",
-        "send word"
-      ],
-      "voice": [
-        "in person",
-        "myself",
-        "tell him",
-        "tell her",
-        "tell them",
-        "by voice",
-        "face to face"
-      ],
-      "signal": [
-        "signal",
-        "by signal",
-        "by banner",
-        "raise the banner",
-        "by horn",
-        "sound the horn"
-      ]
-    },
-    "signals": {
-      "advance": [
-        "advance",
-        "push on"
-      ],
-      "hold": [
-        "hold",
-        "stand fast"
-      ],
-      "withdraw": [
-        "withdraw",
-        "fall back to the gate",
-        "retreat"
-      ],
-      "reserve": [
-        "reserve",
-        "commit the reserve",
-        "commit"
-      ],
-      "fallback": [
-        "fallback",
-        "fall back to the ridge",
-        "fallback to the ridge"
-      ],
-      "flank": [
-        "flank",
-        "strike from the wood",
-        "strike from the wood's edge",
-        "the flank"
-      ]
-    },
-    "all": [
-      "everyone",
-      "all of you",
-      "everybody",
-      "all commanders",
-      "all"
-    ],
-    "cost": {
-      "questionSeconds": 30,
-      "readbackSeconds": 15,
-      "technicalSeconds": 0,
-      "pressAfter": 5
-    }
-  },
-  "fuzzy": {
-    "minLength": 5,
-    "oneEditUpTo": 7,
-    "twoEditsFrom": 8
+  "all": [
+   "everyone",
+   "all of you",
+   "everybody",
+   "all commanders",
+   "all"
+  ],
+  "cost": {
+   "questionSeconds": 30,
+   "readbackSeconds": 15,
+   "technicalSeconds": 0,
+   "pressAfter": 5
   }
+ },
+ "fuzzy": {
+  "minLength": 5,
+  "oneEditUpTo": 7,
+  "twoEditsFrom": 8
+ },
+ "speech": {
+  "note": "What another language layer may change when it speaks (validate.ts, rule 7): courtesy words it may add or leave out, and phrases that count as one. Anything else must be the canonical line's words in its order.",
+  "free": [
+   "a",
+   "an",
+   "the",
+   "my",
+   "lady",
+   "queen",
+   "majesty",
+   "your",
+   "grace",
+   "indeed",
+   "well",
+   "aye",
+   "so",
+   "please"
+  ],
+  "same": [
+   [
+    "let me be sure",
+    "if i have it right",
+    "so that i have it right",
+    "to be sure",
+    "let me be clear"
+   ],
+   [
+    "is that right",
+    "have i got that right",
+    "have i that right",
+    "do i have that right",
+    "is that so",
+    "is that your will"
+   ],
+   [
+    "i would",
+    "i'd"
+   ],
+   [
+    "i am",
+    "i'm"
+   ],
+   [
+    "it is",
+    "it's"
+   ],
+   [
+    "i have",
+    "i've"
+   ],
+   [
+    "do not",
+    "don't"
+   ],
+   [
+    "it shall be done",
+    "it will be done",
+    "consider it done",
+    "as you command"
+   ],
+   [
+    "as you wish",
+    "as you say",
+    "very well"
+   ],
+   [
+    "what worries me",
+    "what troubles me",
+    "my worry is",
+    "my concern is"
+   ],
+   [
+    "otherwise",
+    "or else",
+    "failing that"
+   ],
+   [
+    "i must see to my men",
+    "i must go to my men",
+    "my men need me"
+   ],
+   [
+    "let me think on it",
+    "let me think on that",
+    "let me consider it",
+    "give me time to think"
+   ],
+   [
+    "repair",
+    "mend"
+   ],
+   [
+    "buy",
+    "purchase"
+   ]
+  ]
+ }
 }

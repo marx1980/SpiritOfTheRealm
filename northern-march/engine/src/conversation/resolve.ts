@@ -37,7 +37,7 @@ function slotsOf(verb: string, a: PlayerAction): { role: "from" | "at" | "to" | 
 }
 const fits = (m: Mention, s: { role: Mention["role"]; id: string | undefined }) => s.id === m.id && (m.role === null || s.role === null || m.role === s.role || (m.role === "at" && s.role === "to") || (m.role === "to" && s.role === "at"));
 
-/** Each place she names takes a place of its own in the order ("buy iron at Greybridge for Greybridge" names the market and the store). */
+/** Each place she names takes a place of its own in the order ("buy iron at X for X" names the market and the store). */
 function assignable(ms: Mention[], slots: ReturnType<typeof slotsOf>, used = new Set<number>(), i = 0): boolean {
   if (i === ms.length) return true;
   return slots.some((s, k) => !used.has(k) && fits(ms[i], s) && assignable(ms, slots, new Set([...used, k]), i + 1));

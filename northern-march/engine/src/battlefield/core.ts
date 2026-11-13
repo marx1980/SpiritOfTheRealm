@@ -118,7 +118,7 @@ export interface NetworkRow { commander: string; task: Task | null; status: "non
 export interface HqFrame { t: number; x: number; y: number; marks: Mark[]; network: NetworkRow[] }
 export interface Note {
   t: number; kind: "order_sent" | "order_received" | "order_decided" | "runner_lost" | "runner_searching" | "signal_missed" | "report_sent" | "report_received" | "danger" | "contact" | "behaviour" | "contingency" | "end"
-    | "review" | "commander_fell" | "succession" | "fall_known" | "signal_seen" | "rally" | "sector_plan";
+    | "review" | "commander_fell" | "succession" | "succession_failed" | "fall_known" | "signal_seen" | "rally" | "sector_plan";
   orderId?: number; commander?: string; formation?: string; via?: string; towards?: { x: number; y: number }; why?: string; decision?: string; from?: string; to?: string; text?: string;
 }
 export type Decision = "obey" | "adapt" | "keep" | "defy";
@@ -996,6 +996,7 @@ function fightBattle(setup: BattleSetup, orders: BattleOrder[], opts: { until?: 
     if (h.fallen) { // the heir fell first: the next in line
       const next = [h.deputy, h.superior].map((id) => (id ? cs.get(id) : undefined)).find((x) => x && !x.fallen && x.id !== from);
       if (next) pendingSucc.push({ at: t + X!.hazard!.noticeSeconds, from, to: next.id });
+      else notes.push({ t, kind: "succession_failed", from }); // no one in the line is left: his men keep their last instruction
       return;
     }
     c.successor = h.id;
