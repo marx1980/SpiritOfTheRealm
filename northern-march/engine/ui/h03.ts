@@ -21,7 +21,7 @@ const STYLE_NAME: Record<FlashStyle, string> = { none: "No flash", pink: "Pink f
 const ORDER_OF_STATES: Behaviour[] = ["yielding", "disorganised", "rallying", "withdrawing", "retreat", "rout", "pursuing"];
 const LOOK: Partial<Record<Behaviour, string>> = {
   yielding: "Shorter block, chevrons behind it.", disorganised: "Block broken into pieces.", rallying: "Men gathered round the banner, a turning ring.",
-  withdrawing: "Whole block, one arrow to the rear.", retreat: "Ragged shape streaming back.", rout: "Scattered dots, no banner.", pursuing: "Loose wedge, arrows towards the enemy.",
+  withdrawing: "Whole block, one arrow to the rear.", retreat: "Block with a torn, jagged edge.", rout: "Scattered dots, no banner.", pursuing: "Loose wedge, arrows towards the enemy.",
 };
 const items = new Map(__CLIPS__.items.map((i) => [i.id, i]));
 const app = document.getElementById("app")!;

@@ -74,8 +74,8 @@ function body(g: Glyph): string {
       return `<circle class="ring" r="${hw * 0.75 + 10}"/>` + Array.from({ length: 10 }, (_, i) => { const a = (i / 10) * 2 * Math.PI, r = hw * 0.55; return `<circle class="dot" cx="${(Math.cos(a) * r).toFixed(0)}" cy="${(Math.sin(a) * r * 0.6).toFixed(0)}" r="5"/>`; }).join("") + banner();
     case "withdrawing": // intact, moving back in order: one straight arrow to the rear
       return `<rect class="blk" x="${-hw}" y="${-d / 2}" width="${w}" height="${d}" rx="2"/>${banner()}<path class="arw" d="M0 ${d / 2 + 4} v22 m-8 -8 l8 8 l8 -8"/>`;
-    case "retreat": // stretched and ragged, streaming back
-      return `<path class="blk" d="M${-hw} ${-d / 2} L${hw} ${-d / 2 + 4} L${hw * 0.7} ${d / 2 + 12} L${hw * 0.3} ${d / 2 + 3} L${hw * 0.1} ${d / 2 + 20} L${-hw * 0.3} ${d / 2 + 5} L${-hw * 0.6} ${d / 2 + 16} Z"/><path class="arw rag" d="M0 ${d / 2 + 22} l-7 8 l9 7 l-7 8"/><path class="arw" d="M-9 ${d / 2 + 45} l7 9 l8 -10"/>`;
+    case "retreat": // the line torn into a ragged edge; no arrow, the edge, the word and the flash say it
+      return `<path class="blk" d="M${-hw} ${-d / 2} L${hw} ${-d / 2 + 4} L${hw * 0.7} ${d / 2 + 12} L${hw * 0.3} ${d / 2 + 3} L${hw * 0.1} ${d / 2 + 20} L${-hw * 0.3} ${d / 2 + 5} L${-hw * 0.6} ${d / 2 + 16} Z"/>`;
     case "rout": // scattered men running, no banner, no line
       return Array.from({ length: 14 }, (_, i) => `<circle class="dot" cx="${jit(g.id, i, Math.floor(hw * 1.2))}" cy="${Math.abs(jit(g.id, i + 20, 34)) + 6}" r="3.5"/>`).join("");
     case "pursuing": { // the line run out into a loose wedge after the enemy: arrows ahead, banner leaning forward

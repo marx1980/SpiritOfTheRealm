@@ -23,7 +23,7 @@ Archers and bowmen shooting are drawn as a dashed arc from them to their target,
 | Becoming disorganised | Disorganised | The block broken into several uneven pieces, banner leaning. | Men are still there but control is slipping. Usually not running. |
 | Officers rallying men | Rallying | Men gathered round an upright banner, with a dashed ring turning around them. | A formation that had broken is being pulled back together by nearby officers. |
 | Withdrawing in order | Withdrawing | Whole block with one straight arrow pointing to its own rear. | An ordered pull-back. Men stay together. |
-| Uncontrolled retreat | Retreat | Stretched, ragged outline with a jagged arrow streaming back. | The line has broken and is falling back without control, but some shape remains. |
+| Uncontrolled retreat | Retreat | A block with a torn, jagged lower edge. No arrow. | The line has broken and is falling back without control, but some shape remains. |
 | Rout | Rout | No block and no banner. Scattered dots running away. | Men are fleeing and have lost all control. |
 | Pursuing | Pursuing | A loose wedge pointing at the enemy, two arrows ahead of it, banner leaning. | Men have run after a broken enemy, out of formation. They leave a gap, tire, and are easy prey if they meet formed troops. |
 
