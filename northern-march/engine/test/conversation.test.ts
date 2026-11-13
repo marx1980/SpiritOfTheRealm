@@ -376,3 +376,28 @@ test("every sentence the rules use for an offered action is understood back as t
   }
   assert.ok(n > 500);
 });
+
+test("'do as X advises' with several pieces of advice from X asks which, and the order in words settles it", () => {
+  let found = 0;
+  for (const seed of [2, 4, 5, 6, 10]) {
+    const sim = createSim({ content: CONTENT, seed, policy: "external" });
+    for (let i = 0; i < 400 && found < 1; i++) {
+      const r = sim.next(40 * 86400);
+      if (r.ended || !r.paused) break;
+      const v = r.view!;
+      const by = v.advice.length ? v.advice[0].author : undefined;
+      const mine = by ? adviceChoices(v).filter((c) => !c.wait && c.byIds.includes(by)) : [];
+      if (by && mine.length > 1) {
+        const c = court(), t = say(c, v, `Do as ${v.world.names[by]} advises`);
+        assert.equal(c.state as string, "question", spoken(t));
+        assert.match(spoken(t), /Which of his advice/);
+        for (const m of mine) assert.ok(spoken(t).includes(m.text), m.text);
+        const u = say(c, v, mine[0].text);
+        assert.ok(["readback", "technical"].includes(c.state as string), spoken(u));
+        found++;
+      }
+      sim.answer([]);
+    }
+  }
+  assert.equal(found, 1);
+});

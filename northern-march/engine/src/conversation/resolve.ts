@@ -8,7 +8,7 @@ import { validateBattleDraft } from "../view.ts";
 import type { Lexicon } from "./lexicon.ts";
 import type { Mention, Understanding } from "./layer.ts";
 
-export type Slot = "place" | "from" | "to" | "market" | "good" | "arm" | "adviser" | "recipient";
+export type Slot = "place" | "from" | "to" | "market" | "good" | "arm" | "adviser" | "advice" | "recipient";
 export type CourtResolution =
   | { kind: "action"; action: PlayerAction; text: string }
   | { kind: "ambiguous"; slot: Slot; options: { id: string; name: string }[]; verb: string }
@@ -52,6 +52,7 @@ export function resolveCourt(u: Understanding, v: View, rules: PublicRules, L: L
     const pick = who ? choices.filter((c) => c.byIds.includes(who.id)) : choices;
     if (who && !pick.length) return { kind: "none", why: `${who.name} has no advice for you to follow` };
     if (!pick.length) return { kind: "none", why: "no one has advice for you to follow" };
+    if (who && pick.length > 1) return { kind: "ambiguous", slot: "advice", options: pick.map((c) => ({ id: JSON.stringify(c.action), name: c.text })), verb };
     if (pick.length > 1) return { kind: "ambiguous", slot: "adviser", options: [...new Map(pick.flatMap((c) => c.byIds.map((id) => [id, { id, name: nameOf(v, id) }] as const))).values()], verb };
     const c = pick[0], by = who?.id ?? c.byIds[0];
     return { kind: "action", action: { ...c.action, followed: by }, text: c.text };

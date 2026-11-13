@@ -27,7 +27,7 @@ export const readback = (v: View, speaker: string | null, text: string, names: s
 export const battleReadback = (speaker: string | null, who: string, text: string, names: string[]): SpeechAct =>
   speaker ? act("readback", speaker, `I am to ${text}. Is that right, my lady?`, names) : act("readback", null, `To ${who}: ${text}. Is that right?`, [who, ...names]);
 
-const SLOT: Record<Slot, string> = { place: "Which place", from: "From where", to: "To where", market: "At which market", good: "Which goods", arm: "Which kind of men", adviser: "Whose advice", recipient: "Who" };
+const SLOT: Record<Slot, string> = { place: "Which place", from: "From where", to: "To where", market: "At which market", good: "Which goods", arm: "Which kind of men", adviser: "Whose advice", advice: "Which of his advice", recipient: "Who" };
 export const question = (speaker: string | null, slot: Slot, options: string[]): SpeechAct => act("question", speaker, `${SLOT[slot]}, my lady: ${orList(options.slice(0, 6))}?`, options);
 export const battleQuestion = (speaker: string | null, verbWord: string): SpeechAct => act("question", speaker, `${verbWord} where, my lady?`);
 export const technical = (text: string, names: string[] = []): SpeechAct => act("technical", null, text, names);

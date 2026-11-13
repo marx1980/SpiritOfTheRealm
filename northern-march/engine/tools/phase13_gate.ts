@@ -65,7 +65,7 @@ function converse(conv: Conversation, v: View, arm: number, first: string, again
   for (let i = 0; i < MAX_TURNS; i++) {
     const t: Turn = conv.say(text, v);
     st.turns++;
-    if (process.env.TRACE && arm === Number(process.env.TRACE) && /arch/i.test(first)) console.log(JSON.stringify({ i, said: text, state: conv.state, replies: t.replies.map((r) => r.text), actions: t.actions.length }));
+    if (process.env.TRACE && arm === Number(process.env.TRACE) && new RegExp(process.env.TRACEPAT ?? "arch", "i").test(first)) console.log(JSON.stringify({ i, said: text, state: conv.state, replies: t.replies.map((r) => r.text), actions: t.actions.length }));
     for (const r of t.replies) {
       if (r.kind === "technical") st.technical++;
       if (r.kind === "question") st.questions++;
@@ -74,7 +74,7 @@ function converse(conv: Conversation, v: View, arm: number, first: string, again
     actions.push(...t.actions);
     if (t.actions.length) return actions;
     // refused outright (a wrong place she named): she puts it again, plainly, once
-    if (conv.state === "idle" && wants && !retried && arm !== 0) { retried = true; text = again; continue; }
+    if (conv.state === "idle" && wants && !retried && arm !== 0) { retried = true; fix = undefined; text = again; continue; }
     if (conv.state === "idle") return actions;
     if (conv.state === "readback" && fix && !fixed) { text = fix; fixed = true; st.corrections++; continue; }
     text = conv.state === "technical" ? yes : conv.state === "readback" ? yes : again;
@@ -106,7 +106,7 @@ function court(seed: number, arm: number, st: Stats): Sim {
       } else if (choices.length && pick < 0.55) {
         const c = choices[Math.floor(r() * choices.length)], by = c.byIds[0];
         const p = phrase(arm, `Do as ${v.world.names[by]} advises`, v, say);
-        acts = converse(conv, v, arm, p.first, `Do as ${v.world.names[by]} advises`, p.fix, st, true);
+        acts = converse(conv, v, arm, p.first, c.text, p.fix, st, true); // asked which of his advice, she says it
       } else if (allowed.length) {
         const a = allowed[Math.floor(r() * allowed.length)], p = phrase(arm, actionText(v, a), v, say);
         acts = converse(conv, v, arm, p.first, actionText(v, a), p.fix, st, true);
