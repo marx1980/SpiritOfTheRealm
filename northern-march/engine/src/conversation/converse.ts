@@ -32,6 +32,8 @@ export class Conversation {
   private battleT: number | undefined;
   private spoken = new Map<string, number>();
   private awaiting?: { author: string; q: NonNullable<Understanding["question"]> };
+  /** A correction that could replace more than one place: the orders each would make, until she says which place goes. */
+  private replacing?: { id: string; name: string; u: Understanding }[];
 
   private readonly o: { domain: Domain; layer: LanguageLayer; lexicon: Lexicon; rules: PublicRules };
   constructor(o: { domain: Domain; layer: LanguageLayer; lexicon: Lexicon; rules: PublicRules }) { this.o = o; }
@@ -78,14 +80,22 @@ export class Conversation {
       case "correct":
         if (this.state === "technical") { this.reset(); speak(say.technical("Then tell me again.")); return; }
         if (!this.pending) { speak(say.technical("There is nothing to correct.")); return; }
-        if (u.verb || u.mentions.length || u.modes.length || u.goods.length || u.arms.length || u.when || u.command.length || u.limitLine || u.unknown.length) return this.pipeline(this.merge(this.pending, u, true, view), view, speak);
+        if (u.verb || u.mentions.length || u.modes.length || u.goods.length || u.arms.length || u.when || u.command.length || u.limitLine || u.unknown.length) return this.corrected(this.merge(this.pending, u, true, view), view, speak);
         speak(say.ack(this.voice(view), "What would you have me change?")); return;
       case "question":
         if (battle) { speak(say.technical("Commanders do not yet answer questions in battle.")); return; }
         return this.questions(u, view, speak, actions);
-      case "command": this.pending = u; return this.pipeline(u, view, speak);
+      case "command": this.replacing = undefined; this.pending = u; return this.pipeline(u, view, speak);
       case "answer":
-        if (this.pending && this.state !== "idle") return this.pipeline(this.merge(this.pending, u, this.state === "readback", view), view, speak);
+        if (this.replacing) {
+          const places = u.mentions.filter((x) => x.kind === "place"), pick = places.length === 1 ? this.replacing.find((r) => r.id === places[0].id) : undefined;
+          const opts = this.replacing;
+          this.replacing = undefined;
+          if (pick) return this.pipeline(pick.u, view, speak);
+          this.state = "question"; this.replacing = opts;
+          speak(say.act("question", this.voice(view), `In place of ${orList(opts.map((o) => o.name))}, my lady?`, opts.map((o) => o.name))); return;
+        }
+        if (this.pending && this.state !== "idle") return this.corrected(this.merge(this.pending, u, this.state === "readback", view), view, speak);
         speak(say.technical("I did not understand what you want done.")); return;
       default:
         speak(say.technical("I did not catch that.")); void L;
@@ -125,6 +135,13 @@ export class Conversation {
     const names = [...u.mentions.map((m) => m.name), ...(r.task.command ?? []).map((id) => nameOf(view, id))];
     speak(say.battleReadback(speaker, nameOf(view, r.to), taskWords(view, r.task), names), present ? cost.readbackSeconds : 0);
     this.press(who.id, present, speak);
+  }
+
+  /** After a correction: the order it makes, or, when it could replace more than one place, the question which. */
+  private corrected(u: Understanding, view: View, speak: (a: SpeechAct, s?: number) => void) {
+    if (!this.replacing) return this.pipeline(u, view, speak);
+    this.state = "question";
+    speak(say.act("question", this.voice(view), `In place of ${orList(this.replacing.map((o) => o.name))}, my lady?`, this.replacing.map((o) => o.name)));
   }
 
   private press(commander: string, present: boolean, speak: (a: SpeechAct, s?: number) => void) {
@@ -176,7 +193,7 @@ export class Conversation {
 
   // ---- helpers ----------------------------------------------------------------------------------------------------------
   private voice(view: View): string | null { return this.o.domain === "court" ? say.listener(view) : null; }
-  private reset() { this.state = "idle"; this.pending = undefined; }
+  private reset() { this.state = "idle"; this.pending = undefined; this.replacing = undefined; }
 
   /** Her correction or answer folded into the draft. A correction replaces the part it names; an answer adds what was missing. */
   private merge(base: Understanding, add: Understanding, replace: boolean, view: View): Understanding {
@@ -187,15 +204,15 @@ export class Conversation {
       if (same >= 0 && replace) m.mentions[same] = { ...x, role: x.role ?? m.mentions[same].role };
       else if (!m.mentions.some((y) => y.id === x.id && y.kind === x.kind)) m.mentions.push(x);
     }
-    // a correction that names a place without saying which one it replaces: the one that makes the order work (the last such, first)
+    // a correction that names a place without saying which one it replaces: the one whose replacing makes a working order;
+    // a place the order already names is not replaced by itself; if more than one could be meant, she is asked (D-081)
     const bare = add.mentions.filter((x) => x.kind === "place" && x.role === null);
     if (replace && bare.length === 1 && base.mentions.filter((x) => x.kind === "place").length > 1) {
-      const idx = base.mentions.map((x, i) => (x.kind === "place" ? i : -1)).filter((i) => i >= 0).reverse();
-      for (const i of idx) {
-        const trial = { ...m, mentions: base.mentions.map((x, k) => (k === i ? { ...bare[0], role: x.role } : x)), modes: [...m.modes, ...add.modes.filter((x) => !m.modes.includes(x))] };
-        const ok = this.o.domain === "court" ? resolveCourt(trial, view, this.o.rules, this.o.lexicon).kind === "action" : resolveBattle(trial, view, this.o.lexicon).kind === "draft";
-        if (ok) return trial;
-      }
+      const idx = base.mentions.map((x, i) => (x.kind === "place" && x.id !== bare[0].id ? i : -1)).filter((i) => i >= 0);
+      const trials = idx.map((i) => ({ i, u: { ...m, mentions: base.mentions.map((x, k) => (k === i ? { ...bare[0], role: x.role } : x)), modes: [...m.modes, ...add.modes.filter((x) => !m.modes.includes(x))] } }))
+        .filter((t) => (this.o.domain === "court" ? resolveCourt(t.u, view, this.o.rules, this.o.lexicon).kind === "action" : resolveBattle(t.u, view, this.o.lexicon).kind === "draft"));
+      if (trials.length === 1) return trials[0].u;
+      if (trials.length > 1) { this.replacing = trials.map((t) => ({ id: base.mentions[t.i].id, name: base.mentions[t.i].name, u: t.u })); return base; }
     }
     const conflict: Record<string, string> = { rush: "labour", labour: "rush", runner: "voice", voice: "runner" };
     for (const mode of add.modes) { m.modes = m.modes.filter((x) => x !== conflict[mode]); if (!m.modes.includes(mode)) m.modes.push(mode); }

@@ -415,3 +415,35 @@ test("a battle order is never shortened quietly: what no order can carry is said
   const e = battle();
   assert.match(spoken(say(e, view, `${n}, hold the ridge until their horse is seen, then attack`)), /hold the ridge, and when their horse is seen, attack/);
 });
+
+test("'No, I mean X' on a two-place order: replaces the place that is not X; when either could be meant, she is asked which", () => {
+  // the shapes G-16 found on block 540000 (D-081), rebuilt on a TUNE seed
+  const { view } = pauseWhere(SEED, withRepairAdvice);
+  const acts = playerActions(view, rules);
+  const same = acts.find((a) => a.action === "purchase" && a.target && a.to === a.target);
+  if (same) {
+    const other = acts.find((a) => a.action === "purchase" && a.target !== same.target && a.to === same.to && a.good === same.good)!;
+    const c = court();
+    say(c, view, actionText(view, { ...same, target: other.target })); // the wrong market first
+    say(c, view, `No, I mean ${view.world.names[same.target!]}`);
+    assert.equal(c.state, "readback");
+    assert.deepEqual(say(c, view, "yes").actions.map((x) => ({ ...x, followed: undefined })), [{ ...same, followed: undefined }]);
+  }
+  const two = acts.filter((a) => a.action === "requisition" && !a.sell && a.target && a.to && a.target !== a.to);
+  const pair = two.flatMap((a) => two.filter((b) => b !== a && b.good === a.good && b.target === a.to && b.to !== a.target).map((b) => [a, b] as const))[0];
+  if (pair) {
+    const [a] = pair, wrong = two.find((x) => x.good === a.good && x.target !== a.target && x.to === a.to && x.target !== a.to);
+    assert.ok(wrong, "a wrong source to start from");
+    if (wrong) {
+      const c = court();
+      say(c, view, actionText(view, wrong)); // "send ... from W to T"
+      const t = say(c, view, `No, I mean ${view.world.names[a.target!]}`);
+      assert.equal(c.state, "question", spoken(t));
+      assert.match(spoken(t), /In place of/);
+      const u = say(c, view, view.world.names[wrong.target!]);
+      assert.equal(c.state, "readback", spoken(u));
+      assert.deepEqual(say(c, view, "yes").actions.map((x) => ({ ...x, followed: undefined })), [{ ...a, followed: undefined }]);
+    }
+  }
+  assert.ok(same && pair, "both shapes are offered at this pause");
+});
