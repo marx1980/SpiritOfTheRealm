@@ -28,8 +28,8 @@ For an ending the trigger event is the one that completed the condition. Its **a
 - `ancestryDomains`: the domains of the events in the ancestry. G-09(b) is the share with three or more.
 
 ### Pressures and `dominantCrisis` (`readAttention`)
-Five pressures, named in code `rebellion`, `food_security`, `wilds` (the Blackwood pressure: raiders and the wood), `frontier` (Arven) and `environment` (the engine never carries a content name). A pressure is read from the **system of the root event** (the events with no cause: weather and environment, threat and exploration, communities, grain, goods, economy and manpower). The frontier has no system yet, so it reads zero until 14B.
-- Anna's attention is her `PlayerInput` events. Each is traced through `causedBy` to the roots it came from; its weight is split equally between the pressures those roots belong to. An input with no roots (a checkpoint with no cause) is routine and is not counted.
+Five pressures, named in code `rebellion`, `food_security`, `wilds` (the Blackwood pressure: raiders and the wood), `frontier` (Arven) and `environment` (the engine never carries a content name). A pressure is read from the **system of the nearest event** on the input's chain of causes that belongs to one (weather and environment, threat and exploration, communities, grain, goods, economy and manpower). The first draft used the root of the chain; the 60-seed probe showed that hides rebellion and food, because their roots are raids and storms. The frontier has no system yet, so it reads zero until 14B.
+- Anna's attention is her `PlayerInput` events. Each is traced through `causedBy` to the nearest events that belong to a pressure; its weight is split equally between them. An input with none (a checkpoint with no cause) is routine and is not counted.
 - `dominantCrisis` is the pressure with the largest share; the runner-up and each pressure's busiest 30 days are recorded. G-07 asks that each type is dominant in 5-45% of seeds.
 
 ### Bars not in the plan (proposed; Marko confirms before any sealed run)

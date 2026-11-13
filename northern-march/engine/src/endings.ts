@@ -12,8 +12,8 @@ const REACHABLE: Record<EndingType, boolean> = { military_victory: false, negoti
 
 export const PRESSURES = ["rebellion", "food_security", "wilds", "frontier", "environment"] as const;
 export type Pressure = (typeof PRESSURES)[number];
-/** A pressure is read from the system of the root event an input came from. (`frontier` has no system until 14B.) */
-export const ROOT_PRESSURE: Readonly<Record<string, Pressure>> = Object.freeze({
+/** A pressure is read from the system of the nearest event on an input's chain of causes that belongs to one. (`frontier` has no system until 14B.) */
+export const SYSTEM_PRESSURE: Readonly<Record<string, Pressure>> = Object.freeze({
   communities: "rebellion",
   grain: "food_security", goods: "food_security", economy: "food_security", manpower: "food_security",
   threat: "wilds", exploration: "wilds",
@@ -94,8 +94,26 @@ function ancestry(log: readonly SimEvent[], id: number, byId = new Map(log.map((
   return { ancestors, roots };
 }
 
+/** Breadth-first through `causedBy`: the pressures of the closest events (not the input itself) whose system belongs to one. */
+function nearestPressures(id: number, byId: Map<number, SimEvent>): Set<Pressure> {
+  let level = [id];
+  const seen = new Set<number>([id]);
+  while (level.length) {
+    const next: number[] = [], found = new Set<Pressure>();
+    for (const x of level) for (const cid of byId.get(x)?.causedBy ?? []) {
+      if (seen.has(cid)) continue;
+      seen.add(cid);
+      const p = SYSTEM_PRESSURE[EVENT_TYPES[byId.get(cid)?.type ?? ""]?.system];
+      if (p) found.add(p); else next.push(cid);
+    }
+    if (found.size) return found;
+    level = next;
+  }
+  return new Set();
+}
+
 export interface Attention {
-  /** Share of Anna's counted inputs that came from each pressure (0 to 1; they sum to 1, or all 0 if nothing was counted). */
+  /** Share of the ruler's counted inputs that came from each pressure (0 to 1; they sum to 1, or all 0 if nothing was counted). */
   shares: Record<Pressure, number>;
   dominant: Pressure | null;
   runnerUp: Pressure | null;
@@ -114,8 +132,7 @@ export function readAttention(log: readonly SimEvent[], c: Content): Attention {
   let counted = 0, routine = 0;
   for (const e of log) {
     if (e.type !== "PlayerInput" || e.tick > horizon) continue;
-    const ps = new Set<Pressure>();
-    for (const r of ancestry(log, e.id, byId).roots) { const p = ROOT_PRESSURE[EVENT_TYPES[r.type]?.system]; if (p) ps.add(p); }
+    const ps = nearestPressures(e.id, byId);
     if (!ps.size) { routine++; continue; }
     counted++;
     for (const p of ps) { sum[p] += 1 / ps.size; perDay[p][Math.min(days, Math.floor(e.tick / DAY))] += 1 / ps.size; }

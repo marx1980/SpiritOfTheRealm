@@ -2,7 +2,7 @@
 // The reading changes nothing. Constructed logs pin each rule; real runs pin the invariants.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { DECISION_TYPES, ENDING_TYPES, PRESSURES, ROOT_PRESSURE, readAttention, readEnding } from "../src/endings.ts";
+import { DECISION_TYPES, ENDING_TYPES, PRESSURES, SYSTEM_PRESSURE, readAttention, readEnding } from "../src/endings.ts";
 import { EVENT_TYPES, type SimEvent } from "../src/events.ts";
 import { hashLog } from "../src/engine.ts";
 import { CONTENT, run, variant } from "./helpers.ts";
@@ -21,8 +21,8 @@ const fresh = () => { n = 0; };
 test("the registries only name event types and systems that exist", () => {
   for (const t of DECISION_TYPES) assert.ok(EVENT_TYPES[t], `${t} is not an event type`);
   const systems = new Set(Object.values(EVENT_TYPES).map((d) => d.system));
-  for (const s of Object.keys(ROOT_PRESSURE)) assert.ok(systems.has(s as never), `${s} is not a system`);
-  for (const p of Object.values(ROOT_PRESSURE)) assert.ok((PRESSURES as readonly string[]).includes(p));
+  for (const s of Object.keys(SYSTEM_PRESSURE)) assert.ok(systems.has(s as never), `${s} is not a system`);
+  for (const p of Object.values(SYSTEM_PRESSURE)) assert.ok((PRESSURES as readonly string[]).includes(p));
   assert.equal(ENDING_TYPES.length, 6);
   assert.equal(PRESSURES.length, 5);
 });
@@ -140,6 +140,17 @@ test("attention: each input goes to the pressures of the roots it came from, spl
   assert.equal(at.shares.rebellion, 0);
   assert.equal(at.dominant, "environment");
   assert.equal(at.runnerUp, "food_security");
+});
+
+test("attention: the nearest crisis on the chain counts, not the first cause of everything", () => {
+  fresh();
+  const threat = ev(DAY, "ThreatBegan"); // wilds, but far back
+  const st = ev(2 * DAY, "CommunityStanceChanged", [threat.id], { community: C1, to: "refuse" }); // rebellion, nearer
+  const rep = ev(3 * DAY, "ReportDelivered", [st.id]); // belongs to no pressure
+  const inp = ev(4 * DAY, "PlayerInput", [rep.id], { action: "relief" });
+  const at = readAttention([threat, st, rep, inp], CONTENT);
+  assert.equal(at.shares.rebellion, 1);
+  assert.equal(at.shares.wilds, 0);
 });
 
 test("attention: nothing counted means no dominant crisis; a tie goes to the earlier pressure in the list", () => {
