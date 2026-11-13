@@ -1256,7 +1256,7 @@
    "mauled": -80,
    "fell": -300,
    "killed": 220,
-   "activeAt": 500
+   "activeAt": 350
   },
   "custody": {
    "deliverLoyalty": 1000,
