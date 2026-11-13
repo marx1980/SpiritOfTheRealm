@@ -75,7 +75,7 @@ function body(g: Glyph): string {
     case "withdrawing": // intact, moving back in order: one straight arrow to the rear
       return `<rect class="blk" x="${-hw}" y="${-d / 2}" width="${w}" height="${d}" rx="2"/>${banner()}<path class="arw" d="M0 ${d / 2 + 4} v22 m-8 -8 l8 8 l8 -8"/>`;
     case "retreat": // stretched and ragged, streaming back
-      return `<path class="blk" d="M${-hw} ${-d / 2} L${hw} ${-d / 2 + 4} L${hw * 0.7} ${d / 2 + 12} L${hw * 0.3} ${d / 2 + 3} L${hw * 0.1} ${d / 2 + 20} L${-hw * 0.3} ${d / 2 + 5} L${-hw * 0.6} ${d / 2 + 16} Z"/><path class="arw rag" d="M-7 ${d / 2 + 23} l4 7 l-3 3 l5 8 m-6 -5 l6 5 l4 -8"/>`;
+      return `<path class="blk" d="M${-hw} ${-d / 2} L${hw} ${-d / 2 + 4} L${hw * 0.7} ${d / 2 + 12} L${hw * 0.3} ${d / 2 + 3} L${hw * 0.1} ${d / 2 + 20} L${-hw * 0.3} ${d / 2 + 5} L${-hw * 0.6} ${d / 2 + 16} Z"/><path class="arw rag" d="M0 ${d / 2 + 22} l-7 8 l9 7 l-7 8"/><path class="arw" d="M-9 ${d / 2 + 45} l7 9 l8 -10"/>`;
     case "rout": // scattered men running, no banner, no line
       return Array.from({ length: 14 }, (_, i) => `<circle class="dot" cx="${jit(g.id, i, Math.floor(hw * 1.2))}" cy="${Math.abs(jit(g.id, i + 20, 34)) + 6}" r="3.5"/>`).join("");
     case "pursuing": { // the line run out into a loose wedge after the enemy: arrows ahead, banner leaning forward
@@ -238,7 +238,7 @@ export function battleSvg(field: FieldSpec, glyphs: Glyph[], o: { hq?: { x: numb
     if (name || age) names.push(`<g class="tag ${tone}" ${at}><text class="lbl fl" y="${g.side === "raiders" ? -26 : 44}">${name}${esc(age)}</text></g>`);
     if (g.behaviour !== "rout") icons.push(`<g class="tag ${tone}" ${at}>${icon(g)}</g>`);
     const word = o.states === false ? "" : STATE_WORD[g.behaviour];
-    if (word) states.push(`<g class="tag ${tone}" ${at}><text class="lbl st" y="${g.side === "raiders" ? 64 : -44}">${esc(word)}</text></g>`);
+    if (word) states.push(`<g class="tag ${tone}" ${at}><text class="lbl st" y="${g.side === "raiders" ? (g.behaviour === "pursuing" ? 92 : 64) : (g.behaviour === "pursuing" ? -72 : -44)}">${esc(word)}</text></g>`);
   }
   const fs = vols + bodies.join("") + icons.join("") + names.join("") + states.join("");
   const hq = o.hq ? `<g class="hq" transform="translate(${o.hq.x} ${o.hq.y})"><circle r="13"/><path d="M-7 3 l2.4 -9 l4.6 4.6 l4.6 -4.6 l2.4 9 z"/></g>` : "";
