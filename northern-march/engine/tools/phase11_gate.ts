@@ -70,7 +70,7 @@ function summarise(rows: any[]) {
     n: new Set(rows.map((r) => r.seed)).size, perPolicy,
     a: { expeditionGames: games.length, emerged: em, share: point, interval: [lo, hi], bar: "20%-40%", verdict: lo >= 0.2 && hi <= 0.4 ? "PASS" : point >= 0.2 && point <= 0.4 ? "AMBER" : "FAIL" },
     b: { emergences, traced, bar: "= all", verdict: emergences > 0 && traced === emergences ? "PASS" : emergences === 0 ? "AMBER" : "FAIL" },
-    c: { found: found.length, outside: out, share: op, interval: [ol, oh], bar: ">= 10% outside; no custody gaps", gaps: sum((r) => r.gaps), verdict: sum((r) => r.gaps) > 0 ? "FAIL" : ol >= 0.1 ? "PASS" : op >= 0.1 ? "AMBER" : "FAIL" },
+    c: { found: found.length, outside: out, share: op, interval: [ol, oh], bar: ">= 10% outside Anna's hands; no custody gaps", gaps: sum((r) => r.gaps), verdict: sum((r) => r.gaps) > 0 ? "FAIL" : ol >= 0.1 ? "PASS" : op >= 0.1 ? "AMBER" : "FAIL" },
     d: { violations: sum((r) => r.invariants), bar: "= 0", verdict: sum((r) => r.invariants) === 0 ? "PASS" : "FAIL" },
   };
 }

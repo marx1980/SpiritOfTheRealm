@@ -56,7 +56,7 @@ really worth (a prestige effect, not a rule of the world).
 Three scripted policies on a sealed block, 240 days:
 - (a) Stefan emerges in 20-40% of the games where an expedition goes out (Wilson 90% interval inside or touching the band; AMBER if the point is inside and the interval crosses an edge).
 - (b) Every emergence has the chain recommendation -> appointment -> expedition -> reputation -> emergence in its causes: 100%.
-- (c) The Stone ends a run outside the crown's hands (kept, lost or still in the wood) in at least 10% of the games where it was found, and provenance is reconstructable in every game (custody chain without gaps): 100%.
+- (c) The Stone ends a run outside Anna's hands (kept by another, in transit, lost or still in the wood) in at least 10% of the games where it was found, and provenance is reconstructable in every game (custody chain without gaps): 100%.
 - (d) Invariants: 0 violations.
 Tool: `tools/phase11_gate.ts`. Run once on frozen code.
 
