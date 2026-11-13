@@ -9,7 +9,7 @@ import { INTENTS, type Constraint, type Contingency, type IntentKind, type Recom
 import type { IssuedRecord, Position, WorldState } from "./world.ts";
 import type { PlayerAction } from "./policies.ts";
 // Types the presentation layer needs, re-exported here so presentation imports only this window (test/view.test.ts).
-export type { PlayerAction, Recommendation };
+export type { PlayerAction, Recommendation, Task, BattleOrder };
 
 /** Advice heard more than this long ago is no longer shown as standing advice. */
 export const ADVICE_FRESH = 15 * 86400;
@@ -105,7 +105,7 @@ function battleView(s: Readonly<WorldState>, c: Content, who: string, now: numbe
 
 /** A battle order is valid against what headquarters knows: a commander in this battle (or herself), places on the
  *  field, a formation headquarters has seen, a signal only for a meaning agreed before the fight. */
-export function validateBattleDraft(v: View, d: { to: string; task: Task; via: string; signal?: string } | undefined): string[] {
+export function validateBattleDraft(v: View, d: { to: string; task: Task; via: string; signal?: string; delay?: number } | undefined): string[] {
   const b = v.battle, out: string[] = [];
   if (!b || b.ended) return ["there is no battle in progress here"];
   if (!d) return ["no battle order"];
@@ -117,6 +117,7 @@ export function validateBattleDraft(v: View, d: { to: string; task: Task; via: s
   // Phase 12 sector delegation: only commanders in this battle can be put under another
   for (const id of d.task.command ?? []) if (id === d.to || id === v.self.id || !b.commanders.some((c) => c.id === id)) out.push(`${id} cannot be put under ${d.to}`);
   if (!["runner", "signal", "voice"].includes(d.via)) out.push(`cannot send by ${d.via}`);
+  if (d.delay !== undefined && !(Number.isInteger(d.delay) && d.delay >= 0 && d.delay <= 3600)) out.push("the time spent talking must be 0 to 3,600 seconds");
   if (d.via === "signal" && !b.signals.some((s) => s.id === d.signal)) out.push("a signal must be one agreed before the battle");
   return out;
 }

@@ -13,6 +13,7 @@ import { captainSentTo, fallenAt, lettersFall, planOf, certainty, letterSentence
 import { beliefsAbout, validateDraft, type OrderDraft, type View } from "../src/view.ts";
 import { INTENTS, type Recommendation } from "../src/schemas.ts";
 import type { PlayerAction } from "../src/policies.ts";
+import { Talk } from "./talk.ts";
 
 declare const __RAW__: RawContent;
 declare const __H01__: { seed: number; days: number; scripts: RawContent["scenario"]["scripts"] };
@@ -106,7 +107,7 @@ function triage(r: ReturnType<Sim["next"]>, batch: number[], batchDay: number): 
 function start(seed: number, restore = true) {
   st.sim = createSim({ content, seed, policy: "external", params: { dayEnd: true } });
   st.seed = seed; st.queue = []; st.error = ""; st.over = false; st.log = [];
-  st.batch = []; st.openIssue = null; st.letter = null; st.advice = null; st.openLetter = null; st.paused = null; st.shownPause = null; st.advSeen = {}; st.advDay = -1; st.windfall = null; st.tab = "game"; st.answered = 0;
+  st.batch = []; st.openIssue = null; st.letter = null; st.advice = null; st.openLetter = null; st.paused = null; st.shownPause = null; st.advSeen = {}; st.advDay = -1; st.windfall = null; st.tab = "game"; st.answered = 0; talk.reset();
   // the silent prelude, up to the first day of play
   for (let guard = 0; guard < 5000; guard++) { const r = st.sim.next(PRE); if (!r.paused) break; st.sim.answer([]); }
   if (!restore) clearLog(seed);
@@ -153,6 +154,7 @@ function send() {
   try { answer(st.queue); } catch (e) { st.error = (e as Error).message; return render(); }
   st.answered++; st.queue = []; st.error = "";
   advance();
+  if (!st.over) { talk.resume(); render(); }
 }
 
 /** Every goods or grain order names its amount: the usual order size when none was given (an adviser's, say). */
@@ -172,6 +174,7 @@ const queue = (a: PlayerAction) => {
   st.queue.push(a); st.error = ""; render();
 };
 
+const talk = new Talk({ view: () => st.sim.viewOf("player"), queue: (as) => { for (const a of as) queue(a); }, render: () => render(), name, content });
 /** Two actions are the same action if they send the same captain to the same fort (its mission may differ). */
 const matches = (q: PlayerAction, a: PlayerAction) => a.action === "advance" ? q.action === "advance" && q.target === a.target : JSON.stringify(q) === JSON.stringify(sized(a));
 const listNames = (xs: string[]) => xs.length <= 1 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
@@ -616,6 +619,7 @@ function battleScreen(v: View): string {
     <div class="card map">${battleSvg(b.field, glyphs, { hq: { x: b.hq.x, y: b.hq.y }, viewBox: battleView(b.field, [...framePoints(glyphs), b.hq]) })}</div>
     <div class="col">
       <div class="card"><h2>Commanders</h2><div class="scroll"><table class="net"><tr><th>Commander</th><th>Orders</th><th>Status</th><th class="n">Last word</th></tr>${net}</table></div></div>
+      ${talk.html()}
       <div class="card"><h2>Order</h2>${form.html}</div>
       <div class="card"><h2>Reports</h2><div class="letters">${notes || "–"}</div></div>
     </div></div>`;
@@ -654,17 +658,20 @@ function render() {
     ${st.paused && st.paused !== "battle" ? choicesBlock(v) : ""}
     <span class="queue">${st.queue.map((a, i) => ({ a, i })).filter(({ a }) => !isShown(a)).map(({ a, i }) => `<span class="chip">${esc(textOf(v, a))} <button data-unq="${i}" aria-label="Remove">×</button></span>`).join("")}</span>
     ${st.error ? `<span class="err">${esc(st.error)}</span>` : ""}</div>
-  ${st.tab === "policy" ? policyTab(v) : st.tab === "economy" ? economyTab(v) : st.paused === "battle" && v.battle ? battleScreen(v) : `<div class="grid">${court(v)}${map(v)}${side(v)}</div>`}
+  ${st.tab === "policy" ? policyTab(v) : st.tab === "economy" ? economyTab(v) : st.paused === "battle" && v.battle ? battleScreen(v) : `${st.paused ? talk.html() : ""}<div class="grid">${court(v)}${map(v)}${side(v)}</div>`}
   ${st.observer ? observer() : ""}`}`;
   void o;
   syncMore();
+  if (talk.focus) { const i = document.getElementById("talk-in") as HTMLInputElement | null; if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
   if (newPause) document.querySelector(".pause")?.scrollIntoView({ block: "start" });
 }
 
 document.addEventListener("click", (e) => {
   const t = e.target as HTMLElement;
-  const el = t.closest("#bo-add,[data-act],[data-toggle],[data-mission],[data-place],[data-q],[data-unq],[data-letter],[data-issue],[data-close-letter],[data-use-levy],#go,#restart,#settings-tab,#economy-tab,#policy-tab,#pol-go,#o-add,#eco-add,#copy-log") as HTMLElement | null;
+  const el = t.closest("#talk-mic,[data-say],#bo-add,[data-act],[data-toggle],[data-mission],[data-place],[data-q],[data-unq],[data-letter],[data-issue],[data-close-letter],[data-use-levy],#go,#restart,#settings-tab,#economy-tab,#policy-tab,#pol-go,#o-add,#eco-add,#copy-log") as HTMLElement | null;
   if (!el) return;
+  if (el.id === "talk-mic") return talk.listen();
+  if (el.dataset.say) return talk.say(el.dataset.say);
   if (el.dataset.useLevy !== undefined) { st.draft.action = "p:levy"; return render(); }
   if (el.dataset.letter) { const id = Number(el.dataset.letter); st.openLetter = st.openLetter === id ? null : id; return render(); }
   if (el.dataset.issue) { st.openIssue = st.openIssue === el.dataset.issue ? null : el.dataset.issue; return render(); }
@@ -713,6 +720,12 @@ document.addEventListener("click", (e) => {
   }
   if (el.id === "copy-log") navigator.clipboard?.writeText(st.sim.log.map((x) => JSON.stringify(x)).join("\n")).catch(() => {});
 });
+document.addEventListener("submit", (e) => {
+  if ((e.target as HTMLElement).id !== "talk-form") return;
+  e.preventDefault(); talk.say((document.getElementById("talk-in") as HTMLInputElement).value);
+});
+document.addEventListener("input", (e) => { if ((e.target as HTMLElement).id === "talk-in") { talk.input = (e.target as HTMLInputElement).value; talk.focus = true; } });
+document.addEventListener("focusin", (e) => { talk.focus = (e.target as HTMLElement).id === "talk-in"; });
 document.addEventListener("change", (e) => {
   const t = e.target as HTMLInputElement | HTMLSelectElement;
   if (t.id === "observer-toggle") { st.observer = (t as HTMLInputElement).checked; return render(); }
@@ -739,6 +752,7 @@ document.addEventListener("change", (e) => {
 });
 document.addEventListener("keydown", (e) => { if (e.key === "O" && e.shiftKey) { st.observer = !st.observer; render(); } });
 document.head.insertAdjacentHTML("beforeend", `<style>${BATTLE_CSS}
+${Talk.CSS}
 .battle { align-items: start; } .battle .net td { white-space: normal; } .battle .letters { max-height: 260px; }
 </style>`);
 start(st.seed);

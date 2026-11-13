@@ -7,7 +7,7 @@ import type { SystemId } from "./events.ts";
 export const SAVE_SCHEMA_VERSION = 1;
 
 import type { OrderDraft } from "./view.ts";
-export interface InputRecord { decision: number; tick: number; action: "repair" | "levy" | "advance" | "travel" | "order" | "relief" | "requisition" | "purchase" | "battle" | "policy"; battle?: import("./policies.ts").BattleOrderDraft; target: string | null; to?: string; consult?: boolean; good?: string; units?: number; market?: boolean; sell?: boolean; muster?: boolean; arm?: "foot" | "archers" | "horse"; policy?: { area: "military" | "emergency" | "communities"; rule: string }; order?: OrderDraft; followed?: string; mission?: "defend" | "scout" | "attack"; raid?: string; repairMode?: "standard" | "rush" | "labour" }
+export interface InputRecord { decision: number; tick: number; action: "repair" | "levy" | "advance" | "travel" | "order" | "relief" | "requisition" | "purchase" | "battle" | "policy" | "ask"; battle?: import("./policies.ts").BattleOrderDraft; target: string | null; to?: string; consult?: boolean; good?: string; units?: number; market?: boolean; sell?: boolean; muster?: boolean; arm?: "foot" | "archers" | "horse"; policy?: { area: "military" | "emergency" | "communities"; rule: string }; order?: OrderDraft; followed?: string; mission?: "defend" | "scout" | "attack"; raid?: string; repairMode?: "standard" | "rush" | "labour" }
 export interface SaveFile {
   schemaVersion: number; contentVersion: string; contentHash: string;
   seed: number; policy: PolicyId; params: SimParams; ablate: SystemId[];

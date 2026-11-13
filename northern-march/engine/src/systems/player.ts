@@ -38,6 +38,8 @@ export function makePlayer(decide: (ctx: Ctx, cause: number | null, reason: stri
             ...(a.mission ? { mission: a.mission } : {}), ...(a.to ? { to: a.to } : {}), ...(a.consult ? { consult: true } : {}), ...(a.muster ? { muster: true } : {}), ...(a.arm ? { arm: a.arm } : {}), ...(a.sell ? { sell: true } : {}), ...(a.good ? { good: a.good } : {}), ...(a.units ? { units: a.units } : {}), ...(a.market ? { market: true } : {}), ...(a.raid ? { raid: a.raid } : {}), ...(a.repairMode ? { repairMode: a.repairMode } : {}), ...(a.battle ? { battle: a.battle } : {}), ...(a.policy ? { policy: a.policy } : {}) });
           if (a.action === "policy") { if (a.policy) proclaim(ctx, a.policy.area, a.policy.rule, input.id); continue; }
           if (a.action === "battle") { if (a.battle) giveBattleOrder(ctx, input.id, a.battle); continue; }
+          // Phase 13: "think again": the adviser works out his advice now (only if he is with her), for him only
+          if (a.action === "ask") { ctx.emit("AdviceScheduled", [input.id], [chr(a.target!)], { agent: a.target, day: Math.floor(ctx.tick / DAY) }); ctx.at(ctx.tick, "agents:advise", { agent: a.target, cause: input.id }); continue; }
           if (a.action === "travel") { travel(ctx, ruler, a.target!, "rider", false, input.id); continue; }
           if (a.action === "order") {
             const d = a.order!;

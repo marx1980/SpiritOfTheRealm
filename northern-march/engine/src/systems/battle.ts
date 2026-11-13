@@ -95,12 +95,12 @@ export const battle: System = {
 };
 
 /** The ruler's battle order, as player input: given now, in battle time. Returns the event, or null if no battle needs it. */
-export function giveBattleOrder(ctx: Ctx, cause: number, d: { to: string; task: BattleOrder["task"]; via: BattleOrder["via"]; signal?: string }) {
+export function giveBattleOrder(ctx: Ctx, cause: number, d: { to: string; task: BattleOrder["task"]; via: BattleOrder["via"]; signal?: string; delay?: number }) {
   const ruler = ctx.content.scenario.ruler;
   const st = Object.values(ctx.s.battles).filter((b) => b.status === "running" && b.setup.ruler.present).sort((a, b) => b.startTick - a.startTick)[0];
   if (!st) return null;
-  const t = ctx.tick - st.startTick;
-  const order: BattleOrder = { schemaVersion: 1, id: 1000 + st.orders.length, t, from: ruler, to: d.to, task: d.task, via: t === 0 ? "voice" : d.via, ...(d.signal ? { signal: d.signal } : {}) };
+  const now = ctx.tick - st.startTick, t = now + Math.max(0, Math.floor(d.delay ?? 0)); // talking takes battle time (Phase 13)
+  const order: BattleOrder = { schemaVersion: 1, id: 1000 + st.orders.length, t, from: ruler, to: d.to, task: d.task, via: now === 0 ? "voice" : d.via, ...(d.signal ? { signal: d.signal } : {}) };
   return ctx.emit("BattleOrderGiven", [cause], [chr(ruler), chr(d.to)], { battleId: st.setup.battleId, order });
 }
 

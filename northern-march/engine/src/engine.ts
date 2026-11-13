@@ -166,6 +166,7 @@ export class Sim {
         if (problems.length) throw new Error(`cannot order: ${problems.join("; ")}`);
       }
       if (a.action === "travel" && !this.content.scenario.presence.travelTo.includes(a.target!)) throw new Error(`cannot travel to ${a.target}`);
+      if (a.action === "ask" && this.content.byId.character.get(a.target ?? "")?.reportsTo !== this.content.scenario.ruler) throw new Error(`cannot ask ${a.target}: not one of her advisers`);
       if (a.action === "battle") {
         const problems = validateBattleDraft(view, a.battle);
         if (problems.length) throw new Error(`cannot order: ${problems.join("; ")}`);

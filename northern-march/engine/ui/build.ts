@@ -6,10 +6,11 @@ import { readContentDir } from "../src/content.ts";
 
 const here = new URL(".", import.meta.url).pathname;
 const raw = readContentDir(new URL("../content/march/", import.meta.url).pathname);
+const lexicon = JSON.parse(readFileSync(new URL("../content/march/lexicon.json", import.meta.url).pathname, "utf8"));
 const h01 = JSON.parse(readFileSync(here + "h01.json", "utf8"));
 const res = await build({
   entryPoints: [here + "app.ts"], bundle: true, format: "iife", write: false, target: "es2022", minify: true,
-  define: { __RAW__: JSON.stringify(raw), __H01__: JSON.stringify(h01) },
+  define: { __RAW__: JSON.stringify(raw), __H01__: JSON.stringify(h01), __LEXICON__: JSON.stringify(lexicon) },
   plugins: [{ name: "stub-node", setup(b) { b.onResolve({ filter: /^node:(fs|path)$/ }, () => ({ path: here + "fs-stub.ts" })); } }],
 });
 const js = res.outputFiles[0].text.replace(/<\/script/gi, "<\\/script");
