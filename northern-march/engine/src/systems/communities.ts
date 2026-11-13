@@ -36,6 +36,8 @@ function placeOf(e: SimEvent): string | null {
     case "GrainDelivered": return p.to as string;
     case "MusterCalled": return p.community as string;
     case "CropDamaged": return p.place as string;
+    case "CreatureHunt": return p.place as string;
+    case "StoneDelivered": return p.at as string;
     default: return null;
   }
 }
@@ -191,6 +193,21 @@ function effectsOf(ctx: Ctx, id: string, type: string, p: Record<string, any>, h
       out.grievances = [{ kind: "levy", delta: scale(scale(scale(g.levy, context(ctx, c, d)), weight(d, "levy")), share), blameCrown: 900 }];
       out.material = -scale(pr.levyMaterial, share);
       out.trust = [["crown", scale(pr.trust.levyCrown, share)]];
+      return out;
+    }
+    case "CreatureHunt": { // something in the wood took stock (and sometimes a person): the place at once, others as a tale (Phase 11)
+      const bw = ctx.content.scenario.wilds!;
+      out.memory = { kind: "beast", actor: "beast", at: p.place, weight: p.place === id ? 500 : 150 };
+      if (how !== "witnessed" || p.place !== id) return out;
+      out.material = -(p.livestock as number) * bw.creature.materialPerHead;
+      if (p.missing) out.grievances = [{ kind: "unprotected", delta: scale(120, weight(d, "unprotected")), blameCrown: 300 }];
+      return out;
+    }
+    case "StoneDelivered": { // the Stone is back in the crown's hands: what it is worth, and no more, lifts the crown in their eyes (Phase 11)
+      if (p.to !== ctx.content.scenario.ruler) return null;
+      const bw = ctx.content.scenario.wilds!;
+      out.memory = { kind: "stone_returned", actor: "crown", at: p.at, weight: 300 };
+      out.trust = [["crown", Math.floor((bw.stone.trustPerLegitimacy * bw.stone.actualLegitimacy) / 1000)]];
       return out;
     }
     case "CropDamaged": { // the people whose fields they were lose some of their means (Phase 10); no one is blamed
@@ -414,6 +431,7 @@ function audience(ctx: Ctx, e: SimEvent): { id: string; delay: number; how: "wit
   const at = placeOf(e), pr = P(ctx);
   for (const d of defs(ctx)) {
     if (e.type === "LevyRaised") { out.push({ id: d.id, delay: 0, how: "witnessed" }); continue; }
+    if (e.type === "StoneDelivered") { out.push({ id: d.id, delay: 0, how: "rumour" }); continue; }
     if (!at) continue;
     const direct = at === d.id || (e.type === "RaidDamage" && d.exposedTo.includes(e.payload.site as string)) || (e.type === "FortFell" && d.exposedTo.includes(e.payload.site as string));
     if (direct) { out.push({ id: d.id, delay: 0, how: "witnessed" }); continue; }
@@ -423,7 +441,7 @@ function audience(ctx: Ctx, e: SimEvent): { id: string; delay: number; how: "wit
   return out;
 }
 
-const HEARD = new Set(["RaidDamage", "FortFell", "FortRetaken", "SortieResolved", "LevyRaised", "ReliefDelivered", "TroopMisconduct", "Arrived", "GrainShipped", "GrainDelivered", "MusterCalled", "CommunityParley", "CommunityPunished", "CropDamaged"]);
+const HEARD = new Set(["RaidDamage", "FortFell", "FortRetaken", "SortieResolved", "LevyRaised", "ReliefDelivered", "TroopMisconduct", "Arrived", "GrainShipped", "GrainDelivered", "MusterCalled", "CommunityParley", "CommunityPunished", "CropDamaged", "CreatureHunt", "StoneDelivered"]);
 
 export const communities: System = {
   id: "communities",

@@ -214,5 +214,45 @@
     "domain": "info",
     "wakeSignificance": 2,
     "materialDelta": 1
+  },
+  {
+    "id": "site.rumour",
+    "subjectKind": "location",
+    "halfLifeTicks": 2592000,
+    "domain": "info",
+    "wakeSignificance": 2,
+    "materialDelta": 150
+  },
+  {
+    "id": "site.signs",
+    "subjectKind": "location",
+    "halfLifeTicks": 5184000,
+    "domain": "info",
+    "wakeSignificance": 2,
+    "materialDelta": 1
+  },
+  {
+    "id": "creature.nature",
+    "subjectKind": "location",
+    "halfLifeTicks": 0,
+    "domain": "info",
+    "wakeSignificance": 1,
+    "materialDelta": 1
+  },
+  {
+    "id": "stone.found",
+    "subjectKind": "location",
+    "halfLifeTicks": 0,
+    "domain": "info",
+    "wakeSignificance": 3,
+    "materialDelta": 1
+  },
+  {
+    "id": "stone.properties",
+    "subjectKind": "location",
+    "halfLifeTicks": 0,
+    "domain": "info",
+    "wakeSignificance": 1,
+    "materialDelta": 1
   }
 ]

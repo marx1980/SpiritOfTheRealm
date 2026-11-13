@@ -6,7 +6,7 @@ import { STANCES, type RawContent } from "../src/content.ts";
 import { beliefsAbout } from "../src/view.ts";
 import { buildCourt } from "../src/presentation/court.ts";
 import { geoMean } from "../src/systems/communities.ts";
-import { CONTENT, run, variant } from "./helpers.ts";
+import { CONTENT, run, variant, legacyVariant } from "./helpers.ts";
 
 const rung = (s: string) => STANCES.indexOf(s as (typeof STANCES)[number]);
 type Sim = ReturnType<typeof createSim>;
@@ -145,7 +145,8 @@ test("with the communities system off, income and levies are exactly as before (
 });
 
 test("competing narratives: Varos's story turns Coldmere's blame for the raids on the crown; Bren's turns Northwatch's onto the raiders", () => {
-  const c = variant((r) => {
+  const c = legacyVariant( // Phase 11: pins the pre-exploration scenario (a Blackwood creature adds its own blame)
+    (r) => {
     r.scenario.threat.startPermillePerDay = 0; r.scenario.messenger.lossPermillePerDay = 0; r.scenario.interception = [];
     r.scenario.scripts.push({ day: 2, kind: "threat", site: "blackwood", intensityPermille: 900, durationDays: 60 });
   });

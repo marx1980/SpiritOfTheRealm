@@ -4,14 +4,15 @@ import assert from "node:assert/strict";
 import { TICKS_PER_DAY as DAY } from "../src/engine.ts";
 import { withExtraBackground } from "../src/content.ts";
 import type { DecisionTrace } from "../src/schemas.ts";
-import { CONTENT, run, variant } from "./helpers.ts";
+// Phase 10/11: these tests pin the pre-environment, pre-Blackwood scenario; the expedition has its own tests (exploration.test.ts)
+import { LEGACY as CONTENT, legacyRun as run, legacyVariant as variant } from "./helpers.ts";
 
 const background = CONTENT.characters.filter((c) => c.tier === "C");
 const touches = (sim: ReturnType<typeof run>, who: string) => sim.log.filter((e) =>
   (e.type === "BeliefUpdated" && e.payload.holder === who) || (e.type === "AgentWoke" && e.payload.agent === who) ||
   (e.type === "DecisionMade" && (e.payload.trace as DecisionTrace).agent === who) || (e.type === "Observed" && e.payload.observer === who));
 
-const expedition = (edit?: (r: Parameters<Parameters<typeof variant>[0]>[0]) => void) => variant((r) => {
+const expedition = (edit?: (r: Parameters<NonNullable<Parameters<typeof variant>[0]>>[0]) => void) => variant((r) => {
   r.scenario.scripts = [{ day: 2, kind: "order", from: "anna", to: "caron", intent: "investigate", objective: { kind: "location", id: "blackwood" }, discretion: "delegated" }];
   r.scenario.messenger.lossPermillePerDay = 0; r.scenario.interception = [];
   edit?.(r);

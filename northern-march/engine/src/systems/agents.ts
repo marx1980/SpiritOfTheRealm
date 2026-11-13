@@ -73,7 +73,7 @@ export function defenceAt(s: Readonly<WorldState>, where: string) {
 export function leaderCandidates(s: Readonly<WorldState>, c: Content, agent: string) {
   const ch = c.byId.character.get(agent)!;
   const min = c.scenario.agents.recommendationTrustMin;
-  const free = (id: string) => id !== agent && !(s.ordersInForce[id] ?? []).length && "at" in s.positions[id];
+  const free = (id: string) => id !== agent && !(s.ordersInForce[id] ?? []).length && "at" in s.positions[id] && !s.bw?.dead[id];
   const out: { id: string; recommendedBy: string; score: number }[] = [];
   for (const r of ch.relationships) if (r.kind === "retainer" && free(r.to)) out.push({ id: r.to, recommendedBy: agent, score: r.value });
   for (const r of ch.relationships) {
@@ -187,7 +187,7 @@ function rebuild(ctx: Ctx, agent: string) {
   }
 }
 
-const isAgent = (ctx: Ctx, who: string) => !!ctx.s.agents[who] && ctx.s.tiers[who] !== "C";
+const isAgent = (ctx: Ctx, who: string) => !!ctx.s.agents[who] && ctx.s.tiers[who] !== "C" && !ctx.s.bw?.dead[who];
 const RANK = { C: 0, B: 1, A: 2 } as const;
 
 /** Promotion (ARCHITECTURE §20.9). The promoted start with what their station would tell them: whom they answer to and
@@ -561,7 +561,7 @@ export const agents: System = {
       const quiet = ctx.content.scenario.agents.demoteAfterDays * DAY;
       for (const id of Object.keys(ctx.s.tiers).sort()) {
         const tier = ctx.s.tiers[id], base = ctx.content.byId.character.get(id)!.tier, a = ctx.s.agents[id];
-        if (!a || RANK[tier] <= RANK[base]) continue;
+        if (!a || RANK[tier] <= RANK[base] || ctx.s.bw?.emerged[id]) continue; // one who has emerged keeps his place
         const busy = (ctx.s.ordersInForce[id] ?? []).length > 0 || !("at" in ctx.s.positions[id]) || (a.operational && !a.operational.idle);
         if (busy || ctx.tick - a.lastActive < quiet) continue;
         const to = tier === "A" ? "B" : "C";

@@ -28,7 +28,7 @@ export interface Character { id: string; name: string; role: string; location: s
   household?: string; occupation?: string; adviceKinds?: string[]; repairScope?: "all" | "endangered" | "critical" }
 export type Script =
   | { day: number; kind: "travel"; who: string; to: string; mode: Mode; secret?: boolean }
-  | { day: number; kind: "order"; from: string; to: string; intent: string; objective: SubjectRefC; supersedesPrevious?: boolean; discretion?: "strict" | "bounded" | "delegated" }
+  | { day: number; kind: "order"; from: string; to: string; intent: string; objective: SubjectRefC; supersedesPrevious?: boolean; discretion?: "strict" | "bounded" | "delegated"; constraints?: { kind: string; textKey: string }[] }
   | { day: number; kind: "threat"; site: string; intensityPermille: number; durationDays: number };
 export interface AgentParams {
   reviewDays: { strategic: number; operational: number };
@@ -141,8 +141,33 @@ export interface EnvironmentParams {
   /** Starting values that differ from the defaults (tests and scenarios). */
   initial?: { regions?: Record<string, Partial<{ snow: number; wet: number; dry: number; anom: number }>>; rivers?: Record<string, Partial<{ level: number; ice: number }>>; stress?: Record<string, number> };
 }
+/** Phase 11 (docs/EXPLORATION.md): the wood creature, expeditions, reputation and the Stone of Vey. */
+export type ExpeditionKind = "scholarly" | "military";
+export interface WildsParams {
+  site: string;
+  /** Whom a scripted ruler sends to look into the talk. */
+  envoy: string;
+  /** Places the creature hunts, with weights. */
+  range: Record<string, number>;
+  creature: { firstHuntDays: [number, number]; intervalDays: [number, number]; livestock: [number, number]; personPermille: number; materialPerHead: number };
+  rumour: { perHunt: number; exaggeratePermille: [number, number]; radiusHours: number };
+  stone: { foundPermillePerDay: number; actualLegitimacy: number; believedLegitimacy: number; examineDays: number; trustPerLegitimacy: number };
+  expedition: {
+    searchDays: number; signsPermille: number; hollowPermille: number; encounterPermille: number;
+    /** Odds of each outcome of meeting the creature, by kind of party (permille, sum 1000); skill moves odds from "mauled" and "fell" to "killed". */
+    encounter: Record<ExpeditionKind, { killed: number; fled: number; mauled: number; fell: number }>;
+    skillShift: number;
+    /** Which capability makes a good leader of each kind. */
+    fitness: Record<ExpeditionKind, string>;
+  };
+  leader: { reputationWeight: number; fitnessFloor: number; sharpen: number };
+  reputation: { signs: number; hollow: number; stone: number; survived: number; fled: number; mauled: number; fell: number; killed: number; activeAt: number };
+  custody: { deliverLoyalty: number; deliverTrait: number; keepBase: number; keepTrait: number; keepOtherHouse: number; believedWorth: number };
+}
+
 export interface Scenario {
   environment?: EnvironmentParams;
+  wilds?: WildsParams;
   policy?: PolicyParams;
   ruler: string; treasuryMilli: number;
   movement: { speedsKmPerDay: Record<Mode, Record<string, number>>; crossingDelayTicks: Record<string, number> };
@@ -345,6 +370,18 @@ export function validateContent(raw: RawContent): { errors: ContentError[] } {
   for (const id of ["fortification.condition", "character.location", "character.seat", "order.status", "order.content", "report.route", "threat.intensity", "treasury.balance", "request.reinforce"]) need(preds, id, "predicate", "engine requires");
 
   if (sc.environment) need(preds, "road.closed", "predicate", "the environment needs it (news of shut roads)");
+  const bw = sc.wilds;
+  if (bw) {
+    for (const id of ["site.rumour", "site.signs", "creature.nature", "stone.found", "stone.properties"]) need(preds, id, "predicate", "the wood expeditions need it");
+    need(locs, bw.site, "location", "wilds.site");
+    need(chars, bw.envoy, "character", "wilds.envoy");
+    for (const p of Object.keys(bw.range)) need(locs, p, "location", "wilds.range");
+    for (const k of ["scholarly", "military"] as const) {
+      const e = bw.expedition.encounter[k];
+      if (!e || e.killed + e.fled + e.mauled + e.fell !== 1000) err("RANGE", `wilds.expedition.encounter.${k} must sum to 1000`);
+    }
+    if (!(bw.creature.intervalDays[0] > 0 && bw.creature.intervalDays[0] <= bw.creature.intervalDays[1])) err("RANGE", "wilds.creature.intervalDays");
+  }
   const ruler = raw.characters.find((c) => c.id === sc.ruler);
   if (ruler && locs.has(ruler.location)) {
     const adj = new Map<string, string[]>();

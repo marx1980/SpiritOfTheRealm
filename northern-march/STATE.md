@@ -47,6 +47,8 @@ Phases 0-4: see DECISIONS D-001 to D-014.
 
 **Phase 10, environment (D-072, built 13 Nov; `docs/ENVIRONMENT.md`).** `src/environment.ts` (pure daily step) and `src/systems/environment.ts`: weather, temperature, ground wetness, snowpack and stress per province, river level, ice and flood per river, recorded daily as `EnvironmentDay`. Closes crossings (flood, ice), hill passes (snow), marsh tracks (waterlogged) and, after an earthquake, hill and forest routes (landslide) with hysteresis; mud and snow slow travel by terrain; harvests follow the season and suffer flood, frost and drought (`CropDamaged`); storms, fires and earthquakes are `Hazard` events from the state; battles get the day's weather and mud; officials skip sources they cannot reach (`SupplyBlocked`) and their later requests cite the closures; people at a route's end see it shut (`road.closed`), castellans write at once; the page shows season, weather and shut roads. Content march-0.9. `test/environment.test.ts` (19). **Not verified:** that any of the values are right, that winters or the marsh feel right, or that it is fun; all numbers are first guesses tuned on TUNE seeds. G-18 (tool `tools/phase10_gate.ts`, bars proposed) not yet run.
 
+**Phase 11, exploration, creature and artefact (D-073, built 13 Nov; `docs/EXPLORATION.md`).** `src/systems/exploration.ts`: hidden apex-predator ecology with scheduled hunts and rumours, military and scholarly expeditions to Blackwood chosen by a senior delegate (weighted keyed draw, weights recorded), reputation and `CharacterEmerged` (Stefan Veyr), the Stone of Vey (actual vs believed properties, custody events with reasons, `provenance(log)`), crown trust on delivery. Content march-0.10. `tools/phase11_gate.ts` (G-19 probe/shard/eval) written, not run on a gate block.
+
 ## Result
 - Phase 1: G-01, G-02 PASS (D-009). Phase 2: built (D-010).
 - Phase 3: G-10 PASS, G-11 FAIL, overridden (D-013, D-016).
@@ -69,6 +71,8 @@ Phases 0-4: see DECISIONS D-001 to D-014.
 - Environment (Phase 10): planners and the order composer use usual speeds, not today's mud; no forecasts or Selene advice; magic is P1; battles use the day's weather only (no hours, no night); closures are physical truth for pathing while people learn of them by seeing and by letter; the climate values are guesses.
 - Battles (Phase 8): no audio signatures; the enemy does not read signals; no commander death or succession; no sector delegation; weather is rain or clear only (from a storm in the last day); the planner still often prefers a poor sally to holding (D-068); captains' companies keep a fixed foot/horse/archers split; the fort's roster is not in letters or on the map; a captain's company wiped out is not marked on the map (troops stay above zero).
 
+- Exploration (Phase 11): no contested reports between expeditions, no theft or capture, no competing claims on the Stone; one creature that does not change; planners do not weigh the creature; the Stone's effect is trust only; magic is P1. Numbers are first guesses from TUNE probes (Stefan emerges 20.5% pooled; 65% of finds end outside Anna's hands).
+
 ## Needs a human
 - H-03 battle screen playability (version 3; deferred by Marko on 13 Nov, D-069, still owed): at least 5 testers, two on a phone, on the Battle Clips page, shared as Contributors (`docs/H03_PROTOCOL.md`); it also picks the flash style. The bars are proposals (D-063) for you to confirm. Phase 8 completes only on its PASS or your override.
 - One round on the frozen Phase 9 code (D-071): G-17 400000, 7A 410000, G-12 420000, G-13 430000, tune-seed checks; running from a worktree.
@@ -76,6 +80,7 @@ Phases 0-4: see DECISIONS D-001 to D-014.
 - Optional: run `node src/cli.ts g01 --seeds 1..100` in `engine/` on your own computer; it must end with the combined hash above.
 
 ## Next phase
+(13 Nov, latest.) Phase 11 built; G-19 to run once on frozen code after Marko confirms the bars (D-073). Next: Phase 12 full battlefield, Opus 5.5, xhigh.
 (13 Nov, later.) Phase 10 built; G-18 to run once on the frozen code (needs Marko's confirmation of the bars in D-072). Then Phase 11 (exploration, artefact): Sonnet 5.5, high; Opus medium for the Stefan emergence rules.
 (13 Nov.) Phase 9 built; G-17 and the regression round run once on the frozen code. Then Phase 10 (environment): Sonnet 5.5, high.
 (Updated 8 Nov.) The plan's Phase 7B is now built (stages 1-3) and gated. Next is Phase 8, minimal battle slice, Opus 5.5, high; after it the plan says to choose the timber/Blackwood loop or the Grey Hill battlefield laboratory from the evidence. Marko plays first. Older text follows.

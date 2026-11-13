@@ -4,8 +4,8 @@
 export const EVENT_SCHEMA_VERSION = 3; // v3 (Phase 3): agents, DecisionTrace, obedience payloads; v2 (Phase 2): B2/B5 payloads
 
 export type Domain = "military" | "economic" | "political" | "social" | "environment" | "magic" | "info";
-export type SystemId = "core" | "economy" | "weather" | "threat" | "movement" | "knowledge" | "messenger" | "orders" | "player" | "advice" | "agents" | "battle" | "communities" | "grain" | "goods" | "manpower" | "policy" | "environment";
-export const ABLATABLE: readonly SystemId[] = ["economy", "weather", "threat", "messenger", "communities", "environment"];
+export type SystemId = "core" | "economy" | "weather" | "threat" | "movement" | "knowledge" | "messenger" | "orders" | "player" | "advice" | "agents" | "battle" | "communities" | "grain" | "goods" | "manpower" | "policy" | "environment" | "exploration";
+export const ABLATABLE: readonly SystemId[] = ["economy", "weather", "threat", "messenger", "communities", "environment", "exploration"];
 
 export interface SubjectRef {
   kind: "character" | "location" | "report" | "order";
@@ -67,6 +67,22 @@ export const EVENT_TYPES: Readonly<Record<string, EventTypeDef>> = Object.freeze
   StressReleased: T("environment", "environment", 3), // an earthquake: the stress it let go
   CropDamaged: T("environment", "environment", 2),
   SupplyBlocked: T("grain", "economic", 2), // an official could not send for grain because the roads were shut
+  // exploration (Phase 11, docs/EXPLORATION.md)
+  CreatureHunt: T("exploration", "social", 2, true), // the creature takes livestock, sometimes a person: a clock-driven step
+  ExpeditionStarted: T("exploration", "military", 2),
+  SiteSearched: T("exploration", "info", 1),
+  CreatureEncountered: T("exploration", "military", 3),
+  ExpeditionEnded: T("exploration", "military", 3),
+  LeaderFell: T("exploration", "military", 3),
+  ReputationChanged: T("exploration", "political", 2),
+  CharacterEmerged: T("exploration", "political", 3),
+  StoneFound: T("exploration", "political", 3),
+  StoneTaken: T("exploration", "political", 3),
+  StoneKept: T("exploration", "political", 3),
+  StoneSent: T("exploration", "political", 3),
+  StoneDelivered: T("exploration", "political", 3),
+  StoneLost: T("exploration", "political", 3),
+  StoneExamined: T("exploration", "political", 2),
   // knowledge (B5)
   Observed: T("knowledge", "info", 0),
   BeliefUpdated: T("knowledge", "info", 1),

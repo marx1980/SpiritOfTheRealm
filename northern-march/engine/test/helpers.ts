@@ -11,8 +11,8 @@ export function variant(edit: (raw: RawContent) => void) {
   return deriveContent(raw);
 }
 
-/** The scenario as it was before Phase 10 (no environment block): dry roads, the placeholder weather. For tests that pin exact travel times or the old weather. */
-export const legacyVariant = (edit: (raw: RawContent) => void = () => {}) => variant((r) => { delete (r.scenario as { environment?: unknown }).environment; edit(r); });
+/** The scenario as it was before Phase 10 (no environment block, and since Phase 11 no Blackwood): dry roads, the placeholder weather, no hunts. For tests that pin exact travel times or the old weather. */
+export const legacyVariant = (edit: (raw: RawContent) => void = () => {}) => variant((r) => { delete (r.scenario as { environment?: unknown }).environment; delete (r.scenario as { wilds?: unknown }).wilds; for (const c of r.characters) if (c.id === "bren") c.relationships = c.relationships.filter((x) => !(x.kind === "recommends" && x.to === "edda")); edit(r); });
 export const LEGACY = legacyVariant();
 
 export function run(cfg: Partial<SimConfig> & { seed: number }, days = 240) {

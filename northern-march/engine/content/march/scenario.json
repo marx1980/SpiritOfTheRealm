@@ -1177,5 +1177,94 @@
   "battle": {
    "mudSlowPermille": 250
   }
+ },
+ "wilds": {
+  "site": "blackwood",
+  "envoy": "caron",
+  "range": {
+   "coldmere": 500,
+   "greyfen": 300,
+   "pinegate": 200
+  },
+  "creature": {
+   "firstHuntDays": [
+    6,
+    18
+   ],
+   "intervalDays": [
+    9,
+    22
+   ],
+   "livestock": [
+    2,
+    6
+   ],
+   "personPermille": 120,
+   "materialPerHead": 8
+  },
+  "rumour": {
+   "perHunt": 180,
+   "exaggeratePermille": [
+    -200,
+    600
+   ],
+   "radiusHours": 60
+  },
+  "stone": {
+   "foundPermillePerDay": 250,
+   "actualLegitimacy": 300,
+   "believedLegitimacy": 800,
+   "examineDays": 3,
+   "trustPerLegitimacy": 120
+  },
+  "expedition": {
+   "searchDays": 4,
+   "signsPermille": 450,
+   "hollowPermille": 300,
+   "encounterPermille": 300,
+   "encounter": {
+    "scholarly": {
+     "killed": 50,
+     "fled": 600,
+     "mauled": 250,
+     "fell": 100
+    },
+    "military": {
+     "killed": 400,
+     "fled": 250,
+     "mauled": 250,
+     "fell": 100
+    }
+   },
+   "skillShift": 150,
+   "fitness": {
+    "scholarly": "intelligence",
+    "military": "military"
+   }
+  },
+  "leader": {
+   "reputationWeight": 400,
+   "fitnessFloor": 150,
+   "sharpen": 2
+  },
+  "reputation": {
+   "signs": 60,
+   "hollow": 80,
+   "stone": 160,
+   "survived": 90,
+   "fled": -60,
+   "mauled": -80,
+   "fell": -300,
+   "killed": 220,
+   "activeAt": 500
+  },
+  "custody": {
+   "deliverLoyalty": 1000,
+   "deliverTrait": 200,
+   "keepBase": 100,
+   "keepTrait": 200,
+   "keepOtherHouse": 100,
+   "believedWorth": 150
+  }
  }
 }

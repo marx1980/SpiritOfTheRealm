@@ -279,6 +279,11 @@
         "to": "stefan",
         "kind": "recommends",
         "value": 850
+      },
+      {
+        "to": "edda",
+        "kind": "recommends",
+        "value": 600
       }
     ],
     "house": "crown",

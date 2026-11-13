@@ -33,6 +33,16 @@ export interface CommunityState {
   material: number; grievances: Grievance[]; memories: Memory[]; trust: Record<string, number>;
   stance: string; stanceSince: number; supports: string | null; told: string; lastTrigger: number; lastTriggerEvent: number; nextGrievance: number;
 }
+/** Phase 11: the wood creature, the expeditions, reputations and the Stone (docs/EXPLORATION.md). Null when a scenario has none. */
+export interface StoneState { status: "hollow" | "carried" | "transit" | "held" | "lost"; at: string; holder: string | null; found: boolean; examined: boolean; foundBy: string | null; toward: string | null }
+export interface ExpeditionState { orderId: number; leader: string; kind: "scholarly" | "military"; since: number; days: number; signs: boolean; hollow: boolean; stone: boolean; killed: boolean; ended: string | null }
+export interface WildsState {
+  alive: boolean; kills: number; missing: number; lastHunt: number;
+  stone: StoneState;
+  rep: Record<string, number>; emerged: Record<string, number>; dead: Record<string, number>;
+  expeditions: Record<string, ExpeditionState>;
+}
+
 export interface WorldState {
   treasuryMilli: Record<string, number>;
   /** garrison: all men in the fort; archers and horse: how many of them are bowmen and riders, the rest foot (D-067). */
@@ -62,6 +72,8 @@ export interface WorldState {
   threats: Record<string, { intensityPermille: number; untilTick: number; eventId: number; since: number }>;
   /** Phase 10: the environment (null when a scenario has none): weather, ground, snow, rivers, stress. */
   env: EnvState | null;
+  /** Phase 11: the wood (null when a scenario has none). */
+  bw: WildsState | null;
   /** Routes that are shut, and why (flood, ice, snow, waterlogged, landslide), with the event that shut them. */
   routesClosed: Record<string, ClosedRoute>;
   /** The last time an official could not send for grain to a place because the roads were shut (the event, and when). */
@@ -114,6 +126,12 @@ export interface WorldState {
 
 export const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 /** A policy in force from the start is known to everyone. */
+function initialWilds(c: Content): WildsState | null {
+  const b = c.scenario.wilds;
+  if (!b) return null;
+  return { alive: true, kills: 0, missing: 0, lastHunt: -1, stone: { status: "hollow", at: b.site, holder: null, found: false, examined: false, foundBy: null, toward: null }, rep: {}, emerged: {}, dead: {}, expeditions: {} };
+}
+
 function initialPolicies(c: Content) {
   const out: WorldState["policyKnown"] = {};
   const init = Object.entries(c.scenario.policy?.initial ?? {}).sort(([a], [b]) => cmp(a, b));
@@ -152,7 +170,7 @@ export function initialState(c: Content): WorldState {
     if (ch.id !== c.scenario.ruler && ch.tier !== "C") agents[ch.id] = newAgent();
   }
   return {
-    treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, tiers, history: {}, agents, recommendations: {}, heard: {}, campaign: { ended: null, lastDanger: -1 }, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, sortieOpen: {}, battles: {}, policyKnown: initialPolicies(c), precedents: [], prestige: {}, conduct: {}, lastStorm: {}, fallen: {}, threats: {}, routesClosed: {}, supplyBlocked: {}, env: initialEnv(c),
+    treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, tiers, history: {}, agents, recommendations: {}, heard: {}, campaign: { ended: null, lastDanger: -1 }, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, sortieOpen: {}, battles: {}, policyKnown: initialPolicies(c), precedents: [], prestige: {}, conduct: {}, lastStorm: {}, fallen: {}, threats: {}, routesClosed: {}, supplyBlocked: {}, env: initialEnv(c), bw: initialWilds(c),
     positions, departures: {}, beliefs: {}, nextPropId: 1, reports: {}, nextReportId: 1, messengers: {}, nextMessengerId: 1,
     orders: {}, nextOrderId: 1, advisePending: {}, dayEndDay: -1, ordersInForce: {}, issued: {}, repairs: {}, communities: initialCommunities(c), ...initialGrain(c), ...initialGoods(c), hands: Object.fromEntries(c.communities.communities.map((x) => [x.id, x.hands ?? 0])), musterAway: {}, musters: {}, nextMusterId: 1,
   };
@@ -286,6 +304,22 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
     if (!cur || cur.until <= e.tick || p.permille >= cur.permille) s.harvestHit[p.place] = { permille: p.permille, until: Math.max(p.until, cur && cur.until > e.tick ? cur.until : 0), eventId: e.id, env: true };
   },
   SupplyBlocked: (s, p, e) => { s.supplyBlocked[p.place] = { eventId: e.id, tick: e.tick }; },
+  // Phase 11: the wood. Custody and reputation change only through these.
+  CreatureHunt: (s, p, e) => { const b = s.bw!; b.kills += p.livestock; b.missing += p.missing ? 1 : 0; b.lastHunt = e.tick; },
+  ExpeditionStarted: (s, p, e) => { s.bw!.expeditions[String(p.orderId)] = { orderId: p.orderId, leader: p.leader, kind: p.kind, since: e.tick, days: 0, signs: false, hollow: false, stone: false, killed: false, ended: null }; },
+  SiteSearched: (s, p) => { const x = s.bw!.expeditions[String(p.orderId)]; if (!x) return; x.days = p.day; x.signs ||= !!p.signs; x.hollow ||= !!p.hollow; x.stone ||= !!p.stone; },
+  CreatureEncountered: (s, p) => { if (p.outcome === "killed") { s.bw!.alive = false; const x = s.bw!.expeditions[String(p.orderId)]; if (x) x.killed = true; } },
+  ExpeditionEnded: (s, p) => { const x = s.bw!.expeditions[String(p.orderId)]; if (x) x.ended = p.outcome; },
+  LeaderFell: (s, p, e) => { s.bw!.dead[p.leader] = e.tick; s.troops[p.leader] = 0; },
+  ReputationChanged: (s, p) => { const b = s.bw!; b.rep[p.who] = Math.max(0, Math.min(1000, (b.rep[p.who] ?? 0) + p.delta)); },
+  CharacterEmerged: (s, p, e) => { s.bw!.emerged[p.who] = e.tick; },
+  StoneFound: (s, p) => { const st = s.bw!.stone; st.found = true; st.foundBy = p.by; },
+  StoneTaken: (s, p) => { const st = s.bw!.stone; st.status = "carried"; st.holder = p.holder; st.at = p.at; st.toward = null; },
+  StoneKept: (s, p) => { const st = s.bw!.stone; st.status = "held"; st.holder = p.holder; st.at = p.at; st.toward = null; },
+  StoneSent: (s, p) => { const st = s.bw!.stone; st.status = "transit"; st.holder = p.holder; st.toward = p.to; },
+  StoneDelivered: (s, p) => { const st = s.bw!.stone; st.status = "held"; st.holder = p.to; st.at = p.at; st.toward = null; },
+  StoneLost: (s, p) => { const st = s.bw!.stone; st.status = "lost"; st.holder = null; st.at = p.at; st.toward = null; st.found = false; },
+  StoneExamined: (s) => { s.bw!.stone.examined = true; },
 
   Observed: noop,
   BeliefUpdated: (s, p) => { (s.beliefs[p.holder] ??= {})[String(p.prop.id)] = p.prop; s.nextPropId = Math.max(s.nextPropId, p.prop.id + 1); },

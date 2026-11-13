@@ -34,6 +34,8 @@ export interface WorldKnowledge {
   names: Record<string, string>;
   /** The rules a standing policy can name, by area (Phase 9). */
   policy?: Record<string, string[]>;
+  /** Whom a ruler sends to look into talk of the wild site (Phase 11). */
+  envoy?: string;
   /** What each known person is known for: their strongest skill, in words (the area they advise on). */
   areas: Record<string, string>;
   /** What each store feeds each day, and the days of cover that mark the scarcity bands: the stewards know their own needs. */
@@ -161,6 +163,7 @@ export function buildView(s: Readonly<WorldState>, c: Content, who: string, now:
       places: c.locations.map((l) => ({ id: l.id, name: l.name, province: l.province, kind: l.kind, terrain: l.terrain, pos: [...l.pos] as [number, number], fortified: !!l.fortification })),
       routes: c.routes.map((r) => ({ from: r.from, to: r.to, ...(r.crossing ? { crossing: r.crossing.kind } : {}) })),
       ...(c.scenario.policy ? { policy: structuredClone(c.scenario.policy.rules) } : {}),
+      ...(c.scenario.wilds ? { envoy: c.scenario.wilds.envoy } : {}),
       names: Object.fromEntries([...c.locations.map((l) => [l.id, l.name]), ...[...known].sort().map((id) => [id, c.byId.character.get(id)?.name ?? id])]),
       areas: Object.fromEntries([...known].sort().map((id) => [id, areaOf(c.byId.character.get(id)?.capabilities ?? {})])),
       ...(c.scenario.goods ? { goods: {

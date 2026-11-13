@@ -50,6 +50,14 @@ const grainRelief = (consult: boolean, gapDays = 30): PolicyFn => (v) => {
     .sort((a, b) => b.k!.sacks - a.k!.sacks || (a.id < b.id ? -1 : 1))[0];
   return from ? [{ action: "requisition" as const, target: from.id, to: short.id, consult }] : [];
 };
+/** Phase 11: when she hears enough talk of the wood, send her envoy to look into it (a scholarly or a military expedition); at most once in `gapDays`. */
+const expedition = (kind: "scholarly" | "military", minRumour: number, gapDays: number): PolicyFn => (v) => {
+  const site = Object.values(v.beliefs).filter((b) => b.predicate === "site.rumour").map((b) => b.subject.id).sort()[0]; // the place the talk is about
+  const talk = site ? beliefsAbout(v, site, "site.rumour")[0] : undefined;
+  if (!site || !talk || !v.world.envoy || !v.world.places.some((x) => x.id === site) || (talk.believedValue as number) < minRumour || recently(v, "investigate", site, gapDays)) return [];
+  return [{ action: "order" as const, order: { recipient: v.world.envoy, intent: "investigate" as const, objective: { kind: "location" as const, id: site }, discretion: "delegated" as const,
+    constraints: [{ kind: "expedition", textKey: kind }], contingencies: [], reportingPolicy: { onReceipt: false, onCompletion: true, onFailure: true } } as never }];
+};
 const repairBelow = (threshold: number, cooldownDays: number): PolicyFn => (v) =>
   believedForts(v).filter((f) => f.value < threshold && !recently(v, "repair", f.loc, cooldownDays)).map((f) => ({ action: "repair" as const, target: f.loc }));
 
@@ -110,9 +118,9 @@ export function policyFn(id: PolicyId, aliases: Record<string, string> = {}): Po
 
 export const POLICIES: Record<"passive" | "delegating" | "aggressive" | "cautious" | "provisioner" | "random-valid" | "follow-best-adviser" | "follow-worst-adviser", { fn: PolicyFn | null; note: string }> = {
   passive: { fn: () => [], note: "never acts" },
-  delegating: { fn: (v, rng) => [...repairBelow(60000, 20)(v, rng), ...advanceTo(400, 20)(v, rng), ...grainRelief(true)(v, rng)], note: "repairs below 60%; sends the captain against raiders reported at 400 or more; asks the people whose grain it is first when a store looks low" },
+  delegating: { fn: (v, rng) => [...repairBelow(60000, 20)(v, rng), ...advanceTo(400, 20)(v, rng), ...grainRelief(true)(v, rng), ...expedition("scholarly", 300, 60)(v, rng)], note: "repairs below 60%; sends the captain against raiders reported at 400 or more; asks the people whose grain it is first when a store looks low" },
   aggressive: {
-    fn: (v, rng) => [...repairBelow(80000, 10)(v, rng), ...advanceTo(1, 10)(v, rng), ...(recently(v, "levy", null, 60) ? [] : [{ action: "levy" as const }]), ...grainRelief(false, 60)(v, rng)],
+    fn: (v, rng) => [...repairBelow(80000, 10)(v, rng), ...advanceTo(1, 10)(v, rng), ...(recently(v, "levy", null, 60) ? [] : [{ action: "levy" as const }]), ...grainRelief(false, 60)(v, rng), ...expedition("military", 300, 60)(v, rng)],
     note: "repairs below 80%, sends the captain against any reported raiders, levies every 60 days, takes grain without asking when a store looks low, at most once in 60 days",
   },
   provisioner: { fn: (v, rng) => [...POLICIES.delegating.fn!(v, rng), ...provision(v)], note: "as delegating, and also: does what advisers say about timber and men (once in 20 days for each), and sells timber from a store that is nearly full at the town that pays most (D-045; an evidence policy, not a gate policy)" },

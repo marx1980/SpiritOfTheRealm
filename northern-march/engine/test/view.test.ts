@@ -14,7 +14,7 @@ test("ViewOf(player) is frozen and holds only beliefs, delivered reports and the
   const sim = run({ seed: 1 }, 60);
   const v = sim.viewOf("player");
   assert.ok(Object.isFrozen(v) && Object.isFrozen(v.beliefs));
-  assert.deepEqual(Object.keys(v).sort(), ["advice", "beliefs", "ledger", "now", "reports", "self", "world"]); // the ledger is the steward's books of goods, given to the ruler at the seat (D-044)
+  assert.deepEqual(Object.keys(v).sort(), ["advice", "beliefs", "environment", "ledger", "now", "reports", "self", "world"]); // the environment block is Phase 10 (D-072); the ledger is the steward's books of goods, given to the ruler at the seat (D-044)
   assert.throws(() => { (v as { now: number }).now = 0; });
 });
 
