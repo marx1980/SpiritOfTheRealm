@@ -96,14 +96,14 @@ export class Talk {
     if (this.rec) { this.rec.stop(); return; }
     const base = this.input.trim() ? `${this.input.trim()} ` : "";
     const rec = this.rec = new Rec();
-    rec.lang = "en-GB"; rec.interimResults = true; rec.maxAlternatives = 1; rec.continuous = false;
+    rec.lang = "en-GB"; rec.interimResults = false; rec.maxAlternatives = 1; rec.continuous = false;
     this.listening = true; this.host.render();
     let got = false;
     rec.onresult = (e) => {
       got = true;
-      const r = e.results[e.results.length - 1], alt = r[0];
-      const text = base + alt.transcript;
-      this.show(r.isFinal ? correctTranscript(this.host.view(), { text: text.trim(), words: alt.transcript.split(/\s+/).map((x) => ({ w: x, conf: alt.confidence })) }).text : text);
+      // one phrase: every piece the recogniser settled on, in order (as HeadJams does it)
+      const said = Array.from(e.results).map((r) => r[0].transcript).join(" ").replace(/\s+/g, " ").trim();
+      this.show(correctTranscript(this.host.view(), { text: (base + said).trim() }).text);
     };
     // iOS reports "service not allowed" when the recogniser closes, even after it has heard her: only a silence is worth saying
     const done = (why?: string) => { this.rec = undefined; this.listening = false; if (why && why !== "aborted" && why !== "no-speech" && !(got && why === "service-not-allowed")) this.lines.push({ who: "", text: why === "service-not-allowed" ? "Speak: switch on Dictation in the phone's keyboard settings" : `Speak: ${why.replace(/-/g, " ")}`, kind: "tech" }); this.host.render(); };
