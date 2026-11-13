@@ -658,16 +658,15 @@ function render() {
   ${st.observer ? observer() : ""}`}`;
   void o;
   syncMore();
+  talk.bind();
   if (talk.focus) { const i = document.getElementById("talk-in") as HTMLInputElement | null; if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
   if (newPause) document.querySelector(".pause")?.scrollIntoView({ block: "start" });
 }
 
 document.addEventListener("click", (e) => {
   const t = e.target as HTMLElement;
-  const el = t.closest("#talk-say,[data-say],#bo-add,[data-act],[data-toggle],[data-mission],[data-place],[data-q],[data-unq],[data-letter],[data-issue],[data-close-letter],[data-use-levy],#go,#restart,#settings-tab,#economy-tab,#policy-tab,#pol-go,#o-add,#eco-add,#copy-log") as HTMLElement | null;
+  const el = t.closest("#bo-add,[data-act],[data-toggle],[data-mission],[data-place],[data-q],[data-unq],[data-letter],[data-issue],[data-close-letter],[data-use-levy],#go,#restart,#settings-tab,#economy-tab,#policy-tab,#pol-go,#o-add,#eco-add,#copy-log") as HTMLElement | null;
   if (!el) return;
-  if (el.id === "talk-say") return talk.say((document.getElementById("talk-in") as HTMLInputElement).value);
-  if (el.dataset.say) return talk.say(el.dataset.say);
   if (el.dataset.useLevy !== undefined) { st.draft.action = "p:levy"; return render(); }
   if (el.dataset.letter) { const id = Number(el.dataset.letter); st.openLetter = st.openLetter === id ? null : id; return render(); }
   if (el.dataset.issue) { st.openIssue = st.openIssue === el.dataset.issue ? null : el.dataset.issue; return render(); }
@@ -716,9 +715,6 @@ document.addEventListener("click", (e) => {
   }
   if (el.id === "copy-log") navigator.clipboard?.writeText(st.sim.log.map((x) => JSON.stringify(x)).join("\n")).catch(() => {});
 });
-// no <form>: the artifact frame does not submit forms, so Say is a button and Enter is a key
-document.addEventListener("keydown", (e) => { if ((e.target as HTMLElement).id === "talk-in" && e.key === "Enter") { e.preventDefault(); talk.say((e.target as HTMLInputElement).value); } });
-document.addEventListener("input", (e) => { if ((e.target as HTMLElement).id === "talk-in") { talk.input = (e.target as HTMLInputElement).value; talk.focus = true; } });
 document.addEventListener("focusin", (e) => { talk.focus = (e.target as HTMLElement).id === "talk-in"; });
 document.addEventListener("change", (e) => {
   const t = e.target as HTMLInputElement | HTMLSelectElement;
@@ -749,4 +745,5 @@ document.head.insertAdjacentHTML("beforeend", `<style>${BATTLE_CSS}
 ${Talk.CSS}
 .battle { align-items: start; } .battle .net td { white-space: normal; } .battle .letters { max-height: 260px; }
 </style>`);
+talk.init();
 start(st.seed);
