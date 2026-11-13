@@ -6,7 +6,7 @@ import type { Behaviour, FieldSpec, Kind, Mark, Side } from "../src/battlefield/
 import { KNIGHT } from "./maparts.ts";
 
 /** The word shown on a formation for its state; good order is the default and has none. */
-export const STATE_WORD: Record<Behaviour, string> = { good_order: "", yielding: "Yielding", disorganised: "Disorganised", rallying: "Rallying", withdrawing: "Withdrawing", retreat: "Retreat", rout: "Rout", pursuing: "Pursuing", gone: "" };
+export const STATE_WORD: Record<Behaviour, string> = { good_order: "", yielding: "Yielding", disorganised: "Disordered", rallying: "Rallying", withdrawing: "Pulling back", retreat: "Breaking", rout: "Routed", pursuing: "Pursuing", gone: "" };
 /** How units seen breaking are made to stand out: not at all, a flash to light pink, or a flash to a pale tint of their own colour. */
 export type FlashStyle = "none" | "pink" | "pale";
 
@@ -217,33 +217,67 @@ export function frameBox(points: { x: number; y: number }[], field: FieldSpec, a
   return `${Math.round(bx)} ${Math.round(by)} ${Math.round(w)} ${Math.round(h)}`;
 }
 
-export function battleSvg(field: FieldSpec, glyphs: Glyph[], o: { hq?: { x: number; y: number }; showLabels?: boolean; states?: boolean; flash?: FlashStyle; viewBox?: string; ruler?: boolean; extra?: string } = {}): string {
+/** Roughly where a unit's drawing sits (block, banner, arrows), for keeping labels off it. */
+type Box = { x0: number; y0: number; x1: number; y1: number };
+function unitBox(g: Glyph): Box {
+  const hw = g.behaviour === "rout" || g.behaviour === "rallying" ? g.width * 0.62 : g.width / 2 + 2;
+  const front = D / 2 + 26, back = D / 2 + (g.behaviour === "rout" ? 42 : g.behaviour === "yielding" || g.behaviour === "withdrawing" ? 28 : 6);
+  return g.side === "crown" ? { x0: g.x - hw, y0: g.y - front, x1: g.x + hw, y1: g.y + back } : { x0: g.x - hw, y0: g.y - back, x1: g.x + hw, y1: g.y + front };
+}
+const overlap = (a: Box, b: Box) => Math.max(0, Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0)) * Math.max(0, Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0));
+/** Puts a label at the first of its spots that covers no unit and no label already placed (else the least covered one). */
+function place(text: string, size: number, spots: { x: number; y: number }[], avoid: Box[]): { x: number; y: number; box: Box } {
+  const w = text.length * size * 0.57 + 8, h = size * 1.05;
+  let best: { x: number; y: number; box: Box } | undefined, bestCost = Infinity;
+  spots.forEach((p, i) => {
+    const box = { x0: p.x - w / 2, y0: p.y - h * 0.82, x1: p.x + w / 2, y1: p.y + h * 0.22 };
+    const cost = avoid.reduce((n, b) => n + overlap(box, b), 0) + i; // ties go to the earlier, more natural spot
+    if (cost < bestCost) { bestCost = cost; best = { ...p, box }; }
+  });
+  return best!;
+}
+
+export function battleSvg(field: FieldSpec, glyphs: Glyph[], o: { hq?: { x: number; y: number }; showLabels?: boolean; states?: boolean; raiderWords?: boolean; flash?: FlashStyle; viewBox?: string; ruler?: boolean; extra?: string; avoid?: Box[] } = {}): string {
   const lines = field.lines.map((l) => `<text class="lbl pl" x="40" y="${l.y - 26}">${esc(l.name)}</text>`).join("");
   const places = field.places.map((p) => `<text class="lbl pl" x="${p.x + 60}" y="${p.y + 6}">${esc(p.name)}</text>`).join("");
   // layers: arrows in flight, the units, their type emblems, report ages, then the state words on top
   const live = glyphs.filter((g) => g.behaviour !== "gone"), byId = new Map(live.map((g) => [g.id, g]));
   const vols = live.filter((g) => g.shooting && byId.has(g.shooting)).map((g) => volley(g, byId.get(g.shooting!)!)).join("");
   const bodies: string[] = [], names: string[] = [], states: string[] = [], icons: string[] = [];
+  const avoid: Box[] = [...live.map(unitBox), ...(o.avoid ?? [])];
+  const labels: { g: Glyph; text: string; cls: string; size: number; spots: { x: number; y: number }[]; tone: string }[] = [];
   for (const g of live) {
     const known = g.category === "observed" && !g.stale ? "obs" : g.category === "inferred" ? "inf" : "rep";
     const flashing = o.flash && o.flash !== "none" && known === "obs" && BROKEN.includes(g.behaviour);
     const cls = `f ${g.side} b-${g.behaviour} ${known}${g.stale ? " stale" : ""}${flashing ? ` flash-${o.flash}` : ""}`;
     const flip = g.side === "raiders" ? " rotate(180)" : "";
-    const age = known === "obs" ? "" : `${g.age < 60 ? "<1 min" : mins(g.age)}`; // a report is never "now"
-    const at = `transform="translate(${g.x} ${g.y})"`, tone = `${g.side} ${known}${g.stale ? " stale" : ""}`;
-    bodies.push(`<g class="${cls}" data-id="${esc(g.id)}" ${at}><g transform="${flip}">${body(g)}</g></g>`);
-    // names are off unless asked for; what stays is the age of a report, so an old sighting is never read as fresh.
-    // The age sits on the side away from the enemy, the state word on the side towards it.
-    const name = o.showLabels === true ? esc(g.label) + (age ? " · " : "") : "";
-    if (name || age) names.push(`<g class="tag ${tone}" ${at}><text class="lbl fl" y="${g.side === "raiders" ? -26 : 44}">${name}${esc(age)}</text></g>`);
-    if (g.behaviour !== "rout") icons.push(`<g class="tag ${tone}" ${at}>${icon(g)}</g>`);
-    const word = o.states === false ? "" : STATE_WORD[g.behaviour];
-    if (word) states.push(`<g class="tag ${tone}" ${at}><text class="lbl st" y="${g.side === "raiders" ? (g.behaviour === "pursuing" ? 92 : 64) : (g.behaviour === "pursuing" ? -72 : -44)}">${esc(word)}</text></g>`);
+    const tone = `${g.side} ${known}${g.stale ? " stale" : ""}`;
+    bodies.push(`<g class="${cls}" data-id="${esc(g.id)}" transform="translate(${g.x} ${g.y})"><g transform="${flip}">${body(g)}</g></g>`);
+    if (g.behaviour !== "rout") icons.push(`<g class="tag ${tone}" transform="translate(${g.x} ${g.y})">${icon(g)}</g>`);
+    const b = unitBox(g), hw = (b.x1 - b.x0) / 2, toward = g.side === "crown" ? b.y0 : b.y1, away = g.side === "crown" ? b.y1 : b.y0, dir = g.side === "crown" ? -1 : 1;
+    // the state word (our units only, unless asked): towards the enemy first, then behind, to the sides, further out
+    const word = o.states === false || (g.side === "raiders" && !o.raiderWords) ? "" : STATE_WORD[g.behaviour];
+    if (word) labels.push({ g, text: word, cls: "st", size: 25, tone, spots: [
+      { x: g.x, y: toward + dir * 6 + (dir < 0 ? 0 : 20) }, { x: g.x, y: away - dir * 6 + (dir < 0 ? 22 : 0) },
+      { x: b.x1 + word.length * 7.5 + 10, y: g.y + 8 }, { x: b.x0 - word.length * 7.5 - 10, y: g.y + 8 },
+      { x: g.x, y: toward + dir * 34 + (dir < 0 ? 0 : 20) }, { x: g.x + hw + 40, y: toward + dir * 6 }, { x: g.x - hw - 40, y: toward + dir * 6 }] });
+    // names are off unless asked for; what stays is the age of a report, so an old sighting is never read as fresh
+    const age = known === "obs" ? "" : `${g.age < 60 ? "<1 min" : mins(g.age)}`;
+    const name = o.showLabels === true ? g.label + (age ? " · " : "") : "";
+    if (name || age) { const t = name + age; labels.push({ g, text: t, cls: "fl", size: 21, tone, spots: [
+      { x: g.x, y: away - dir * 4 + (dir < 0 ? 20 : 0) }, { x: b.x1 + t.length * 6 + 8, y: g.y + 7 }, { x: b.x0 - t.length * 6 - 8, y: g.y + 7 }, { x: g.x, y: toward + dir * 4 + (dir < 0 ? 0 : 18) }] }); }
+  }
+  // words before ages, so the more important label gets the better spot
+  for (const l of labels.sort((a, b) => (a.cls === b.cls ? 0 : a.cls === "st" ? -1 : 1))) {
+    const at = place(l.text, l.size, l.spots, avoid);
+    avoid.push(at.box);
+    (l.cls === "st" ? states : names).push(`<text class="lbl ${l.cls} tag ${l.tone}" x="${at.x.toFixed(0)}" y="${at.y.toFixed(0)}">${esc(l.text)}</text>`);
   }
   const fs = vols + bodies.join("") + icons.join("") + names.join("") + states.join("");
   const hq = o.hq ? `<g class="hq" transform="translate(${o.hq.x} ${o.hq.y})"><circle r="13"/><path d="M-7 3 l2.4 -9 l4.6 4.6 l4.6 -4.6 l2.4 9 z"/></g>` : "";
   return `<svg class="field" viewBox="${o.viewBox ?? `0 0 ${field.width} ${field.height}`}" role="img" aria-label="Battlefield">${terrain(field)}${lines}${places}${fs}${hq}${o.extra ?? ""}</svg>`;
 }
+export { unitBox, type Box };
 
 export const BATTLE_CSS = `
 .field { display: block; width: 100%; height: auto; max-height: 78vh; border-radius: 6px; background: #b7c48a;

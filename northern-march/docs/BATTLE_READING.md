@@ -12,7 +12,7 @@ For testers and for anyone checking the battle drawings (D-063). The screen show
 
 ## The eight behaviours
 
-Each block carries its type inside it: a sword for foot and warbands, an arrow for archers and bowmen, a horse for cavalry and riders, a crown for the queen's guard. A captain's own company also has a small knight at the left end of the block. The small flag above a block is its standard: upright when the men obey, leaning when control slips, absent in a rout. It adds nothing beyond the state word.
+Only our units carry the state word; it moves aside so it never covers a unit or another word. Each block carries its type inside it: a sword for foot and warbands, an arrow for archers and bowmen, a horse for cavalry and riders, a crown for the queen's guard. A captain's own company also has a small knight at the left end of the block. The small flag above a block is its standard: upright when the men obey, leaning when control slips, absent in a rout. It adds nothing beyond the state word.
 
 Archers and bowmen shooting are drawn as a dashed arc from them to their target, with arrows falling on it. The field shows meadow, our farmland and the fort wall at the bottom, the raiders' tents at the top, the ridge as a low hill, the wood as trees and the stream with its ford. The crown always faces up the field and the raiders down it; where the two meet they stand face to face.
 
@@ -20,11 +20,11 @@ Archers and bowmen shooting are drawn as a dashed arc from them to their target,
 |---|---|---|---|
 | In good order | none | One solid, unbroken block, banner upright. | Men are together and obeying orders. |
 | Yielding ground | Yielding | Slightly shorter block, banner tilted back, chevrons behind it. | In contact with the enemy, losing men, still holding a line but giving ground slowly. |
-| Becoming disorganised | Disorganised | The block broken into several uneven pieces, banner leaning. | Men are still there but control is slipping. Usually not running. |
+| Becoming disorganised | Disordered | The block broken into several uneven pieces, banner leaning. | Men are still there but control is slipping. Usually not running. |
 | Officers rallying men | Rallying | Men gathered round an upright banner, with a dashed ring turning around them. | A formation that had broken is being pulled back together by nearby officers. |
-| Withdrawing in order | Withdrawing | Whole block with one straight arrow pointing to its own rear. | An ordered pull-back. Men stay together. |
-| Uncontrolled retreat | Retreat | A block with a torn, jagged lower edge. No arrow. | The line has broken and is falling back without control, but some shape remains. |
-| Rout | Rout | No block and no banner. Scattered dots running away. | Men are fleeing and have lost all control. |
+| Withdrawing in order | Pulling back | Whole block with one straight arrow pointing to its own rear. | An ordered pull-back. Men stay together. |
+| Uncontrolled retreat | Breaking | A block with a torn, jagged lower edge. No arrow. | The line has broken and is falling back without control, but some shape remains. |
+| Routed | Rout | No block and no banner. Scattered dots running away. | Men are fleeing and have lost all control. |
 | Pursuing | Pursuing | A loose wedge pointing at the enemy, two arrows ahead of it, banner leaning. | Men have run after a broken enemy, out of formation. They leave a gap, tire, and are easy prey if they meet formed troops. |
 
 ## Telling similar ones apart
