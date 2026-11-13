@@ -60,6 +60,8 @@ Phases 0-4: see DECISIONS D-001 to D-014.
   - G-12 TUNE with communities on: Elara 33.0%, Selene 30.5%, Oren 14.5%, passive 0.5% (gap 18.5 points; 7 before communities). Block 98000 was refused by the gate tool (not a multiple of 10,000) before any seed ran; re-registered as 100000-100999 (D-021); running (results/phase6_g12_100000.txt).
   - Regression: G-02 PASS (results/phase6_regression.log); rest of that run pending.
 
+- G-18 PASS (block 500000, D-074). G-19 FAIL on (a) (block 510000): Stefan emerged in 15.6% of games with an expedition, band 20-40%; (b)-(d) PASS. Phase 11 is not complete until a PASS or a recorded override (D-074 lists the options).
+
 ## Known gaps
 - G-11 open (D-016). Standing instruction: tell Marko if a re-run passes.
 - The economy is still unplayed by a human. Muster still needs iron at the fort first (buy it at Highcairn, which is Varos's), and advisers do not recommend it. Iron and horses are used only by muster. Houses spend only on restocking (an invented sink, not calibrated). Town prices change only when the crown sells. Sealed gates for D-045 closed (D-050).
@@ -80,7 +82,7 @@ Phases 0-4: see DECISIONS D-001 to D-014.
 - Optional: run `node src/cli.ts g01 --seeds 1..100` in `engine/` on your own computer; it must end with the combined hash above.
 
 ## Next phase
-(13 Nov, latest.) Phase 11 built; G-19 to run once on frozen code after Marko confirms the bars (D-073). Next: Phase 12 full battlefield, Opus 5.5, xhigh.
+(13 Nov, latest.) Phase 11 built; G-19 to run once on frozen code after Marko confirms the bars (D-073). G-18 passed; G-19 failed on the Stefan share (D-074). Decide on G-19 first (recalibrate and re-run on block 520000, or an override), then Phase 12 full battlefield, Opus 5.5, xhigh.
 (13 Nov, later.) Phase 10 built; G-18 to run once on the frozen code (needs Marko's confirmation of the bars in D-072). Then Phase 11 (exploration, artefact): Sonnet 5.5, high; Opus medium for the Stefan emergence rules.
 (13 Nov.) Phase 9 built; G-17 and the regression round run once on the frozen code. Then Phase 10 (environment): Sonnet 5.5, high.
 (Updated 8 Nov.) The plan's Phase 7B is now built (stages 1-3) and gated. Next is Phase 8, minimal battle slice, Opus 5.5, high; after it the plan says to choose the timber/Blackwood loop or the Grey Hill battlefield laboratory from the evidence. Marko plays first. Older text follows.
