@@ -106,10 +106,12 @@ export class Talk {
       this.show(correctTranscript(this.host.view(), { text: (base + said).trim() }).text);
     };
     // iOS reports "service not allowed" when the recogniser closes, even after it has heard her: only a silence is worth saying
-    const done = (why?: string) => { this.rec = undefined; this.listening = false; if (why && why !== "aborted" && why !== "no-speech" && !(got && why === "service-not-allowed")) this.lines.push({ who: "", text: why === "service-not-allowed" ? "Speak: switch on Dictation in the phone's keyboard settings" : `Speak: ${why.replace(/-/g, " ")}`, kind: "tech" }); this.host.render(); };
+    // every way it ends without words is said, so a phone that will not listen says why
+    let why = "";
+    const done = () => { if (!this.rec) return; this.rec = undefined; this.listening = false; if (!got) this.lines.push({ who: "", text: `Speak: ${why ? why.replace(/-/g, " ") : "heard nothing"}`, kind: "tech" }); this.host.render(); };
     rec.onend = () => done();
-    rec.onerror = (e) => done(e.error);
-    try { rec.start(); } catch { done("unavailable"); }
+    rec.onerror = (e) => { why = e.error; done(); };
+    try { rec.start(); } catch (e) { why = (e as Error).name || "unavailable"; done(); }
   }
   /** Speak: start listening (straight from the click, as the platform requires), or stop. */
   listen() {
