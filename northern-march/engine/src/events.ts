@@ -81,6 +81,15 @@ export const EVENT_TYPES: Readonly<Record<string, EventTypeDef>> = Object.freeze
   TreatySigned: T("frontier", "political", 3), // her acceptance reaches the court: the tribute, and a truce
   TreatyRefused: T("frontier", "political", 3), // her refusal reaches the court
   FrontierTrade: T("frontier", "economic", 2), // the merchant's grain reaches the March
+  // the ruler's verbs toward the court across the border (D-090; content scenario.frontier.verbs)
+  ReinforcementsSent: T("frontier", "military", 2), // hired men set out for the border fort, paid now
+  ReinforcementsArrived: T("frontier", "military", 2),
+  ReinforcementsLeft: T("frontier", "military", 1),
+  EnvoySent: T("frontier", "political", 2), // a gift to the court leaves with the ambassador, paid now
+  EnvoyArrived: T("frontier", "political", 3), // the court receives it: goodwill for a while
+  MerchantGrainBought: T("frontier", "economic", 2),
+  MerchantGrainDelivered: T("frontier", "economic", 2),
+  FrontierActRefused: T("frontier", "political", 1), // a verb that cannot be done now (the merchant does not trade, the chest is empty)
   // exploration (Phase 11, docs/EXPLORATION.md)
   CreatureHunt: T("exploration", "social", 2, true), // the creature takes livestock, sometimes a person: a clock-driven step
   ExpeditionStarted: T("exploration", "military", 2),

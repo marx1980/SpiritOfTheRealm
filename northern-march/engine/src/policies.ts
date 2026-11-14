@@ -2,14 +2,14 @@
 import type { Rng } from "./rng.ts";
 import { beliefsAbout, type OrderDraft, type View } from "./view.ts";
 import { captainSentTo, planOf } from "./presentation/phrasing.ts";
-import { adviceAction, economyProblems, affordable as affordableR, publicRulesOf } from "./presentation/affordances.ts";
+import { adviceAction, economyProblems, affordable as affordableR, coinsKnown, publicRulesOf } from "./presentation/affordances.ts";
 
 
 export type PolicyId = "passive" | "delegating" | "delegating-core" | "aggressive" | "cautious" | "provisioner" | "random-valid" | "follow-best-adviser" | "follow-worst-adviser" | "external" | "replay" | `follow:${string}`;
 /** `mission` (for sending a captain): defend the fort (default), or scout / attack the raiders at `raid`. */
 export interface BattleOrderDraft { to: string; task: import("./battlefield/core.ts").Task; via: "runner" | "signal" | "voice"; signal?: string;
   /** Phase 13: battle seconds spent talking before the order is given; the order is dated that much later (CONVERSATION.md §4). */ delay?: number }
-export interface PlayerAction { action: "repair" | "levy" | "advance" | "travel" | "order" | "relief" | "requisition" | "purchase" | "battle" | "policy" | "ask" | "treaty"; battle?: BattleOrderDraft; target?: string; to?: string; consult?: boolean; good?: string; units?: number; market?: boolean; sell?: boolean; muster?: boolean; arm?: "foot" | "archers" | "horse"; policy?: { area: "military" | "emergency" | "communities"; rule: string }; order?: OrderDraft; decision?: number; followed?: string; mission?: "defend" | "scout" | "attack"; raid?: string; repairMode?: "standard" | "rush" | "labour" }
+export interface PlayerAction { action: "repair" | "levy" | "advance" | "travel" | "order" | "relief" | "requisition" | "purchase" | "battle" | "policy" | "ask" | "treaty" | "reinforce" | "envoy" | "merchant"; battle?: BattleOrderDraft; target?: string; to?: string; consult?: boolean; good?: string; units?: number; market?: boolean; sell?: boolean; muster?: boolean; arm?: "foot" | "archers" | "horse"; policy?: { area: "military" | "emergency" | "communities"; rule: string }; order?: OrderDraft; decision?: number; followed?: string; mission?: "defend" | "scout" | "attack"; raid?: string; repairMode?: "standard" | "rush" | "labour" }
 export type PolicyFn = (v: View, rng: () => Rng) => PlayerAction[];
 
 const DAY = 86400;
@@ -145,13 +145,39 @@ const takeTheField = (minIntensity: number): PolicyFn => (v) => {
   return fort ? [{ action: "travel" as const, target: fort }] : [];
 };
 
+/** D-090: Pell's word on the border commander as it reaches her this hour (0 settle, 1 trade, 2 press, 3 strike), or null. */
+const postureNow = (v: View): number | null => {
+  const c = v.reports.filter((r) => v.now - r.deliveredAt < 3600).flatMap((r) => r.claims.filter((x) => x.predicate === "frontier.posture")).at(-1);
+  return c ? Number(c.believedValue) : null;
+};
+/** Her own acts toward the court across the border within `days` (no order records them, so `recently` cannot see them). */
+const actedWithin = (v: View, action: string, days: number) => (v.self.acts ?? []).some((a) => a.action === action && v.now - a.tick < days * DAY);
+/** Below this the border fort's walls (as she believes them) count as weak. */
+const WEAK_WALL = 85000;
+/** D-090: the ruler's verbs toward the court across the border, on Pell's letters. Delegating: a gift to the court when he reads the commander at press or strike (once per
+ *  goodwill), and men to the border fort as well if its walls are weak. Aggressive: men to the border fort on press or strike (once per stay), and the
+ *  merchant's grain bought when he reads the court at peace or trading (once in 40 days). Nothing without the content block. */
+const answerFrontier = (style: "delegating" | "aggressive"): PolicyFn => (v) => {
+  const F = v.world.frontier, seen = F ? postureNow(v) : null;
+  if (!F || seen === null) return [];
+  const coins = coinsKnown(v, publicRulesOf(v)), can = (m: number) => coins === undefined || m <= coins, hostile = seen >= 2;
+  const wall = beliefsAbout(v, F.fort, "fortification.condition")[0]?.believedValue as number | undefined;
+  const reinforce = (): PlayerAction[] => (F.reinforce && !actedWithin(v, "reinforce", F.reinforce.stayDays) && can(F.reinforce.costMilli) ? [{ action: "reinforce", target: F.fort }] : []);
+  if (style === "delegating") {
+    const out: PlayerAction[] = hostile && F.envoy && !actedWithin(v, "envoy", F.envoy.days) && can(F.envoy.giftMilli) ? [{ action: "envoy" }] : [];
+    return hostile && wall !== undefined && wall < WEAK_WALL ? [...out, ...reinforce()] : out;
+  }
+  if (hostile) return reinforce();
+  return F.merchant && !actedWithin(v, "merchant", 40) && can(F.merchant.costMilli) ? [{ action: "merchant" }] : [];
+};
+
 export const POLICIES: Record<"passive" | "delegating" | "delegating-core" | "aggressive" | "cautious" | "provisioner" | "random-valid" | "follow-best-adviser" | "follow-worst-adviser", { fn: PolicyFn | null; note: string }> = {
   passive: { fn: () => [], note: "never acts" },
   "delegating-core": { fn: (v, rng) => [...repairBelow(60000, 20)(v, rng), ...advanceTo(400, 20)(v, rng), ...grainRelief(true)(v, rng), ...expedition("scholarly", 300, 60)(v, rng)], note: "delegating as it was before Phase 14 (the walls, the captain, grain and the envoy; no answer to the court or the people), kept so that the Phase 9 policy measures compare" },
-  delegating: { fn: (v, rng) => [...repairBelow(60000, 20)(v, rng), ...advanceTo(400, 20)(v, rng), ...grainRelief(true)(v, rng), ...expedition("scholarly", 300, 60)(v, rng), ...answerTerms("accept")(v, rng), ...hearPeople()(v, rng)], note: "accepts the court's terms; repairs below 60%; sends the captain against raiders reported at 400 or more; asks the people whose grain it is first when a store looks low" },
+  delegating: { fn: (v, rng) => [...repairBelow(60000, 20)(v, rng), ...advanceTo(400, 20)(v, rng), ...grainRelief(true)(v, rng), ...expedition("scholarly", 300, 60)(v, rng), ...answerTerms("accept")(v, rng), ...hearPeople()(v, rng), ...answerFrontier("delegating")(v, rng)], note: "sends the court a gift when Pell reads its commander pressing or striking, and men to the border fort if its walls are weak (D-090); accepts the court's terms; repairs below 60%; sends the captain against raiders reported at 400 or more; asks the people whose grain it is first when a store looks low" },
   aggressive: {
-    fn: (v, rng) => [...repairBelow(80000, 10)(v, rng), ...advanceTo(1, 10)(v, rng), ...(recently(v, "levy", null, 60) ? [] : [{ action: "levy" as const }]), ...grainRelief(false, 60)(v, rng), ...expedition("military", 300, 60)(v, rng), ...answerTerms("refuse")(v, rng), ...hearPeople()(v, rng), ...takeTheField(600)(v, rng)],
-    note: "rides to a fort she believes is under a strong raid, answers the people's petitions, refuses the court's terms, repairs below 80%, sends the captain against any reported raiders, levies every 60 days, takes grain without asking when a store looks low, at most once in 60 days",
+    fn: (v, rng) => [...repairBelow(80000, 10)(v, rng), ...advanceTo(1, 10)(v, rng), ...(recently(v, "levy", null, 60) ? [] : [{ action: "levy" as const }]), ...grainRelief(false, 60)(v, rng), ...expedition("military", 300, 60)(v, rng), ...answerTerms("refuse")(v, rng), ...hearPeople()(v, rng), ...takeTheField(600)(v, rng), ...answerFrontier("aggressive")(v, rng)],
+    note: "sends men to the border fort when Pell reads the commander pressing or striking, buys the merchant's grain when he reads the court at peace (D-090); rides to a fort she believes is under a strong raid, answers the people's petitions, refuses the court's terms, repairs below 80%, sends the captain against any reported raiders, levies every 60 days, takes grain without asking when a store looks low, at most once in 60 days",
   },
   provisioner: { fn: (v, rng) => [...POLICIES.delegating.fn!(v, rng), ...provision(v)], note: "as delegating, and also: does what advisers say about timber and men (once in 20 days for each), and sells timber from a store that is nearly full at the town that pays most (D-045; an evidence policy, not a gate policy)" },
   cautious: { fn: (v, rng) => [...repairBelow(60000, 20)(v, rng), ...advanceTo(400, 20)(v, rng)], note: "as delegating, but never asks anyone for grain (holds back from a people already angry)" },

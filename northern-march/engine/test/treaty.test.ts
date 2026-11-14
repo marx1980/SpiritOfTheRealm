@@ -174,7 +174,8 @@ test("on trade the merchant brings grain to the March, and the ledger counts it"
 });
 
 test("no grain while the court presses or strikes, or while a host stands at the gate", () => {
-  const press = variant((r) => { delete (r.scenario as { year?: unknown }).year; const f = r.scenario.frontier!; f.court = { ...f.court, startStance: "press", thresholds: { tradeFrom: 0, pressFrom: 0, strikeFrom: 2000 } }; f.trade = { ...f.trade, everyDays: 10 }; });
+  // (the ruler's gift, D-090, would move this court off press: the verbs are taken out, as the year is, so the stance set here holds)
+  const press = variant((r) => { delete (r.scenario as { year?: unknown }).year; delete (r.scenario.frontier as { verbs?: unknown }).verbs; const f = r.scenario.frontier!; f.court = { ...f.court, startStance: "press", thresholds: { tradeFrom: 0, pressFrom: 0, strikeFrom: 2000 } }; f.trade = { ...f.trade, everyDays: 10 }; });
   assert.equal(ofType(run({ seed: 2, content: press }, 90).log, "FrontierTrade").length, 0);
   const log = run({ seed: 4, content: market }, 200).log;
   const hosts: [number, number][] = []; let from = -1;

@@ -124,14 +124,16 @@ function nearestPressures(id: number, byId: Map<number, SimEvent>, frontierSite?
 
 /** What the decision's own action answers, or null when the action says nothing about a pressure (then the chain of causes decides):
  *  repair answers what last damaged the fort; grain moved or bought answers food; relief answers rebellion; advance (or a scout or attack) answers the
- *  raiders at that fort or site (the gate's are the frontier's); a treaty answer is the frontier's. Everything else (levy, order, policy, ask, travel, battle) is null. */
+ *  raiders at that fort or site (the gate's are the frontier's); a treaty answer, men for the border fort and a gift to the court are the frontier's;
+ *  the merchant's grain is food when the input records that she believed a store short, else the frontier's (D-090). Everything else (levy, order, policy, ask, travel, battle) is null. */
 function answered(e: SimEvent, lastDamage: Map<string, Pressure>, active: Map<string, { target: string; since: number }>, gate?: string): Set<Pressure> | null {
   const p = e.payload, one = (x: Pressure | undefined) => (x ? new Set<Pressure>([x]) : null);
   switch (p.action) {
     case "repair": return one(lastDamage.get(p.target as string));
     case "requisition": case "purchase": return !p.good || p.good === "grain" ? one("food_security") : null;
     case "relief": return one("rebellion");
-    case "treaty": return one("frontier");
+    case "treaty": case "reinforce": case "envoy": return one("frontier"); // D-090: the verbs toward the court across the border
+    case "merchant": return one(p.short ? "food_security" : "frontier"); // grain bought across the border: food if she then believed a store short, else the frontier
     case "advance": {
       if (typeof p.raid === "string") return one(gate && p.raid === gate ? "frontier" : "wilds");
       let site: string | undefined, since = -1;

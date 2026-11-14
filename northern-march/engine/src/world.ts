@@ -54,6 +54,8 @@ export interface FrontierState {
   lastStrike: number; lastTreaty: number; strikes: number; declined: number; proposals: number;
   /** The offer of terms that is open (its event, and when it lapses), the truce a signed treaty makes, the weakness a refusal adds, and when the merchant last came. */
   offer: { id: number; lapsesAt: number; answered: boolean } | null; truceUntil: number; refusedUntil: number; signed: number; lastTrade: number;
+  /** D-090, only with `scenario.frontier.verbs`: the ruler's own acts toward the court across the border (for her dedupe), while hired men stand at the border fort, while the court's goodwill holds. */
+  verbs?: { acts: { action: string; target: string | null; tick: number }[]; reinforcedUntil: number; goodwillUntil: number };
 }
 
 export interface WorldState {
@@ -156,7 +158,7 @@ function initialFrontier(c: Content): FrontierState | null {
   const f = c.scenario.frontier;
   if (!f) return null;
   const cur = (): FrontierState["current"][string] => ({ stance: f.court.startStance, since: 0, event: 1 });
-  return { stance: f.court.startStance, since: 0, weakness: null, current: { ambassador: cur(), commander: cur(), merchant: cur() }, clash: false, lastStrike: -1, lastTreaty: -1, strikes: 0, declined: 0, proposals: 0, offer: null, truceUntil: -1, refusedUntil: -1, signed: -1, lastTrade: -1 };
+  return { stance: f.court.startStance, since: 0, weakness: null, current: { ambassador: cur(), commander: cur(), merchant: cur() }, clash: false, lastStrike: -1, lastTreaty: -1, strikes: 0, declined: 0, proposals: 0, offer: null, truceUntil: -1, refusedUntil: -1, signed: -1, lastTrade: -1, ...(f.verbs ? { verbs: { acts: [], reinforcedUntil: -1, goodwillUntil: -1 } } : {}) };
 }
 
 function initialPolicies(c: Content) {
@@ -268,6 +270,8 @@ function applyEffects(s: WorldState, p: P, e: SimEvent) {
 }
 const clampCond = (v: number) => Math.max(0, Math.min(100000, v));
 const noop = () => {};
+/** The ruler's actions toward the court across the border (D-090). */
+export const FRONTIER_VERBS: readonly string[] = ["reinforce", "envoy", "merchant"];
 type P = Record<string, any>;
 const removeFromForce = (s: WorldState, who: string, id: number) => { s.ordersInForce[who] = (s.ordersInForce[who] ?? []).filter((x) => x !== id); };
 const setOrder = (status: string) => (s: WorldState, p: P) => { s.orders[String(p.orderId)].status = status; };
@@ -357,6 +361,14 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   TreatySigned: (s, p, e) => { const f = s.fr!; f.offer = null; f.signed = e.tick; f.truceUntil = p.truceUntil; s.treasuryMilli[p.payer] -= p.tributeMilli; },
   TreatyRefused: (s, p) => { const f = s.fr!; f.offer = null; f.refusedUntil = p.until; },
   FrontierTrade: (s, p, e) => { s.grain[p.to] += p.sacks; s.grainLedger[p.to].imported += p.sacks; s.fr!.lastTrade = e.tick; },
+  ReinforcementsSent: (s, p) => { s.treasuryMilli[p.payer] -= p.costMilli; },
+  ReinforcementsArrived: (s, p) => { if (p.entered) { s.fortifications[p.fort].garrison += p.men; const v = s.fr!.verbs!; v.reinforcedUntil = Math.max(v.reinforcedUntil, p.until); } },
+  ReinforcementsLeft: (s, p) => { loseMen(s.fortifications[p.fort], p.men, { archers: 0, horse: 0 }); },
+  EnvoySent: (s, p) => { s.treasuryMilli[p.payer] -= p.giftMilli; },
+  EnvoyArrived: (s, p) => { const v = s.fr!.verbs!; v.goodwillUntil = Math.max(v.goodwillUntil, p.until); },
+  MerchantGrainBought: (s, p) => { s.treasuryMilli[p.payer] -= p.costMilli; },
+  MerchantGrainDelivered: (s, p) => { s.grain[p.to] += p.sacks; s.grainLedger[p.to].imported += p.sacks; },
+  FrontierActRefused: noop,
   CreatureHunt: (s, p, e) => { const b = s.bw!; b.kills += p.livestock; b.missing += p.missing ? 1 : 0; b.lastHunt = e.tick; },
   ExpeditionStarted: (s, p, e) => { s.bw!.expeditions[String(p.orderId)] = { orderId: p.orderId, leader: p.leader, kind: p.kind, since: e.tick, days: 0, signs: false, hollow: false, stone: false, killed: false, ended: null }; },
   SiteSearched: (s, p) => { const x = s.bw!.expeditions[String(p.orderId)]; if (!x) return; x.days = p.day; x.signs ||= !!p.signs; x.hollow ||= !!p.hollow; x.stone ||= !!p.stone; },
@@ -510,7 +522,8 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
     }
   },
   CommunityStanceChanged: (s, p, e) => { const c = s.communities[p.community]; c.stance = p.to; c.stanceSince = e.tick; c.supports = p.supports ?? null; if (p.tell) c.told = p.to; },
-  PlayerInput: noop,
+  PlayerInput: (s, p, e) => { if (s.fr?.verbs && FRONTIER_VERBS.includes(p.action)) s.fr.verbs.acts.push({ action: p.action, target: p.target ?? null, tick: e.tick }); }, // D-090: only the verbs, only with the block
+
   RecommendationMade: (s, p) => {
     s.recommendations[p.recommendation.author] = p.recommendation;
     for (const who of p.audience ?? []) (s.heard[who] ??= {})[`${p.recommendation.author}|${p.recommendation.plan.id}`] = p.recommendation;

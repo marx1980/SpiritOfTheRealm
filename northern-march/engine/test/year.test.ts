@@ -74,7 +74,8 @@ test("with the block absent the log is the old one: no event, the same ids as th
   assert.equal(ofType(a.log, "YearDrawn").length, 0);
   assert.equal(hashLog(a.log), hashLog(run({ seed: 3, content: none }, 60).log));
   // and it is the old log exactly: these are the hashes of march-0.17 on the engine before the year (delegating, 90 days)
-  const was = variant((r) => { delete (r.scenario as { year?: unknown }).year; r.manifest.contentVersion = "march-0.17"; });
+  // (the ruler's verbs for Arven, D-090, came after: they are stripped too, with their predicate)
+  const was = variant((r) => { delete (r.scenario as { year?: unknown }).year; delete (r.scenario.frontier as { verbs?: unknown }).verbs; r.predicates = r.predicates.filter((p) => p.id !== "frontier.envoy"); r.manifest.contentVersion = "march-0.17"; });
   for (const [seed, hash] of [[3, "77a3eede08f4557edcc4e60b450dc31e16b57d375b0311ce5b1df98ef24882e7"], [7, "e0cfbdd2f2246889570314aff8c58ebc0224054c471dea0fdbd1f064d266b872"]] as const) assert.equal(hashLog(run({ seed, content: was, policy: "delegating" }, 90).log), hash, `seed ${seed}`);
   // every stripped (legacy) variant has no year either
   assert.equal(LEGACY.scenario.year, undefined);

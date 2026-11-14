@@ -31,7 +31,9 @@ export function stanceFor(weakness: number, current: FrontierStance, since: numb
 
 /** The court's thresholds as this year moves them (D-089). */
 function shifted(ctx: Ctx, c: FrontierParams["court"]): Pick<FrontierParams["court"], "holdDays" | "thresholds"> {
-  const k = courtShift(ctx.s), t = c.thresholds;
+  // and a gift that has reached the court (D-090) sits on top of the year's shift while its goodwill holds
+  const v = ctx.s.fr!.verbs, gift = v && ctx.tick < v.goodwillUntil ? (P(ctx).verbs?.envoy?.thresholdShift ?? 0) : 0;
+  const k = courtShift(ctx.s) + gift, t = c.thresholds;
   return k === 0 ? c : { holdDays: c.holdDays, thresholds: { tradeFrom: Math.max(0, t.tradeFrom + k), pressFrom: Math.max(0, t.pressFrom + k), strikeFrom: Math.max(0, t.strikeFrom + k) } };
 }
 
@@ -42,7 +44,9 @@ function review(ctx: Ctx) {
   const forts = ctx.content.scenario.objective.forts.map((id) => ({ conditionMilli: ctx.s.fortifications[id].conditionMilli, fallen: !!ctx.s.fallen[id] }));
   // a refusal makes the March look weaker for a while; a truce holds the court at `settle` (its instructions still take the roads)
   const refused = ctx.tick < f.refusedUntil ? p.treaty.refusePermille : 0;
-  const from = f.stance, weakness = Math.min(1000, weaknessOf(forts, noise) + refused), stance = ctx.tick < f.truceUntil ? "settle" : stanceFor(weakness, from, f.since, ctx.tick, shifted(ctx, c));
+  // hired men standing at the border fort make it look stronger to the informants (D-090)
+  const held = f.verbs && ctx.tick < f.verbs.reinforcedUntil ? (p.verbs?.reinforce?.weaknessCut ?? 0) : 0;
+  const from = f.stance, weakness = Math.max(0, Math.min(1000, weaknessOf(forts, noise) + refused) - held), stance = ctx.tick < f.truceUntil ? "settle" : stanceFor(weakness, from, f.since, ctx.tick, shifted(ctx, c));
   const ev = ctx.emit("FrontierReview", [], [loc(p.market)], { weakness, stance, from, changed: stance !== from }, "frontier");
   ctx.at(ctx.tick + next * DAY, "frontier:review", {});
   if (stance === from) return;
@@ -120,6 +124,61 @@ function trade(ctx: Ctx) {
   ctx.emit("FrontierTrade", [f.current.merchant.event], [chr(who), loc(p.market), loc(p.trade.dest)], { from: p.market, to: p.trade.dest, sacks }, "frontier");
 }
 
+/** A character of the court writes the ruler what he now holds about `predicate` (as the ambassador does about an offer). */
+function writeRuler(ctx: Ctx, who: string, predicate: string, value: number, cause: number) {
+  const ruler = ctx.content.scenario.ruler;
+  if (!ctx.enabled("messenger")) return;
+  if (!best(ctx, who, ruler, "character.seat")) learn(ctx, who, { subject: chr(ruler), predicate: "character.seat", value: ctx.content.byId.character.get(ruler)!.location, observedAt: ctx.tick, band: "certain" }, { kind: "observation", eventId: cause, source: who }, [cause]);
+  const upd = learn(ctx, who, { subject: chr(who), predicate, value, observedAt: ctx.tick, band: "certain" }, { kind: "observation", eventId: cause, source: who }, [cause]);
+  const b = best(ctx, who, who, predicate);
+  if (!b) return;
+  const { band, ...rest } = b;
+  compose(ctx, who, ruler, [{ ...rest, reliabilityBand: band as typeof b.reliabilityBand }], upd.id);
+}
+
+// ---- the ruler's verbs toward the court across the border (D-090). Each is a player action; each draws only from its own keyed stream (G-02); each pays from the treasury now.
+type Verb = "reinforce" | "envoy" | "merchant";
+function refuse(ctx: Ctx, act: Verb, reason: string, cause: number) { ctx.emit("FrontierActRefused", [cause], [chr(ctx.content.scenario.ruler)], { act, reason }, "frontier"); }
+const coin = (ctx: Ctx) => ctx.s.treasuryMilli[ctx.content.scenario.ruler] ?? 0;
+
+/** Whether the ruler believes some store holds fewer than `crisisCoverDays` days of grain (her own beliefs; for the reading of what buying grain answers). */
+export function believesShort(ctx: Ctx): boolean | undefined {
+  const m = ctx.content.scenario.frontier?.verbs?.merchant, g = ctx.content.scenario.grain;
+  if (!m || !g) return undefined;
+  const ruler = ctx.content.scenario.ruler;
+  return g.places.some((p) => { const b = best(ctx, ruler, p.location, "grain.stock"); return !!b && p.need > 0 && (b.believedValue as number) < p.need * m.crisisCoverDays; });
+}
+
+/** The ruler acts toward the court across the border. Without the content block, with the frontier ablated or with the verb absent, nothing happens. */
+export function frontierVerb(ctx: Ctx, act: Verb, cause: number) {
+  const p = ctx.content.scenario.frontier, f = ctx.s.fr, v = p?.verbs;
+  if (!p || !f || !v || !f.verbs || !ctx.enabled("frontier")) return;
+  const ruler = ctx.content.scenario.ruler;
+  if (act === "reinforce" && v.reinforce) {
+    const r = v.reinforce;
+    if (coin(ctx) < r.costMilli) return refuse(ctx, act, "coin", cause);
+    const days = ctx.keyed(`frontier:reinforce:${cause}`).int(r.delayDays[0], r.delayDays[1]), arrivesAt = ctx.tick + days * DAY;
+    const e = ctx.emit("ReinforcementsSent", [cause], [chr(ruler), loc(p.target)], { fort: p.target, men: r.men, costMilli: r.costMilli, payer: ruler, arrivesAt }, "frontier");
+    ctx.at(arrivesAt, "frontier:reinforced", { sent: e.id });
+  } else if (act === "envoy" && v.envoy) {
+    const x = v.envoy, who = p.actors.ambassador;
+    if (isDead(ctx.s, who)) return refuse(ctx, act, "dead", cause);
+    if (coin(ctx) < x.giftMilli) return refuse(ctx, act, "coin", cause);
+    const [lo, hi] = p.delayDays.ambassador, arrivesAt = ctx.tick + ctx.keyed(`frontier:envoy:${cause}`).int(lo, hi) * DAY;
+    const e = ctx.emit("EnvoySent", [cause], [chr(ruler), chr(who), loc(p.market)], { by: who, giftMilli: x.giftMilli, payer: ruler, arrivesAt }, "frontier");
+    ctx.at(arrivesAt, "frontier:envoy", { sent: e.id });
+  } else if (act === "merchant" && v.merchant) {
+    const m = v.merchant, who = p.actors.merchant, st = f.current.merchant.stance, cost = m.sacks * m.priceMilliPerSack;
+    if (isDead(ctx.s, who)) return refuse(ctx, act, "dead", cause);
+    if (st !== "trade" && st !== "settle") return refuse(ctx, act, "stance", cause);
+    if (ctx.s.threats[p.site]) return refuse(ctx, act, "host", cause);
+    if (coin(ctx) < cost) return refuse(ctx, act, "coin", cause);
+    const arrivesAt = ctx.tick + ctx.keyed(`frontier:merchant:${cause}`).int(m.delayDays[0], m.delayDays[1]) * DAY;
+    const e = ctx.emit("MerchantGrainBought", [cause], [chr(ruler), chr(who), loc(p.trade.dest)], { from: p.market, to: p.trade.dest, sacks: m.sacks, costMilli: cost, payer: ruler, arrivesAt }, "frontier");
+    ctx.at(arrivesAt, "frontier:merchant", { bought: e.id, to: p.trade.dest, sacks: m.sacks });
+  }
+}
+
 /** The crown's representative looks at the commander and writes to the ruler what he thinks he saw. */
 function report(ctx: Ctx) {
   const p = P(ctx), rep = p.actors.representative, f = ctx.s.fr!, ruler = ctx.content.scenario.ruler;
@@ -150,6 +209,23 @@ export const frontier: System = {
     "frontier:review": (ctx) => review(ctx),
     "frontier:arrive": (ctx, { instr, actor, stance }) => arrive(ctx, instr, actor, stance),
     "frontier:answered": (ctx, { answer, accept }) => answered(ctx, answer, accept),
+    "frontier:reinforced": (ctx, { sent }) => {
+      const p = P(ctx), r = p.verbs!.reinforce!, entered = !ctx.s.fallen[p.target], until = ctx.tick + r.stayDays * DAY; // a fallen fort takes no one in
+      const a = ctx.emit("ReinforcementsArrived", [sent], [loc(p.target)], { fort: p.target, men: entered ? r.men : 0, entered, until }, "frontier");
+      if (entered) ctx.at(until, "frontier:released", { arrived: a.id, men: r.men });
+    },
+    "frontier:released": (ctx, { arrived, men }) => {
+      const p = P(ctx), f = ctx.s.fortifications[p.target];
+      // they go home with what is left of them: no more than stand above the fort's own establishment, and none from a fort that has fallen since
+      const going = ctx.s.fallen[p.target] ? 0 : Math.min(men, Math.max(0, f.garrison - f.establishment));
+      ctx.emit("ReinforcementsLeft", [arrived], [loc(p.target)], { fort: p.target, men: going }, "frontier");
+    },
+    "frontier:envoy": (ctx, { sent }) => {
+      const p = P(ctx), x = p.verbs!.envoy!, until = ctx.tick + x.days * DAY;
+      const a = ctx.emit("EnvoyArrived", [sent], [chr(p.actors.ambassador), loc(p.market)], { by: p.actors.ambassador, thresholdShift: x.thresholdShift, until }, "frontier");
+      writeRuler(ctx, p.actors.ambassador, "frontier.envoy", a.id, a.id);
+    },
+    "frontier:merchant": (ctx, { bought, to, sacks }) => { ctx.emit("MerchantGrainDelivered", [bought], [loc(to)], { to, sacks }, "frontier"); },
     "frontier:report": (ctx) => { report(ctx); ctx.at(ctx.tick + P(ctx).report.everyDays * DAY, "frontier:report", {}); },
     "frontier:day": (ctx) => {
       const p = P(ctx), r = ctx.rng("frontier"), f = ctx.s.fr!;

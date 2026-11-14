@@ -270,5 +270,13 @@
     "domain": "info",
     "wakeSignificance": 2,
     "materialDelta": 1
+  },
+  {
+    "id": "frontier.envoy",
+    "subjectKind": "character",
+    "halfLifeTicks": 2592000,
+    "domain": "info",
+    "wakeSignificance": 2,
+    "materialDelta": 1
   }
 ]

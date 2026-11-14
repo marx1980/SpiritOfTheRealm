@@ -162,6 +162,17 @@ export interface FrontierParams {
   /** The merchant's grain for the March while his stance is `trade` or `settle` and no host stands at the gate. */
   trade: { everyDays: number; dest: string; sacks: [number, number] };
   report: { everyDays: number; blurPermille: number };
+  /** G-07 fix 2 (D-090): what the ruler can do about the court across the border besides answering terms. Each verb is optional; without the block the actions do nothing. */
+  verbs?: FrontierVerbs;
+}
+export interface FrontierVerbs {
+  /** Hired men sent to the border fort (`target`): paid now, there after a drawn delay, stay `stayDays`; while they stand the court reads the March `weaknessCut` stronger. */
+  reinforce?: { costMilli: number; men: number; delayDays: [number, number]; stayDays: number; weaknessCut: number };
+  /** A gift to the court, carried by the ambassador on his own road (`delayDays.ambassador`): for `days` after it arrives the court's thresholds sit `thresholdShift` higher. */
+  envoy?: { giftMilli: number; thresholdShift: number; days: number };
+  /** The merchant's grain bought outright while he trades: `sacks` at `priceMilliPerSack`, delivered to `trade.dest` after a drawn delay. `crisisCoverDays`:
+   *  the ruler is taken to believe in a food crisis when she thinks some store holds fewer days than this (the reading, D-088). */
+  merchant?: { sacks: number; priceMilliPerSack: number; delayDays: [number, number]; crisisCoverDays: number };
 }
 
 /** Phase 11 (docs/EXPLORATION.md): the wood creature, expeditions, reputation and the Stone of Vey. */
@@ -462,6 +473,10 @@ export function validateContent(raw: RawContent): { errors: ContentError[] } {
     if (!(fr.court.reviewDays[0] >= 1)) err("RANGE", "frontier.court.reviewDays");
     if (!(t.tradeFrom <= t.pressFrom && t.pressFrom <= t.strikeFrom)) err("RANGE", "frontier.court.thresholds must not fall");
     if (!(fr.strike.declinePermille >= 0 && fr.strike.declinePermille <= 1000)) err("RANGE", "frontier.strike.declinePermille");
+    const vb = fr.verbs, whole = (x: unknown, lo = 0) => Number.isInteger(x) && (x as number) >= lo, span = (r: unknown) => Array.isArray(r) && r.length === 2 && whole(r[0]) && whole(r[1]) && r[0] <= r[1];
+    if (vb?.reinforce) { const x = vb.reinforce; if (!(whole(x.costMilli) && whole(x.men, 1) && span(x.delayDays) && whole(x.stayDays, 1) && whole(x.weaknessCut) && x.weaknessCut <= 1000)) err("RANGE", "frontier.verbs.reinforce"); }
+    if (vb?.envoy) { const x = vb.envoy; if (!(whole(x.giftMilli) && whole(x.thresholdShift) && x.thresholdShift <= 2000 && whole(x.days, 1))) err("RANGE", "frontier.verbs.envoy"); need(preds, "frontier.envoy", "predicate", "the ambassador writes that the gift arrived"); }
+    if (vb?.merchant) { const x = vb.merchant; if (!(whole(x.sacks, 1) && whole(x.priceMilliPerSack) && span(x.delayDays) && whole(x.crisisCoverDays))) err("RANGE", "frontier.verbs.merchant"); }
   }
   const ruler = raw.characters.find((c) => c.id === sc.ruler);
   if (ruler && locs.has(ruler.location)) {

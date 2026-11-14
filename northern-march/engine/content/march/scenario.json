@@ -1574,6 +1574,11 @@
     60,
     120
    ]
+  },
+  "verbs": {
+   "reinforce": { "costMilli": 15000, "men": 60, "delayDays": [4, 7], "stayDays": 60, "weaknessCut": 200 },
+   "envoy": { "giftMilli": 8000, "thresholdShift": 200, "days": 90 },
+   "merchant": { "sacks": 100, "priceMilliPerSack": 150, "delayDays": [5, 9], "crisisCoverDays": 8 }
   }
  }
 }

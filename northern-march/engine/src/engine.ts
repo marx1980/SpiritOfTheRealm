@@ -202,11 +202,12 @@ export class Sim {
   streamsCreated(): string[] {
     return [...this.streams.keys(), ...this.keyedStreams.map((k) => k.name)];
   }
-  rngDraws(): Record<string, number> {
+  /** Draws by system; `sharedOnly` leaves out the keyed streams (G-02: decisions must not move a shared stream's schedule). */
+  rngDraws(sharedOnly = false): Record<string, number> {
     const out: Record<string, number> = {};
     const add = (name: string, n: number) => { const sys = name.split(":")[0]; out[sys] = (out[sys] ?? 0) + n; };
     for (const [n, r] of this.streams) add(n, r.draws);
-    for (const k of this.keyedStreams) add(k.name, k.rng.draws);
+    if (!sharedOnly) for (const k of this.keyedStreams) add(k.name, k.rng.draws);
     return out;
   }
 

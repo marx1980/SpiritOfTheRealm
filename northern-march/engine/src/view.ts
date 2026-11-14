@@ -38,6 +38,8 @@ export interface WorldKnowledge {
   envoy?: string;
   /** What each known person is known for: their strongest skill, in words (the area they advise on). */
   areas: Record<string, string>;
+  /** D-090: what the crown can do about the court across the border and what it costs (public, from content): the gate, the fort that answers it, the three verbs. */
+  frontier?: { site: string; fort: string; reinforce?: { costMilli: number; stayDays: number }; envoy?: { giftMilli: number; days: number }; merchant?: { costMilli: number; sacks: number } };
   /** What each store feeds each day, and the days of cover that mark the scarcity bands: the stewards know their own needs. */
   grain?: { places: { id: string; need: number }[]; bandDays: number[]; sacks: { requisition: number; purchase: number } };
   /** What anyone in the realm knows of the wider trade: who holds which store, where goods sell, the usual prices, what a muster takes. Not the stocks. */
@@ -59,7 +61,9 @@ export interface EnvironmentView {
 }
 export interface View {
   readonly now: number;
-  readonly self: { readonly id: string; readonly position: Position; readonly ordersInForce: readonly StructuredOrder[]; readonly orders: readonly IssuedRecord[]; readonly policies?: Readonly<Record<string, { rule: string; learnedAt: number }>> };
+  readonly self: { readonly id: string; readonly position: Position; readonly ordersInForce: readonly StructuredOrder[]; readonly orders: readonly IssuedRecord[]; readonly policies?: Readonly<Record<string, { rule: string; learnedAt: number }>>;
+    /** D-090: her own acts toward the court across the border (verb, target, when), which no order records. */
+    readonly acts?: readonly { action: string; target: string | null; tick: number }[] };
   readonly beliefs: Readonly<Record<string, Readonly<BeliefView>>>;
   readonly reports: readonly DeliveredReport[];
   /** What advisers told the viewer in person, latest per adviser (DESIGN_PIPELINE §5). */
@@ -154,7 +158,8 @@ export function buildView(s: Readonly<WorldState>, c: Content, who: string, now:
   return deepFreeze({
     now,
     self: { id: who, position: structuredClone(s.positions[who]), ordersInForce: (s.ordersInForce[who] ?? []).map((id) => structuredClone(s.orders[String(id)].order)),
-      orders: structuredClone(s.issued[who] ?? []), ...(s.policyKnown?.[who] ? { policies: structuredClone(s.policyKnown[who]) } : {}) },
+      orders: structuredClone(s.issued[who] ?? []), ...(s.policyKnown?.[who] ? { policies: structuredClone(s.policyKnown[who]) } : {}),
+      ...(who === c.scenario.ruler && s.fr?.verbs ? { acts: structuredClone(s.fr.verbs.acts) } : {}) },
     beliefs,
     reports,
     ...(who === c.scenario.ruler && s.ledger ? { ledger: structuredClone(s.ledger) } : {}),
@@ -167,6 +172,9 @@ export function buildView(s: Readonly<WorldState>, c: Content, who: string, now:
       routes: c.routes.map((r) => ({ from: r.from, to: r.to, ...(r.crossing ? { crossing: r.crossing.kind } : {}) })),
       ...(c.scenario.policy ? { policy: structuredClone(c.scenario.policy.rules) } : {}),
       ...(c.scenario.wilds ? { envoy: c.scenario.wilds.envoy } : {}),
+      ...((): { frontier?: WorldKnowledge["frontier"] } => { const f = c.scenario.frontier, vb = f?.verbs; return f && vb ? { frontier: { site: f.site, fort: f.target,
+        ...(vb.reinforce ? { reinforce: { costMilli: vb.reinforce.costMilli, stayDays: vb.reinforce.stayDays } } : {}), ...(vb.envoy ? { envoy: { giftMilli: vb.envoy.giftMilli, days: vb.envoy.days } } : {}),
+        ...(vb.merchant ? { merchant: { costMilli: vb.merchant.sacks * vb.merchant.priceMilliPerSack, sacks: vb.merchant.sacks } } : {}) } } : {}; })(),
       names: Object.fromEntries([...c.locations.map((l) => [l.id, l.name]), ...[...known].sort().map((id) => [id, c.byId.character.get(id)?.name ?? id])]),
       areas: Object.fromEntries([...known].sort().map((id) => [id, areaOf(c.byId.character.get(id)?.capabilities ?? {})])),
       ...(c.scenario.goods ? { goods: {

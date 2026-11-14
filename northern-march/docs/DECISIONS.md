@@ -598,3 +598,70 @@ Fix 1 of the ranked G-07 plan. G-07 is a between-games measure and every game ha
 - **Test changes (none to an assertion or a bar).** (1) KI-01 hash re-recorded (`83276be0...`; predicate unchanged): one more event, so every log differs. (2) Seeds moved where the trajectory is simply a different year: pressures protection petition seed 2 to 17; aggressive ruler's death seed 28 to 18; saveload mission test seed 51 to 52; the conversation `toBattle` helper starts at seed 2 (seed 1 now draws a year in which Caron is not at the battle). (3) Variants that pin the court's start or thresholds (`frontier`, `treaty`, `blight` tests) delete `scenario.year`, since a year would otherwise overwrite the stance they set. All other tests pass unchanged.
 - **One engine change the tests forced.** With a hostile court the host can march before any Blackwood raid, so the ablation pairing test (threat off) saw the arms differ at `FrontierStrike`, an event of the frontier, before the first threat event. `consider` in `src/systems/frontier.ts` no longer returns when the threat is ablated: the commander still marches (the court acts the same in both arms) and only the `ThreatBegan` that follows is skipped. Nothing changes with the threat on. No assertion changed.
 - **Still open.** Frontier dominance rests on a hostile court striking (30% of years); in a quiet wood it relies on the -400 shift, i.e. on the court being unmoved by the March: that is a design choice for Marko (a hostile year now means war regardless). Per-policy blind spots remain (delegating never gives rebellion the lead, aggressive never food). Weights are first guesses on 40 seeds; the sealed round has not seen them.
+
+## D-090 — G-07 fix 2: verbs for the ruler toward Arven (14 Nov)
+Fix 2 of the ranked G-07 plan. Before this, all the ruler could do about Arven was answer the court's offers, so the frontier drew few of her inputs. Content march-0.19 (`scenario.frontier.verbs`, predicate `frontier.envoy`). Tests written first (`test/arven_verbs.test.ts`, 11 tests). TUNE seeds 1-40 only; no sealed block used.
+- **Decision.** Three player actions, handled in `player.ts` the way `treaty` is and carried out in `frontier.ts` (`frontierVerb`). Each one pays from the treasury at once and draws only from its own keyed stream:
+  - `reinforce`: 60 hired men reach the border fort (Eastmarch) 4-7 days later and stay 60 days. They add defenders against every raid, and while they stand the court's informants read the March 200 permille less weak.
+  - `envoy`: a gift of 8,000 carried by the ambassador on his own road. On arrival the court's thresholds rise by 200 for 90 days, which takes effect at the court's next review. The ambassador writes to tell the ruler it arrived.
+  - `merchant`: 100 sacks at 150 each, delivered to the merchant's place 5-9 days later and counted as imported. Only possible while the merchant is trading and no host is at the gate.
+  - When a verb cannot be done now, the engine emits `FrontierActRefused` with the reason and nothing is paid.
+  - Events: `ReinforcementsSent/Arrived/Left`, `EnvoySent/Arrived`, `MerchantGrainBought/Delivered`, `FrontierActRefused`, each with a reducer.
+  - The view has `world.frontier` (costs) and `self.acts` (her own acts toward Arven), but only when the block is present.
+  - Policies (`answerFrontier`, on Pell's posture letter):
+    - delegating sends a gift when the posture reads press or strike, at most once per 90 days. It also sends men if it believes the border fort's walls are below 85%, at most once per 60 days.
+    - aggressive sends men on press or strike, at most once per 60 days, and buys grain on settle or trade, at most once in 40 days.
+    - `delegating-core` is unchanged.
+  - Dedupe reads `self.acts`. It cannot use `recently()`, which sees only orders (the cause of the earlier 892-travel bug).
+  - Reading (D-088): reinforce and envoy count as frontier. Merchant counts as food_security when the input's `short` is true (the ruler then believed some store held fewer than 8 days of grain), and as frontier otherwise.
+  - `Sim.rngDraws(true)` (new) counts shared streams only.
+  - Both court hooks are plain additive terms in `review()`: weakness minus `weaknessCut`, and thresholds plus the gift's shift added to the year's shift. `weaknessOf` and `stanceFor` are unchanged, so the planned belief-based reading of the March (Marko's later fix) can keep both terms. The hostile year's -400 is not retuned.
+- **Why.** These are the frontier's own levers: the court's weakness reading, its thresholds, the defence against the strike, and the merchant's grain. Each verb acts on a quantity that already existed, so no new mechanism was invented for the court. Paying at once and delivering later follows the existing treaty and purchase patterns. Using keyed streams keeps G-02 intact.
+- **Rejected alternatives.**
+  - Making reinforce a muster order through the order pipeline. Muster needs iron at the fort and community hands, and `IntentKind` is a frozen schema.
+  - A gift that changes the stance at once. That would need an extra review, which moves the frontier stream's draws.
+  - Deduping through orders (`recently()`). The verbs are not orders.
+  - Crediting all merchant grain to the frontier. The brief asked for food during a believed crisis, and the input now records that belief.
+- **Absent block, old log.** I deleted `verbs` and `frontier.envoy` and set the manifest to march-0.18. The result gives exactly the hashes the engine produced before this change: delegating and aggressive, seeds 3 and 7, 120 days, pinned in the test. The `was` variant in `year.test.ts` now also strips the verbs and the predicate, so its march-0.17 hashes still hold.
+- **TUNE probe, seeds 1-40, three policies, 120 games, 360 days.** Values are before → after the first policy (walls < 70%) → final (walls < 85%).
+  - G-07 pooled:
+    - rebellion 10.0 → 11.7 → 11.7
+    - food 7.5 → 7.5 → 7.5 (AMBER)
+    - wilds 22.5 → 26.7 → 25.8
+    - frontier 8.3 → 7.5 (AMBER) → 8.3 (PASS)
+    - environment 18.3 → 13.3 → 13.3
+    - none 33.3 (passive)
+    - Pooled verdict AMBER, unchanged.
+  - Per policy (before → final):
+    - delegating: food 22.5 → 22.5, wilds 37.5 → 40.0, frontier 7.5 → 10.0, environment 32.5 → 27.5, rebellion 0 → 0
+    - aggressive: rebellion 30 → 35, wilds 30 → 37.5, frontier 17.5 → 15.0, environment 22.5 → 12.5, food 0 → 0
+  - G-08 pooled (before → final):
+    - victory 5.8 → 8.3
+    - settlement 17.5 → 25.0
+    - fracture 1.7 → 3.3
+    - death 3.3 → 2.5
+    - capture 5.8 → 4.2
+    - territorial failure 18.3 → 17.5
+    - unresolved 47.5 → 39.2
+    - Verdict AMBER → FAIL. The cause is delegating settlement at 75%, above the 60% ceiling (it was 52.5%).
+  - G-09 (before → final): 63 → 73 games ended; exogenous 34.9 → 28.8%; three or more domains 31.7 → 30.1%. Still FAIL.
+  - Inputs by pressure, seeds 1-12 (before → final):
+    - delegating, 339 → 310 counted: rebellion 44 → 33, food 80 → 67, wilds 75 → 69, frontier 57 → 62, environment 83 → 79. The final run had 12 envoy and 12 reinforce inputs.
+    - aggressive, 652 → 660 counted: rebellion 152 → 149, food 55 → 83, wilds 126 → 136, frontier 123 → 139, environment 196 → 153. The final run had 55 merchant and 20 reinforce inputs.
+- **What it shows: the verbs work, and that limits the frontier's share.**
+  - A gift or men calm the court, so fewer strikes reach the gate, and fewer advances and repairs answer the gate. In the first iteration delegating's frontier inputs fell (57 → 52) even with 15 new verb inputs. Only the second policy iteration (sending men at walls under 85%) brought them back up (62).
+  - Aggressive buys grain on peaceful letters. Over seeds 1-12 that was 55 merchant inputs, of which 49 bought grain and 6 were refused because the merchant was not trading. 22 of the 55 came while she believed a store short, so they count as food; the other 33 count as frontier. Food inputs rose 55 → 83, but food never becomes the largest pressure in an aggressive game.
+  - With the delegating ruler sending gifts and accepting terms, 3 of 4 of its games end in a negotiated settlement.
+- **Test changes.**
+  - KI-01 hash re-recorded as `2b7b5f88...`. The predicate is unchanged. The content version is part of the log, so the hash moves.
+  - The `year.test.ts` old-hash variant strips the new block (see above).
+  - The aggressive-ruler death test (`pressures.test.ts`) moved from seed 18 to seed 27. On seed 18 the new verbs change her year and she no longer dies. Seeds 27, 35 and 39 of 1-40 all show the ride, then the death citing her arrival, and a delegating ruler who stays at her seat.
+  - The "no grain while the court presses" variant (`treaty.test.ts`) takes out `frontier.verbs`, as it already takes out the year: the delegating ruler's gift moved that pinned court off press, and the merchant then traded.
+  - Engine comments no longer name the province, and `answerArven` is renamed `answerFrontier`. A5 forbids content names in `src`.
+  - No bar or assertion moved.
+- **Open (Marko).**
+  1. Should G-07 credit attention for a pressure the ruler answered successfully? Under the present reading, a ruler who calms Arven early gives it little attention, so the frontier can only dominate a game when the verbs fail or are not used.
+  2. Delegating settlement at 75% now breaks G-08's 60% ceiling. Options: a gift could make the court less ready to offer terms, the delegating policy could refuse some offers, or this could be accepted as the delegating style.
+  3. Food is never aggressive's largest pressure, and rebellion never delegating's. The verbs did not change that.
+  4. The page and the conversation layer do not yet offer the verbs. The court screen is still to be built.
+  5. The costs (15,000 / 8,000 / 15,000) and effects (cut 200, shift 200) are first guesses.
