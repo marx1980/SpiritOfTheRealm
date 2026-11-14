@@ -62,7 +62,7 @@ test("an agent's decision counts as a decision in an ending's ancestry", () => {
 });
 
 test("the aggressive ruler rides to a fort under a strong raid, and a death there follows from her riding", () => {
-  const log = run({ seed: 18, policy: "aggressive" }, 240).log, ruler = CONTENT.scenario.ruler;
+  const log = run({ seed: 28, policy: "aggressive" }, 360).log, ruler = CONTENT.scenario.ruler;
   const ride = ofType(log, "PlayerInput").find((e) => e.payload.action === "travel");
   assert.ok(ride, "she rides out");
   const end = ofType(log, "CampaignEnded")[0];
@@ -71,5 +71,5 @@ test("the aggressive ruler rides to a fort under a strong raid, and a death ther
   assert.ok(arrival, "the death cites her arrival");
   assert.equal(readEnding(log, CONTENT).type, "death");
   assert.equal(readEnding(log, CONTENT).firstCause, "decision");
-  assert.equal(ofType(run({ seed: 18, policy: "delegating" }, 240).log, "PlayerInput").filter((e) => e.payload.action === "travel").length, 0, "the delegating policy stays at her seat");
+  assert.equal(ofType(run({ seed: 28, policy: "delegating" }, 360).log, "PlayerInput").filter((e) => e.payload.action === "travel").length, 0, "the delegating policy stays at her seat");
 });

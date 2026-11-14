@@ -163,5 +163,5 @@ function concludeBattle(ctx: Ctx, st: BattleState) {
     debriefs: r.debrief.filter((d) => d.author !== ruler).map((d) => d.author),
   });
   // Phase 12: commanders who fell (after the losses are counted, so a dead captain's surviving men go back to the fort)
-  for (const f of res.fallen ?? []) ctx.emit("CommanderFell", [ev.id], [chr(f.commander), loc(st.from)], { who: f.commander, fate: f.fate, why: f.why, battleId: setup.battleId, from: st.from, ...(f.successor ? { successor: f.successor } : {}) });
+  for (const f of res.fallen ?? []) if (!isDead(ctx.s, f.commander)) ctx.emit("CommanderFell", [ev.id], [chr(f.commander), loc(st.from)], { who: f.commander, fate: f.fate, why: f.why, battleId: setup.battleId, from: st.from, ...(f.successor ? { successor: f.successor } : {}) });
 }

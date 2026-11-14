@@ -13,6 +13,7 @@ export function variant(edit: (raw: RawContent) => void) {
 
 /** Take the frontier (Phase 14B) out of a content copy: its block, its actors, its two places, its road and its province. */
 export function stripFrontier(r: RawContent) {
+  delete (r.scenario.grain as { blight?: unknown } | undefined)?.blight; // the bad harvest year belongs to Phase 14, with the frontier
   delete (r.scenario as { frontier?: unknown }).frontier;
   const gone = new Set(r.locations.filter((l) => l.province === "arven").map((l) => l.id));
   r.locations = r.locations.filter((l) => !gone.has(l.id));
