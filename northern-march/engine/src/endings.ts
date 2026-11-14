@@ -22,7 +22,7 @@ export const SYSTEM_PRESSURE: Readonly<Record<string, Pressure>> = Object.freeze
 });
 
 /** Events that are an agent's decision (a character's, or a community's change of stance). */
-export const DECISION_TYPES: readonly string[] = ["PlayerInput", "OrderIssued", "ObedienceDecided", "LocalPlanFormed", "SubordinateOrdersIssued", "ExpeditionStarted", "CommunityStanceChanged"];
+export const DECISION_TYPES: readonly string[] = ["PlayerInput", "OrderIssued", "ObedienceDecided", "LocalPlanFormed", "SubordinateOrdersIssued", "ExpeditionStarted", "CommunityStanceChanged", "DecisionMade"];
 
 export interface EndingReading {
   type: EndingType | "unresolved";

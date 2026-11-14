@@ -69,6 +69,8 @@ export interface WorldState {
   lastRaid: Record<string, number>;
   lastRepairStart: Record<string, number>;
   lastArrival: Record<string, Record<string, number>>;
+  /** The event in which each character last arrived somewhere (so that what follows from being there can cite the arrival). */
+  arrivedEvent: Record<string, number>;
   sortieOpen: Record<string, number>; // commander -> tick of the sortie still being fought
   /** Phase 8 battles (D-060): the setup and the ruler's battle orders; the record is recomputed from them. */
   battles: Record<string, BattleState>;
@@ -194,7 +196,7 @@ export function initialState(c: Content): WorldState {
     if (ch.id !== c.scenario.ruler && ch.tier !== "C") agents[ch.id] = newAgent();
   }
   return {
-    treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, tiers, history: {}, agents, recommendations: {}, heard: {}, campaign: { ended: null, lastDanger: -1 }, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, sortieOpen: {}, battles: {}, policyKnown: initialPolicies(c), precedents: [], prestige: {}, conduct: {}, commandersFallen: {}, lastStorm: {}, fallen: {}, threats: {}, routesClosed: {}, supplyBlocked: {}, env: initialEnv(c), bw: initialWilds(c), fr: initialFrontier(c),
+    treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, tiers, history: {}, agents, recommendations: {}, heard: {}, campaign: { ended: null, lastDanger: -1 }, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, arrivedEvent: {}, sortieOpen: {}, battles: {}, policyKnown: initialPolicies(c), precedents: [], prestige: {}, conduct: {}, commandersFallen: {}, lastStorm: {}, fallen: {}, threats: {}, routesClosed: {}, supplyBlocked: {}, env: initialEnv(c), bw: initialWilds(c), fr: initialFrontier(c),
     positions, departures: {}, beliefs: {}, nextPropId: 1, reports: {}, nextReportId: 1, messengers: {}, nextMessengerId: 1,
     orders: {}, nextOrderId: 1, advisePending: {}, dayEndDay: -1, ordersInForce: {}, issued: {}, repairs: {}, communities: initialCommunities(c), ...initialGrain(c), ...initialGoods(c), hands: Object.fromEntries(c.communities.communities.map((x) => [x.id, x.hands ?? 0])), musterAway: {}, musters: {}, nextMusterId: 1,
   };
@@ -311,7 +313,7 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
     s.positions[p.who] = { transit: { from: p.from, dest: p.dest, path: p.path, arrivals: p.arrivals, departedAt: e.tick, mode: p.mode } };
     (s.departures[p.from] ??= {})[p.who] = { to: p.secret ? null : p.dest, tick: e.tick };
   },
-  Arrived: (s, p, e) => { s.positions[p.who] = { at: p.at }; (s.lastArrival[p.at] ??= {})[p.who] = e.tick; },
+  Arrived: (s, p, e) => { s.positions[p.who] = { at: p.at }; s.arrivedEvent[p.who] = e.id; (s.lastArrival[p.at] ??= {})[p.who] = e.tick; },
   RouteClosed: (s, p, e) => { s.routesClosed[p.route] = { eventId: e.id, reason: p.reason, since: e.tick, ...(p.until !== undefined ? { until: p.until } : {}) }; },
   RouteOpened: (s, p) => { delete s.routesClosed[p.route]; },
   // environment (Phase 10): the daily snapshot replaces the weather, ground, snow, river and stress state

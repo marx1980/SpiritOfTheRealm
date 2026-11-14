@@ -46,7 +46,8 @@ const grainRelief = (consult: boolean, gapDays = 30): PolicyFn => (v) => {
   const places = v.world.grain?.places ?? [];
   const forts = new Set(v.world.places.filter((p) => p.fortified).map((p) => p.id)); // she worries about the garrisons' bread
   const short = places.filter((p) => forts.has(p.id)).map((p) => ({ id: p.id, k: believedStore(v, p.id) })).filter((x) => x.k && x.k.cover < TRIGGER_COVER).sort((a, b) => a.k!.cover - b.k!.cover || (a.id < b.id ? -1 : 1))[0];
-  if (!short || recently(v, "requisition", null, gapDays)) return [];
+  // she acts when the word of a low store reaches her, not on whatever else brings her to decide (so that what she answers is the shortage)
+  if (!short || recently(v, "requisition", null, gapDays) || !v.reports.some((r) => v.now - r.deliveredAt < 3600 && r.claims.some((c) => c.predicate === "grain.stock" && c.subject.id === short.id))) return [];
   const from = places.filter((p) => p.id !== short.id).map((p) => ({ id: p.id, k: believedStore(v, p.id) })).filter((x) => x.k && x.k.sacks >= 12 * x.k.need)
     .sort((a, b) => b.k!.sacks - a.k!.sacks || (a.id < b.id ? -1 : 1))[0];
   return from ? [{ action: "requisition" as const, target: from.id, to: short.id, consult }] : [];
@@ -122,12 +123,34 @@ const answerTerms = (how: "accept" | "refuse"): PolicyFn => (v) =>
   v.reports.filter((r) => v.now - r.deliveredAt < 3600).flatMap((r) => r.claims.filter((c) => c.predicate === "frontier.treaty"))
     .slice(0, 1).map((c) => ({ action: "treaty" as const, target: how, to: String(c.believedValue) }));
 
+/** Phase 14B stage 3: the people's petitions, as they reach her this hour. Relief for a place that asks for it (once in `gapDays` for each);
+ *  protection for a place that asks for it: the captain to the fort that answers it. */
+const hearPeople = (gapDays = 30): PolicyFn => (v) => {
+  const out: PlayerAction[] = [], rules = publicRulesOf(v);
+  for (const r of v.reports.filter((x) => v.now - x.deliveredAt < 3600)) for (const c of r.claims) {
+    if (c.predicate !== "community.request") continue;
+    const id = c.subject.id, a: PlayerAction | null = c.believedValue === "relief" ? (recently(v, "relief", id, gapDays) ? null : { action: "relief", target: id })
+      : c.believedValue === "protection" ? (() => { const f = fortOfSite(v, id); return f && !recently(v, "advance", f, 10) ? { action: "advance" as const, target: f } : null; })() : null;
+    if (a && !out.some((x) => x.action === a.action && x.target === a.target) && affordableR(v, rules, a)) out.push(a);
+  }
+  return out;
+};
+
+/** Phase 14B stage 3: the ruler takes the field herself. When she believes raiders of `minIntensity` or more stand at a fort and she is not there,
+ *  she rides to it from where she sits, once; the walls are then hers to hold or lose. */
+const takeTheField = (minIntensity: number): PolicyFn => (v) => {
+  const here = "at" in v.self.position ? v.self.position.at : null; // in transit, or already at a fort: she does not set out again
+  if (!here || v.world.places.find((p) => p.id === here)?.fortified) return [];
+  const fort = believedThreats(v, minIntensity)[0];
+  return fort ? [{ action: "travel" as const, target: fort }] : [];
+};
+
 export const POLICIES: Record<"passive" | "delegating" | "aggressive" | "cautious" | "provisioner" | "random-valid" | "follow-best-adviser" | "follow-worst-adviser", { fn: PolicyFn | null; note: string }> = {
   passive: { fn: () => [], note: "never acts" },
-  delegating: { fn: (v, rng) => [...repairBelow(60000, 20)(v, rng), ...advanceTo(400, 20)(v, rng), ...grainRelief(true)(v, rng), ...expedition("scholarly", 300, 60)(v, rng), ...answerTerms("accept")(v, rng)], note: "accepts the court's terms; repairs below 60%; sends the captain against raiders reported at 400 or more; asks the people whose grain it is first when a store looks low" },
+  delegating: { fn: (v, rng) => [...repairBelow(60000, 20)(v, rng), ...advanceTo(400, 20)(v, rng), ...grainRelief(true)(v, rng), ...expedition("scholarly", 300, 60)(v, rng), ...answerTerms("accept")(v, rng), ...hearPeople()(v, rng)], note: "accepts the court's terms; repairs below 60%; sends the captain against raiders reported at 400 or more; asks the people whose grain it is first when a store looks low" },
   aggressive: {
-    fn: (v, rng) => [...repairBelow(80000, 10)(v, rng), ...advanceTo(1, 10)(v, rng), ...(recently(v, "levy", null, 60) ? [] : [{ action: "levy" as const }]), ...grainRelief(false, 60)(v, rng), ...expedition("military", 300, 60)(v, rng), ...answerTerms("refuse")(v, rng)],
-    note: "refuses the court's terms, repairs below 80%, sends the captain against any reported raiders, levies every 60 days, takes grain without asking when a store looks low, at most once in 60 days",
+    fn: (v, rng) => [...repairBelow(80000, 10)(v, rng), ...advanceTo(1, 10)(v, rng), ...(recently(v, "levy", null, 60) ? [] : [{ action: "levy" as const }]), ...grainRelief(false, 60)(v, rng), ...expedition("military", 300, 60)(v, rng), ...answerTerms("refuse")(v, rng), ...hearPeople()(v, rng), ...takeTheField(600)(v, rng)],
+    note: "rides to a fort she believes is under a strong raid, answers the people's petitions, refuses the court's terms, repairs below 80%, sends the captain against any reported raiders, levies every 60 days, takes grain without asking when a store looks low, at most once in 60 days",
   },
   provisioner: { fn: (v, rng) => [...POLICIES.delegating.fn!(v, rng), ...provision(v)], note: "as delegating, and also: does what advisers say about timber and men (once in 20 days for each), and sells timber from a store that is nearly full at the town that pays most (D-045; an evidence policy, not a gate policy)" },
   cautious: { fn: (v, rng) => [...repairBelow(60000, 20)(v, rng), ...advanceTo(400, 20)(v, rng)], note: "as delegating, but never asks anyone for grain (holds back from a people already angry)" },

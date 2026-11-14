@@ -29,7 +29,7 @@ function presence(ctx: Ctx, fort: string, raid: number): boolean {
   if (cond < sc.endStates.fortificationBreachedBelowMilli) {
     const r = ctx.keyed(`threat:presence:${ctx.tick}`);
     const ending = r.chancePermille(sc.presence.deathPermille) ? "killed" : "captured";
-    ctx.emit("CampaignEnded", [raid], [chr(ruler), loc(fort)], { ending, where: fort });
+    ctx.emit("CampaignEnded", [raid, ...(ctx.s.arrivedEvent[ruler] ? [ctx.s.arrivedEvent[ruler]] : [])], [chr(ruler), loc(fort)], { ending, where: fort }); // her being there is what her riding there caused
     return true;
   }
   observe(ctx, ruler, loc(fort), "fortification.condition", raid); // she is on the walls when the raiders strike
