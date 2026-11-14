@@ -1,6 +1,7 @@
 // WorldState is a projection of the log (A1). It changes ONLY through the reducers below, one per event type.
 import type { BeliefProposition } from "./beliefs.ts";
-import type { Content, FrontierStance, Mode } from "./content.ts";
+import type { Content, FrontierStance, Mode, YearEffect } from "./content.ts";
+import type { YearState } from "./year.ts";
 import type { SimEvent } from "./events.ts";
 import type { ActionRef, Recommendation, Report, StructuredOrder } from "./schemas.ts";
 import { initialEnv, type ClosedRoute, type EnvState } from "./environment.ts";
@@ -91,6 +92,8 @@ export interface WorldState {
   /** Phase 11: the wood (null when a scenario has none). */
   bw: WildsState | null;
   fr: FrontierState | null;
+  /** D-089: the year's moods and their effects (null when the scenario draws none, or before the draw). */
+  year: YearState | null;
   /** Routes that are shut, and why (flood, ice, snow, waterlogged, landslide), with the event that shut them. */
   routesClosed: Record<string, ClosedRoute>;
   /** The last time an official could not send for grain to a place because the roads were shut (the event, and when). */
@@ -196,7 +199,7 @@ export function initialState(c: Content): WorldState {
     if (ch.id !== c.scenario.ruler && ch.tier !== "C") agents[ch.id] = newAgent();
   }
   return {
-    treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, tiers, history: {}, agents, recommendations: {}, heard: {}, campaign: { ended: null, lastDanger: -1 }, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, arrivedEvent: {}, sortieOpen: {}, battles: {}, policyKnown: initialPolicies(c), precedents: [], prestige: {}, conduct: {}, commandersFallen: {}, lastStorm: {}, fallen: {}, threats: {}, routesClosed: {}, supplyBlocked: {}, env: initialEnv(c), bw: initialWilds(c), fr: initialFrontier(c),
+    treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, tiers, history: {}, agents, recommendations: {}, heard: {}, campaign: { ended: null, lastDanger: -1 }, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, arrivedEvent: {}, sortieOpen: {}, battles: {}, policyKnown: initialPolicies(c), precedents: [], prestige: {}, conduct: {}, commandersFallen: {}, lastStorm: {}, fallen: {}, threats: {}, routesClosed: {}, supplyBlocked: {}, env: initialEnv(c), bw: initialWilds(c), fr: initialFrontier(c), year: null,
     positions, departures: {}, beliefs: {}, nextPropId: 1, reports: {}, nextReportId: 1, messengers: {}, nextMessengerId: 1,
     orders: {}, nextOrderId: 1, advisePending: {}, dayEndDay: -1, ordersInForce: {}, issued: {}, repairs: {}, communities: initialCommunities(c), ...initialGrain(c), ...initialGoods(c), hands: Object.fromEntries(c.communities.communities.map((x) => [x.id, x.hands ?? 0])), musterAway: {}, musters: {}, nextMusterId: 1,
   };
@@ -287,6 +290,12 @@ const capture = (s: WorldState, p: P, kind: "report" | "order", e: SimEvent) => 
 
 export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void> = {
   ScenarioStarted: noop,
+  YearDrawn: (s, p) => {
+    s.year = { moods: p.moods, effects: p.effects };
+    // the court's start: where the year finds it (before any review or instruction, so every actor holds the same stance)
+    const start = (p.effects as YearEffect[]).map((x) => x.frontier?.startStance).filter((x): x is FrontierStance => !!x).pop();
+    if (start && s.fr) { s.fr.stance = start; for (const a of Object.values(s.fr.current)) a.stance = start; }
+  },
   TreasuryCollected: (s, p) => { s.treasuryMilli[p.holder] = (s.treasuryMilli[p.holder] ?? 0) + p.amountMilli; },
   UpkeepPaid: (s, p) => { s.treasuryMilli[p.holder] -= p.amountMilli; }, // includes any muster wages (p.musterMen)
   GarrisonRecovered: (s, p) => { for (const [loc, n] of p.changes as [string, number][]) { const f = s.fortifications[loc]; recruit(f, Math.min(f.establishment, f.garrison + n) - f.garrison); } },

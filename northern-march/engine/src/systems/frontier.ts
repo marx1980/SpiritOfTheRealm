@@ -9,6 +9,7 @@ import { best, learn } from "./knowledge.ts";
 import { compose } from "./messenger.ts";
 import { isDead } from "../world.ts";
 import { siteDay } from "./physical.ts";
+import { courtShift } from "../year.ts";
 
 const P = (ctx: Ctx) => ctx.content.scenario.frontier!;
 const INSTRUCTED = ["ambassador", "commander", "merchant"] as const;
@@ -28,6 +29,12 @@ export function stanceFor(weakness: number, current: FrontierStance, since: numb
   return FRONTIER_STANCES[i + (j > i ? 1 : -1)];
 }
 
+/** The court's thresholds as this year moves them (D-089). */
+function shifted(ctx: Ctx, c: FrontierParams["court"]): Pick<FrontierParams["court"], "holdDays" | "thresholds"> {
+  const k = courtShift(ctx.s), t = c.thresholds;
+  return k === 0 ? c : { holdDays: c.holdDays, thresholds: { tradeFrom: Math.max(0, t.tradeFrom + k), pressFrom: Math.max(0, t.pressFrom + k), strikeFrom: Math.max(0, t.strikeFrom + k) } };
+}
+
 function review(ctx: Ctx) {
   const p = P(ctx), c = p.court, r = ctx.rng("frontier"), f = ctx.s.fr!;
   // a fixed schedule of draws per review, used or not (G-02)
@@ -35,7 +42,7 @@ function review(ctx: Ctx) {
   const forts = ctx.content.scenario.objective.forts.map((id) => ({ conditionMilli: ctx.s.fortifications[id].conditionMilli, fallen: !!ctx.s.fallen[id] }));
   // a refusal makes the March look weaker for a while; a truce holds the court at `settle` (its instructions still take the roads)
   const refused = ctx.tick < f.refusedUntil ? p.treaty.refusePermille : 0;
-  const from = f.stance, weakness = Math.min(1000, weaknessOf(forts, noise) + refused), stance = ctx.tick < f.truceUntil ? "settle" : stanceFor(weakness, from, f.since, ctx.tick, c);
+  const from = f.stance, weakness = Math.min(1000, weaknessOf(forts, noise) + refused), stance = ctx.tick < f.truceUntil ? "settle" : stanceFor(weakness, from, f.since, ctx.tick, shifted(ctx, c));
   const ev = ctx.emit("FrontierReview", [], [loc(p.market)], { weakness, stance, from, changed: stance !== from }, "frontier");
   ctx.at(ctx.tick + next * DAY, "frontier:review", {});
   if (stance === from) return;
@@ -58,7 +65,7 @@ function arrive(ctx: Ctx, instr: number, actor: (typeof INSTRUCTED)[number], sta
 /** The commander on `strike` decides whether to march; his reasons are recorded. */
 function consider(ctx: Ctx, cause: number) {
   const p = P(ctx), f = ctx.s.fr!, who = p.actors.commander;
-  if (f.current.commander.stance !== "strike" || isDead(ctx.s, who) || !ctx.enabled("threat") || ctx.s.threats[p.site]) return;
+  if (f.current.commander.stance !== "strike" || isDead(ctx.s, who) || ctx.s.threats[p.site]) return;
   if (f.lastStrike >= 0 && ctx.tick - f.lastStrike < p.strike.cooldownDays * DAY) return;
   const ch = ctx.content.byId.character.get(who)!, reasons: { kind: string; ref: string; weight: number }[] = [{ kind: "base", ref: "caution", weight: p.strike.declinePermille }];
   for (const t of ch.traits) { const w = p.strike.traitShift[t]; if (w) reasons.push({ kind: "trait", ref: t, weight: w }); }
@@ -67,7 +74,8 @@ function consider(ctx: Ctx, cause: number) {
   const roll = k.int(0, 999), intensityPermille = k.int(p.strike.intensityPermille[0], p.strike.intensityPermille[1]), durationDays = k.int(p.strike.durationDays[0], p.strike.durationDays[1]);
   if (roll < decline) { ctx.emit("FrontierDeclined", [cause], [chr(who)], { reasons, declinePermille: decline }, "frontier"); return; }
   const s = ctx.emit("FrontierStrike", [cause], [chr(who), loc(p.site), loc(p.target)], { site: p.site, target: p.target, intensityPermille, durationDays, reasons }, "frontier");
-  ctx.emit("ThreatBegan", [s.id], [loc(p.site), loc(p.target)], { site: p.site, target: p.target, intensityPermille, untilTick: ctx.tick + durationDays * DAY }, "frontier");
+  // with the raiders ablated the commander still marches (the court acts the same in both arms) but no host appears
+  if (ctx.enabled("threat")) ctx.emit("ThreatBegan", [s.id], [loc(p.site), loc(p.target)], { site: p.site, target: p.target, intensityPermille, untilTick: ctx.tick + durationDays * DAY }, "frontier");
 }
 
 /** The ambassador on `settle` offers terms to the crown, once per cooldown, and writes to her about them. */

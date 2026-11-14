@@ -42,7 +42,7 @@ test("a blighted year leaves the stores lower, and the merchant's grain eases it
   const unmet = (c: typeof CONTENT) => Object.values(run({ seed: 2, policy: "passive", content: c }, B.checkDay + B.days).unsafeWorldForDebug().grainLedger as Record<string, { unmet: number }>).reduce((a, x) => a + x.unmet, 0);
   const calm = stock(never), bad = stock(sure);
   assert.ok(bad < calm - 100, `${bad} vs ${calm}`);
-  const embargo = variant((r) => { r.scenario.grain!.blight = { ...r.scenario.grain!.blight!, chancePermille: 1000 }; const f = r.scenario.frontier!; f.court = { ...f.court, startStance: "press", thresholds: { tradeFrom: 0, pressFrom: 0, strikeFrom: 2000 } }; });
-  const open = variant((r) => { r.scenario.grain!.blight = { ...r.scenario.grain!.blight!, chancePermille: 1000 }; const f = r.scenario.frontier!; f.court = { ...f.court, startStance: "trade", thresholds: { tradeFrom: 0, pressFrom: 2000, strikeFrom: 2000 } }; });
+  const embargo = variant((r) => { delete (r.scenario as { year?: unknown }).year; r.scenario.grain!.blight = { ...r.scenario.grain!.blight!, chancePermille: 1000 }; const f = r.scenario.frontier!; f.court = { ...f.court, startStance: "press", thresholds: { tradeFrom: 0, pressFrom: 0, strikeFrom: 2000 } }; });
+  const open = variant((r) => { delete (r.scenario as { year?: unknown }).year; r.scenario.grain!.blight = { ...r.scenario.grain!.blight!, chancePermille: 1000 }; const f = r.scenario.frontier!; f.court = { ...f.court, startStance: "trade", thresholds: { tradeFrom: 0, pressFrom: 2000, strikeFrom: 2000 } }; });
   assert.ok(unmet(open) < unmet(embargo), "the grain that comes in while the court trades is what the embargo withholds: fewer go hungry");
 });

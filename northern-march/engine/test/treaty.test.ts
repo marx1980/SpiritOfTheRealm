@@ -14,7 +14,7 @@ const F = CONTENT.scenario.frontier!;
 const ofType = (log: readonly SimEvent[], t: string) => log.filter((e) => e.type === t);
 
 /** The court is at peace, reviews often and offers terms often; the answer to the ambassador takes two days. */
-const peace = variant((r) => {
+const peace = variant((r) => { delete (r.scenario as { year?: unknown }).year;
   const f = r.scenario.frontier!;
   f.court = { ...f.court, reviewDays: [5, 5], holdDays: 0, startStance: "settle", thresholds: { tradeFrom: 2000, pressFrom: 2000, strikeFrom: 2000 } };
   f.delayDays = { ambassador: [2, 2], commander: [2, 2], merchant: [2, 2] };
@@ -71,7 +71,7 @@ test("the tribute leaves the ruler's treasury", () => {
 });
 
 test("during the truce the court's reading is settle, whatever the forts say", () => {
-  const hawk = variant((r) => {
+  const hawk = variant((r) => { delete (r.scenario as { year?: unknown }).year;
     const f = r.scenario.frontier!;
     f.court = { ...f.court, reviewDays: [5, 5], holdDays: 0, startStance: "settle", thresholds: { tradeFrom: 0, pressFrom: 0, strikeFrom: 0 } };
     f.delayDays = { ambassador: [2, 2], commander: [2, 2], merchant: [2, 2] };
@@ -174,7 +174,7 @@ test("on trade the merchant brings grain to the March, and the ledger counts it"
 });
 
 test("no grain while the court presses or strikes, or while a host stands at the gate", () => {
-  const press = variant((r) => { const f = r.scenario.frontier!; f.court = { ...f.court, startStance: "press", thresholds: { tradeFrom: 0, pressFrom: 0, strikeFrom: 2000 } }; f.trade = { ...f.trade, everyDays: 10 }; });
+  const press = variant((r) => { delete (r.scenario as { year?: unknown }).year; const f = r.scenario.frontier!; f.court = { ...f.court, startStance: "press", thresholds: { tradeFrom: 0, pressFrom: 0, strikeFrom: 2000 } }; f.trade = { ...f.trade, everyDays: 10 }; });
   assert.equal(ofType(run({ seed: 2, content: press }, 90).log, "FrontierTrade").length, 0);
   const log = run({ seed: 4, content: market }, 200).log;
   const hosts: [number, number][] = []; let from = -1;

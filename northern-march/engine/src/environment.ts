@@ -47,16 +47,16 @@ export function initialEnv(c: Content): EnvState | null {
 }
 
 /** One day. `draws` holds each province's four fixed draws (the system draws them whether or not they are needed). */
-export function stepDay(c: Content, prev: EnvState, tick: number, draws: Record<string, RegionDraws>): EnvState {
+export function stepDay(c: Content, prev: EnvState, tick: number, draws: Record<string, RegionDraws>, year: { tempC10: number; wetPermille: number; stormPermille: number } | null = null): EnvState {
   const p = c.scenario.environment!, doy = dayOfYear(p, tick), season = seasonOf(p, doy), rain = p.rain[season];
   const regions: EnvState["regions"] = {}, stress: EnvState["stress"] = {}, water: Record<string, number> = {};
   for (const id of sortedKeys(p.regions)) {
     const o = prev.regions[id], cfg = p.regions[id], d = draws[id];
     const anom = Math.floor((o.anom * p.anomalyKeepPermille) / 1000) + d.anom;
-    const temp = meanTempC10(p, doy) + cfg.tempOffsetC10 + anom;
-    const chance = clamp((o.wx !== "clear" ? rain.stay : rain.start) + cfg.wetOffsetPermille, 0, 1000);
+    const temp = meanTempC10(p, doy) + cfg.tempOffsetC10 + anom + (year?.tempC10 ?? 0); // the year's own shift is not carried into the anomaly (D-089)
+    const chance = clamp((o.wx !== "clear" ? rain.stay : rain.start) + cfg.wetOffsetPermille + (year?.wetPermille ?? 0), 0, 1000);
     const wet = d.wet < chance, heavy = wet && d.heavy < rain.heavy, mm = wet ? (heavy ? p.mm.heavy : p.mm.light) : 0;
-    const snowing = wet && temp < p.snowBelowC10, storm = wet && !snowing && heavy && d.storm < rain.storm;
+    const snowing = wet && temp < p.snowBelowC10, storm = wet && !snowing && heavy && d.storm < rain.storm + (year?.stormPermille ?? 0);
     const fall = snowing ? mm : 0, rainMm = wet && !snowing ? mm : 0;
     const melt = temp > 0 ? Math.min(o.snow + fall, Math.floor((temp * p.meltPerC10Permille) / 1000)) : 0;
     const reach = rainMm + melt; // water that reaches the ground, in mm

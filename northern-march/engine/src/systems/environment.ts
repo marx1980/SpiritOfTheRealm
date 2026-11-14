@@ -5,9 +5,10 @@ import type { SimEvent } from "../events.ts";
 import type { Ctx, System } from "./types.ts";
 import { DAY, loc, sorted } from "./types.ts";
 import { cmp } from "../world.ts";
-import { provinceOf, routeProvinces, stepDay, wantClosed, type EnvState, type RegionDraws } from "../environment.ts";
+import { dayOfYear, provinceOf, routeProvinces, seasonOf, stepDay, wantClosed, type EnvState, type RegionDraws } from "../environment.ts";
 import { maybeAlarm, witness } from "./physical.ts";
 import { observe } from "./knowledge.ts";
+import { weatherShift } from "../year.ts";
 
 const START = 1800; // half past midnight: before the grain tally and the other daily steps
 
@@ -115,7 +116,7 @@ export const environment: System = {
       // a fixed schedule of draws, four per province a day, used or not, so the stream stays aligned whatever else happens (G-02)
       const draws: Record<string, RegionDraws> = {};
       for (const id of Object.keys(p.regions).sort()) draws[id] = { anom: r.int(-p.anomalyC10, p.anomalyC10), wet: r.int(0, 999), heavy: r.int(0, 999), storm: r.int(0, 999) };
-      const next = stepDay(c, prev, ctx.tick, draws);
+      const next = stepDay(c, prev, ctx.tick, draws, ctx.s.year ? weatherShift(ctx.s, seasonOf(p, dayOfYear(p, ctx.tick))) : null);
       const day = ctx.emit("EnvironmentDay", [], [], { day: next.day, season: next.season, regions: next.regions, rivers: next.rivers, stress: next.stress }, "environment");
       const env = ctx.s.env!;
       for (const id of Object.keys(p.rivers).sort()) {

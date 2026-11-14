@@ -62,6 +62,7 @@ Phases 0-4: see DECISIONS D-001 to D-014.
 
 **Phase 14B stage 4 (D-087).** Horizon 360 days; bad harvest years (`grain.blight`); harder strikes and a merchant who matters; attention now reads what a letter speaks of. Open: G-07 balance (wilds 45%, frontier 3%), deposition and capture (need Houses to hold something), court screen, G-15 tool.
 **G-07 reading fix (D-088, 14 Nov).** `readAttention` now credits a decision to what its action answers (repair: what last damaged the fort; grain: food; relief: rebellion; advance: the raiders; treaty: frontier), chain otherwise; letter reading removed. Instrument change, no bar moved, TUNE only; Marko to confirm. Probe: wilds 40%, rebellion 8%, food 7%, frontier 3%, environment 8%.
+**G-07, the year varies by seed (D-089, 14 Nov; content march-0.18).** `scenario.year`: three moods (Blackwood quiet/ordinary/roused, the court friendly/wary/hostile, the winter mild/ordinary/hard) drawn at the start from keyed streams, recorded as `YearDrawn`, read by the raiders, the court and the weather; absent block = old log exactly. TUNE probe (seeds 1-40, 120 games): rebellion 10.0, food 7.5, wilds 22.5, frontier 8.3, environment 18.3, none 33.3 (was wilds 40, frontier 3, others under 10 on 20 seeds). G-08 AMBER (4 types in band), G-09 FAIL as before. KI-01 hash re-recorded; four tests moved to other seeds, no bar moved. Open: per-policy blind spots, a hostile year always means war, weights untested on a sealed block.
 
 ## Result
 - Phase 1: G-01, G-02 PASS (D-009). Phase 2: built (D-010).

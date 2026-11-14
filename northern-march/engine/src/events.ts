@@ -36,6 +36,7 @@ const T = (system: SystemId, domain: Domain, significance: 0 | 1 | 2 | 3, root =
 
 export const EVENT_TYPES: Readonly<Record<string, EventTypeDef>> = Object.freeze({
   ScenarioStarted: T("core", "info", 3, true),
+  YearDrawn: T("core", "info", 2, true), // the year's moods, drawn once at the start (D-089)
   // physical processes
   TreasuryCollected: T("economy", "economic", 2, true),
   UpkeepPaid: T("economy", "economic", 2, true),

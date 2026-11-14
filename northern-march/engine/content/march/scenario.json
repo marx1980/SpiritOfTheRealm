@@ -1414,6 +1414,91 @@
    "believedWorth": 150
   }
  },
+ "year": {
+  "moods": [
+   {
+    "id": "wilds",
+    "options": [
+     {
+      "id": "quiet",
+      "weight": 4,
+      "threat": {
+       "startPct": 250,
+       "intensityPct": 700,
+       "durationPct": 600
+      }
+     },
+     {
+      "id": "ordinary",
+      "weight": 3
+     },
+     {
+      "id": "roused",
+      "weight": 3,
+      "threat": {
+       "startPct": 1500,
+       "intensityPct": 1200,
+       "durationPct": 1300
+      }
+     }
+    ]
+   },
+   {
+    "id": "court",
+    "options": [
+     {
+      "id": "friendly",
+      "weight": 3,
+      "frontier": {
+       "startStance": "settle",
+       "thresholdShift": 150
+      }
+     },
+     {
+      "id": "wary",
+      "weight": 4
+     },
+     {
+      "id": "hostile",
+      "weight": 3,
+      "frontier": {
+       "startStance": "press",
+       "thresholdShift": -400
+      }
+     }
+    ]
+   },
+   {
+    "id": "winter",
+    "options": [
+     {
+      "id": "mild",
+      "weight": 3,
+      "environment": {
+       "season": "winter",
+       "tempC10": 50,
+       "wetPermille": -40,
+       "stormPermille": -30
+      }
+     },
+     {
+      "id": "ordinary",
+      "weight": 4
+     },
+     {
+      "id": "hard",
+      "weight": 3,
+      "environment": {
+       "season": "winter",
+       "tempC10": -80,
+       "wetPermille": 80,
+       "stormPermille": 60
+      }
+     }
+    ]
+   }
+  ]
+ },
  "frontier": {
   "site": "arven_gate",
   "market": "arven_market",

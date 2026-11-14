@@ -188,7 +188,20 @@ export interface WildsParams {
   custody: { deliverLoyalty: number; deliverTrait: number; keepBase: number; keepTrait: number; keepOtherHouse: number; believedWorth: number };
 }
 
+/** Phase 14 (D-089): the year's moods. At the start of a game each mood draws one of its options, by weight, from a keyed stream; the choice is
+ *  recorded (YearDrawn) and the systems read its effects. Every effect part is optional; an absent block changes nothing. */
+export interface YearEffect {
+  /** Raiders: how often they begin (start chance), how hard they are and how long they stay, in permille of the content's own numbers. `sites` limits it (default: all the old threat sites). */
+  threat?: { startPct?: number; intensityPct?: number; durationPct?: number; sites?: string[] };
+  /** The court: where it stands at the start, and how far its thresholds move (negative: it presses on a healthier March). */
+  frontier?: { startStance?: FrontierStance; thresholdShift?: number };
+  /** One season's weather: added to the temperature (tenths of a degree), to the wet-day chance and to the storm chance (permille). */
+  environment?: { season: Season; tempC10?: number; wetPermille?: number; stormPermille?: number };
+}
+export interface YearParams { moods: { id: string; options: ({ id: string; weight: number } & YearEffect)[] }[] }
+
 export interface Scenario {
+  year?: YearParams;
   environment?: EnvironmentParams;
   wilds?: WildsParams;
   frontier?: FrontierParams;
@@ -413,6 +426,25 @@ export function validateContent(raw: RawContent): { errors: ContentError[] } {
       if (!e || e.killed + e.fled + e.mauled + e.fell !== 1000) err("RANGE", `wilds.expedition.encounter.${k} must sum to 1000`);
     }
     if (!(bw.creature.intervalDays[0] > 0 && bw.creature.intervalDays[0] <= bw.creature.intervalDays[1])) err("RANGE", "wilds.creature.intervalDays");
+  }
+  const yr = sc.year;
+  if (yr) {
+    if (!yr.moods.length) err("RANGE", "year.moods is empty");
+    const seen = new Set<string>();
+    for (const m of yr.moods) {
+      if (seen.has(m.id)) err("RANGE", `year mood ${m.id} twice`);
+      seen.add(m.id);
+      if (!m.options.length || new Set(m.options.map((o) => o.id)).size !== m.options.length) err("RANGE", `year.${m.id}: options missing or repeated`);
+      if (!m.options.every((o) => Number.isInteger(o.weight) && o.weight >= 0) || !m.options.some((o) => o.weight > 0)) err("RANGE", `year.${m.id}: weights are whole numbers, one above zero`);
+      for (const o of m.options) {
+        const t = o.threat;
+        if (t) { for (const v of [t.startPct, t.intensityPct, t.durationPct]) if (v !== undefined && !(Number.isInteger(v) && v >= 0 && v <= 10000)) err("RANGE", `year.${m.id}.${o.id}.threat`); for (const x of t.sites ?? []) if (!sc.threat.sites.some((y) => y.site === x)) err("ID_UNKNOWN", `year.${m.id}.${o.id}.threat.sites ${x}`); }
+        if (o.frontier) {
+          if (o.frontier.startStance !== undefined && !FRONTIER_STANCES.includes(o.frontier.startStance)) err("RANGE", `year.${m.id}.${o.id}.frontier.startStance`);
+        }
+        if (o.environment && sc.environment && !sc.environment.seasons.some((x) => x.id === o.environment!.season)) err("RANGE", `year.${m.id}.${o.id}.environment.season`);
+      }
+    }
   }
   const fr = sc.frontier;
   if (fr) {

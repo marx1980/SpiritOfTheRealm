@@ -250,7 +250,7 @@ test("a transcript is corrected against the names she knows, shows what changed 
 
 // ---- battle conversation ------------------------------------------------------------------------------------------------
 function toBattle(): { sim: Sim; view: View } {
-  for (let seed = 1; seed <= 12; seed++) {
+  for (let seed = 2; seed <= 12; seed++) { // seed 1 draws a year (D-089) in which Caron is not at the battle
     const sim = createSim({ content: CONTENT, seed, policy: "external" });
     let travelled = false, ordered = false;
     for (let i = 0; i < 20000; i++) {

@@ -6,6 +6,7 @@ import { cmp } from "../world.ts";
 import { best, learn, observe, observeTreasury } from "./knowledge.ts";
 import { travel } from "./movement.ts";
 import { contribution } from "./communities.ts";
+import { threatScale } from "../year.ts";
 
 const presentAt = (ctx: Ctx, where: string) => sorted(Object.entries(ctx.s.positions).filter(([, p]) => "at" in p && p.at === where).map(([id]) => id), (x) => x);
 export function defence(ctx: Ctx, where: string) {
@@ -220,8 +221,10 @@ export const threat: System = {
       for (const { site, target } of sorted(t.sites, (x) => x.site)) {
         // A fixed draw schedule (three draws per site per day, used or not), so this stream stays aligned day by day
         // whatever other systems do to the world (G-02).
-        const roll = r.int(0, 999), intensityPermille = r.int(t.intensityPermille[0], t.intensityPermille[1]), days = r.int(t.durationDays[0], t.durationDays[1]);
-        if (siteDay(ctx, site, target, { roll, intensityPermille, days }, t.startPermillePerDay, "threat")) return; // the campaign has ended
+        const roll = r.int(0, 999), drawn = r.int(t.intensityPermille[0], t.intensityPermille[1]), drawnDays = r.int(t.durationDays[0], t.durationDays[1]);
+        // the year scales what was drawn (D-089); the draws themselves are the same either way
+        const k = threatScale(ctx.s, site), intensityPermille = Math.min(1000, Math.floor((drawn * k.intensity) / 1000)), days = Math.max(1, Math.floor((drawnDays * k.duration) / 1000));
+        if (siteDay(ctx, site, target, { roll, intensityPermille, days }, (t.startPermillePerDay * k.start) / 1000, "threat")) return; // the campaign has ended
       }
       // Days without raids are evidence too: those at the target who still believe in a threat notice the quiet.
       for (const { site, target } of [...sorted(t.sites, (x) => x.site), ...ctx.content.raidSites.filter((x) => !t.sites.some((y) => y.site === x.site))]) {

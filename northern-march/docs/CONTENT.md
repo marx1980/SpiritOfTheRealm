@@ -38,5 +38,12 @@ Five pressures, named in code `rebellion`, `food_security`, `wilds` (the Blackwo
 - Verdicts use the Wilson 90% interval: PASS if inside the bar, AMBER if only the point is, else FAIL. G-07 and G-09 use the same rule.
 - Endings parameters (`fractureCommunities` 2, `fractureDays` 10, `lostForts` 2, horizon 240) are first guesses, tuned only on TUNE seeds.
 
+## The year (D-089, content march-0.18)
+`scenario.year` makes games differ, since G-07 is measured between games. At the start of each game every mood in `year.moods` draws one of its options by weight from its own keyed stream (`year:<mood>`; no shared stream moves). The draw is the root event `YearDrawn` (id 2, tick 0), so the year is visible in the log and in `WorldState.year`.
+- A mood is `{ id, options: [{ id, weight, threat?, frontier?, environment? }] }`. Weights are whole numbers, at least one above zero.
+- `threat { startPct, intensityPct, durationPct, sites? }`: permille of the content's own numbers for the old threat sites (default all). `frontier { startStance, thresholdShift }`: where the court starts, and a shift to its three thresholds. `environment { season, tempC10, wetPermille, stormPermille }`: added to that season's weather.
+- Shipped moods: `wilds` (quiet 4, ordinary 3, roused 3), `court` (friendly 3, wary 4, hostile 3), `winter` (mild 3, ordinary 4, hard 3). The bad harvest year (`grain.blight`) is separate.
+- To change the balance, edit the weights and effects in `scenario.json` and probe on TUNE seeds only. Remove the block and the game has one year, as before. Test content that pins a court start must delete `scenario.year`; `stripFrontier` already does.
+
 ## Not built in 14A
 Anything that changes the world: new characters, Arven, events that end the campaign, victory and settlement.

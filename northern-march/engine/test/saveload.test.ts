@@ -50,7 +50,7 @@ test("a save replays the captain's mission and the repair mode the ruler chose (
   const { loadContent } = await import("../src/content.ts");
   const { createSim } = await import("../src/engine.ts");
   const content = loadContent(new URL("../content/march/", import.meta.url).pathname);
-  const sim = createSim({ content, seed: 51, policy: "external", params: { dayEnd: true } });
+  const sim = createSim({ content, seed: 52, policy: "external", params: { dayEnd: true } });
   let sent = 0;
   for (let g = 0; g < 400 && sent < 2; g++) {
     const r = sim.next(120 * 86400);

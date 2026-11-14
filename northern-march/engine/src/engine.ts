@@ -24,6 +24,7 @@ import { frontier } from "./systems/frontier.ts";
 import { routeSpeedPermille } from "./environment.ts";
 import { makePlayer } from "./systems/player.ts";
 import { MapGraph } from "./map.ts";
+import { drawYear } from "./year.ts";
 import { beliefsAbout } from "./view.ts";
 import { DAY, type Ctx, type SimParams, type System } from "./systems/types.ts";
 import { buildView, validateBattleDraft, validateDraft, type View } from "./view.ts";
@@ -89,6 +90,8 @@ export class Sim {
     this.ctx = this.makeCtx();
     for (const s of [economy, weather, environment, exploration, frontier, threat, movement, knowledge, messenger, orders, agents, communities, grain, goods, manpower, battle, policy, makePlayer((ctx, d, r) => this.decide(ctx, d, r))]) this.systems.set(s.id, s);
     this.emit("ScenarioStarted", [], [], { contentVersion: cfg.content.version, seed: cfg.seed });
+    const year = drawYear(cfg.content, this.ctx.keyed); // keyed draws only (D-089): no shared stream is touched
+    if (year) this.emit("YearDrawn", [], [], { moods: year.moods, effects: year.effects });
     for (const s of this.systems.values()) if (!this.disabled.has(s.id)) s.start(this.ctx);
   }
 

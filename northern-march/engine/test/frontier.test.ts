@@ -15,7 +15,7 @@ const ofType = (log: readonly SimEvent[], t: string) => log.filter((e) => e.type
 const byId = (log: readonly SimEvent[]) => new Map(log.map((e) => [e.id, e]));
 
 /** The court reviews every five days, steps at once, is told in two days (the ambassador in thirty), and the commander never declines. */
-const fast = variant((r) => {
+const fast = variant((r) => { delete (r.scenario as { year?: unknown }).year;
   const f = r.scenario.frontier!;
   f.court = { ...f.court, reviewDays: [5, 5], holdDays: 0, startStance: "settle", thresholds: { tradeFrom: 0, pressFrom: 0, strikeFrom: 0 } };
   f.delayDays = { ambassador: [30, 30], commander: [2, 2], merchant: [2, 2] };
@@ -109,12 +109,12 @@ test("a commander on strike marches: the host appears at the gate, against the t
 });
 
 test("the host never comes by chance: with the court at peace there is no threat at the gate", () => {
-  const calm = variant((r) => { const f = r.scenario.frontier!; f.court = { ...f.court, startStance: "settle", thresholds: { tradeFrom: 2000, pressFrom: 2000, strikeFrom: 2000 } }; });
+  const calm = variant((r) => { delete (r.scenario as { year?: unknown }).year; const f = r.scenario.frontier!; f.court = { ...f.court, startStance: "settle", thresholds: { tradeFrom: 2000, pressFrom: 2000, strikeFrom: 2000 } }; });
   for (const seed of [1, 2]) assert.ok(!run({ seed, content: calm }, 200).log.some((e) => e.type === "ThreatBegan" && e.payload.site === F.site));
 });
 
 test("a commander may decline, with his reasons", () => {
-  const timid = variant((r) => {
+  const timid = variant((r) => { delete (r.scenario as { year?: unknown }).year;
     const f = r.scenario.frontier!;
     f.court = { ...f.court, reviewDays: [5, 5], holdDays: 0, startStance: "settle", thresholds: { tradeFrom: 0, pressFrom: 0, strikeFrom: 0 } };
     f.delayDays = { ambassador: [30, 30], commander: [2, 2], merchant: [2, 2] };
@@ -129,7 +129,7 @@ test("a commander may decline, with his reasons", () => {
 
 test("the ambassador on a peaceful stance proposes terms, no more than once per cooldown", () => {
   const sim = run({ seed: 2, content: fast }, 80), ts = ofType(sim.log, "TreatyProposed");
-  const calm = run({ seed: 2, content: variant((r) => { const f = r.scenario.frontier!; f.court = { ...f.court, startStance: "settle", thresholds: { tradeFrom: 2000, pressFrom: 2000, strikeFrom: 2000 } }; }) }, 200);
+  const calm = run({ seed: 2, content: variant((r) => { delete (r.scenario as { year?: unknown }).year; const f = r.scenario.frontier!; f.court = { ...f.court, startStance: "settle", thresholds: { tradeFrom: 2000, pressFrom: 2000, strikeFrom: 2000 } }; }) }, 200);
   const t2 = ofType(calm.log, "TreatyProposed");
   assert.ok(t2.length >= 2);
   for (let i = 1; i < t2.length; i++) assert.ok(t2[i].tick - t2[i - 1].tick >= F.treaty.cooldownDays * DAY);
