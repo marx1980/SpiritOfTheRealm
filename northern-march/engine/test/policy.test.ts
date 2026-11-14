@@ -16,7 +16,7 @@ const sortieCands = (sim: Sim) => traces(sim).flatMap(({ e, t }) => t.candidates
 const P = CONTENT.scenario.policy!;
 
 /** Campaigns under a scripted policy, with a standing policy in force from the start (initial) or none. */
-function campaign(seed: number, policy: "passive" | "delegating" | "aggressive", initial?: Record<string, string>, days = 160, edit: (r: any) => void = () => {}) {
+function campaign(seed: number, policy: "passive" | "delegating" | "delegating-core" | "aggressive", initial?: Record<string, string>, days = 160, edit: (r: any) => void = () => {}) {
   const c = variant((r) => { if (initial) r.scenario.policy!.initial = initial; edit(r); });
   const sim = createSim({ content: c, seed, policy });
   sim.runDays(days);
@@ -58,8 +58,8 @@ test("policy: under 'hold the walls' officials stop sallying on their own unless
   // renown, and his trace shows the policy he overrode.
   let on = 0, off = 0, cited = 0, applied = 0, loyal = 0;
   const free = (sim: Sim) => sim.log.filter((e) => e.type === "SortieLaunched" && !(sim.log.find((d) => d.id === e.payload.decisionEventId)?.payload.trace as Trace | undefined)?.ordersInForce?.length);
-  for (const seed of [1, 2, 3, 4, 5, 6]) {
-    const a = campaign(seed, "delegating", { military: "hold_walls" }), b = campaign(seed, "delegating");
+  for (const seed of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]) {
+    const a = campaign(seed, "delegating-core", { military: "hold_walls" }), b = campaign(seed, "delegating-core"); // the ruler script of Phase 9, so the measure is the policy and not the petitions
     on += free(a).length; off += free(b).length;
     loyal += free(a).filter((e) => e.payload.commander === "bren").length;
     for (const { t, c } of sortieCands(a)) { if (t.ordersInForce?.length) continue; applied++; if (c.contributions.some((r) => r.ref.kind === "policy" && r.ref.id === "military:hold_walls" && r.weight < 0)) cited++; }

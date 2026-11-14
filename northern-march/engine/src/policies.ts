@@ -5,7 +5,7 @@ import { captainSentTo, planOf } from "./presentation/phrasing.ts";
 import { adviceAction, economyProblems, affordable as affordableR, publicRulesOf } from "./presentation/affordances.ts";
 
 
-export type PolicyId = "passive" | "delegating" | "aggressive" | "cautious" | "provisioner" | "random-valid" | "follow-best-adviser" | "follow-worst-adviser" | "external" | "replay" | `follow:${string}`;
+export type PolicyId = "passive" | "delegating" | "delegating-core" | "aggressive" | "cautious" | "provisioner" | "random-valid" | "follow-best-adviser" | "follow-worst-adviser" | "external" | "replay" | `follow:${string}`;
 /** `mission` (for sending a captain): defend the fort (default), or scout / attack the raiders at `raid`. */
 export interface BattleOrderDraft { to: string; task: import("./battlefield/core.ts").Task; via: "runner" | "signal" | "voice"; signal?: string;
   /** Phase 13: battle seconds spent talking before the order is given; the order is dated that much later (CONVERSATION.md §4). */ delay?: number }
@@ -145,8 +145,9 @@ const takeTheField = (minIntensity: number): PolicyFn => (v) => {
   return fort ? [{ action: "travel" as const, target: fort }] : [];
 };
 
-export const POLICIES: Record<"passive" | "delegating" | "aggressive" | "cautious" | "provisioner" | "random-valid" | "follow-best-adviser" | "follow-worst-adviser", { fn: PolicyFn | null; note: string }> = {
+export const POLICIES: Record<"passive" | "delegating" | "delegating-core" | "aggressive" | "cautious" | "provisioner" | "random-valid" | "follow-best-adviser" | "follow-worst-adviser", { fn: PolicyFn | null; note: string }> = {
   passive: { fn: () => [], note: "never acts" },
+  "delegating-core": { fn: (v, rng) => [...repairBelow(60000, 20)(v, rng), ...advanceTo(400, 20)(v, rng), ...grainRelief(true)(v, rng), ...expedition("scholarly", 300, 60)(v, rng)], note: "delegating as it was before Phase 14 (the walls, the captain, grain and the envoy; no answer to the court or the people), kept so that the Phase 9 policy measures compare" },
   delegating: { fn: (v, rng) => [...repairBelow(60000, 20)(v, rng), ...advanceTo(400, 20)(v, rng), ...grainRelief(true)(v, rng), ...expedition("scholarly", 300, 60)(v, rng), ...answerTerms("accept")(v, rng), ...hearPeople()(v, rng)], note: "accepts the court's terms; repairs below 60%; sends the captain against raiders reported at 400 or more; asks the people whose grain it is first when a store looks low" },
   aggressive: {
     fn: (v, rng) => [...repairBelow(80000, 10)(v, rng), ...advanceTo(1, 10)(v, rng), ...(recently(v, "levy", null, 60) ? [] : [{ action: "levy" as const }]), ...grainRelief(false, 60)(v, rng), ...expedition("military", 300, 60)(v, rng), ...answerTerms("refuse")(v, rng), ...hearPeople()(v, rng), ...takeTheField(600)(v, rng)],
