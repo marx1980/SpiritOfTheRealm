@@ -21,15 +21,6 @@ export const SYSTEM_PRESSURE: Readonly<Record<string, Pressure>> = Object.freeze
   weather: "environment", environment: "environment",
 });
 
-/** What a letter is about: a decision that answers a delivered report is credited to the pressure the report's claims speak of (what she read), and only
- *  when they speak of none does the chain of causes decide. A threat claim at the frontier's gate is the frontier's. */
-export const PREDICATE_PRESSURE: Readonly<Record<string, Pressure>> = Object.freeze({
-  "grain.stock": "food_security",
-  "community.grievance": "rebellion", "community.stance": "rebellion", "community.request": "rebellion",
-  "threat.intensity": "wilds", "site.rumour": "wilds", "site.signs": "wilds", "creature.nature": "wilds",
-  "frontier.posture": "frontier", "frontier.treaty": "frontier",
-});
-
 /** Events that are an agent's decision (a character's, or a community's change of stance). */
 export const DECISION_TYPES: readonly string[] = ["PlayerInput", "OrderIssued", "ObedienceDecided", "LocalPlanFormed", "SubordinateOrdersIssued", "ExpeditionStarted", "CommunityStanceChanged", "DecisionMade"];
 
@@ -113,17 +104,6 @@ function ancestry(log: readonly SimEvent[], id: number, byId = new Map(log.map((
   return { ancestors, roots };
 }
 
-/** The pressures a delivered letter speaks of, from its claims (empty if it speaks of none of them, or the event is not a letter). */
-function letterPressures(e: SimEvent | undefined, reports: Map<number, { claims: { predicate: string; subject: { id: string } }[] }>, frontierSite?: string): Set<Pressure> {
-  const out = new Set<Pressure>();
-  if (e?.type !== "ReportDelivered") return out;
-  for (const c of reports.get(e.payload.reportId as number)?.claims ?? []) {
-    const p = c.predicate === "threat.intensity" && frontierSite && c.subject.id === frontierSite ? "frontier" : PREDICATE_PRESSURE[c.predicate];
-    if (p) out.add(p);
-  }
-  return out;
-}
-
 /** Breadth-first through `causedBy`: the pressures of the closest events (not the input itself) whose system belongs to one. */
 function nearestPressures(id: number, byId: Map<number, SimEvent>, frontierSite?: string): Set<Pressure> {
   let level = [id];
@@ -142,6 +122,26 @@ function nearestPressures(id: number, byId: Map<number, SimEvent>, frontierSite?
   return new Set();
 }
 
+/** What the decision's own action answers, or null when the action says nothing about a pressure (then the chain of causes decides):
+ *  repair answers what last damaged the fort; grain moved or bought answers food; relief answers rebellion; advance (or a scout or attack) answers the
+ *  raiders at that fort or site (the gate's are the frontier's); a treaty answer is the frontier's. Everything else (levy, order, policy, ask, travel, battle) is null. */
+function answered(e: SimEvent, lastDamage: Map<string, Pressure>, active: Map<string, { target: string; since: number }>, gate?: string): Set<Pressure> | null {
+  const p = e.payload, one = (x: Pressure | undefined) => (x ? new Set<Pressure>([x]) : null);
+  switch (p.action) {
+    case "repair": return one(lastDamage.get(p.target as string));
+    case "requisition": case "purchase": return !p.good || p.good === "grain" ? one("food_security") : null;
+    case "relief": return one("rebellion");
+    case "treaty": return one("frontier");
+    case "advance": {
+      if (typeof p.raid === "string") return one(gate && p.raid === gate ? "frontier" : "wilds");
+      let site: string | undefined, since = -1;
+      for (const [s, t] of active) if (t.target === p.target && t.since > since) { site = s; since = t.since; }
+      return site === undefined ? null : one(gate && site === gate ? "frontier" : "wilds");
+    }
+    default: return null;
+  }
+}
+
 export interface Attention {
   /** Share of the ruler's counted inputs that came from each pressure (0 to 1; they sum to 1, or all 0 if nothing was counted). */
   shares: Record<Pressure, number>;
@@ -157,16 +157,23 @@ export interface Attention {
 export function readAttention(log: readonly SimEvent[], c: Content): Attention {
   const horizon = c.scenario.endings.horizonDays * DAY, days = c.scenario.endings.horizonDays;
   const byId = new Map(log.map((e) => [e.id, e] as const));
-  const reports = new Map<number, { claims: { predicate: string; subject: { id: string } }[] }>();
-  for (const e of log) if (e.type === "ReportComposed" && e.payload.report) reports.set((e.payload.report as { id: number }).id, e.payload.report as { claims: { predicate: string; subject: { id: string } }[] });
   const sum = Object.fromEntries(PRESSURES.map((p) => [p, 0])) as Record<Pressure, number>;
   const perDay = Object.fromEntries(PRESSURES.map((p) => [p, new Array<number>(days + 1).fill(0)])) as Record<Pressure, number[]>;
   let counted = 0, routine = 0;
+  const gate = c.scenario.frontier?.site;
+  // What the log says so far (read in order, so a decision sees only what came before it): what last damaged each place, and the raiders now abroad.
+  const lastDamage = new Map<string, Pressure>(), active = new Map<string, { target: string; since: number }>();
   for (const e of log) {
+    const p = e.payload;
+    switch (e.type) {
+      case "FortificationsWeathered": for (const ch of (p.changes as [string, number][] | undefined) ?? []) lastDamage.set(ch[0], "environment"); break;
+      case "Storm": case "Hazard": if (typeof p.location === "string") lastDamage.set(p.location, "environment"); break;
+      case "RaidDamage": if (typeof p.location === "string") lastDamage.set(p.location, gate && p.site === gate ? "frontier" : "wilds"); break;
+      case "ThreatBegan": active.set(p.site as string, { target: p.target as string, since: e.tick }); break;
+      case "ThreatEnded": active.delete(p.site as string); break;
+    }
     if (e.type !== "PlayerInput" || e.tick > horizon) continue;
-    const read = new Set<Pressure>();
-    for (const cid of e.causedBy) for (const p of letterPressures(byId.get(cid), reports, c.scenario.frontier?.site)) read.add(p);
-    const ps = read.size ? read : nearestPressures(e.id, byId, c.scenario.frontier?.site);
+    const ps = answered(e, lastDamage, active, gate) ?? nearestPressures(e.id, byId, gate);
     if (!ps.size) { routine++; continue; }
     counted++;
     for (const p of ps) { sum[p] += 1 / ps.size; perDay[p][Math.min(days, Math.floor(e.tick / DAY))] += 1 / ps.size; }

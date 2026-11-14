@@ -61,6 +61,7 @@ Phases 0-4: see DECISIONS D-001 to D-014.
 **Phase 14B stage 3 (D-086).** The delegating and aggressive policies answer the people's petitions and low-grain letters; the aggressive ruler rides to a raided fort (death now reachable and decision-led); `DecisionMade` counts as a decision in endings. Three decisions for Marko are listed in D-086 before the sealed round.
 
 **Phase 14B stage 4 (D-087).** Horizon 360 days; bad harvest years (`grain.blight`); harder strikes and a merchant who matters; attention now reads what a letter speaks of. Open: G-07 balance (wilds 45%, frontier 3%), deposition and capture (need Houses to hold something), court screen, G-15 tool.
+**G-07 reading fix (D-088, 14 Nov).** `readAttention` now credits a decision to what its action answers (repair: what last damaged the fort; grain: food; relief: rebellion; advance: the raiders; treaty: frontier), chain otherwise; letter reading removed. Instrument change, no bar moved, TUNE only; Marko to confirm. Probe: wilds 40%, rebellion 8%, food 7%, frontier 3%, environment 8%.
 
 ## Result
 - Phase 1: G-01, G-02 PASS (D-009). Phase 2: built (D-010).

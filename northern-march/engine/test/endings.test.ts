@@ -153,22 +153,76 @@ test("attention: the nearest crisis on the chain counts, not the first cause of 
   assert.equal(at.shares.wilds, 0);
 });
 
-test("attention: a decision that answers a letter is credited to what the letter speaks of, not to what happened to cause it to be written", () => {
+test("attention: a repair is credited to what last damaged the fort, even when the letter that prompted it speaks of raiders", () => {
   fresh();
-  const weather = ev(DAY, "FortificationsWeathered");
-  const letter = (id: number, claims: [string, string][]) => ev(2 * DAY, "ReportComposed", [weather.id], { report: { id, claims: claims.map(([predicate, sub]) => ({ predicate, subject: { kind: "location", id: sub } })) } });
-  const l1 = letter(7, [["grain.stock", F1]]), d1 = ev(3 * DAY, "ReportDelivered", [l1.id], { reportId: 7 }), i1 = ev(3 * DAY, "PlayerInput", [d1.id], { action: "requisition" });
-  const a1 = readAttention([weather, l1, d1, i1], CONTENT);
-  assert.equal(a1.shares.food_security, 1);
-  assert.equal(a1.shares.environment, 0, "the weather is only why the steward looked");
-  const l2 = letter(8, [["community.request", C1], ["grain.stock", F1]]), d2 = ev(4 * DAY, "ReportDelivered", [l2.id], { reportId: 8 }), i2 = ev(4 * DAY, "PlayerInput", [d2.id], { action: "relief" });
-  const a2 = readAttention([weather, l2, d2, i2], CONTENT);
-  assert.equal(a2.shares.rebellion, 0.5);
-  assert.equal(a2.shares.food_security, 0.5);
-  const gate = CONTENT.scenario.frontier!.site, l3 = letter(9, [["threat.intensity", gate]]), d3 = ev(5 * DAY, "ReportDelivered", [l3.id], { reportId: 9 }), i3 = ev(5 * DAY, "PlayerInput", [d3.id], { action: "advance" });
-  assert.equal(readAttention([weather, l3, d3, i3], CONTENT).shares.frontier, 1);
-  const l4 = letter(10, [["fortification.condition", F1]]), d4 = ev(6 * DAY, "ReportDelivered", [l4.id], { reportId: 10 }), i4 = ev(6 * DAY, "PlayerInput", [d4.id], { action: "repair" });
-  assert.equal(readAttention([weather, l4, d4, i4], CONTENT).shares.environment, 1, "a letter that speaks of none of them falls back to the chain");
+  const gate = CONTENT.scenario.frontier!.site;
+  const raid = ev(DAY, "RaidDamage", [], { site: "wild-site", location: F1, damageMilli: 5 }), weather = ev(2 * DAY, "FortificationsWeathered", [], { changes: [[F1, 3]] });
+  const letter = ev(3 * DAY, "ReportComposed", [weather.id], { report: { id: 7, claims: [{ predicate: "fortification.condition", subject: { kind: "location", id: F1 } }, { predicate: "threat.intensity", subject: { kind: "location", id: "wild-site" } }] } });
+  const dlv = ev(4 * DAY, "ReportDelivered", [letter.id], { reportId: 7 }), inp = ev(4 * DAY, "PlayerInput", [dlv.id], { action: "repair", target: F1 });
+  const a1 = readAttention([raid, weather, letter, dlv, inp], CONTENT);
+  assert.equal(a1.shares.environment, 1);
+  assert.equal(a1.shares.wilds, 0);
+  // the other way round: the raid came last
+  fresh();
+  const w2 = ev(DAY, "FortificationsWeathered", [], { changes: [[F1, 3]] }), r2 = ev(2 * DAY, "RaidDamage", [], { site: "wild-site", location: F1, damageMilli: 5 });
+  const i2 = ev(3 * DAY, "PlayerInput", [w2.id], { action: "repair", target: F1 });
+  assert.equal(readAttention([w2, r2, i2], CONTENT).shares.wilds, 1);
+  // a raid from the gate is the frontier's; a storm at the fort is the environment's; damage at another fort does not count; later damage does not count
+  fresh();
+  const g = ev(DAY, "RaidDamage", [], { site: gate, location: F1, damageMilli: 5 }), i3 = ev(2 * DAY, "PlayerInput", [], { action: "repair", target: F1 });
+  const st = ev(3 * DAY, "Storm", [], { location: F1, damageMilli: 5, kind: "storm" }), hz = ev(3 * DAY, "Hazard", [], { location: F2, damageMilli: 5, kind: "fire" });
+  const i4 = ev(4 * DAY, "PlayerInput", [], { action: "repair", target: F2 }), i5 = ev(4 * DAY, "PlayerInput", [], { action: "repair", target: F3 });
+  const at = readAttention([g, i3, st, hz, i4, i5], CONTENT);
+  assert.equal(at.shares.frontier, 1 / 2 * 1, "the first repair is the frontier's");
+  assert.equal(at.counted, 2, "a repair at a fort nothing has damaged falls back to the chain, which is empty");
+  assert.equal(at.routine, 1);
+  assert.equal(at.shares.environment, 0.5, "the hazard at the second fort");
+});
+
+test("attention: a repair with no damage on record falls back to the chain", () => {
+  fresh();
+  const storm = ev(DAY, "Storm", [], { location: "elsewhere", damageMilli: 5, kind: "storm" }), inp = ev(2 * DAY, "PlayerInput", [storm.id], { action: "repair", target: F1 });
+  assert.equal(readAttention([storm, inp], CONTENT).shares.environment, 1);
+});
+
+test("attention: grain is food, relief is rebellion, a treaty is the frontier's; timber and the rest fall back to the chain", () => {
+  fresh();
+  const storm = ev(DAY, "Storm", [], { location: "elsewhere" });
+  const mk = (payload: Record<string, unknown>) => ev(2 * DAY, "PlayerInput", [storm.id], payload);
+  const read = (payload: Record<string, unknown>) => { const i = mk(payload); return readAttention([storm, i], CONTENT).dominant; };
+  assert.equal(read({ action: "requisition", target: F1, to: F2 }), "food_security");
+  assert.equal(read({ action: "requisition", target: F1, to: F2, good: "grain" }), "food_security");
+  assert.equal(read({ action: "purchase", target: F1 }), "food_security");
+  assert.equal(read({ action: "requisition", target: F1, to: F2, good: "timber", sell: true }), "environment");
+  assert.equal(read({ action: "purchase", target: F1, good: "timber" }), "environment");
+  assert.equal(read({ action: "relief", target: C1 }), "rebellion");
+  assert.equal(read({ action: "treaty", target: "accept", to: "1" }), "frontier");
+  for (const action of ["levy", "order", "policy", "ask", "travel", "battle"]) assert.equal(read({ action }), "environment", `${action} is read from the chain`);
+});
+
+test("attention: an advance answers the raiders at the fort (the gate's are the frontier's), or at the site a scout or attack names", () => {
+  fresh();
+  const gate = CONTENT.scenario.frontier!.site;
+  const t1 = ev(DAY, "ThreatBegan", [], { site: "wild-site", target: F1 }), t2 = ev(2 * DAY, "ThreatBegan", [], { site: gate, target: F2 });
+  const i1 = ev(3 * DAY, "PlayerInput", [], { action: "advance", target: F1 }), i2 = ev(3 * DAY, "PlayerInput", [], { action: "advance", target: F2 });
+  const at = readAttention([t1, t2, i1, i2], CONTENT);
+  assert.equal(at.shares.wilds, 0.5);
+  assert.equal(at.shares.frontier, 0.5);
+  fresh();
+  const s = ev(DAY, "Storm", [], { location: "x" });
+  const i3 = ev(2 * DAY, "PlayerInput", [s.id], { action: "advance", target: F1, mission: "attack", raid: gate }), i4 = ev(2 * DAY, "PlayerInput", [s.id], { action: "advance", target: F1, mission: "scout", raid: "wild-site" });
+  const a2 = readAttention([s, i3, i4], CONTENT);
+  assert.equal(a2.shares.frontier, 0.5);
+  assert.equal(a2.shares.wilds, 0.5);
+  // the threat has ended: nothing is answered, the chain decides
+  fresh();
+  const s3 = ev(DAY, "Storm", [], { location: "x" }), t3 = ev(2 * DAY, "ThreatBegan", [], { site: "wild-site", target: F1 }), e3 = ev(3 * DAY, "ThreatEnded", [t3.id], { site: "wild-site" });
+  const i5 = ev(4 * DAY, "PlayerInput", [s3.id], { action: "advance", target: F1 });
+  assert.equal(readAttention([s3, t3, e3, i5], CONTENT).shares.environment, 1);
+  // the newest of two threats at one fort
+  fresh();
+  const ta = ev(DAY, "ThreatBegan", [], { site: gate, target: F1 }), tb = ev(2 * DAY, "ThreatBegan", [], { site: "wild-site", target: F1 }), i6 = ev(3 * DAY, "PlayerInput", [], { action: "advance", target: F1 });
+  assert.equal(readAttention([ta, tb, i6], CONTENT).shares.wilds, 1);
 });
 
 test("attention: a raid from the frontier's gate is the frontier's pressure, not the wilds'", () => {
