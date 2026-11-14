@@ -254,5 +254,13 @@
     "domain": "info",
     "wakeSignificance": 1,
     "materialDelta": 1
+  },
+  {
+    "id": "frontier.posture",
+    "subjectKind": "location",
+    "halfLifeTicks": 2592000,
+    "domain": "info",
+    "wakeSignificance": 2,
+    "materialDelta": 1
   }
 ]

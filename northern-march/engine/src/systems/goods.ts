@@ -153,7 +153,7 @@ export const goods: System = {
       const r = ctx.keyed(`goods:convoy:${convoyId}`);
       const days = Math.max(1, Math.ceil((c.arrivesAt - c.departedAt) / DAY));
       const lost = r.chancePermille(Math.min(1000, g.convoy.lossPermillePerDay * days));
-      const intensity = Math.max(0, ...ctx.content.scenario.threat.sites.filter((x) => x.target === c.from || x.target === (c.via ?? c.from) || x.target === c.to).map((x) => ctx.s.threats[x.site]?.intensityPermille ?? 0));
+      const intensity = Math.max(0, ...ctx.content.raidSites.filter((x) => x.target === c.from || x.target === (c.via ?? c.from) || x.target === c.to).map((x) => ctx.s.threats[x.site]?.intensityPermille ?? 0));
       const seized = r.chancePermille(Math.floor((g.convoy.seizurePermilleAtFull * intensity) / 1000));
       if (lost || seized) { ctx.emit("GoodsLost", [cause], [loc(c.from), loc(c.to)], { convoyId, good: c.good, from: c.from, to: c.to, units: c.units, reason: seized ? "seized" : "lost", orderId: c.orderId }); return; }
       if (c.how === "sale") {

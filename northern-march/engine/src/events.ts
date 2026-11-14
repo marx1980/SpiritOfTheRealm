@@ -4,8 +4,8 @@
 export const EVENT_SCHEMA_VERSION = 3; // v3 (Phase 3): agents, DecisionTrace, obedience payloads; v2 (Phase 2): B2/B5 payloads
 
 export type Domain = "military" | "economic" | "political" | "social" | "environment" | "magic" | "info";
-export type SystemId = "core" | "economy" | "weather" | "threat" | "movement" | "knowledge" | "messenger" | "orders" | "player" | "advice" | "agents" | "battle" | "communities" | "grain" | "goods" | "manpower" | "policy" | "environment" | "exploration";
-export const ABLATABLE: readonly SystemId[] = ["economy", "weather", "threat", "messenger", "communities", "environment", "exploration"];
+export type SystemId = "core" | "economy" | "weather" | "threat" | "movement" | "knowledge" | "messenger" | "orders" | "player" | "advice" | "agents" | "battle" | "communities" | "grain" | "goods" | "manpower" | "policy" | "environment" | "exploration" | "frontier";
+export const ABLATABLE: readonly SystemId[] = ["economy", "weather", "threat", "messenger", "communities", "environment", "exploration", "frontier"];
 
 export interface SubjectRef {
   kind: "character" | "location" | "report" | "order";
@@ -67,6 +67,15 @@ export const EVENT_TYPES: Readonly<Record<string, EventTypeDef>> = Object.freeze
   StressReleased: T("environment", "environment", 3), // an earthquake: the stress it let go
   CropDamaged: T("environment", "environment", 2),
   SupplyBlocked: T("grain", "economic", 2), // an official could not send for grain because the roads were shut
+  // frontier (Phase 14B, docs/FRONTIER.md)
+  FrontierReview: T("frontier", "political", 2, true), // the court reads the March through its informants: a clock-driven step
+  FrontierInstruction: T("frontier", "political", 2),
+  FrontierInstructionArrived: T("frontier", "political", 2),
+  FrontierContradiction: T("frontier", "political", 3),
+  FrontierStrike: T("frontier", "military", 3),
+  FrontierDeclined: T("frontier", "military", 2),
+  FrontierObserved: T("frontier", "info", 1), // the crown's representative looks at the commander
+  TreatyProposed: T("frontier", "political", 3),
   // exploration (Phase 11, docs/EXPLORATION.md)
   CreatureHunt: T("exploration", "social", 2, true), // the creature takes livestock, sometimes a person: a clock-driven step
   ExpeditionStarted: T("exploration", "military", 2),

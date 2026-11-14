@@ -13,5 +13,10 @@
     "id": "eastmarch",
     "name": "Eastmarch",
     "seat": "eastmarch"
+  },
+  {
+    "id": "arven",
+    "name": "Arven",
+    "seat": "arven_market"
   }
 ]

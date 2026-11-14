@@ -196,11 +196,11 @@ function inspectAndReport(ctx: Ctx, author: string, cause: number) {
   for (const l of grainFor) observe(ctx, author, loc(l), "grain.stock", cause);
   const recent = (b: { observedAt: number } | undefined | null) => !!b && ctx.tick - b.observedAt <= ctx.content.scenario.messenger.reportEveryDays * DAY;
   const beliefs = [best(ctx, author, ch.location, "fortification.condition"), best(ctx, author, ch.location, "fortification.garrison"), ...companies.map((id) => best(ctx, author, id, "character.troops")),
-    ...ctx.content.scenario.threat.sites.filter((x) => x.target === ch.location).map((x) => best(ctx, author, x.site, "threat.intensity")),
+    ...ctx.content.raidSites.filter((x) => x.target === ch.location).map((x) => best(ctx, author, x.site, "threat.intensity")),
     ...grainFor.map((l) => best(ctx, author, l, "grain.stock")),
     ...[best(ctx, author, ch.location, "fortification.incident"), best(ctx, author, ch.location, "fortification.holder"), best(ctx, author, ch.location, "road.closed"), ...(ctx.content.scenario.wilds ? [best(ctx, author, ctx.content.scenario.wilds.site, "site.rumour")] : [])].filter((b) => recent(b)),
     // a fight since the last routine letter is told, so that a change in men is explained
-    ...ctx.content.scenario.threat.sites.filter((x) => x.target === ch.location).map((x) => best(ctx, author, x.site, "battle.result"))
+    ...ctx.content.raidSites.filter((x) => x.target === ch.location).map((x) => best(ctx, author, x.site, "battle.result"))
       .filter((b) => b && ctx.tick - b.observedAt <= ctx.content.scenario.messenger.reportEveryDays * DAY)].filter((x) => !!x);
   const claims = [selfClaim(ctx, author, upd.id), ...beliefs.map((b) => ({ ...b!, reliabilityBand: b!.band as BeliefProposition["reliabilityBand"] }))].map(({ band: _b, ...rest }: any) => rest);
   compose(ctx, author, ch.reportsTo, claims, upd.id);

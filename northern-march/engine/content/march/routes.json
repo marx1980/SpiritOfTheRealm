@@ -213,5 +213,19 @@
     "to": "stonewood",
     "km": 12,
     "terrain": "forest"
+  },
+  {
+    "id": "thornfield-arven_gate",
+    "from": "thornfield",
+    "to": "arven_gate",
+    "km": 40,
+    "terrain": "hills"
+  },
+  {
+    "id": "arven_gate-arven_market",
+    "from": "arven_gate",
+    "to": "arven_market",
+    "km": 30,
+    "terrain": "road"
   }
 ]

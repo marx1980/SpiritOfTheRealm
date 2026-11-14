@@ -153,6 +153,16 @@ test("attention: the nearest crisis on the chain counts, not the first cause of 
   assert.equal(at.shares.wilds, 0);
 });
 
+test("attention: a raid from the frontier's gate is the frontier's pressure, not the wilds'", () => {
+  fresh();
+  const gate = CONTENT.scenario.frontier!.site;
+  const began = ev(DAY, "ThreatBegan", [], { site: gate, target: F1 }), raid = ev(2 * DAY, "RaidDamage", [began.id], { site: gate, location: F1 });
+  const inp = ev(3 * DAY, "PlayerInput", [raid.id], { action: "advance" });
+  const at = readAttention([began, raid, inp], CONTENT);
+  assert.equal(at.shares.frontier, 1);
+  assert.equal(at.shares.wilds, 0);
+});
+
 test("attention: nothing counted means no dominant crisis; a tie goes to the earlier pressure in the list", () => {
   fresh();
   const none = readAttention([ev(0, "ScenarioStarted"), ev(DAY, "PlayerInput", [], { action: "ask" })], CONTENT);

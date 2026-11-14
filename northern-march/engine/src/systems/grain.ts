@@ -129,7 +129,7 @@ export const grain: System = {
       const r = ctx.keyed(`grain:convoy:${convoyId}`);
       const days = Math.max(1, Math.ceil((c.arrivesAt - c.departedAt) / DAY));
       const lost = r.chancePermille(Math.min(1000, g.convoy.lossPermillePerDay * days));
-      const intensity = Math.max(0, ...ctx.content.scenario.threat.sites.filter((x) => x.target === c.from || x.target === c.to).map((x) => ctx.s.threats[x.site]?.intensityPermille ?? 0));
+      const intensity = Math.max(0, ...ctx.content.raidSites.filter((x) => x.target === c.from || x.target === c.to).map((x) => ctx.s.threats[x.site]?.intensityPermille ?? 0));
       const seized = r.chancePermille(Math.floor((g.convoy.seizurePermilleAtFull * intensity) / 1000));
       if (lost || seized) { ctx.emit("GrainLost", [cause], [loc(c.from), loc(c.to)], { convoyId, from: c.from, to: c.to, sacks: c.sacks, reason: seized ? "seized" : "lost", orderId: c.orderId }); return; }
       const spilled = Math.max(0, ctx.s.grain[c.to] + c.sacks - place(ctx, c.to)!.cap);

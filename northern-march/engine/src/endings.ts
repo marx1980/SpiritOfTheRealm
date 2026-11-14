@@ -14,6 +14,7 @@ export const PRESSURES = ["rebellion", "food_security", "wilds", "frontier", "en
 export type Pressure = (typeof PRESSURES)[number];
 /** A pressure is read from the system of the nearest event on an input's chain of causes that belongs to one. (`frontier` has no system until 14B.) */
 export const SYSTEM_PRESSURE: Readonly<Record<string, Pressure>> = Object.freeze({
+  frontier: "frontier",
   communities: "rebellion",
   grain: "food_security", goods: "food_security", economy: "food_security", manpower: "food_security",
   threat: "wilds", exploration: "wilds",
@@ -95,7 +96,7 @@ function ancestry(log: readonly SimEvent[], id: number, byId = new Map(log.map((
 }
 
 /** Breadth-first through `causedBy`: the pressures of the closest events (not the input itself) whose system belongs to one. */
-function nearestPressures(id: number, byId: Map<number, SimEvent>): Set<Pressure> {
+function nearestPressures(id: number, byId: Map<number, SimEvent>, frontierSite?: string): Set<Pressure> {
   let level = [id];
   const seen = new Set<number>([id]);
   while (level.length) {
@@ -103,7 +104,7 @@ function nearestPressures(id: number, byId: Map<number, SimEvent>): Set<Pressure
     for (const x of level) for (const cid of byId.get(x)?.causedBy ?? []) {
       if (seen.has(cid)) continue;
       seen.add(cid);
-      const p = SYSTEM_PRESSURE[EVENT_TYPES[byId.get(cid)?.type ?? ""]?.system];
+      const x = byId.get(cid), p = frontierSite && x?.payload.site === frontierSite ? "frontier" : SYSTEM_PRESSURE[EVENT_TYPES[x?.type ?? ""]?.system];
       if (p) found.add(p); else next.push(cid);
     }
     if (found.size) return found;
@@ -132,7 +133,7 @@ export function readAttention(log: readonly SimEvent[], c: Content): Attention {
   let counted = 0, routine = 0;
   for (const e of log) {
     if (e.type !== "PlayerInput" || e.tick > horizon) continue;
-    const ps = nearestPressures(e.id, byId);
+    const ps = nearestPressures(e.id, byId, c.scenario.frontier?.site);
     if (!ps.size) { routine++; continue; }
     counted++;
     for (const p of ps) { sum[p] += 1 / ps.size; perDay[p][Math.min(days, Math.floor(e.tick / DAY))] += 1 / ps.size; }

@@ -286,5 +286,29 @@
       800,
       720
     ]
+  },
+  {
+    "id": "arven_gate",
+    "name": "Arven Gate",
+    "province": "arven",
+    "kind": "outpost",
+    "terrain": "hills",
+    "exposurePermille": 5,
+    "pos": [
+      980,
+      600
+    ]
+  },
+  {
+    "id": "arven_market",
+    "name": "Kessrow",
+    "province": "arven",
+    "kind": "town",
+    "terrain": "road",
+    "exposurePermille": 5,
+    "pos": [
+      1090,
+      540
+    ]
   }
 ]

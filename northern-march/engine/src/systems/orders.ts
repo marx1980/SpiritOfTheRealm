@@ -97,7 +97,7 @@ function launchAttack(ctx: Ctx, orderId: number, cause: number) {
 /** A captain who marches into a fort the raiders hold must fight for it. Win and it is ours again (ruined, with a few men); lose and he falls back. */
 function assault(ctx: Ctx, who: string, fort: string, cause: number) {
   const sc = ctx.content.scenario, sp = sc.battle.sortie;
-  const site = sc.threat.sites.find((x) => x.target === fort)?.site, th = site ? ctx.s.threats[site] : undefined;
+  const here = ctx.content.raidSites.filter((x) => x.target === fort).map((x) => x.site), site = here.find((x) => ctx.s.threats[x]) ?? here[0], th = site ? ctx.s.threats[site] : undefined;
   const men = ctx.s.troops[who] ?? 0;
   const S = Math.floor((men * (sp.skillBasePermille + capability(ctx.s, ctx.content, who, "military"))) / 1000), I = th ? Math.floor((th.intensityPermille * sp.intensityFactorPermille) / 1000) : 0;
   const p = th ? Math.floor((1000 * S) / Math.max(1, S + I)) : 1000;
@@ -250,10 +250,10 @@ function scouted(ctx: Ctx, who: string, orderId: number, cause: number) {
   const o = ctx.s.orders[String(orderId)].order;
   const site = o.objective.id;
   if (isWilds(ctx, o)) { // Phase 11: the party searches the wood over days and then reports; what he sees of the raiders he sees on arrival
-    if (ctx.content.scenario.threat.sites.some((x) => x.site === site)) observe(ctx, who, loc(site), "threat.intensity", cause);
+    if (ctx.content.raidSites.some((x) => x.site === site)) observe(ctx, who, loc(site), "threat.intensity", cause);
     return startExpedition(ctx, who, orderId, cause);
   }
-  if (ctx.content.scenario.threat.sites.some((x) => x.site === site)) observe(ctx, who, loc(site), "threat.intensity", cause);
+  if (ctx.content.raidSites.some((x) => x.site === site)) observe(ctx, who, loc(site), "threat.intensity", cause);
   else if (ctx.s.fortifications[site]) observe(ctx, who, loc(site), "fortification.condition", cause);
   finish(ctx, orderId, "completed", cause);
   const home = ctx.content.byId.character.get(who)!.location;

@@ -101,7 +101,7 @@ export const economy: System = {
         for (const [who] of back) {
           const ch = ctx.content.byId.character.get(who)!;
           if ((ctx.s.troops[who] ?? 0) < ch.troops! || !ch.reportsTo) continue;
-          const trouble = ctx.content.scenario.threat.sites.filter((x) => x.target !== ch.location && ctx.s.fortifications[x.target]
+          const trouble = ctx.content.raidSites.filter((x) => x.target !== ch.location && ctx.s.fortifications[x.target]
             && (((best(ctx, who, x.site, "threat.intensity")?.believedValue as number) ?? 0) > 0 || best(ctx, who, x.target, "fortification.holder")?.believedValue === "raiders"))[0];
           const heard = trouble && best(ctx, who, who, "captain.heading");
           if (!trouble || !heard) continue; // only after a fight that sent him home
@@ -158,6 +158,41 @@ export const weather: System = {
   },
 };
 
+/** One day at one raiding site: begin (if the roll allows and `startPermille` is above zero), end, grow, or batter the target.
+ *  Returns true if the campaign ended in it. The frontier's site (Phase 14B) comes through here with its own draws and no random start. */
+export function siteDay(ctx: Ctx, site: string, target: string, draw: { roll: number; intensityPermille: number; days: number }, startPermille: number, stream: string): boolean {
+  const t = ctx.content.scenario.threat, { roll, intensityPermille, days } = draw;
+  const active = ctx.s.threats[site];
+  if (active && ctx.s.fallen[target]) return false; // the raiders hold the fort: they stay until driven out, and there is nothing left to batter
+  if (!active) {
+    // raiders are bolder when the crown's captain is away from the fort that answers them
+    const away = awayCaptains(ctx).length > 0 && !presentAt(ctx, target).some((x) => (ctx.s.troops[x] ?? 0) > 0);
+    if (roll >= startPermille * (away ? t.awayStartMultiplier : 1)) return false;
+    const untilTick = ctx.tick + DAY * days;
+    ctx.emit("ThreatBegan", [], [loc(site), loc(target)], { site, target, intensityPermille, untilTick }, stream);
+  } else if (ctx.tick >= active.untilTick) {
+    ctx.emit("ThreatEnded", [active.eventId], [loc(site)], { site });
+  } else {
+    // a band nobody has dealt with grows bolder
+    const days = Math.floor((ctx.tick - active.since) / DAY);
+    if (days > 0 && days % t.growthEveryDays === 0 && active.intensityPermille < 1000)
+      ctx.emit("ThreatGrew", [active.eventId], [loc(site)], { site, intensityPermille: Math.min(1000, active.intensityPermille + t.growthPermille) });
+    const before = ctx.s.fortifications[target].conditionMilli;
+    const men = defence(ctx, target);
+    const damageMilli = Math.floor((t.raidDamageMilliAtFullIntensity * active.intensityPermille) / (1000 + men * ctx.content.scenario.battle.raidMitigationPerManPermille));
+    const e = ctx.emit("RaidDamage", [active.eventId], [loc(target)], { site, location: target, damageMilli, defenders: men });
+    // Those present experience the raid: they see the damage and estimate the raiders' strength.
+    for (const who of presentAt(ctx, target).filter((x) => ctx.s.tiers[x] !== "C")) {
+      observe(ctx, who, loc(target), "fortification.condition", e.id);
+      observe(ctx, who, loc(site), "threat.intensity", e.id);
+    }
+    maybeAlarm(ctx, target, before, e.id);
+    if (presence(ctx, target, e.id)) return true; // the campaign has ended
+    if (ctx.s.fortifications[target].conditionMilli < ctx.content.scenario.endStates.fortificationBreachedBelowMilli) fall(ctx, target, site, e.id);
+  }
+  return false;
+}
+
 export const threat: System = {
   id: "threat",
   start: (ctx) => {
@@ -183,40 +218,13 @@ export const threat: System = {
     "threat:day": (ctx) => {
       const t = ctx.content.scenario.threat, r = ctx.rng("threat");
       for (const { site, target } of sorted(t.sites, (x) => x.site)) {
-        const active = ctx.s.threats[site];
         // A fixed draw schedule (three draws per site per day, used or not), so this stream stays aligned day by day
         // whatever other systems do to the world (G-02).
         const roll = r.int(0, 999), intensityPermille = r.int(t.intensityPermille[0], t.intensityPermille[1]), days = r.int(t.durationDays[0], t.durationDays[1]);
-        if (active && ctx.s.fallen[target]) continue; // the raiders hold the fort: they stay until driven out, and there is nothing left to batter
-        if (!active) {
-          // raiders are bolder when the crown's captain is away from the fort that answers them
-          const away = awayCaptains(ctx).length > 0 && !presentAt(ctx, target).some((x) => (ctx.s.troops[x] ?? 0) > 0);
-          if (roll >= t.startPermillePerDay * (away ? t.awayStartMultiplier : 1)) continue;
-          const untilTick = ctx.tick + DAY * days;
-          ctx.emit("ThreatBegan", [], [loc(site), loc(target)], { site, target, intensityPermille, untilTick }, "threat");
-        } else if (ctx.tick >= active.untilTick) {
-          ctx.emit("ThreatEnded", [active.eventId], [loc(site)], { site });
-        } else {
-          // a band nobody has dealt with grows bolder
-          const days = Math.floor((ctx.tick - active.since) / DAY);
-          if (days > 0 && days % t.growthEveryDays === 0 && active.intensityPermille < 1000)
-            ctx.emit("ThreatGrew", [active.eventId], [loc(site)], { site, intensityPermille: Math.min(1000, active.intensityPermille + t.growthPermille) });
-          const before = ctx.s.fortifications[target].conditionMilli;
-          const men = defence(ctx, target);
-          const damageMilli = Math.floor((t.raidDamageMilliAtFullIntensity * active.intensityPermille) / (1000 + men * ctx.content.scenario.battle.raidMitigationPerManPermille));
-          const e = ctx.emit("RaidDamage", [active.eventId], [loc(target)], { site, location: target, damageMilli, defenders: men });
-          // Those present experience the raid: they see the damage and estimate the raiders' strength.
-          for (const who of presentAt(ctx, target).filter((x) => ctx.s.tiers[x] !== "C")) {
-            observe(ctx, who, loc(target), "fortification.condition", e.id);
-            observe(ctx, who, loc(site), "threat.intensity", e.id);
-          }
-          maybeAlarm(ctx, target, before, e.id);
-          if (presence(ctx, target, e.id)) return; // the campaign has ended
-          if (ctx.s.fortifications[target].conditionMilli < ctx.content.scenario.endStates.fortificationBreachedBelowMilli) fall(ctx, target, site, e.id);
-        }
+        if (siteDay(ctx, site, target, { roll, intensityPermille, days }, t.startPermillePerDay, "threat")) return; // the campaign has ended
       }
       // Days without raids are evidence too: those at the target who still believe in a threat notice the quiet.
-      for (const { site, target } of sorted(t.sites, (x) => x.site)) {
+      for (const { site, target } of [...sorted(t.sites, (x) => x.site), ...ctx.content.raidSites.filter((x) => !t.sites.some((y) => y.site === x.site))]) {
         if (ctx.s.threats[site]) continue;
         const last = ctx.s.lastRaid[target];
         if (last === undefined || ctx.tick - last < ctx.content.scenario.agents.quietDaysToEnd * DAY) continue;

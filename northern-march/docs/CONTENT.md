@@ -33,6 +33,7 @@ Five pressures, named in code `rebellion`, `food_security`, `wilds` (the Blackwo
 - `dominantCrisis` is the pressure with the largest share; the runner-up and each pressure's busiest 30 days are recorded. G-07 asks that each type is dominant in 5-45% of seeds.
 
 ### Bars not in the plan (proposed; Marko confirms before any sealed run)
+- G-07 keeps the passive policy in (Marko, 14 Nov): its games have no dominant crisis and stay in the denominator.
 - G-08 is read pooled over the three policies, each ending's share taken over all games; "at least four types in 5-60%" counts the six endings only and no ending may exceed 60%; `unresolved` is reported, not counted. The plan names no policy split; each policy is reported as well.
 - Verdicts use the Wilson 90% interval: PASS if inside the bar, AMBER if only the point is, else FAIL. G-07 and G-09 use the same rule.
 - Endings parameters (`fractureCommunities` 2, `fractureDays` 10, `lostForts` 2, horizon 240) are first guesses, tuned only on TUNE seeds.

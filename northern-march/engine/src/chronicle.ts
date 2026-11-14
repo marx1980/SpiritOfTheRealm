@@ -63,7 +63,7 @@ function subjectOf(s: WorldState, t: DecisionTrace, order?: StructuredOrder): st
 
 function beliefQuality(s: WorldState, c: Content, t: DecisionTrace, subject: string) {
   let wrong = false, stale = false;
-  const decisive = new Set([subject, ...c.scenario.threat.sites.filter((x) => x.target === subject).map((x) => x.site)]);
+  const decisive = new Set([subject, ...c.raidSites.filter((x) => x.target === subject).map((x) => x.site)]);
   for (const b of t.beliefsConsulted) {
     const pred = b.predicate!, id = b.subject!.id;
     if (!decisive.has(id)) continue; // only beliefs about the decision's own fort and the threats near it

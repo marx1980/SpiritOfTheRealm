@@ -1079,5 +1079,92 @@
     "household": "none",
     "occupation": "carter",
     "objectives": []
+  },
+  {
+    "id": "halvard",
+    "name": "Halvard Korsk",
+    "role": "ambassador",
+    "location": "ravenport",
+    "tier": "C",
+    "traits": [
+      "proud",
+      "cautious"
+    ],
+    "capabilities": {
+      "engineering": 100,
+      "military": 200,
+      "intelligence": 700,
+      "administration": 800
+    },
+    "relationships": [],
+    "house": "arven",
+    "objectives": []
+  },
+  {
+    "id": "ingrid",
+    "name": "Ingrid Voss",
+    "role": "border commander",
+    "location": "arven_gate",
+    "tier": "C",
+    "traits": [
+      "aggressive",
+      "ambitious"
+    ],
+    "capabilities": {
+      "engineering": 300,
+      "military": 850,
+      "intelligence": 500,
+      "administration": 400
+    },
+    "relationships": [],
+    "house": "arven",
+    "objectives": []
+  },
+  {
+    "id": "dagny",
+    "name": "Dagny Orlek",
+    "role": "merchant",
+    "location": "arven_market",
+    "tier": "C",
+    "traits": [
+      "greedy",
+      "cautious"
+    ],
+    "capabilities": {
+      "engineering": 100,
+      "military": 100,
+      "intelligence": 600,
+      "administration": 750
+    },
+    "relationships": [],
+    "house": "arven",
+    "objectives": [],
+    "occupation": "grain and salt factor"
+  },
+  {
+    "id": "pell",
+    "name": "Pell Wardin",
+    "role": "royal representative",
+    "location": "arven_gate",
+    "tier": "B",
+    "traits": [
+      "loyal",
+      "cautious"
+    ],
+    "capabilities": {
+      "engineering": 200,
+      "military": 300,
+      "intelligence": 750,
+      "administration": 600
+    },
+    "relationships": [
+      {
+        "to": "anna",
+        "kind": "loyalty",
+        "value": 750
+      }
+    ],
+    "house": "crown",
+    "objectives": []
   }
 ]

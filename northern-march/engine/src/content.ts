@@ -141,6 +141,24 @@ export interface EnvironmentParams {
   /** Starting values that differ from the defaults (tests and scenarios). */
   initial?: { regions?: Record<string, Partial<{ snow: number; wet: number; dry: number; anom: number }>>; rivers?: Record<string, Partial<{ level: number; ice: number }>>; stress?: Record<string, number> };
 }
+/** Phase 14B (docs/FRONTIER.md): the court across the border, its actors, instructions and the host that marches. */
+export type FrontierStance = "settle" | "trade" | "press" | "strike";
+export const FRONTIER_STANCES: readonly FrontierStance[] = ["settle", "trade", "press", "strike"];
+export interface FrontierParams {
+  /** The gate: a place across the border, the host's raid site. */
+  site: string;
+  /** Where the court sits. */
+  market: string;
+  /** The fort the host marches against. */
+  target: string;
+  actors: { ambassador: string; commander: string; merchant: string; representative: string };
+  court: { reviewDays: [number, number]; holdDays: number; startStance: FrontierStance; informantNoise: number; thresholds: { tradeFrom: number; pressFrom: number; strikeFrom: number }; fallenBonus: number };
+  delayDays: { ambassador: [number, number]; commander: [number, number]; merchant: [number, number] };
+  strike: { cooldownDays: number; declinePermille: number; traitShift: Record<string, number>; intensityPermille: [number, number]; durationDays: [number, number] };
+  treaty: { cooldownDays: number };
+  report: { everyDays: number; blurPermille: number };
+}
+
 /** Phase 11 (docs/EXPLORATION.md): the wood creature, expeditions, reputation and the Stone of Vey. */
 export type ExpeditionKind = "scholarly" | "military";
 export interface WildsParams {
@@ -168,6 +186,7 @@ export interface WildsParams {
 export interface Scenario {
   environment?: EnvironmentParams;
   wilds?: WildsParams;
+  frontier?: FrontierParams;
   policy?: PolicyParams;
   ruler: string; treasuryMilli: number;
   movement: { speedsKmPerDay: Record<Mode, Record<string, number>>; crossingDelayTicks: Record<string, number> };
@@ -230,6 +249,8 @@ export interface RawContent {
 }
 export interface Content extends RawContent {
   version: string; hash: string;
+  /** Every place raiders come from and the fort each answers: the old threat sites, then the frontier's gate (Phase 14B). Only the old ones are drawn for by the daily threat stream. */
+  raidSites: { site: string; target: string }[];
   byId: { location: Map<string, Location>; character: Map<string, Character>; route: Map<string, Route>; predicate: Map<string, Predicate>; trait: Map<string, Trait> };
 }
 export interface ContentError { code: string; msg: string }
@@ -387,6 +408,19 @@ export function validateContent(raw: RawContent): { errors: ContentError[] } {
     }
     if (!(bw.creature.intervalDays[0] > 0 && bw.creature.intervalDays[0] <= bw.creature.intervalDays[1])) err("RANGE", "wilds.creature.intervalDays");
   }
+  const fr = sc.frontier;
+  if (fr) {
+    need(preds, "frontier.posture", "predicate", "the frontier's representative writes it");
+    for (const l of [fr.site, fr.market, fr.target]) need(locs, l, "location", "frontier");
+    for (const [k, id] of Object.entries(fr.actors)) need(chars, id, "character", `frontier.actors.${k}`);
+    if (!sc.objective.forts.includes(fr.target)) err("ID_UNKNOWN", `frontier.target ${fr.target} is not an objective fort`);
+    if (!FRONTIER_STANCES.includes(fr.court.startStance)) err("RANGE", "frontier.court.startStance");
+    const t = fr.court.thresholds;
+    for (const [k, [a, b]] of Object.entries({ ...fr.delayDays, review: fr.court.reviewDays, duration: fr.strike.durationDays, intensity: fr.strike.intensityPermille }) as [string, [number, number]][]) if (!(a >= 0 && a <= b)) err("RANGE", `frontier ${k} range`);
+    if (!(fr.court.reviewDays[0] >= 1)) err("RANGE", "frontier.court.reviewDays");
+    if (!(t.tradeFrom <= t.pressFrom && t.pressFrom <= t.strikeFrom)) err("RANGE", "frontier.court.thresholds must not fall");
+    if (!(fr.strike.declinePermille >= 0 && fr.strike.declinePermille <= 1000)) err("RANGE", "frontier.strike.declinePermille");
+  }
   const ruler = raw.characters.find((c) => c.id === sc.ruler);
   if (ruler && locs.has(ruler.location)) {
     const adj = new Map<string, string[]>();
@@ -405,13 +439,14 @@ export function deriveContent(raw: RawContent): Content {
   const m = <T extends { id: string }>(xs: T[]) => new Map(xs.map((x) => [x.id, x]));
   return {
     ...raw, version: raw.manifest.contentVersion, hash: hashOf(raw),
+    raidSites: [...raw.scenario.threat.sites.map((x) => ({ site: x.site, target: x.target })), ...(raw.scenario.frontier ? [{ site: raw.scenario.frontier.site, target: raw.scenario.frontier.target }] : [])],
     byId: { location: m(raw.locations), character: m(raw.characters), route: m(raw.routes), predicate: m(raw.predicates), trait: m(raw.traits) },
   };
 }
 
 /** Strip the derived fields of a Content back to its raw files. */
 export function rawOf(c: Content): RawContent {
-  const { version: _v, hash: _h, byId: _b, ...raw } = c;
+  const { version: _v, hash: _h, byId: _b, raidSites: _r, ...raw } = c;
   return structuredClone(raw) as RawContent;
 }
 

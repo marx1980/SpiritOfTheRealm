@@ -1142,6 +1142,11 @@
     "tempOffsetC10": -10,
     "wetOffsetPermille": 20,
     "stressPerDay": 1
+   },
+   "arven": {
+    "tempOffsetC10": -10,
+    "wetOffsetPermille": 20,
+    "stressPerDay": 1
    }
   },
   "rain": {
@@ -1399,6 +1404,70 @@
    "keepTrait": 200,
    "keepOtherHouse": 100,
    "believedWorth": 150
+  }
+ },
+ "frontier": {
+  "site": "arven_gate",
+  "market": "arven_market",
+  "target": "eastmarch",
+  "actors": {
+   "ambassador": "halvard",
+   "commander": "ingrid",
+   "merchant": "dagny",
+   "representative": "pell"
+  },
+  "court": {
+   "reviewDays": [
+    20,
+    35
+   ],
+   "holdDays": 15,
+   "startStance": "trade",
+   "informantNoise": 120,
+   "thresholds": {
+    "tradeFrom": 150,
+    "pressFrom": 350,
+    "strikeFrom": 550
+   }
+  },
+  "delayDays": {
+   "ambassador": [
+    10,
+    16
+   ],
+   "commander": [
+    3,
+    7
+   ],
+   "merchant": [
+    7,
+    12
+   ]
+  },
+  "strike": {
+   "cooldownDays": 40,
+   "declinePermille": 250,
+   "traitShift": {
+    "aggressive": -150,
+    "ambitious": -100,
+    "cautious": 150,
+    "loyal": 100
+   },
+   "intensityPermille": [
+    500,
+    900
+   ],
+   "durationDays": [
+    25,
+    50
+   ]
+  },
+  "treaty": {
+   "cooldownDays": 60
+  },
+  "report": {
+   "everyDays": 12,
+   "blurPermille": 200
   }
  }
 }

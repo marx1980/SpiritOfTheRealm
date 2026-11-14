@@ -1,6 +1,6 @@
 // WorldState is a projection of the log (A1). It changes ONLY through the reducers below, one per event type.
 import type { BeliefProposition } from "./beliefs.ts";
-import type { Content, Mode } from "./content.ts";
+import type { Content, FrontierStance, Mode } from "./content.ts";
 import type { SimEvent } from "./events.ts";
 import type { ActionRef, Recommendation, Report, StructuredOrder } from "./schemas.ts";
 import { initialEnv, type ClosedRoute, type EnvState } from "./environment.ts";
@@ -43,6 +43,16 @@ export interface WildsState {
   expeditions: Record<string, ExpeditionState>;
 }
 
+/** The court across the border and what its actors hold (Phase 14B). Not visible to the player: she has only what her representative writes. */
+export interface FrontierState {
+  stance: FrontierStance; since: number; weakness: number | null;
+  /** What each instructed actor now acts on, and the event in which the instruction reached him. */
+  current: Record<string, { stance: FrontierStance; since: number; event: number }>;
+  /** The ambassador and the commander hold stances that cannot both be served (one peaceful, one hostile). */
+  clash: boolean;
+  lastStrike: number; lastTreaty: number; strikes: number; declined: number; proposals: number;
+}
+
 export interface WorldState {
   treasuryMilli: Record<string, number>;
   /** garrison: all men in the fort; archers and horse: how many of them are bowmen and riders, the rest foot (D-067). */
@@ -76,6 +86,7 @@ export interface WorldState {
   env: EnvState | null;
   /** Phase 11: the wood (null when a scenario has none). */
   bw: WildsState | null;
+  fr: FrontierState | null;
   /** Routes that are shut, and why (flood, ice, snow, waterlogged, landslide), with the event that shut them. */
   routesClosed: Record<string, ClosedRoute>;
   /** The last time an official could not send for grain to a place because the roads were shut (the event, and when). */
@@ -134,6 +145,13 @@ function initialWilds(c: Content): WildsState | null {
   return { alive: true, kills: 0, missing: 0, lastHunt: -1, stone: { status: "hollow", at: b.site, holder: null, found: false, examined: false, foundBy: null, toward: null }, rep: {}, emerged: {}, dead: {}, expeditions: {} };
 }
 
+function initialFrontier(c: Content): FrontierState | null {
+  const f = c.scenario.frontier;
+  if (!f) return null;
+  const cur = (): FrontierState["current"][string] => ({ stance: f.court.startStance, since: 0, event: 1 });
+  return { stance: f.court.startStance, since: 0, weakness: null, current: { ambassador: cur(), commander: cur(), merchant: cur() }, clash: false, lastStrike: -1, lastTreaty: -1, strikes: 0, declined: 0, proposals: 0 };
+}
+
 function initialPolicies(c: Content) {
   const out: WorldState["policyKnown"] = {};
   const init = Object.entries(c.scenario.policy?.initial ?? {}).sort(([a], [b]) => cmp(a, b));
@@ -174,7 +192,7 @@ export function initialState(c: Content): WorldState {
     if (ch.id !== c.scenario.ruler && ch.tier !== "C") agents[ch.id] = newAgent();
   }
   return {
-    treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, tiers, history: {}, agents, recommendations: {}, heard: {}, campaign: { ended: null, lastDanger: -1 }, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, sortieOpen: {}, battles: {}, policyKnown: initialPolicies(c), precedents: [], prestige: {}, conduct: {}, commandersFallen: {}, lastStorm: {}, fallen: {}, threats: {}, routesClosed: {}, supplyBlocked: {}, env: initialEnv(c), bw: initialWilds(c),
+    treasuryMilli: { [c.scenario.ruler]: c.scenario.treasuryMilli }, fortifications, troops, tiers, history: {}, agents, recommendations: {}, heard: {}, campaign: { ended: null, lastDanger: -1 }, lastRaid: {}, lastRepairStart: {}, lastArrival: {}, sortieOpen: {}, battles: {}, policyKnown: initialPolicies(c), precedents: [], prestige: {}, conduct: {}, commandersFallen: {}, lastStorm: {}, fallen: {}, threats: {}, routesClosed: {}, supplyBlocked: {}, env: initialEnv(c), bw: initialWilds(c), fr: initialFrontier(c),
     positions, departures: {}, beliefs: {}, nextPropId: 1, reports: {}, nextReportId: 1, messengers: {}, nextMessengerId: 1,
     orders: {}, nextOrderId: 1, advisePending: {}, dayEndDay: -1, ordersInForce: {}, issued: {}, repairs: {}, communities: initialCommunities(c), ...initialGrain(c), ...initialGoods(c), hands: Object.fromEntries(c.communities.communities.map((x) => [x.id, x.hands ?? 0])), musterAway: {}, musters: {}, nextMusterId: 1,
   };
@@ -309,6 +327,19 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   },
   SupplyBlocked: (s, p, e) => { s.supplyBlocked[p.place] = { eventId: e.id, tick: e.tick }; },
   // Phase 11: the wood. Custody and reputation change only through these.
+  FrontierReview: (s, p, e) => { const f = s.fr!; f.weakness = p.weakness; if (p.stance !== f.stance) { f.stance = p.stance; f.since = e.tick; } },
+  FrontierInstruction: noop,
+  FrontierInstructionArrived: (s, p, e) => {
+    const f = s.fr!;
+    f.current[p.actor] = { stance: p.stance, since: e.tick, event: e.id };
+    const peaceful = (x: string) => x === "settle" || x === "trade", a = f.current.ambassador.stance, c = f.current.commander.stance;
+    f.clash = (peaceful(a) && !peaceful(c)) || (!peaceful(a) && peaceful(c));
+  },
+  FrontierContradiction: noop,
+  FrontierObserved: noop,
+  FrontierStrike: (s, _p, e) => { s.fr!.lastStrike = e.tick; s.fr!.strikes++; },
+  FrontierDeclined: (s, _p, e) => { s.fr!.lastStrike = e.tick; s.fr!.declined++; },
+  TreatyProposed: (s, _p, e) => { s.fr!.lastTreaty = e.tick; s.fr!.proposals++; },
   CreatureHunt: (s, p, e) => { const b = s.bw!; b.kills += p.livestock; b.missing += p.missing ? 1 : 0; b.lastHunt = e.tick; },
   ExpeditionStarted: (s, p, e) => { s.bw!.expeditions[String(p.orderId)] = { orderId: p.orderId, leader: p.leader, kind: p.kind, since: e.tick, days: 0, signs: false, hollow: false, stone: false, killed: false, ended: null }; },
   SiteSearched: (s, p) => { const x = s.bw!.expeditions[String(p.orderId)]; if (!x) return; x.days = p.day; x.signs ||= !!p.signs; x.hollow ||= !!p.hollow; x.stone ||= !!p.stone; },

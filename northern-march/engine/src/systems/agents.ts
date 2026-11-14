@@ -108,7 +108,7 @@ export function buildSituation(s: Readonly<WorldState>, c: Content, agent: strin
       unitsPerOrder: c.scenario.goods.buy.timber.units, pointsPerUnit: c.scenario.goods.repair.pointsPerUnit, coverPermille: c.scenario.goods.repair.coverPermille,
       musterMen: c.scenario.manpower.musterMen, ironPerMan: c.scenario.manpower.ironPerMan, serviceDays: c.scenario.manpower.serviceDays, wageMilli: c.scenario.manpower.wageMilli } } : {}),
     forts: sorted(c.locations.filter((l) => l.fortification), (l) => l.id).map((l) => ({ id: l.id, garrison: l.fortification!.garrison,
-      sites: c.scenario.threat.sites.filter((x) => x.target === l.id).map((x) => x.site).sort(),
+      sites: c.raidSites.filter((x) => x.target === l.id).map((x) => x.site).sort(),
       stormMilliPerDay: Math.floor((l.exposurePermille * (c.scenario.weather.stormDamageMilli[0] + c.scenario.weather.stormDamageMilli[1])) / 2000) })),
     captains: sorted(c.characters.filter((x) => x.role === "captain"), (x) => x.id).map((x) => ({ id: x.id, troops: x.troops ?? 0, seat: x.id === agent ? x.location : seatOf(x.id) })),
     travel: (a, b, m) => {
@@ -159,7 +159,7 @@ function interestsOf(ctx: Ctx, agent: string): Set<string> {
   const c = ctx.content, ch = c.byId.character.get(agent)!, s = ctx.s;
   const out = new Set<string>();
   const forts = c.locations.filter((l) => l.fortification).map((l) => l.id);
-  const sitesOf = (f: string) => c.scenario.threat.sites.filter((x) => x.target === f).map((x) => x.site);
+  const sitesOf = (f: string) => c.raidSites.filter((x) => x.target === f).map((x) => x.site);
   const fort = (f: string) => { out.add(`${f}|fortification.condition`); out.add(`${f}|request.reinforce`); for (const x of sitesOf(f)) out.add(`${x}|threat.intensity`); };
   for (const o of ch.objectives) {
     if ((o.objective === "hold_fortification" || o.objective === "hold_post") && o.target && forts.includes(o.target)) fort(o.target);
@@ -365,7 +365,7 @@ function claimsFor(ctx: Ctx, agent: string, fort: string) {
   const out = [];
   const b = best(ctx, agent, fort, "fortification.condition");
   if (b) out.push(b);
-  for (const site of ctx.content.scenario.threat.sites.filter((x) => x.target === fort).map((x) => x.site).sort()) {
+  for (const site of ctx.content.raidSites.filter((x) => x.target === fort).map((x) => x.site).sort()) {
     const t = best(ctx, agent, site, "threat.intensity");
     if (t) out.push(t);
   }
