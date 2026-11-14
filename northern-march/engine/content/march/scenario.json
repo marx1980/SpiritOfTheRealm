@@ -149,7 +149,7 @@
   "fortificationBreachedBelowMilli": 30000
  },
  "endings": {
-  "horizonDays": 240,
+  "horizonDays": 360,
   "fractureCommunities": 2,
   "fractureDays": 10,
   "lostForts": 2,
@@ -835,6 +835,12 @@
    "bandPermille": 120,
    "harvestPermille": 250,
    "raidPermille": 300
+  },
+  "blight": {
+   "checkDay": 120,
+   "chancePermille": 450,
+   "cutPermille": 500,
+   "days": 80
   }
  },
  "goods": {
@@ -1447,8 +1453,8 @@
    ]
   },
   "strike": {
-   "cooldownDays": 40,
-   "declinePermille": 250,
+   "cooldownDays": 30,
+   "declinePermille": 150,
    "traitShift": {
     "aggressive": -150,
     "ambitious": -100,
@@ -1456,12 +1462,12 @@
     "loyal": 100
    },
    "intensityPermille": [
-    500,
-    900
+    600,
+    1000
    ],
    "durationDays": [
-    25,
-    50
+    30,
+    60
    ]
   },
   "treaty": {
@@ -1477,11 +1483,11 @@
    "blurPermille": 200
   },
   "trade": {
-   "everyDays": 30,
+   "everyDays": 20,
    "dest": "eastmarch",
    "sacks": [
-    40,
-    80
+    60,
+    120
    ]
   }
  }

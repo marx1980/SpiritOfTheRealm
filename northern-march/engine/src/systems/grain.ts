@@ -58,12 +58,24 @@ export function startGrainOrder(ctx: Ctx, orderId: number, a: ActionRef, cause: 
 
 export const grain: System = {
   id: "grain",
-  start: (ctx) => { if (ctx.content.scenario.grain) ctx.at(DAY + 2 * HOUR, "grain:day", {}); },
+  start: (ctx) => {
+    const g = ctx.content.scenario.grain;
+    if (!g) return;
+    ctx.at(DAY + 2 * HOUR, "grain:day", {});
+    if (g.blight) ctx.at(g.blight.checkDay * DAY + 6 * HOUR, "grain:blight", {});
+  },
   onEvent: (ctx, e) => {
     const g = ctx.content.scenario.grain;
     if (e.type === "RaidDamage" && g?.places.some((p) => p.location === e.payload.location)) ctx.at(ctx.tick, "grain:harvest", { place: e.payload.location, cause: e.id });
   },
   handlers: {
+    "grain:blight": (ctx) => {
+      const b = ctx.content.scenario.grain!.blight!, year = ctx.content.scenario.environment?.yearDays ?? 360;
+      ctx.at(ctx.tick + year * DAY, "grain:blight", {});
+      if (!ctx.keyed(`grain:blight:${ctx.tick}`).chancePermille(b.chancePermille)) return; // the draw is made every year, used or not
+      const ev = ctx.emit("HarvestBlighted", [], [], { permille: b.cutPermille, days: b.days });
+      for (const p of ctx.content.scenario.grain!.places) ctx.emit("HarvestDamaged", [ev.id], [loc(p.location)], { place: p.location, permille: b.cutPermille, until: ctx.tick + b.days * DAY });
+    },
     "grain:harvest": (ctx, { place, cause }) => {
       const g = ctx.content.scenario.grain!;
       if ((ctx.s.harvestHit[place]?.until ?? 0) > ctx.tick) return; // a spoiled harvest is spoiled once; the next raid after it recovers hits it again

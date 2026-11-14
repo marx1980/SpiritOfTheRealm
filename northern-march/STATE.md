@@ -60,6 +60,8 @@ Phases 0-4: see DECISIONS D-001 to D-014.
 
 **Phase 14B stage 3 (D-086).** The delegating and aggressive policies answer the people's petitions and low-grain letters; the aggressive ruler rides to a raided fort (death now reachable and decision-led); `DecisionMade` counts as a decision in endings. Three decisions for Marko are listed in D-086 before the sealed round.
 
+**Phase 14B stage 4 (D-087).** Horizon 360 days; bad harvest years (`grain.blight`); harder strikes and a merchant who matters; attention now reads what a letter speaks of. Open: G-07 balance (wilds 45%, frontier 3%), deposition and capture (need Houses to hold something), court screen, G-15 tool.
+
 ## Result
 - Phase 1: G-01, G-02 PASS (D-009). Phase 2: built (D-010).
 - Phase 3: G-10 PASS, G-11 FAIL, overridden (D-013, D-016).
@@ -95,7 +97,7 @@ Phases 0-4: see DECISIONS D-001 to D-014.
 - Optional: run `node src/cli.ts g01 --seeds 1..100` in `engine/` on your own computer; it must end with the combined hash above.
 
 ## Next phase
-(14 Nov, latest.) Phase 14B stages 1-3 done (D-084 to D-086). Next: Marko's three decisions in D-086 (ending horizon and holds; food and frontier strength or the G-07 reading; ruler in the field), then 14B stage 4 (more characters, Houses, court screen), then 14C. Sonnet 5.5, medium; Opus medium for the emergence gates.
+(14 Nov, latest.) Phase 14B stages 1-4 done (D-084 to D-087). Next: Marko's G-07 decision in D-087, then (optionally) stage 5 (Houses that hold something: deposition, capture on the road, more characters, court screen), then 14C (Opus 5.5 medium). Sonnet 5.5, medium; Opus medium for the emergence gates.
 (13 Nov, Phase 12.) Phase 12 built; G-20 to run once on frozen code after Marko confirms the bars (D-077); H-03 still owed and now has more to show. Next: Phase 13 conversation layer, Sonnet 5.5 high (Opus for validation rules); its gate G-16.
 (13 Nov, latest.) Phase 11 built; G-19 to run once on frozen code after Marko confirms the bars (D-073). G-18 and G-19 passed (D-074, D-076). Next: Phase 12 full battlefield; the Phase 9 round (D-071) is still owed.
 (13 Nov, later.) Phase 10 built; G-18 to run once on the frozen code (needs Marko's confirmation of the bars in D-072). Then Phase 11 (exploration, artefact): Sonnet 5.5, high; Opus medium for the Stefan emergence rules.

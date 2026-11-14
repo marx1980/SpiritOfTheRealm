@@ -73,6 +73,8 @@ export interface ManpowerParams { arms?: Record<Arm, ArmCost>; musterMen: number
 export interface GrainParams {
   places: GrainPlace[];
   harvestHitPermille: number; harvestHitDays: number;
+  /** A bad harvest year (Phase 14B stage 4): on `checkDay` of each year a draw at `chancePermille` cuts every place's harvest by `cutPermille` for `days`. */
+  blight?: { checkDay: number; chancePermille: number; cutPermille: number; days: number };
   /** Days of cover at which a place moves to the next scarcity band: plenty, adequate, tight, short (below that: famine). */
   bandDays: [number, number, number, number];
   /** The crown takes grain: `sacks` asked, the place keeps `reserveDays` of its own need; consulting first adds `consultDays` and softens the grievance. */
@@ -338,6 +340,7 @@ export function validateContent(raw: RawContent): { errors: ContentError[] } {
     if (g.store > g.cap) err("RANGE", `grain ${g.location} store above cap`);
   }
   if (sc.grain && !(sc.grain.harvestHitPermille >= 0 && sc.grain.harvestHitPermille <= 1000)) err("RANGE", "grain harvestHitPermille");
+  { const b = sc.grain?.blight; if (b && !(b.checkDay >= 1 && b.days >= 1 && b.chancePermille >= 0 && b.chancePermille <= 1000 && b.cutPermille >= 0 && b.cutPermille <= 1000)) err("RANGE", "grain.blight"); }
   const env = sc.environment;
   if (env) {
     const seasonIds = new Set<string>(SEASONS);

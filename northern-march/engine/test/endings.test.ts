@@ -153,6 +153,24 @@ test("attention: the nearest crisis on the chain counts, not the first cause of 
   assert.equal(at.shares.wilds, 0);
 });
 
+test("attention: a decision that answers a letter is credited to what the letter speaks of, not to what happened to cause it to be written", () => {
+  fresh();
+  const weather = ev(DAY, "FortificationsWeathered");
+  const letter = (id: number, claims: [string, string][]) => ev(2 * DAY, "ReportComposed", [weather.id], { report: { id, claims: claims.map(([predicate, sub]) => ({ predicate, subject: { kind: "location", id: sub } })) } });
+  const l1 = letter(7, [["grain.stock", F1]]), d1 = ev(3 * DAY, "ReportDelivered", [l1.id], { reportId: 7 }), i1 = ev(3 * DAY, "PlayerInput", [d1.id], { action: "requisition" });
+  const a1 = readAttention([weather, l1, d1, i1], CONTENT);
+  assert.equal(a1.shares.food_security, 1);
+  assert.equal(a1.shares.environment, 0, "the weather is only why the steward looked");
+  const l2 = letter(8, [["community.request", C1], ["grain.stock", F1]]), d2 = ev(4 * DAY, "ReportDelivered", [l2.id], { reportId: 8 }), i2 = ev(4 * DAY, "PlayerInput", [d2.id], { action: "relief" });
+  const a2 = readAttention([weather, l2, d2, i2], CONTENT);
+  assert.equal(a2.shares.rebellion, 0.5);
+  assert.equal(a2.shares.food_security, 0.5);
+  const gate = CONTENT.scenario.frontier!.site, l3 = letter(9, [["threat.intensity", gate]]), d3 = ev(5 * DAY, "ReportDelivered", [l3.id], { reportId: 9 }), i3 = ev(5 * DAY, "PlayerInput", [d3.id], { action: "advance" });
+  assert.equal(readAttention([weather, l3, d3, i3], CONTENT).shares.frontier, 1);
+  const l4 = letter(10, [["fortification.condition", F1]]), d4 = ev(6 * DAY, "ReportDelivered", [l4.id], { reportId: 10 }), i4 = ev(6 * DAY, "PlayerInput", [d4.id], { action: "repair" });
+  assert.equal(readAttention([weather, l4, d4, i4], CONTENT).shares.environment, 1, "a letter that speaks of none of them falls back to the chain");
+});
+
 test("attention: a raid from the frontier's gate is the frontier's pressure, not the wilds'", () => {
   fresh();
   const gate = CONTENT.scenario.frontier!.site;
