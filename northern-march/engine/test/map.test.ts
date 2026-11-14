@@ -8,8 +8,10 @@ import { CONTENT, run, variant, legacyVariant } from "./helpers.ts";
 const map = new MapGraph(CONTENT);
 
 test("20-25 locations across three provinces, with bridge, ford and ferry over the river", () => {
-  assert.ok(CONTENT.locations.length >= 20 && CONTENT.locations.length <= 25);
-  assert.equal(new Set(CONTENT.locations.map((l) => l.province)).size, 3);
+  const march = CONTENT.locations.filter((l) => l.province !== "arven");
+  assert.ok(march.length >= 20 && march.length <= 25);
+  assert.equal(new Set(march.map((l) => l.province)).size, 3);
+  assert.equal(CONTENT.locations.filter((l) => l.province === "arven").length, 2, "and the two places across the border");
   const kinds = new Set(CONTENT.routes.filter((r) => r.crossing).map((r) => r.crossing!.kind));
   assert.deepEqual([...kinds].sort(), ["bridge", "ferry", "ford"]);
 });

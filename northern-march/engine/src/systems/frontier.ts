@@ -79,7 +79,7 @@ function propose(ctx: Ctx, cause: number) {
 /** The crown's representative looks at the commander and writes to the ruler what he thinks he saw. */
 function report(ctx: Ctx) {
   const p = P(ctx), rep = p.actors.representative, f = ctx.s.fr!, ruler = ctx.content.scenario.ruler;
-  if (isDead(ctx.s, rep)) return;
+  if (isDead(ctx.s, rep) || !ctx.enabled("messenger")) return; // a letter needs the messengers
   const cur = f.current.commander, k = ctx.keyed(`frontier:report:${ctx.tick}`);
   const idx = FRONTIER_STANCES.indexOf(cur.stance), blurred = k.int(0, 999) < p.report.blurPermille, dir = k.int(0, 1) ? 1 : -1;
   const seen = blurred ? Math.max(0, Math.min(FRONTIER_STANCES.length - 1, idx + dir)) : idx;

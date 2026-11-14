@@ -89,7 +89,10 @@ test("modes and goods in the words narrow the order", () => {
 });
 
 test("'do as Selene advises' follows her advice and names her", () => {
-  const { view } = pauseWhere(SEED, withRepairAdvice);
+  const one = (v: View) => v.advice.filter((a) => a.author === "selene").length === 1; // with two, she is asked which
+  let view: View | undefined;
+  for (const seed of [SEED, 1, 3, 4, 5, 6, 7, 8]) { try { view = pauseWhere(seed, (v) => one(v) && v.advice.some((a) => a.author === "selene" && !(JSON.parse(a.plan.id) as { kind: string }).kind.startsWith("advise_wait")), 140).view; break; } catch { /* next seed */ } }
+  assert.ok(view, "a pause where Selene gives one piece of advice");
   const c = court();
   const t = say(c, view, "Do as Selene advises");
   assert.ok(t.replies.some((r) => r.kind === "readback"), spoken(t));

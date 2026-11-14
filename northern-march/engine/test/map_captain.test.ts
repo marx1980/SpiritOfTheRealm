@@ -42,6 +42,6 @@ test("an order to move: the next day he is shown headed there, as a projection, 
 });
 
 test("a fight order reads as an attack on the raiders at their place, and a scouting order as scouting", () => {
-  const atk = buildMap(play(13, { action: "advance", target: "northwatch", mission: "attack", raid: "greyfen" }, 11.95).viewOf("player")).captains.find((c) => c.id === "caron");
+  const atk = buildMap(play(13, { action: "advance", target: "northwatch", mission: "attack", raid: "blackwood" }, 11.95).viewOf("player")).captains.find((c) => c.id === "caron");
   if (atk?.heading) assert.match(atk.heading.words, /^(Attacking the raiders at|En route to) /);
 });

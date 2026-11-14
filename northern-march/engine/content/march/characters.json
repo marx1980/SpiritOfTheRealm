@@ -1098,7 +1098,9 @@
     },
     "relationships": [],
     "house": "arven",
-    "objectives": []
+    "objectives": [],
+    "household": "a secretary and two clerks",
+    "occupation": "ambassador of Arven"
   },
   {
     "id": "ingrid",
@@ -1118,7 +1120,9 @@
     },
     "relationships": [],
     "house": "arven",
-    "objectives": []
+    "objectives": [],
+    "household": "her staff and a company of riders",
+    "occupation": "commander of the border post"
   },
   {
     "id": "dagny",
@@ -1139,7 +1143,8 @@
     "relationships": [],
     "house": "arven",
     "objectives": [],
-    "occupation": "grain and salt factor"
+    "occupation": "grain and salt factor",
+    "household": "a clerk and four carters"
   },
   {
     "id": "pell",
