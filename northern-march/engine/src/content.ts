@@ -155,7 +155,10 @@ export interface FrontierParams {
   court: { reviewDays: [number, number]; holdDays: number; startStance: FrontierStance; informantNoise: number; thresholds: { tradeFrom: number; pressFrom: number; strikeFrom: number }; fallenBonus: number };
   delayDays: { ambassador: [number, number]; commander: [number, number]; merchant: [number, number] };
   strike: { cooldownDays: number; declinePermille: number; traitShift: Record<string, number>; intensityPermille: [number, number]; durationDays: [number, number] };
-  treaty: { cooldownDays: number };
+  /** Terms offered to the crown (open `openDays`), what accepting costs and buys, and what a refusal does to the court's reading. */
+  treaty: { cooldownDays: number; openDays: number; truceDays: number; tributeMilli: number; refusePermille: number; refuseDays: number };
+  /** The merchant's grain for the March while his stance is `trade` or `settle` and no host stands at the gate. */
+  trade: { everyDays: number; dest: string; sacks: [number, number] };
   report: { everyDays: number; blurPermille: number };
 }
 
@@ -206,7 +209,7 @@ export interface Scenario {
   scripts: Script[];
   endStates: { fortificationBreachedBelowMilli: number };
   /** Phase 14: when each ending is read from the log (docs/CONTENT.md). Read-only: nothing here changes the world. */
-  endings: { horizonDays: number; fractureCommunities: number; fractureDays: number; lostForts: number };
+  endings: { horizonDays: number; fractureCommunities: number; fractureDays: number; lostForts: number; settlementDays: number; victoryHosts: number };
   agents: AgentParams;
   battle: BattleParams;
   regency: { regent: string; seat: string; maxRepairCostMilli: number; mayLevy: boolean; maySendCaptain: boolean };
@@ -365,7 +368,7 @@ export function validateContent(raw: RawContent): { errors: ContentError[] } {
   for (const l of sc.presence.travelTo) need(locs, l, "location", "presence.travelTo");
   for (const f of sc.objective.forts) if (!raw.locations.find((l) => l.id === f)?.fortification) err("ID_UNKNOWN", `objective fort ${f} is not fortified`);
   const en = sc.endings;
-  if (!en || ![en.horizonDays, en.fractureCommunities, en.fractureDays, en.lostForts].every((n) => Number.isInteger(n) && n >= 1)) err("RANGE", "scenario.endings needs whole numbers of at least 1");
+  if (!en || ![en.horizonDays, en.fractureCommunities, en.fractureDays, en.lostForts, en.settlementDays, en.victoryHosts].every((n) => Number.isInteger(n) && n >= 1)) err("RANGE", "scenario.endings needs whole numbers of at least 1");
   else if (en.lostForts > sc.objective.forts.length) err("RANGE", "scenario.endings.lostForts is more than the objective forts");
   for (const l of raw.locations) if (!Array.isArray(l.pos) || l.pos.length !== 2) err("POSITION", `location ${l.id} has no map position`);
   for (const s of sc.scripts) {
@@ -411,6 +414,10 @@ export function validateContent(raw: RawContent): { errors: ContentError[] } {
   const fr = sc.frontier;
   if (fr) {
     need(preds, "frontier.posture", "predicate", "the frontier's representative writes it");
+    need(preds, "frontier.treaty", "predicate", "the ambassador writes it");
+    need(locs, fr.trade.dest, "location", "frontier.trade.dest");
+    if (!(fr.trade.everyDays >= 1 && fr.trade.sacks[0] >= 0 && fr.trade.sacks[0] <= fr.trade.sacks[1])) err("RANGE", "frontier.trade");
+    if (!(fr.treaty.openDays >= 1 && fr.treaty.truceDays >= 1 && fr.treaty.tributeMilli >= 0 && fr.treaty.refuseDays >= 0)) err("RANGE", "frontier.treaty");
     for (const l of [fr.site, fr.market, fr.target]) need(locs, l, "location", "frontier");
     for (const [k, id] of Object.entries(fr.actors)) need(chars, id, "character", `frontier.actors.${k}`);
     if (!sc.objective.forts.includes(fr.target)) err("ID_UNKNOWN", `frontier.target ${fr.target} is not an objective fort`);

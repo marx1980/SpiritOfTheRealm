@@ -33,7 +33,9 @@ function review(ctx: Ctx) {
   // a fixed schedule of draws per review, used or not (G-02)
   const noise = r.int(-c.informantNoise, c.informantNoise), next = r.int(c.reviewDays[0], c.reviewDays[1]);
   const forts = ctx.content.scenario.objective.forts.map((id) => ({ conditionMilli: ctx.s.fortifications[id].conditionMilli, fallen: !!ctx.s.fallen[id] }));
-  const from = f.stance, weakness = weaknessOf(forts, noise), stance = stanceFor(weakness, from, f.since, ctx.tick, c);
+  // a refusal makes the March look weaker for a while; a truce holds the court at `settle` (its instructions still take the roads)
+  const refused = ctx.tick < f.refusedUntil ? p.treaty.refusePermille : 0;
+  const from = f.stance, weakness = Math.min(1000, weaknessOf(forts, noise) + refused), stance = ctx.tick < f.truceUntil ? "settle" : stanceFor(weakness, from, f.since, ctx.tick, c);
   const ev = ctx.emit("FrontierReview", [], [loc(p.market)], { weakness, stance, from, changed: stance !== from }, "frontier");
   ctx.at(ctx.tick + next * DAY, "frontier:review", {});
   if (stance === from) return;
@@ -68,12 +70,46 @@ function consider(ctx: Ctx, cause: number) {
   ctx.emit("ThreatBegan", [s.id], [loc(p.site), loc(p.target)], { site: p.site, target: p.target, intensityPermille, untilTick: ctx.tick + durationDays * DAY }, "frontier");
 }
 
-/** The ambassador on `settle` offers terms to the crown, once per cooldown. Nothing answers yet (stage 2). */
+/** The ambassador on `settle` offers terms to the crown, once per cooldown, and writes to her about them. */
 function propose(ctx: Ctx, cause: number) {
-  const p = P(ctx), f = ctx.s.fr!, who = p.actors.ambassador;
+  const p = P(ctx), f = ctx.s.fr!, who = p.actors.ambassador, ruler = ctx.content.scenario.ruler;
   if (f.current.ambassador.stance !== "settle" || isDead(ctx.s, who)) return;
   if (f.lastTreaty >= 0 && ctx.tick - f.lastTreaty < p.treaty.cooldownDays * DAY) return;
-  ctx.emit("TreatyProposed", [cause], [chr(who), chr(ctx.content.scenario.ruler)], { from: who, stance: f.current.ambassador.stance }, "frontier");
+  if (ctx.tick < f.truceUntil) return; // terms are already agreed
+  const t = ctx.emit("TreatyProposed", [cause], [chr(who), chr(ruler)], { from: who, stance: f.current.ambassador.stance, tributeMilli: p.treaty.tributeMilli, truceDays: p.treaty.truceDays, openDays: p.treaty.openDays }, "frontier");
+  if (!ctx.enabled("messenger")) return;
+  // an ambassador to the crown knows where the crown sits (a background actor holds no beliefs of his own until he needs one)
+  if (!best(ctx, who, ruler, "character.seat")) learn(ctx, who, { subject: chr(ruler), predicate: "character.seat", value: ctx.content.byId.character.get(ruler)!.location, observedAt: ctx.tick, band: "certain" }, { kind: "observation", eventId: t.id, source: who }, [t.id]);
+  const upd = learn(ctx, who, { subject: chr(who), predicate: "frontier.treaty", value: t.id, observedAt: ctx.tick, band: "certain" }, { kind: "observation", eventId: t.id, source: who }, [t.id]);
+  const b = best(ctx, who, who, "frontier.treaty");
+  if (!b) return;
+  const { band, ...rest } = b;
+  compose(ctx, who, ruler, [{ ...rest, reliabilityBand: band as typeof b.reliabilityBand }], upd.id);
+}
+
+/** The ruler answers the offer that is open. The word takes the ambassador's road; only its arrival signs or refuses. Anything else does nothing. */
+export function answerTreaty(ctx: Ctx, offer: number, accept: boolean, cause: number) {
+  const p = ctx.content.scenario.frontier, f = ctx.s.fr;
+  if (!p || !f || !ctx.enabled("frontier") || !f.offer || f.offer.id !== offer || f.offer.answered || ctx.tick >= f.offer.lapsesAt) return;
+  const ruler = ctx.content.scenario.ruler, a = ctx.emit("TreatyAnswered", [cause, offer], [chr(ruler), chr(p.actors.ambassador)], { offer, accepted: accept }, "frontier");
+  const [lo, hi] = p.delayDays.ambassador, days = ctx.keyed(`frontier:answer:${a.id}`).int(lo, hi);
+  ctx.at(ctx.tick + days * DAY, "frontier:answered", { answer: a.id, accept });
+}
+
+function answered(ctx: Ctx, answer: number, accept: boolean) {
+  const p = P(ctx), ruler = ctx.content.scenario.ruler, offer = ctx.s.fr!.offer;
+  if (!offer) return;
+  if (accept) ctx.emit("TreatySigned", [answer], [chr(p.actors.ambassador), chr(ruler)], { offer: offer.id, tributeMilli: p.treaty.tributeMilli, truceDays: p.treaty.truceDays, truceUntil: ctx.tick + p.treaty.truceDays * DAY, payer: ruler }, "frontier");
+  else ctx.emit("TreatyRefused", [answer], [chr(p.actors.ambassador), chr(ruler)], { offer: offer.id, until: ctx.tick + p.treaty.refuseDays * DAY }, "frontier");
+}
+
+/** The merchant, on a peaceful or trading stance and with no host at the gate, brings grain to the March every `everyDays`. */
+function trade(ctx: Ctx) {
+  const p = P(ctx), f = ctx.s.fr!, who = p.actors.merchant, st = f.current.merchant.stance;
+  if ((st !== "trade" && st !== "settle") || isDead(ctx.s, who) || ctx.s.threats[p.site]) return;
+  if (ctx.tick - Math.max(f.lastTrade, 0) < p.trade.everyDays * DAY) return;
+  const sacks = ctx.keyed(`frontier:trade:${ctx.tick}`).int(p.trade.sacks[0], p.trade.sacks[1]);
+  ctx.emit("FrontierTrade", [f.current.merchant.event], [chr(who), loc(p.market), loc(p.trade.dest)], { from: p.market, to: p.trade.dest, sacks }, "frontier");
 }
 
 /** The crown's representative looks at the commander and writes to the ruler what he thinks he saw. */
@@ -105,6 +141,7 @@ export const frontier: System = {
   handlers: {
     "frontier:review": (ctx) => review(ctx),
     "frontier:arrive": (ctx, { instr, actor, stance }) => arrive(ctx, instr, actor, stance),
+    "frontier:answered": (ctx, { answer, accept }) => answered(ctx, answer, accept),
     "frontier:report": (ctx) => { report(ctx); ctx.at(ctx.tick + P(ctx).report.everyDays * DAY, "frontier:report", {}); },
     "frontier:day": (ctx) => {
       const p = P(ctx), r = ctx.rng("frontier"), f = ctx.s.fr!;
@@ -112,6 +149,7 @@ export const frontier: System = {
       const roll = r.int(0, 999), intensityPermille = r.int(p.strike.intensityPermille[0], p.strike.intensityPermille[1]), days = r.int(p.strike.durationDays[0], p.strike.durationDays[1]);
       if (ctx.enabled("threat") && siteDay(ctx, p.site, p.target, { roll, intensityPermille, days }, 0, "frontier")) return; // the campaign has ended
       // a commander still on `strike` whose cooldown has run out, an ambassador still on `settle`
+      trade(ctx);
       consider(ctx, f.current.commander.event);
       propose(ctx, f.current.ambassador.event);
       ctx.extraDraws("frontier");

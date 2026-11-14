@@ -51,6 +51,8 @@ export interface FrontierState {
   /** The ambassador and the commander hold stances that cannot both be served (one peaceful, one hostile). */
   clash: boolean;
   lastStrike: number; lastTreaty: number; strikes: number; declined: number; proposals: number;
+  /** The offer of terms that is open (its event, and when it lapses), the truce a signed treaty makes, the weakness a refusal adds, and when the merchant last came. */
+  offer: { id: number; lapsesAt: number; answered: boolean } | null; truceUntil: number; refusedUntil: number; signed: number; lastTrade: number;
 }
 
 export interface WorldState {
@@ -107,7 +109,7 @@ export interface WorldState {
   issued: Record<string, IssuedRecord[]>;
   communities: Record<string, CommunityState>;
   grain: Record<string, number>;
-  grainLedger: Record<string, { produced: number; consumed: number; spilled: number; unmet: number; lost: number; seized: number }>;
+  grainLedger: Record<string, { produced: number; consumed: number; spilled: number; unmet: number; lost: number; seized: number; imported: number }>;
   convoys: Record<string, { id: number; from: string; to: string; sacks: number; departedAt: number; arrivesAt: number; orderId: number; how: string; consulted: boolean }>;
   nextConvoyId: number;
   goods: Record<string, Record<string, number>>; // good -> place -> units
@@ -149,7 +151,7 @@ function initialFrontier(c: Content): FrontierState | null {
   const f = c.scenario.frontier;
   if (!f) return null;
   const cur = (): FrontierState["current"][string] => ({ stance: f.court.startStance, since: 0, event: 1 });
-  return { stance: f.court.startStance, since: 0, weakness: null, current: { ambassador: cur(), commander: cur(), merchant: cur() }, clash: false, lastStrike: -1, lastTreaty: -1, strikes: 0, declined: 0, proposals: 0 };
+  return { stance: f.court.startStance, since: 0, weakness: null, current: { ambassador: cur(), commander: cur(), merchant: cur() }, clash: false, lastStrike: -1, lastTreaty: -1, strikes: 0, declined: 0, proposals: 0, offer: null, truceUntil: -1, refusedUntil: -1, signed: -1, lastTrade: -1 };
 }
 
 function initialPolicies(c: Content) {
@@ -218,7 +220,7 @@ function initialGoods(c: Content): Pick<WorldState, "goods" | "goodsLedger" | "g
 function initialGrain(c: Content): Pick<WorldState, "grain" | "grainLedger" | "grainBand" | "harvestHit" | "convoys" | "nextConvoyId" | "grainAsked" | "grainRefusedAt"> {
   const g = c.scenario.grain, out = { grain: {} as WorldState["grain"], grainLedger: {} as WorldState["grainLedger"], grainBand: {} as WorldState["grainBand"], harvestHit: {} as WorldState["harvestHit"], convoys: {} as WorldState["convoys"], nextConvoyId: 1, grainAsked: {} as WorldState["grainAsked"], grainRefusedAt: {} as WorldState["grainRefusedAt"] };
   for (const p of [...(g?.places ?? [])].sort((a, b) => cmp(a.location, b.location))) {
-    out.grain[p.location] = p.store; out.grainLedger[p.location] = { produced: 0, consumed: 0, spilled: 0, unmet: 0, lost: 0, seized: 0 };
+    out.grain[p.location] = p.store; out.grainLedger[p.location] = { produced: 0, consumed: 0, spilled: 0, unmet: 0, lost: 0, seized: 0, imported: 0 };
     out.grainBand[p.location] = bandOf(p.store, p.need, g!.bandDays);
   }
   return out;
@@ -339,7 +341,11 @@ export const REDUCERS: Record<string, (s: WorldState, p: P, e: SimEvent) => void
   FrontierObserved: noop,
   FrontierStrike: (s, _p, e) => { s.fr!.lastStrike = e.tick; s.fr!.strikes++; },
   FrontierDeclined: (s, _p, e) => { s.fr!.lastStrike = e.tick; s.fr!.declined++; },
-  TreatyProposed: (s, _p, e) => { s.fr!.lastTreaty = e.tick; s.fr!.proposals++; },
+  TreatyProposed: (s, p, e) => { s.fr!.lastTreaty = e.tick; s.fr!.proposals++; s.fr!.offer = { id: e.id, lapsesAt: e.tick + p.openDays * 86400, answered: false }; },
+  TreatyAnswered: (s) => { if (s.fr!.offer) s.fr!.offer.answered = true; },
+  TreatySigned: (s, p, e) => { const f = s.fr!; f.offer = null; f.signed = e.tick; f.truceUntil = p.truceUntil; s.treasuryMilli[p.payer] -= p.tributeMilli; },
+  TreatyRefused: (s, p) => { const f = s.fr!; f.offer = null; f.refusedUntil = p.until; },
+  FrontierTrade: (s, p, e) => { s.grain[p.to] += p.sacks; s.grainLedger[p.to].imported += p.sacks; s.fr!.lastTrade = e.tick; },
   CreatureHunt: (s, p, e) => { const b = s.bw!; b.kills += p.livestock; b.missing += p.missing ? 1 : 0; b.lastHunt = e.tick; },
   ExpeditionStarted: (s, p, e) => { s.bw!.expeditions[String(p.orderId)] = { orderId: p.orderId, leader: p.leader, kind: p.kind, since: e.tick, days: 0, signs: false, hollow: false, stone: false, killed: false, ended: null }; },
   SiteSearched: (s, p) => { const x = s.bw!.expeditions[String(p.orderId)]; if (!x) return; x.days = p.day; x.signs ||= !!p.signs; x.hollow ||= !!p.hollow; x.stone ||= !!p.stone; },

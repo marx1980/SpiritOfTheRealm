@@ -76,6 +76,10 @@ export const EVENT_TYPES: Readonly<Record<string, EventTypeDef>> = Object.freeze
   FrontierDeclined: T("frontier", "military", 2),
   FrontierObserved: T("frontier", "info", 1), // the crown's representative looks at the commander
   TreatyProposed: T("frontier", "political", 3),
+  TreatyAnswered: T("frontier", "political", 3), // the ruler's answer leaves her hands
+  TreatySigned: T("frontier", "political", 3), // her acceptance reaches the court: the tribute, and a truce
+  TreatyRefused: T("frontier", "political", 3), // her refusal reaches the court
+  FrontierTrade: T("frontier", "economic", 2), // the merchant's grain reaches the March
   // exploration (Phase 11, docs/EXPLORATION.md)
   CreatureHunt: T("exploration", "social", 2, true), // the creature takes livestock, sometimes a person: a clock-driven step
   ExpeditionStarted: T("exploration", "military", 2),

@@ -152,7 +152,9 @@
   "horizonDays": 240,
   "fractureCommunities": 2,
   "fractureDays": 10,
-  "lostForts": 2
+  "lostForts": 2,
+  "settlementDays": 60,
+  "victoryHosts": 1
  },
  "agents": {
   "reviewDays": {
@@ -1463,11 +1465,24 @@
    ]
   },
   "treaty": {
-   "cooldownDays": 60
+   "cooldownDays": 60,
+   "openDays": 45,
+   "truceDays": 120,
+   "tributeMilli": 6000,
+   "refusePermille": 200,
+   "refuseDays": 60
   },
   "report": {
    "everyDays": 12,
    "blurPermille": 200
+  },
+  "trade": {
+   "everyDays": 30,
+   "dest": "eastmarch",
+   "sacks": [
+    40,
+    80
+   ]
   }
  }
 }

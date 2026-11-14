@@ -15,12 +15,12 @@ const SEEDS = [1, 2, 3, 4, 5, 6, 7, 8];
 
 /** Σ stores + Σ grain on the road = Σ start + produced - consumed - spilled - lost - seized, exactly. */
 function conserved(sim: { unsafeWorldForDebug(): any }) {
-  const w = sim.unsafeWorldForDebug(), L = Object.values(w.grainLedger) as { produced: number; consumed: number; spilled: number; lost: number; seized: number }[];
+  const w = sim.unsafeWorldForDebug(), L = Object.values(w.grainLedger) as { produced: number; consumed: number; spilled: number; lost: number; seized: number; imported: number }[];
   const sum = (f: (x: (typeof L)[number]) => number) => L.reduce((a, x) => a + f(x), 0);
   const have = (Object.values(w.grain) as number[]).reduce((a, x) => a + x, 0) + (Object.values(w.convoys) as { sacks: number }[]).reduce((a, c) => a + c.sacks, 0);
-  return { have, want: G.places.reduce((a, p) => a + p.store, 0) + sum((x) => x.produced) - sum((x) => x.consumed) - sum((x) => x.spilled) - sum((x) => x.lost) - sum((x) => x.seized) };
+  return { have, want: G.places.reduce((a, p) => a + p.store, 0) + sum((x) => x.produced) + sum((x) => x.imported) - sum((x) => x.consumed) - sum((x) => x.spilled) - sum((x) => x.lost) - sum((x) => x.seized) };
 }
-test("grain: stores plus grain on the road equal start + produced - consumed - spilled - lost - seized, exactly, on every seed", () => {
+test("grain: stores plus grain on the road equal start + produced + imported - consumed - spilled - lost - seized, exactly, on every seed", () => {
   for (const seed of SEEDS) {
     const sim = run({ seed });
     const c = conserved(sim); assert.equal(c.have, c.want, `seed ${seed}`);

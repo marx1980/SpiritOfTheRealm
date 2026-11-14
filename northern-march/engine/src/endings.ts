@@ -7,8 +7,8 @@ const DAY = 86400;
 
 export const ENDING_TYPES = ["military_victory", "negotiated_settlement", "coalition_fracture", "death", "capture_deposition", "territorial_authority_failure"] as const;
 export type EndingType = (typeof ENDING_TYPES)[number];
-/** Which endings the world can produce at all (14A: the last two have no event yet; 14B). */
-const REACHABLE: Record<EndingType, boolean> = { military_victory: false, negotiated_settlement: false, coalition_fracture: true, death: true, capture_deposition: true, territorial_authority_failure: true };
+/** Which endings the world can produce at all (victory and settlement from 14B stage 2). */
+const REACHABLE: Record<EndingType, boolean> = { military_victory: true, negotiated_settlement: true, coalition_fracture: true, death: true, capture_deposition: true, territorial_authority_failure: true };
 
 export const PRESSURES = ["rebellion", "food_security", "wilds", "frontier", "environment"] as const;
 export type Pressure = (typeof PRESSURES)[number];
@@ -65,6 +65,15 @@ export function readEnding(log: readonly SimEvent[], c: Content, until?: number)
     const comm = e.payload.community as string, actor = e.payload.supports as string | undefined;
     if (e.payload.to === "support" && actor) holds.set(comm, actor); else holds.delete(comm);
     if (group()) pending ??= { start: e.tick, trigger: e.id }; else pending = null;
+  }
+  // negotiated settlement: a treaty signed, and no host marched for the hold after it
+  const signed = events.find((e) => e.type === "TreatySigned"), settle = en.settlementDays * DAY;
+  if (signed && signed.tick + settle <= known && !events.some((e) => e.type === "FrontierStrike" && e.tick >= signed.tick && e.tick <= signed.tick + settle)) cands.push({ type: "negotiated_settlement", tick: signed.tick + settle, trigger: signed.id });
+  // military victory: enough of the host's marches at the gate ended by the March's arms (a host that goes home does not count)
+  const gate = c.scenario.frontier?.site;
+  if (gate) {
+    let won = 0;
+    for (const e of events) if (e.type === "ThreatEnded" && e.payload.site === gate && ["sortie", "battle", "assault"].includes(e.payload.endedBy as string) && ++won >= en.victoryHosts) { cands.push({ type: "military_victory", tick: e.tick, trigger: e.id }); break; }
   }
   if (pending && pending.start + hold <= known) cands.push({ type: "coalition_fracture", tick: pending.start + hold, trigger: pending.trigger });
   if (!cands.length) return { type: "unresolved", tick: null, trigger: null, firstCause: null, ancestryDomains: [], reachable: { ...REACHABLE } };

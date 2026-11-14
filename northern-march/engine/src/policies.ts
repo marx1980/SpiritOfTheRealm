@@ -9,7 +9,7 @@ export type PolicyId = "passive" | "delegating" | "aggressive" | "cautious" | "p
 /** `mission` (for sending a captain): defend the fort (default), or scout / attack the raiders at `raid`. */
 export interface BattleOrderDraft { to: string; task: import("./battlefield/core.ts").Task; via: "runner" | "signal" | "voice"; signal?: string;
   /** Phase 13: battle seconds spent talking before the order is given; the order is dated that much later (CONVERSATION.md §4). */ delay?: number }
-export interface PlayerAction { action: "repair" | "levy" | "advance" | "travel" | "order" | "relief" | "requisition" | "purchase" | "battle" | "policy" | "ask"; battle?: BattleOrderDraft; target?: string; to?: string; consult?: boolean; good?: string; units?: number; market?: boolean; sell?: boolean; muster?: boolean; arm?: "foot" | "archers" | "horse"; policy?: { area: "military" | "emergency" | "communities"; rule: string }; order?: OrderDraft; decision?: number; followed?: string; mission?: "defend" | "scout" | "attack"; raid?: string; repairMode?: "standard" | "rush" | "labour" }
+export interface PlayerAction { action: "repair" | "levy" | "advance" | "travel" | "order" | "relief" | "requisition" | "purchase" | "battle" | "policy" | "ask" | "treaty"; battle?: BattleOrderDraft; target?: string; to?: string; consult?: boolean; good?: string; units?: number; market?: boolean; sell?: boolean; muster?: boolean; arm?: "foot" | "archers" | "horse"; policy?: { area: "military" | "emergency" | "communities"; rule: string }; order?: OrderDraft; decision?: number; followed?: string; mission?: "defend" | "scout" | "attack"; raid?: string; repairMode?: "standard" | "rush" | "labour" }
 export type PolicyFn = (v: View, rng: () => Rng) => PlayerAction[];
 
 const DAY = 86400;
@@ -117,12 +117,17 @@ export function policyFn(id: PolicyId, aliases: Record<string, string> = {}): Po
   return POLICIES[id as keyof typeof POLICIES]?.fn ?? null;
 }
 
+/** Phase 14B stage 2: the offer of terms that has just reached her (the ambassador's letter, this hour), answered the way the policy does. */
+const answerTerms = (how: "accept" | "refuse"): PolicyFn => (v) =>
+  v.reports.filter((r) => v.now - r.deliveredAt < 3600).flatMap((r) => r.claims.filter((c) => c.predicate === "frontier.treaty"))
+    .slice(0, 1).map((c) => ({ action: "treaty" as const, target: how, to: String(c.believedValue) }));
+
 export const POLICIES: Record<"passive" | "delegating" | "aggressive" | "cautious" | "provisioner" | "random-valid" | "follow-best-adviser" | "follow-worst-adviser", { fn: PolicyFn | null; note: string }> = {
   passive: { fn: () => [], note: "never acts" },
-  delegating: { fn: (v, rng) => [...repairBelow(60000, 20)(v, rng), ...advanceTo(400, 20)(v, rng), ...grainRelief(true)(v, rng), ...expedition("scholarly", 300, 60)(v, rng)], note: "repairs below 60%; sends the captain against raiders reported at 400 or more; asks the people whose grain it is first when a store looks low" },
+  delegating: { fn: (v, rng) => [...repairBelow(60000, 20)(v, rng), ...advanceTo(400, 20)(v, rng), ...grainRelief(true)(v, rng), ...expedition("scholarly", 300, 60)(v, rng), ...answerTerms("accept")(v, rng)], note: "accepts the court's terms; repairs below 60%; sends the captain against raiders reported at 400 or more; asks the people whose grain it is first when a store looks low" },
   aggressive: {
-    fn: (v, rng) => [...repairBelow(80000, 10)(v, rng), ...advanceTo(1, 10)(v, rng), ...(recently(v, "levy", null, 60) ? [] : [{ action: "levy" as const }]), ...grainRelief(false, 60)(v, rng), ...expedition("military", 300, 60)(v, rng)],
-    note: "repairs below 80%, sends the captain against any reported raiders, levies every 60 days, takes grain without asking when a store looks low, at most once in 60 days",
+    fn: (v, rng) => [...repairBelow(80000, 10)(v, rng), ...advanceTo(1, 10)(v, rng), ...(recently(v, "levy", null, 60) ? [] : [{ action: "levy" as const }]), ...grainRelief(false, 60)(v, rng), ...expedition("military", 300, 60)(v, rng), ...answerTerms("refuse")(v, rng)],
+    note: "refuses the court's terms, repairs below 80%, sends the captain against any reported raiders, levies every 60 days, takes grain without asking when a store looks low, at most once in 60 days",
   },
   provisioner: { fn: (v, rng) => [...POLICIES.delegating.fn!(v, rng), ...provision(v)], note: "as delegating, and also: does what advisers say about timber and men (once in 20 days for each), and sells timber from a store that is nearly full at the town that pays most (D-045; an evidence policy, not a gate policy)" },
   cautious: { fn: (v, rng) => [...repairBelow(60000, 20)(v, rng), ...advanceTo(400, 20)(v, rng)], note: "as delegating, but never asks anyone for grain (holds back from a people already angry)" },

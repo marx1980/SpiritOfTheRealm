@@ -262,5 +262,13 @@
     "domain": "info",
     "wakeSignificance": 2,
     "materialDelta": 1
+  },
+  {
+    "id": "frontier.treaty",
+    "subjectKind": "character",
+    "halfLifeTicks": 3888000,
+    "domain": "info",
+    "wakeSignificance": 2,
+    "materialDelta": 1
   }
 ]

@@ -27,14 +27,14 @@ test("the registries only name event types and systems that exist", () => {
   assert.equal(PRESSURES.length, 5);
 });
 
-test("nothing happened: unresolved, and the two endings the world cannot reach yet say so", () => {
+test("nothing happened: unresolved, and every ending can be reached", () => {
   fresh();
   const r = readEnding([ev(0, "ScenarioStarted", [])], CONTENT);
   assert.equal(r.type, "unresolved");
   assert.equal(r.tick, null);
   assert.equal(r.firstCause, null);
-  assert.equal(r.reachable.military_victory, false);
-  assert.equal(r.reachable.negotiated_settlement, false);
+  assert.equal(r.reachable.military_victory, true);
+  assert.equal(r.reachable.negotiated_settlement, true);
   assert.equal(r.reachable.death, true);
 });
 

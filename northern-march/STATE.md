@@ -56,7 +56,7 @@ Phases 0-4: see DECISIONS D-001 to D-014.
 
 **Phase 14A, measuring endings and pressures (D-083, 14 Nov; `docs/CONTENT.md`).** `src/endings.ts` reads six endings and five pressures from the log (content march-0.13, `scenario.endings`); batch rows fill `dominantCrisis`, `endingType`, first cause and ancestry domains; `tools/phase14_gate.ts` (G-07, G-08, G-09; probe run on TUNE only). On 60 TUNE seeds: 88% of games reach no ending (victory, settlement, death and capture never happen), attention goes to environment and raids (rebellion 0%, food 0.6%, frontier none yet). 14B builds what is missing (Arven, characters, endings, pressures that pull on decisions); 14C is the sealed round and H-02. Not built: Arven, new characters, G-15 tool.
 
-**Phase 14B stage 1, the frontier (D-084; `docs/FRONTIER.md`; content march-0.14).** Arven court, four actors, delayed and contradicting instructions, host strikes at Eastmarch, crown's representative letters. Not built: treaty answer, victory, merchant trade, more characters.
+**Phase 14B stage 1, the frontier (D-084; `docs/FRONTIER.md`; content march-0.14).** Arven court, four actors, delayed and contradicting instructions, host strikes at Eastmarch, crown's representative letters. Stage 2 (D-085): treaty answer (action `treaty`), negotiated settlement and military victory readable, merchant grain. Not built: court screen for the offer, more characters, Houses.
 
 ## Result
 - Phase 1: G-01, G-02 PASS (D-009). Phase 2: built (D-010).
@@ -93,7 +93,7 @@ Phases 0-4: see DECISIONS D-001 to D-014.
 - Optional: run `node src/cli.ts g01 --seeds 1..100` in `engine/` on your own computer; it must end with the combined hash above.
 
 ## Next phase
-(14 Nov, latest.) Phase 14B stage 1 (frontier) done, D-084. Next: 14B stage 2 (treaty answer, victory, merchant trade, endings), then more characters/Houses and pressures that pull on decisions. Sonnet 5.5, medium; Opus medium for the emergence gates.
+(14 Nov, latest.) Phase 14B stages 1-2 (frontier, treaty, endings, merchant) done, D-084 and D-085. Next: 14B stage 3: pressures that pull on decisions (rebellion, food), the exogenous share, death and capture reachable, more characters/Houses; then 14C. Sonnet 5.5, medium; Opus medium for the emergence gates.
 (13 Nov, Phase 12.) Phase 12 built; G-20 to run once on frozen code after Marko confirms the bars (D-077); H-03 still owed and now has more to show. Next: Phase 13 conversation layer, Sonnet 5.5 high (Opus for validation rules); its gate G-16.
 (13 Nov, latest.) Phase 11 built; G-19 to run once on frozen code after Marko confirms the bars (D-073). G-18 and G-19 passed (D-074, D-076). Next: Phase 12 full battlefield; the Phase 9 round (D-071) is still owed.
 (13 Nov, later.) Phase 10 built; G-18 to run once on the frozen code (needs Marko's confirmation of the bars in D-072). Then Phase 11 (exploration, artefact): Sonnet 5.5, high; Opus medium for the Stefan emergence rules.

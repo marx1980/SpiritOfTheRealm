@@ -32,3 +32,12 @@ Nothing runs without the content block; same seed same log; ablating `frontier` 
 
 ## 6. Not built in this stage
 The merchant's trade, the treaty answer, victory, the court reading anything but the forts, tier A actors.
+
+# Stage 2: the treaty, the victory, the merchant (14B, 14 Nov)
+Content only again (`scenario.frontier.treaty`, `.trade`, `scenario.endings.settlementDays` and `.victoryHosts`).
+- **The offer.** `TreatyProposed` now carries terms (`tributeMilli`, `truceDays`, open for `treaty.openDays`) and the ambassador writes the ruler a letter (belief `frontier.treaty`, value = the offer's event id). Only one offer is open at a time.
+- **The answer.** A player action `treaty` (`target` `accept` or `refuse`, `to` the offer id) while the offer is open emits `TreatyAnswered` at once. The word takes the ambassador's road (his delay) to reach the court; on arrival: `TreatySigned` (the tribute leaves the treasury, a truce of `truceDays` begins) or `TreatyRefused` (the court reads the March `refusePermille` weaker for `refuseDays`). An answer to a lapsed or unknown offer does nothing.
+- **The truce.** While it runs the court's reading is forced to `settle` (the instruction travels as any other, so a commander still on `strike` can march before it reaches him). It is not binding on a commander already marching.
+- **Negotiated settlement** is read: a signed treaty with no `FrontierStrike` for `settlementDays` after it. **Military victory** is read: at least `victoryHosts` hosts at the gate ended by the March's arms (`ThreatEnded` with `endedBy` sortie, battle or assault; a host that merely goes home does not count).
+- **The merchant.** While his stance is `trade` or `settle` and no host stands at the gate, every `trade.everyDays` he brings grain (`FrontierTrade`, a draw in `trade.sacks`) to `trade.dest`; the ledger counts it as `imported`.
+- Not built: the player-facing screens for the offer (the view holds the belief; the court screen and affordances come with the UI), a refusal that costs standing with Houses.
